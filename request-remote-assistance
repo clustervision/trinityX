@@ -56,7 +56,7 @@ if hostname == '':
 
 if len(sys.argv) > 1:
     sandbox = sys.argv[1]
-remote_url = 'http://' + sandbox + '/~remote/';
+remote_url = 'http://{}/~remote/'.format(sandbox)
 
 trid = shell('cat /trinity/site')
 if not re.search('^\d+$', trid):
@@ -64,17 +64,14 @@ if not re.search('^\d+$', trid):
 
 certificatesubject = 'T=Trinity_C=No_certificate_provided'
 
-print
-print 'This tool helps securely set up a temporary SSH tunnel to ' + sandbox + ' .'
-print
+print 'This tool helps securely set up a temporary SSH tunnel to {} .'.format(sandbox)
 if not confirm('Allow a ClusterVision engineer SSH access to the cluster?', 'y'):
     sys.exit(0)
 
 r1 = shell(""" grep "^RSAAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
 r2 = shell(""" grep "^PubkeyAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
 if (r1 != '' and r1 == 'no') or (r2 != '' and r2 == 'no'):
-    print
-    print 'Warning: PubkeyAuthentication and/or RSAAuthentication disabled in sshd config.\n'
+    print '\nWarning: PubkeyAuthentication and/or RSAAuthentication disabled in sshd config.'
     print 'Note: support will not be able to login automatically, you will need to supply'
     print '      the root password when contacted by support.\n'
     if not confirm('Continue?', 'n'):
@@ -87,8 +84,7 @@ for f in pub_files:
         pub_file = f
         break
 if not pub_file:
-    print
-    print 'Error: found no SSH public key files in /root/.ssh/ use ssh-keygen tool to'
+    print '\nError: found no SSH public key files in /root/.ssh/ use ssh-keygen tool to'
     print '       generate private/public keys.'
     sys.exit(0)
 with open(pub_file, 'r') as f:
@@ -96,14 +92,12 @@ with open(pub_file, 'r') as f:
 
 freetext = ''
 info = ''
-print
-if confirm('Do you want to enter additional information for ClusterVision (e.g.: related\nticket number, problem description)?', 'y'):
-    print
-    print 'End input with CTRL-D'
+if confirm('\nDo you want to enter additional information for ClusterVision (e.g.: related\nticket number, problem description)?', 'y'):
+    print '\nEnd input with CTRL-D'
     freetext = sys.stdin.read()
     print '\nThank you.'
     for line in freetext.split('\n'):
-        line = re.sub('[^' + ok_chars + ']', '', line.strip())
+        line = re.sub('[^{}]'.format(ok_chars), '', line.strip())
         if info:
             info += '##-##' + line
         else:
@@ -112,42 +106,39 @@ if confirm('Do you want to enter additional information for ClusterVision (e.g.:
 info = '_'.join(info.split(' '))
 
 # Testing the Internet connection.
-if shell_exit_status('ping -c1 ' + sandbox) != 0:
-    print 'Error: Unable to ping ' + sandbox
+if shell_exit_status('ping -c1 {}'.format(sandbox)) != 0:
+    print 'Error: Unable to ping {} .'.format(sandbox)
     print 'Please check your internet connection.'
     if not confirm('Continue?', 'n'):
         sys.exit(0)
 
 # Request certificate.
 pub = re.sub('[^a-zA-Z0-9]', lambda m: '%{0:02X}'.format(ord(m.group(0))), pub)
-req = urllib2.Request(remote_url, data = 'hostname=' + hostname + '&getport=1&getpubcert=' + str(getpubcert) + '&pub=' + pub + '&id=' + id, headers = {'Content-type': 'application/x-www-form-urlencoded'})
+req = urllib2.Request(remote_url, data = 'hostname={}&getport=1&getpubcert={}&pub={}&id={}'.format(hostname, getpubcert, pub, id), headers = {'Content-type': 'application/x-www-form-urlencoded'})
 try:
     res = urllib2.urlopen(req)
     result = res.read().strip()
     spresult = result.split(':##:')
     if getpubcert:
-        shell('cp -f ' + auth_key + ' ' + auth_key + '.remote.bak')
-        shell("""echo -e '\nfrom="127.0.0.1" """ + spresult[1] + """' >>""" + auth_key)
-        print
-        print 'Added temporary ClusterVision public key.'
+        shell('cp -f {}{{,.remote.bak}}'.format(auth_key))
+        shell("""echo -e '\nfrom="127.0.0.1" {}' >> {}""".format(spresult[1], auth_key))
+        print '\nAdded temporary ClusterVision public key.'
     # Testing SSH.
     if shell_exit_status('ssh -q localhost exit') != 0:
         print 'Error: Unable to SSH to localhost .'
         print 'Please make sure that SSH service is running and SSH logins to localhost are enabled.'
         sys.exit(0)
-    subprocess.call('ssh -t -q -R :' + spresult[0] + ':localhost:22 remote@' + sandbox + ' ' + hostname + ' ' + spresult[0] + ' ' + str(getpubcert) + ' ' + trid + ' ' + certificatesubject + ' ' + info, shell = True)
+    subprocess.call('ssh -t -q -R :{}:localhost:22 remote@{} {} {} {} {} {} {}'.format(spresult[0], sandbox, hostname, spresult[0], getpubcert, trid, certificatesubject, info), shell = True)
     subprocess.call('setterm -cursor on', shell = True)
-    print 'Tunnel to ' + sandbox + ' terminated.'
+    print 'Tunnel to {} terminated.'.format(sandbox)
     if getpubcert:
-        shell('mv -f ' + auth_key + '.remote.bak ' + auth_key)
+        shell('mv -f {}.remote.bak {}'.format(auth_key, auth_key))
         print 'Removed temporary ClusterVision public key.'
 except urllib2.URLError as e:
-    print
-    print 'Error: could not complete communication with ' + remote_url + '.'
-    print 'Reason: ' + e.reason
+    print '\nError: could not complete communication with {} .'.format(remote_url)
+    print 'Reason: {} .'.format(e.reason)
 except urllib2.HTTPError as e:
-    print
-    print 'Error: ' + remote_url + ' could not fulfill the request.'
-    print 'Reason: ' + e.code + ' ' + e.read()
+    print '\nError: {} could not fulfill the request.'.format(remote_url)
+    print 'Reason: {} {} .'.format(e.code, e.read())
 
 sys.exit(0)
