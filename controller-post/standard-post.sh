@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Trinity X
+# trinityX
 # Standard controller post-installation script
 # This should include all the most common tasks that have to be performed after
 # a completely standard CentOS minimal installation.
@@ -41,7 +41,7 @@ mkdir -pv "${TRIX_ROOT}/shared"
 myecho "Creating the Trinity shell environment file"
 
 cat > "${TRIX_ROOT}/trinity.sh" << EOF
-# Trinity version file
+# trinityX version file
 # Please do not modify!
 
 TRIX_VERSION="$TRIX_VERSION"
@@ -93,7 +93,7 @@ cp -rv "${MYPATH}/../packages" "${TRIX_ROOT}"
 
 cat > /etc/yum.repos.d/trix-local.repo << EOF
 [trix-local]
-name=Trinity X - local repository
+name=trinityX - local repository
 baseurl=file://${TRIX_ROOT}/packages/
 enabled=1
 gpgcheck=0

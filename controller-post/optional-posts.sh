@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Trinity X
+# trinityX
 # Optional post-installation scripts
 
 
