@@ -50,6 +50,8 @@ echo "${POSTLIST[@]}" | tr ' ' '\n'
 
 #---------------------------------------
 
+export POST_TOPDIR="$(dirname "${MYPATH}")"
+
 for i in "${POSTLIST[@]}" ; do
 	
 	myecho "Running post script: $i"
@@ -64,10 +66,12 @@ for i in "${POSTLIST[@]}" ; do
 		ret=$?
 	else
 		echo "No package file found: $POST_PKGLIST"
+		echo
 	fi
 	
 	# Take a break if the installation didn't go right
 	if (( $ret )) ; then
+		echo
 		echo "Error during package installation: $POST_PKGLIST"
 		read -p "Press Enter continue."
 	fi
@@ -78,14 +82,18 @@ for i in "${POSTLIST[@]}" ; do
 		ret=$?
 	else
 		echo "No post script found: $POST_SCRIPT"
+		echo
 	fi
 	
 	# Take a break if the script returned an error code
 	if (( $ret )) ; then
+		echo
 		echo "Error during post script: $POST_SCRIPT"
 		read -p "Press Enter continue."
 	fi
 	
 	unset POST_PKGLIST POST_SCRIPT POST_FILEDIR
 done
+
+unset POST_TOPDIR
 
