@@ -80,22 +80,3 @@ myecho "Disabling SELinux"
 sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux
 echo "Please remember to reboot the node after completing the configuration!"
 
-#---------------------------------------
-
-myecho "Copying packages and setting up the local repository"
-
-# INFO: we don't update the packages right now as some sites will have special
-# network access rules. We only do enough to be able to fetch the specific RPMs
-# that we need for other post scripts.
-# Updating the whole system and adding other repositories is for later.
-
-cp -rv "${MYPATH}/../packages" "${TRIX_ROOT}"
-
-cat > /etc/yum.repos.d/trix-local.repo << EOF
-[trix-local]
-name=trinityX - local repository
-baseurl=file://${TRIX_ROOT}/packages/
-enabled=1
-gpgcheck=0
-EOF
-
