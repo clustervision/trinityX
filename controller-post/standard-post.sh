@@ -30,9 +30,11 @@ MYPATH="$(dirname "$MYFNAME")"
 
 #---------------------------------------
 
-myecho "Creating Trinity root directory"
+myecho "Creating Trinity directory tree"
 
-mkdir -p "$TRIX_ROOT"
+mkdir -pv "$TRIX_ROOT"
+mkdir -pv "${TRIX_ROOT}/shared"
+
 
 #---------------------------------------
 
@@ -87,13 +89,12 @@ myecho "Copying packages and setting up the local repository"
 # that we need for other post scripts.
 # Updating the whole system and adding other repositories is for later.
 
-mkdir -p "${TRIX_ROOT}/local_repo"
-cp -rv "${MYPATH}/../packages/"* "${TRIX_ROOT}/local_repo"
+cp -rv "${MYPATH}/../packages" "${TRIX_ROOT}"
 
 cat > /etc/yum.repos.d/trix-local.repo << EOF
 [trix-local]
 name=Trinity X - local repository
-baseurl=file://${TRIX_ROOT}/local_repo/
+baseurl=file://${TRIX_ROOT}/packages/
 enabled=1
 gpgcheck=0
 EOF
