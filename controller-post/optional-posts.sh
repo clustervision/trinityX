@@ -41,9 +41,14 @@ MYPATH="$(dirname "$MYFNAME")"
 
 #---------------------------------------
 
+# Treat parameters are script names and override the built-in list:
+(( $# > 0 )) && POSTLIST=("$@")
+
 myecho "List of post scripts to run:"
 
 echo "${POSTLIST[@]}" | tr ' ' '\n'
+
+exit
 
 #---------------------------------------
 
@@ -85,5 +90,4 @@ for i in "${POSTLIST[@]}" ; do
 	
 	unset POST_PKGLIST POST_SCRIPT POST_FILEDIR
 done
-
 
