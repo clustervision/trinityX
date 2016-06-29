@@ -18,7 +18,7 @@ contains this file) as-is. Therefore the directory must contain a ready-to-use
 repository in its top level. When preparing the installation media for trinityX,
 don't forget to run a command like this one::
 
-    createrepo -v --update --compress-type bz2 --basedir /path/to/packages
+    createrepo -v --update --compress-type bz2 /path/to/packages
 
 The internal layout of the directory doesn't matter, as long as the repository
 was created in its top level.
@@ -69,8 +69,10 @@ easiest way to do it is with virtual machines:
 7. copy all the downloaded packages to the ``packages`` directory on the
    installation media::
 
+    mkdir -p /path/to/packages/x86_64
+    
     find /var/cache/yum -iname \*.rpm | \
-        xargs -I '{}' cp -v '{}' /path/to/packages
+        xargs -I '{}' cp -v '{}' /path/to/packages/x86_64
 
 8. create the repository (see above for the command)
 
