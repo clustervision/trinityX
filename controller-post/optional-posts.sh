@@ -48,8 +48,6 @@ myecho "List of post scripts to run:"
 
 echo "${POSTLIST[@]}" | tr ' ' '\n'
 
-exit
-
 #---------------------------------------
 
 for i in "${POSTLIST[@]}" ; do
