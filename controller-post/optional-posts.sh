@@ -17,10 +17,12 @@
 
 
 POSTLIST=( \
+           local-repo \
            base-packages \
            additional-repos \
            yum-update \
            firewalld \
+           environment-modules \
          )
 
 
@@ -54,10 +56,11 @@ export POST_TOPDIR="$(dirname "${MYPATH}")"
 
 for i in "${POSTLIST[@]}" ; do
 	
-	myecho "Running post script: $i"
-	export POST_PKGLIST="${MYPATH}/${i}.pkglist"
-	export POST_SCRIPT="${MYPATH}/${i}.sh"
-	export POST_FILEDIR="${MYPATH}/${i}"
+	bname="$(basename "$i" .sh)"
+	myecho "Running post script: $bname"
+	export POST_PKGLIST="${MYPATH}/${bname}.pkglist"
+	export POST_SCRIPT="${MYPATH}/${bname}.sh"
+	export POST_FILEDIR="${MYPATH}/${bname}"
 	ret=0
 	
 	# Start with installing the packages if we have a list
