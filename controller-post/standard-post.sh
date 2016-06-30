@@ -77,6 +77,6 @@ myecho "Generating root's private SSH keys"
 
 myecho "Disabling SELinux"
 
-sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux
+sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux /etc/selinux/config
 echo "Please remember to reboot the node after completing the configuration!"
 
