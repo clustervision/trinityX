@@ -56,6 +56,7 @@ MYCOLS=77
 alias mywhip="whiptail --title 'trinityX firewalld configuration'"
 
 
+
 #---------------------------------------
 
 # Let the user bail out if the configuration is not what (s)he wants:
@@ -63,6 +64,7 @@ alias mywhip="whiptail --title 'trinityX firewalld configuration'"
 mywhip --yesno "$msg1" $MYLINES $MYCOLS
 
 (( $? )) && exit
+
 
 
 #---------------------------------------
@@ -111,7 +113,7 @@ done
 
 # Assign the zones as requested by the user
 
-echo -e '** Assigning zones to interfaces:\n'
+echo -e '*** Assigning zones to interfaces:\n'
 
 while read -a idata ; do
     echo "${idata[1]} -> ${idata[0]}"
@@ -126,11 +128,19 @@ done < /tmp/ifzones.tmp
 # Set up masquerading
 
 if mywhip --yesno "$msg5" $MYLINES $MYCOLS ; then
-    echo -e '** Enabling IP masquerading on the public interface:\n'
+    echo -e '*** Enabling IP masquerading on the public interface:\n'
     firewall-cmd --zone=public --add-masquerade
     firewall-cmd --permanent --zone=public --add-masquerade
 fi
 
-echo -e '\n** Reloading firewalld'
+echo -e '\n*** Reloading firewalld'
 firewall-cmd --reload
+
+
+#---------------------------------------
+
+# Store a bit of configuration in the environment file
+
+echo "TRIX_IF_PUBLIC=\"$(firewall-cmd --zone=public --list-interfaces)\"" >> /etc/trinity.sh
+echo "TRIX_IF_TRUSTED=\"$(firewall-cmd --zone=trusted --list-interfaces)\"" >> /etc/trinity.sh
 
