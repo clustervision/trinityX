@@ -14,7 +14,7 @@ echo "Copying packages and setting up the local repository:"
 
 source /etc/trinity.sh
 
-if ls "${POST_TOPDIR}"/packages/*primary.sqlite.* >/dev/null 2>&1 ; then
+if ls "${POST_TOPDIR}"/packages/repodata/*primary.sqlite.* >/dev/null 2>&1 ; then
 
 	cp -rv "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
 
