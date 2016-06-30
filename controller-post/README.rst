@@ -166,14 +166,18 @@ Post script environment variables
 The configuration tool exports multiple variables before calling the Bash
 script. Those are:
 
-- ``POST_TOPDIR``: the very top level of the trinityX installation tree
+- ``POST_TOPDIR``
+  the very top level of the trinityX installation tree
 
-- ``POST_PKGLIST``: the package list name
+- ``POST_PKGLIST``
+  the package list name
 
-- ``POST_SCRIPT``: the Bash script name (so when reading it from within the
-  script, this the same as ``$0``)
+- ``POST_SCRIPT``
+  the Bash script name (so when reading it from within the script, this the
+  same as ``$0``)
 
-- ``POST_FILEDIR``: the directory of that post script
+- ``POST_FILEDIR``
+  the directory of that post script
 
 
 Additional environment variables are available from the trinityX environment
@@ -245,4 +249,13 @@ Rules for optional scripts
 
 - Check your requirements carefully, especially on other post scripts, and
   document them in `Inter-script dependencies`_.
+
+- Try to make your scripts as `idempotent
+  <https://en.wikipedia.org/wiki/Idempotence>`_ as possible, that is being able
+  to run multiple times without changing the results beyond those of the first
+  run. It's really hard to achieve, for example when appending to configuration
+  files, yet try to do it as much as possible.
+
+- At the very least make sure that it doesn't do any damage if the initial
+  configuration before the script runs, is not what is expected.
 
