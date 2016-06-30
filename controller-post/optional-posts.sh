@@ -12,8 +12,11 @@
 #          go around changing the order just for the fun of it!
 
 # Known rules:
-# - base-packages goes first
-# - packages that don't require post-install scripts go into base-packages
+# - local-repo goes first
+# - base-packages goes second
+# - packages that require post-install scripts, are optional or come from an
+#   extra repo (which are optional by default) go into their own post files. The
+#   rest goes into base-packages.pkglist
 
 
 POSTLIST=( \
@@ -46,9 +49,10 @@ MYPATH="$(dirname "$MYFNAME")"
 # Treat parameters are script names and override the built-in list:
 (( $# > 0 )) && POSTLIST=("$@")
 
-myecho "List of post scripts to run:"
+echo "#### List of post scripts to run:"
 
 echo "${POSTLIST[@]}" | tr ' ' '\n'
+echo
 
 #---------------------------------------
 
@@ -57,7 +61,7 @@ export POST_TOPDIR="$(dirname "${MYPATH}")"
 for i in "${POSTLIST[@]}" ; do
 	
 	bname="$(basename "$i" .sh)"
-	myecho "Running post script: $bname"
+	echo "####  Running post script: $bname"
 	export POST_PKGLIST="${MYPATH}/${bname}.pkglist"
 	export POST_SCRIPT="${MYPATH}/${bname}.sh"
 	export POST_FILEDIR="${MYPATH}/${bname}"
@@ -68,15 +72,15 @@ for i in "${POSTLIST[@]}" ; do
 		yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
 		ret=$?
 	else
-		echo "No package file found: $POST_PKGLIST"
+		echo "## No package file found: $POST_PKGLIST"
 		echo
 	fi
 	
 	# Take a break if the installation didn't go right
 	if (( $ret )) ; then
 		echo
-		echo "Error during package installation: $POST_PKGLIST"
-		read -p "Press Enter continue."
+		echo "## Error during package installation: $POST_PKGLIST"
+		read -p "   Press Enter continue."
 	fi
 	
 	# Then run the script if we have one
@@ -84,15 +88,15 @@ for i in "${POSTLIST[@]}" ; do
 		bash "$POST_SCRIPT"
 		ret=$?
 	else
-		echo "No post script found: $POST_SCRIPT"
+		echo "## No post script found: $POST_SCRIPT"
 		echo
 	fi
 	
 	# Take a break if the script returned an error code
 	if (( $ret )) ; then
 		echo
-		echo "Error during post script: $POST_SCRIPT"
-		read -p "Press Enter continue."
+		echo "## Error during post script: $POST_SCRIPT"
+		read -p "   Press Enter continue."
 	fi
 	
 	unset POST_PKGLIST POST_SCRIPT POST_FILEDIR

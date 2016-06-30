@@ -19,7 +19,7 @@ TRIX_ROOT="/trinity"
 
 # A bit ugly, but errors in the output are identified much more quickly:
 function myecho {
-	echo -e "\n################################################################################"
+	echo
 	echo "####  $@"
 	echo
 }

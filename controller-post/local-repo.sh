@@ -27,9 +27,9 @@ gpgcheck=0
 EOF
 
 else
-	echo "The \"packages\" directory on the install media does not contain an RPM repo:"
-	echo "${POST_TOPDIR}/packages"
-	echo "Local repository not created"
-	exit 1	
+	echo "*** The \"packages\" directory on the install media does not contain an RPM repo:"
+	echo "    ${POST_TOPDIR}/packages"
+	echo "    Local repository not created"
+	exit 1
 fi
 
