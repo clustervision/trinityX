@@ -42,11 +42,12 @@ mkdir -pv "${TRIX_ROOT}/applications"
 myecho "Creating the Trinity shell environment file"
 
 cat > "${TRIX_ROOT}/trinity.sh" << EOF
-# trinityX version file
+# trinityX environment file
 # Please do not modify!
 
 TRIX_VERSION="$TRIX_VERSION"
 TRIX_ROOT="$TRIX_ROOT"
+TRIX_CTRL_HOSTNAME=$(hostname)
 
 EOF
 
@@ -57,7 +58,7 @@ fi
 
 EOF
 
-chmod go-w "${TRIX_ROOT}/trinity.sh"
+chmod 640 "${TRIX_ROOT}/trinity.sh"
 ln -f -s "${TRIX_ROOT}/trinity.sh" /etc/trinity.sh
 
 #---------------------------------------
