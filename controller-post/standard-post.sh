@@ -34,6 +34,7 @@ myecho "Creating Trinity directory tree"
 
 mkdir -pv "$TRIX_ROOT"
 mkdir -pv "${TRIX_ROOT}/shared"
+mkdir -pv "${TRIX_ROOT}/applications"
 
 
 #---------------------------------------
