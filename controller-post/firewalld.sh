@@ -69,6 +69,16 @@ mywhip --yesno "$msg1" $MYLINES $MYCOLS
 
 #---------------------------------------
 
+# So we want firewalld. Enable and start it now, otherwise lots of commands will
+# fail later.
+
+systemctl enable firewalld
+systemctl start firewalld
+
+
+
+#---------------------------------------
+
 # Ask user input for all interfaces
 
 iflist=$(ls /sys/class/net | grep -v lo)
