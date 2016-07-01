@@ -26,6 +26,11 @@ POSTLIST=( \
            yum-update \
            firewalld \
            environment-modules \
+           rdma-centos \
+           nfs-shared \
+           nfs-home \
+           openldap \
+           sssd \
          )
 
 
