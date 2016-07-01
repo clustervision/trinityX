@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /tmp/trinity.sh
+source /etc/trinity.sh
 source "$POST_COMMON"
 
 # Enable the NFS server and export the shared directory
