@@ -1,0 +1,30 @@
+# local database configuration
+dn: cn=module{0},cn=config
+changetype: modify
+add: olcModuleLoad
+olcModuleLoad: syncprov
+
+dn: olcDatabase={1}hdb,cn=config
+changetype: modify
+add: olcSyncrepl
+olcSyncrepl: rid=100 
+ provider=ldaps://{{ syncProvider }} 
+ bindmethod=sasl 
+ searchbase="dc=local" 
+ scope=sub 
+ schemachecking=on 
+ type=refreshAndPersist 
+ retry="60 +"
+-
+add: olcMirrorMode
+olcMirrorMode: TRUE
+
+# syncrepl config
+dn: olcOverlay=syncprov,olcDatabase={1}hdb,cn=config
+changetype: add
+objectClass: olcOverlayConfig
+objectClass: olcSyncProvConfig
+olcOverlay: syncprov
+olcSpCheckpoint: 100 10
+olcSpSessionlog: 100
+
