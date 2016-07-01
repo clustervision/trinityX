@@ -3,6 +3,7 @@
 # Environment modules setup
 
 source /etc/trinity.sh
+source "$POST_COMMON"
 
 echo '*** Creating the shared modules directories'
 
@@ -22,22 +23,11 @@ mkdir -pv "${TRIX_ROOT}/shared/modulefiles/local"
 
 echo '*** Adding the group path to the default configuration'
 
-function append_path {
-    # usage: append_path path
-    # the path is appened to the file if and only it's not in there already
-    
-    dest='/usr/share/Modules/init/.modulespath'
-    
-    if grep -q "^${1}$" "$dest" ; then
-        echo "Path already present: $1"
-    else
-        echo "$1" | tee -a "$dest"
-    fi
-}
+dest='/usr/share/Modules/init/.modulespath'
 
-append_path "${TRIX_ROOT}/shared/modulefiles/modulegroups"
-append_path "${TRIX_ROOT}/shared/modulefiles/CV-standard"
-append_path "${TRIX_ROOT}/shared/modulefiles/local"
+append_line "${TRIX_ROOT}/shared/modulefiles/modulegroups" "$dest"
+append_line "${TRIX_ROOT}/shared/modulefiles/CV-standard" "$dest"
+append_line "${TRIX_ROOT}/shared/modulefiles/local" "$dest"
 
 echo '*** Adding the group modulefiles'
 

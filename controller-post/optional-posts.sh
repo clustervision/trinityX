@@ -57,6 +57,7 @@ echo
 #---------------------------------------
 
 export POST_TOPDIR="$(dirname "${MYPATH}")"
+export POST_COMMON="${MYPATH}/common_functions.sh"
 
 for i in "${POSTLIST[@]}" ; do
 	
@@ -102,5 +103,5 @@ for i in "${POSTLIST[@]}" ; do
 	unset POST_PKGLIST POST_SCRIPT POST_FILEDIR
 done
 
-unset POST_TOPDIR
+unset POST_TOPDIR POST_COMMON
 
