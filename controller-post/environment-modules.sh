@@ -22,15 +22,28 @@ mkdir -pv "${TRIX_ROOT}/shared/modulefiles/local"
 
 echo '*** Adding the group path to the default configuration'
 
-echo "${TRIX_ROOT}/shared/modulefiles/modulegroups" | tee -a /usr/share/Modules/init/.modulespath
-echo "${TRIX_ROOT}/shared/modulefiles/CV-standard" | tee -a /usr/share/Modules/init/.modulespath
-echo "${TRIX_ROOT}/shared/modulefiles/local" | tee -a /usr/share/Modules/init/.modulespath
+function append_path {
+    # usage: append_path path
+    # the path is appened to the file if and only it's not in there already
+    
+    dest='/usr/share/Modules/init/.modulespath'
+    
+    if grep -q "^${1}$" "$dest" ; then
+        echo "Path already present: $1"
+    else
+        echo "$1" | tee -a "$dest"
+    fi
+}
+
+append_path "${TRIX_ROOT}/shared/modulefiles/modulegroups"
+append_path "${TRIX_ROOT}/shared/modulefiles/CV-standard"
+append_path "${TRIX_ROOT}/shared/modulefiles/local"
 
 echo '*** Adding the group modulefiles'
 
 cp -v "${POST_FILEDIR}/CV-advanced" "${TRIX_ROOT}/shared/modulefiles/modulegroups"
 
-echo "*** Adjusting the trinityX installation path'
+echo '*** Adjusting the trinityX installation path'
 
-sed -i 's#/TRIX_ROOT#'"$TRIX_ROOT"'#g' "${TRIX_ROOT}/shared/modulefiles/modulegroups/"*
+sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' "${TRIX_ROOT}/shared/modulefiles/modulegroups/"*
 
