@@ -39,7 +39,7 @@ function append_line {
     if grep -q -- "^${1}$" "$2" ; then
         errcho "Line already present in destination file: $1"
     else
-        echo -- "$1" | tee -a -- "$dest"
+        echo "$1" | tee -a "$2"
     fi
 }
 
