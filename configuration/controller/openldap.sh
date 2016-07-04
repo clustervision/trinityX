@@ -1,9 +1,7 @@
 #!/bin/bash
 
-source "${POST_FILEDIR}"/conf.sh
-
 # Initialize slapd's local db config and delete default db
-cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
+cp -v /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
 rm -rf /etc/openldap/slapd.d/cn\=config/olcDatabase*{hdb,monitor}*
 
 # Update configuration files
@@ -17,7 +15,7 @@ sed -e "s,{{ rootPW }},$HASH," "${POST_FILEDIR}"/conf/proxy.ldif > $TMP_DIR/prox
 
 
 # Accept TLS requests 
-cp -r "${POST_FILEDIR}"/conf/ssl /etc/openldap/certs/
+cp -rv "${POST_FILEDIR}"/conf/ssl /etc/openldap/certs/
 chown -R ldap. /etc/openldap/certs/ssl
 chmod 600 /etc/openldap/certs/ssl/key
 
@@ -25,7 +23,7 @@ sed -i 's,^SLAPD_URLS=.*$,SLAPD_URLS="ldapi:/// ldap:/// ldaps:///",' /etc/sysco
 
 # Start slapd
 systemctl enable slapd
-systemctl start slapd
+systemctl restart slapd
 
 # Dynamically load required schemas
 # (slapd might take a moment to be fully loaded)

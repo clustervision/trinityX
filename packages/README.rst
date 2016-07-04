@@ -59,7 +59,7 @@ easiest way to do it is with virtual machines:
 
 3. take a snapshot of the VM
 
-4. ``git pull`` the trinityX repository
+4. ``yum -y install git`` and ``git pull`` the trinityX repository
 
 5. configure the post scripts as needed for the next deployment
 

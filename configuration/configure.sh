@@ -67,6 +67,7 @@ function run_one_script {
     export POST_PKGLIST="${POSTDIR}/${1}.pkglist"
     export POST_SCRIPT="${POSTDIR}/${1}.sh"
     export POST_FILEDIR="${POSTDIR}/${1}"
+
     ret=0
     
     # Start with installing the packages if we have a list
@@ -81,6 +82,8 @@ function run_one_script {
     if (( $ret )) ; then
         echo_error_wait "Error during package installation: $POST_PKGLIST"
     fi
+    
+    ret=0
     
     # Then run the script if we have one
     if [[ -r "$POST_SCRIPT" ]] ; then
@@ -111,7 +114,7 @@ function apply_config {
     CONFDIR="$(dirname "$CONFFILE")"
 
     if ! source "$CONFFILE" ; then
-        echo_error_wait "Cannot source configuration file: $CONFFILE"
+        echo_error_wait "Cannot source configuration file: $1"
         return
     fi
     

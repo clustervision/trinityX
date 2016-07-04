@@ -8,11 +8,12 @@
 
 # NOTE: the local repository is enabled by default, which will cause problems if
 #       you don't use it and the directory is empty. In that case, simply
-#       disable the whole post script in the optional-posts.sh file.
-
-echo "Copying packages and setting up the local repository:"
+#       disable the whole post script.
 
 source /etc/trinity.sh
+
+
+echo_info "Copying packages and setting up the local repository:"
 
 if ls "${POST_TOPDIR}"/packages/repodata/*primary.sqlite.* >/dev/null 2>&1 ; then
 
@@ -27,9 +28,7 @@ gpgcheck=0
 EOF
 
 else
-	echo "*** The \"packages\" directory on the install media does not contain an RPM repo:"
-	echo "    ${POST_TOPDIR}/packages"
-	echo "    Local repository not created"
+	echo_warning 'The "packages" directory on the install media does not contain an RPM repo.'
 	exit 1
 fi
 

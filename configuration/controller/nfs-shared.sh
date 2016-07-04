@@ -1,15 +1,17 @@
 #!/bin/bash
 
 source /etc/trinity.sh
-source "$POST_COMMON"
 
 # Enable the NFS server and export the shared directory
 
-echo '*** Adding the shared export:'
+OPTS="${NFS_SHARED_OPTS:-ro,no_root_squash}"
 
-append_line "${TRIX_ROOT}/shared (ro,no_root_squash)" /etc/exports
+echo_info 'Adding the shared export'
 
-echo '*** Enabling and starting the NFS server'
+append_line "${TRIX_ROOT}/shared (${OPTS})" /etc/exports
+
+
+echo_info 'Enabling and starting the NFS server'
 
 systemctl enable nfs-server
 systemctl restart nfs-server

@@ -4,34 +4,38 @@
 
 # It may seem weird to install those repo files from a local directory instead
 # of pulling them off of the internet, but again, there is no guarantee that the
-# node has connectivity *during install*. It may have it later on.
+# controller has connectivity *during install*. It may have it later on.
 
+ret=0
 
 # Key files
-# No reliable naming convention, so list them all
-echo "*** Installing key files"
-rpm --import "${POST_FILEDIR}/RPM-GPG-KEY-elrepo.org"
-echo
+# No reliable naming convention, so they have to be provided
+
+if [[ "$ADDREPOS_KEYS" ]] ; then
+    echo_info 'Installing repository GPG keys'
+    for i in $ADDREPOS_KEYS ; do
+        rpm --import "${POST_FILEDIR}/$i"
+        (( ret += $? ))
+    done
+fi
+
 
 # Repo packages
-echo "*** Installing RPM files"
+echo_info 'Installing RPM files'
+
 if ls "${POST_FILEDIR}/"*.rpm >/dev/null 2>&1 ; then
-	rpm -Uvh "${POST_FILEDIR}/"*.rpm
-	ret1=$?
-else
-	ret1=0
+	yum -y install "${POST_FILEDIR}/"*.rpm
+	(( ret += $? ))
 fi
-echo
+
 
 # Individual repo files
-echo "*** Installing repo files"
+echo_info 'Installing repo files'
+
 if ls "${POST_FILEDIR}/"*.repo >/dev/null 2>&1 ; then
 	cp -v "${POST_FILEDIR}/"*.repo /etc/yum.repos.d
-	ret2=$?
-else
-	ret2=0
+	(( ret += $? ))
 fi
-echo
 
-exit $((ret1 + ret2))
+exit $ret
 

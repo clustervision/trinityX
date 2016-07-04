@@ -5,32 +5,20 @@
 # This should include all the most common tasks that have to be performed after
 # a completely standard CentOS minimal installation.
 
-
-################################################################################
-## Set those environment variables to match your configuration
-## Note that the root path must be a full path!
-
-TRIX_VERSION=10
-TRIX_ROOT="/trinity"
+# Configuration variables are sourced by the configuration script, and are made
+# available in the shell environment.
 
 
-################################################################################
-## Let's go
+# Fallback values for configuration parameters
 
-# A bit ugly, but errors in the output are identified much more quickly:
-function myecho {
-	echo
-	echo "####  $@"
-	echo
-}
+TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trix}"
+TRIX_VERSION="${STDCFG_TRIX_VERSION:-10}"
+SSHROOT="${STDCFG_SSHROOT:-0}"
 
-# Set up a few environment variables that we will need later
-MYFNAME="$(readlink -f "$0")"
-MYPATH="$(dirname "$MYFNAME")"
 
 #---------------------------------------
 
-myecho "Creating Trinity directory tree"
+echo_info "Creating Trinity directory tree"
 
 mkdir -pv "$TRIX_ROOT"
 mkdir -pv "${TRIX_ROOT}/shared"
@@ -39,7 +27,7 @@ mkdir -pv "${TRIX_ROOT}/applications"
 
 #---------------------------------------
 
-myecho "Creating the Trinity shell environment file"
+echo_info "Creating the Trinity shell environment file"
 
 cat > "${TRIX_ROOT}/trinity.sh" << EOF
 # trinityX environment file
@@ -61,24 +49,31 @@ EOF
 chmod 640 "${TRIX_ROOT}/trinity.sh"
 ln -f -s "${TRIX_ROOT}/trinity.sh" /etc/trinity.sh
 
-#---------------------------------------
-
-myecho "Allowing SSH login as root"
-
-sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
-systemctl restart sshd
 
 #---------------------------------------
 
-myecho "Generating root's private SSH keys"
+if (( $SSHROOT )) ; then
+    echo_info "Allowing SSH login as root"
+    
+    sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
+    systemctl restart sshd
+else
+    echo_info "SSH login as root disabled"
+fi
+
+
+#---------------------------------------
+
+echo_info "Generating root's private SSH keys if required"
 
 [[ -e /root/.ssh/id_rsa ]] || ssh-keygen -t rsa -b 4096 -N "" -f /root/.ssh/id_rsa
 [[ -e /root/.ssh/id_ed25519 ]] || ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519
 
+
 #---------------------------------------
 
-myecho "Disabling SELinux"
+echo_info "Disabling SELinux"
 
 sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux /etc/selinux/config
-echo "Please remember to reboot the node after completing the configuration!"
+echo_warn "Please remember to reboot the node after completing the configuration!"
 

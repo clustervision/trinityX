@@ -1,18 +1,21 @@
 #!/bin/bash
 
-source "$POST_COMMON"
-
 # Enable the NFS server and export the HOME directory
 
-echo '*** Adding the /home export:'
+OPTS="${NFS_HOME_OPTS:-rw,no_subtree_check,async}"
 
-append_line "/home (rw,no_subtree_check,async)" /etc/exports
+echo_info 'Adding the /home export'
 
-echo '*** Adjusting the number of threads for the NFS server:'
+append_line "/home (${OPTS})" /etc/exports
 
-sed -i 's/[# ]*\(RPCNFSDCOUNT=\).*/\1256/g' /etc/sysconfig/nfs
 
-echo '*** Enabling and starting the NFS server'
+if [[ "$NFS_HOME_RPCCOUNT" ]] ; then
+    echo_info 'Adjusting the number of threads for the NFS server'
+    sed -i 's/[# ]*\(RPCNFSDCOUNT=\).*/\1'"${NFS_HOME_RPCCOUNT}"'/g' /etc/sysconfig/nfs
+fi
+
+
+echo_info 'Enabling and starting the NFS server'
 
 systemctl enable nfs-server
 systemctl restart nfs-server
