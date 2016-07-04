@@ -19,6 +19,64 @@ fi
 
 #---------------------------------------
 
+# Colors!
+
+ESC_SEQ="\x1b["
+COL_RESET=$ESC_SEQ"39;49;00m"
+COL_RED=$ESC_SEQ"31;01m"
+COL_GREEN=$ESC_SEQ"32;01m"
+COL_YELLOW=$ESC_SEQ"33;01m"
+COL_BLUE=$ESC_SEQ"34;01m"
+COL_MAGENTA=$ESC_SEQ"35;01m"
+COL_CYAN=$ESC_SEQ"36;01m"
+
+
+# Display a string in a big fat header in colors
+
+function echo_header {
+    echo -e "$COL_GREEN"
+    echo -e "################################################################################\n##"
+    echo "##  $@"
+    echo -e "##\n################################################################################"
+    echo -e "$COL_RESET"
+}
+
+# Display a standard progress message
+
+function echo_progress {
+    echo -e "$COL_CYAN"
+    echo " ----->>>  $@"
+    echo -e "$COL_RESET"
+}
+
+
+# Display an information message
+
+function echo_info {
+    echo -e "$COL_MAGENTA"
+    echo "[ info ]   $@"
+    echo -e "$COL_RESET"
+}
+
+# Display a warning message
+
+function echo_warn {
+    echo -e "$COL_YELLOW"
+    echo "[ warn ]   $@"
+    echo -e "$COL_RESET"
+}
+
+# Display an error message
+
+function echo_error {
+    echo -e "$COL_RED"
+    echo "[ ERROR ]  $@"
+    echo -e "$COL_RESET"
+}
+
+
+#---------------------------------------
+
 # Add a line to a file if it's not there already
 # Note that it matches the exact string alone on its line, because otherwise it
 # would be just mad to deal with all the corner cases...
@@ -26,7 +84,7 @@ fi
 # Syntax: append_line string filename
 
 alsyntax="Error: wrong number of parameters.
-Syntax: append_line string file
+Syntax: append_line string filename
 Current parameters: ${@}
 "
 
@@ -37,7 +95,7 @@ function append_line {
     fi
     
     if grep -q -- "^${1}$" "$2" ; then
-        errcho "Line already present in destination file: $1"
+        echo_info "Line already present in destination file: $1"
     else
         echo "$1" | tee -a "$2"
     fi
