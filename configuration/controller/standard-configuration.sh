@@ -9,6 +9,8 @@
 # available in the shell environment.
 
 
+source "$POST_CONFIG"
+
 # Fallback values for configuration parameters
 
 TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trix}"

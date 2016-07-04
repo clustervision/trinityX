@@ -4,7 +4,10 @@ source /etc/trinity.sh
 
 # Enable the NFS server and export the shared directory
 
+source "$POST_CONFIG"
+
 OPTS="${NFS_SHARED_OPTS:-ro,no_root_squash}"
+
 
 echo_info 'Adding the shared export'
 

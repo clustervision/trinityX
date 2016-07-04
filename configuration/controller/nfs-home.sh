@@ -2,7 +2,10 @@
 
 # Enable the NFS server and export the HOME directory
 
+source "$POST_CONFIG"
+
 OPTS="${NFS_HOME_OPTS:-rw,no_subtree_check,async}"
+
 
 echo_info 'Adding the /home export'
 

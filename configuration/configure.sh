@@ -107,10 +107,11 @@ function run_one_script {
 
 function apply_config {
     
-    CONFFILE="$(readlink -e "$1")"
-    CONFDIR="$(dirname "$CONFFILE")"
+    POST_CONFIG="$(readlink -e "$1")"
+    CONFDIR="$(dirname "$POST_CONFIG")"
 
-    source "$CONFFILE"
+    source "$POST_CONFIG"
+    export POST_CONFIG
     
     # Deal with variations in the POSTDIR values:
     # - defined and absolute -> nothing to do
@@ -122,7 +123,7 @@ function apply_config {
             POSTDIR="${CONFDIR}/${POSTDIR}"
         fi
     else
-        POSTDIR="$(basename "$CONFFILE" .cfg)"
+        POSTDIR="$(basename "$POST_CONFIG" .cfg)"
     fi
     
     POSTDIR=$(readlink -f "$POSTDIR")
@@ -141,6 +142,8 @@ function apply_config {
     for post in "${POSTLIST[@]}" ; do
         run_one_script "$post"
     done
+    
+    unset POST_CONFIG
 }
 
 

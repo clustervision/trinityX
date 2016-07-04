@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source "$POST_CONFIG"
+
 # Initialize slapd's local db config and delete default db
 cp -v /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
 rm -rf /etc/openldap/slapd.d/cn\=config/olcDatabase*{hdb,monitor}*
