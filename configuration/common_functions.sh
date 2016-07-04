@@ -74,6 +74,13 @@ function echo_error {
     echo -e "$COL_RESET"
 }
 
+# Same, and wait for user input
+
+function echo_error_wait {
+    echo_error "$@"
+    read -p "           Press Enter to continue."
+}
+
 
 #---------------------------------------
 
