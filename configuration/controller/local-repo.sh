@@ -28,7 +28,7 @@ gpgcheck=0
 EOF
 
 else
-	echo_warning 'The "packages" directory on the install media does not contain an RPM repo.'
+	echo_warn 'The "packages" directory on the install media does not contain an RPM repo.'
 	exit 1
 fi
 
