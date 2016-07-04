@@ -41,10 +41,7 @@ MYPATH="$(dirname "$(readlink -f "$0")")"
 export POST_TOPDIR="$(dirname "${MYPATH}")"
 export POST_COMMON="${MYPATH}/common_functions.sh"
 
-if ! source "$POST_COMMON" ; then
-    echo "ERROR: cannot source common file \"$POST_COMMON\"" >&2
-    exit 1
-fi
+source "$POST_COMMON"
 
 
 
@@ -113,10 +110,7 @@ function apply_config {
     CONFFILE="$(readlink -e "$1")"
     CONFDIR="$(dirname "$CONFFILE")"
 
-    if ! source "$CONFFILE" ; then
-        echo_error_wait "Cannot source configuration file: $1"
-        return
-    fi
+    source "$CONFFILE"
     
     # Deal with variations in the POSTDIR values:
     # - defined and absolute -> nothing to do
