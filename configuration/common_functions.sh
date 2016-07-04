@@ -1,18 +1,12 @@
 
 # Common functions that can be used by all scripts
 
-shopt -s expand_aliases
-
-alias errcho='>&2 echo'
-
-
-#---------------------------------------
 
 # This file is made to be sourced by the scripts that require it, and not
 # executed directly. Exit if executed.
 
 if [[ "$BASH_SOURCE" == "$0" ]] ; then
-    errcho 'This file must be sourced by another script, not executed.'
+    echo 'This file must be sourced by another script, not executed.' >&2
     exit 1
 fi
 
@@ -21,14 +15,14 @@ fi
 
 # Colors!
 
-ESC_SEQ="\x1b["
-COL_RESET=$ESC_SEQ"39;49;00m"
-COL_RED=$ESC_SEQ"31;01m"
-COL_GREEN=$ESC_SEQ"32;01m"
-COL_YELLOW=$ESC_SEQ"33;01m"
-COL_BLUE=$ESC_SEQ"34;01m"
-COL_MAGENTA=$ESC_SEQ"35;01m"
-COL_CYAN=$ESC_SEQ"36;01m"
+export ESC_SEQ="\x1b["
+export COL_RESET=$ESC_SEQ"39;49;00m"
+export COL_RED=$ESC_SEQ"31;01m"
+export COL_GREEN=$ESC_SEQ"32;01m"
+export COL_YELLOW=$ESC_SEQ"33;01m"
+export COL_BLUE=$ESC_SEQ"34;01m"
+export COL_MAGENTA=$ESC_SEQ"35;01m"
+export COL_CYAN=$ESC_SEQ"36;01m"
 
 
 # Display a string in a big fat header in colors
@@ -81,6 +75,13 @@ function echo_error_wait {
     read -p "           Press Enter to continue."
 }
 
+typeset -fx echo_header
+typeset -fx echo_progress
+typeset -fx echo_info
+typeset -fx echo_warn
+typeset -fx echo_error
+typeset -fx echo_error_wait
+
 
 #---------------------------------------
 
@@ -90,7 +91,7 @@ function echo_error_wait {
 
 # Syntax: append_line string filename
 
-alsyntax="Error: wrong number of parameters.
+export alsyntax="Error: wrong number of parameters.
 Syntax: append_line string filename
 Current parameters: ${@}
 "
@@ -107,4 +108,6 @@ function append_line {
         echo "$1" | tee -a "$2"
     fi
 }
+
+typeset -fx append_line
 
