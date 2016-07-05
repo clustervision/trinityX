@@ -59,7 +59,6 @@ source "$POST_COMMON"
 
 function run_one_script {
     
-    echo_progress "Running post script: $1"
     
     export POST_PKGLIST="${POSTDIR}/${1}.pkglist"
     export POST_SCRIPT="${POSTDIR}/${1}.sh"
@@ -69,6 +68,7 @@ function run_one_script {
     
     # Start with installing the packages if we have a list
     if [[ -r "$POST_PKGLIST" ]] ; then
+        echo_progress "Installing packages: $POST_PKGLIST"
         yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
         ret=$?
     else
@@ -84,6 +84,7 @@ function run_one_script {
     
     # Then run the script if we have one
     if [[ -r "$POST_SCRIPT" ]] ; then
+        echo_progress "Running post script: $POST_SCRIPT"
         bash "$POST_SCRIPT"
         ret=$?
     else
