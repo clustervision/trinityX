@@ -48,9 +48,9 @@ ldapmodify -Y EXTERNAL -H ldapi:/// -f $TMP_DIR/proxy.ldif
 ldapadd -D cn=manager,dc=local -w $SLAPD_ROOT_PW -f "${POST_FILEDIR}"/conf/schema.ldif
 
 # Setup obol
-cp -v openldap/obol /usr/local/bin
+cp -v "${POST_FILEDIR}"/obol /usr/local/bin
 chmod +x /usr/local/bin/obol
 
 # Cleanup
-rm -rf $TMP_DIR
+rm -rf "$TMP_DIR"
 
