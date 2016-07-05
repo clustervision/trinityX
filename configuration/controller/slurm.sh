@@ -6,9 +6,11 @@ source "$POST_CONFIG"
 source /etc/trinity.sh
 
 
+echo "
 ${SLURMDBD_MYSQL_DB?"Variable SLURMDBD_MYSQL_DB was not set"}
 ${SLURMDBD_MYSQL_USER?"Variable SLURMDBD_MYSQL_USER  was not set"}
 ${SLURMDBD_MYSQL_PASS?"Variable SLURMDBD_MYSQL_PASS was not set"}
+">/dev/null
 
 echo_info "Creating ${TRIX_ROOT}/shared/etc"
 
@@ -25,7 +27,7 @@ echo_info "Moving /etc/munge to ${TRIX_ROOT}/shared/etc"
 
 echo_info "Create munge.key file."
 
-[ -f ${TRIX_ROOT}/shared/etc/munge/munge.key ] || ( /usr/bin/dd if=/dev/random bs=1 count=1024 of=${TRIX_ROOT}/shared/etc/munge/munge.key && \
+[ -f ${TRIX_ROOT}/shared/etc/munge/munge.key ] || ( /usr/bin/dd if=/dev/urandom bs=1 count=1024 of=${TRIX_ROOT}/shared/etc/munge/munge.key && \
 chmod 400 ${TRIX_ROOT}/shared/etc/munge/munge.key && chown munge:munge ${TRIX_ROOT}/shared/etc/munge/munge.key )
 
 echo_info "Update munge unit files."
@@ -65,7 +67,7 @@ if [ ! -f ${TRIX_ROOT}/shared/etc/slurm/slurm.conf ]; then
 
     sed -i -e "s/{{ HEADNODE }}/${SLURM_HEADNODE=$(hostname -s)}/" /etc/slurm/slurm.conf
     sed -i -e "s/{{ HEADNODE }}/${SLURM_HEADNODE=$(hostname -s)}/" /etc/slurm/slurmdbd.conf
-    if [ -n ${SLURM_BACKUPNODE} ]; then
+    if [ ${SLURM_BACKUPNODE} ]; then
         sed -i -e '/BACKUPNODE/{s/^[# \t]\+//}' /etc/slurm/slurm.conf
         sed -i -e '/BACKUPNODE/{s/^[# \t]\+//}' /etc/slurm/slurmdbd.conf
         sed -i -e "s/{{ BACKUPNODE }}/${SLURM_BACKUPNODE}/" /etc/slurm/slurm.conf
@@ -73,7 +75,7 @@ if [ ! -f ${TRIX_ROOT}/shared/etc/slurm/slurm.conf ]; then
     fi
     sed -i -e "s/{{ SLURMDBD_MYSQL_DB }}/${SLURMDBD_MYSQL_DB}/" /etc/slurm/slurmdbd.conf
     sed -i -e "s/{{ SLURMDBD_MYSQL_USER }}/${SLURMDBD_MYSQL_USER}/" /etc/slurm/slurmdbd.conf
-    sed -i -e "s/{{ SLURMDBD_MYSQL_PASS }}/${SLURMDBD_MYSQL_PASS}/" /etc/slurm/slurmdbd.conf
+    sed -i -e "s|{{ SLURMDBD_MYSQL_PASS }}|${SLURMDBD_MYSQL_PASS}|" /etc/slurm/slurmdbd.conf
 fi
     
 
@@ -103,6 +105,7 @@ systemctl start slurmdbd
 systemctl enable slurmdbd
 
 
+echo_info "Start slurm."
 
 if [ !  -d /etc/systemd/system/slurm.service.d ]; then
 

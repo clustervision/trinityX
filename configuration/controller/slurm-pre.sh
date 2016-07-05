@@ -1,4 +1,5 @@
 source "$POST_CONFIG"
+
 source /etc/trinity.sh
 
 
