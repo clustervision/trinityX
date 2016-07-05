@@ -72,7 +72,7 @@ function run_one_script {
         yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
         ret=$?
     else
-        echo_warn "No package file found: $POST_PKGLIST"
+        echo_info "No package file found: $POST_PKGLIST"
     fi
     
     # Take a break if the installation didn't go right
@@ -87,7 +87,7 @@ function run_one_script {
         bash "$POST_SCRIPT"
         ret=$?
     else
-        echo_warn "No post script found: $POST_SCRIPT"
+        echo_info "No post script found: $POST_SCRIPT"
     fi
     
     # Take a break if the script returned an error code

@@ -39,7 +39,7 @@ function echo_header {
 
 function echo_progress {
     echo -e "$COL_CYAN"
-    echo " ----->>>  $@"
+    echo " ----->>>  $@  <<<-----"
     echo -e "$COL_RESET"
 }
 
