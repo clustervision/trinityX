@@ -1,0 +1,77 @@
+#!/bin/bash
+
+readonly PROGNAME=$(basename $0)
+readonly PROGDIR=$(readlink -m $(dirname $0))
+
+function usage () {
+  printf '%s\n\n%s\n' "Builds a file structure to be used in building a ISO or USB disk." \
+                      "USAGE:" \
+                      "$ ${PROGNAME} -i [ISO file] -m [md5sum] -b [y/n]" \
+                      "File will be checked to verify its an ISO and contains a CentOS image."
+}
+
+while getopts "i:m:b:" opt; do
+  case "${opt}" in
+    i)
+      ISO=${OPTARG}
+      ;;
+    b)
+      if ! { [[ $OPTARG =~ ^([yY][eE][sS]|[yY])$ ]] || [[ $OPTARG =~ ^([nN][oO]|[nN])$ ]]; }; then
+        usage
+        exit 1
+      fi
+      MKISO=${OPTARG}
+      ;;
+    m)
+      HASH=${OPTARG}
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if { [ -z "${ISO}" ] || [ -z "${HASH}" ] || [ -z "${MKISO}" ] || ! [ -f ${ISO} ]; }; then
+  usage
+  exit 1
+fi
+
+function create_directory_structure () {
+  printf '%s %s\n' $FUNCNAME $@
+  mkdir -p ${PROGDIR}/iso
+  mkdir -p ${PROGDIR}/distribution/{packages,isolinux,ks,liveos}
+}
+
+function copy_iso_files () {
+  printf '%s %s\n' $FUNCNAME $@
+  mount -o loop ${ISO} ${PROGDIR}/iso &> /dev/null 2>&1
+  cp ${PROGDIR}/iso/.discinfo ${PROGDIR}/distribution/isolinux
+  cp -r ${PROGDIR}/iso/. ${PROGDIR}/distribution/isolinux
+  cp -r ${PROGDIR}/iso/images/. ${PROGDIR}/distribution/images
+  cp -r ${PROGDIR}/iso/LiveOS/. ${PROGDIR}/distribution/liveos
+  umount ${PROGDIR}/iso
+}
+
+#clean up, remove once done with your code
+function cleanup () {
+  printf '%s %s\n' $FUNCNAME $@
+  rm -rf ${PROGDIR}/iso
+  rm -rf ${PROGDIR}/distribution
+}
+
+function build_custom_iso () {
+  printf '%s %s\n' $FUNCNAME $@
+  cd ${PROGDIR}/distribution
+  mkisofs -o custom.iso -b isolinux.bin -c boot.cat -no-emul-boot -V 'CentOS 7 x86_64' -boot-load-size 4 -boot-info-table -R -J -v -T isolinux/
+}
+
+function main () {
+  create_directory_structure
+  copy_iso_files
+  build_custom_iso
+  cleanup
+}
+
+main
