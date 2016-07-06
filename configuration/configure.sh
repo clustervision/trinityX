@@ -154,9 +154,13 @@ function apply_config {
 
 echo "Beginning of script: $(date)"
 
-for cfg in "$@" ; do
-    echo_header "CONFIGURATION FILE: $cfg"
-    apply_config "$cfg"
+for param in "$@" ; do
+    if [[ "$param" == "--nocolor" ]] ; then
+        export NOCOLOR=""
+    else
+        echo_header "CONFIGURATION FILE: $param"
+        apply_config "$param"
+    fi
 done
 
 echo "End of script: $(date)"
