@@ -111,3 +111,17 @@ function append_line {
 
 typeset -fx append_line
 
+
+#---------------------------------------
+
+# Generate a random string if the environment variable is unset or empty
+
+# Syntax:  get_password variable
+# The output is printed on stdout
+
+function get_password {
+    echo ${1:-$(openssl rand -base64 8 | head -c 8)}
+}
+
+typeset -fx get_password
+
