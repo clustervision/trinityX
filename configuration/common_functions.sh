@@ -133,7 +133,7 @@ function get_password {
 function store_password {
     
     if (( $# != 2 )) ; then
-        echo_warn "Cannot store the password: wrong number of arguments: $@"
+        echo_warn "store_password: wrong number of arguments. Usage: store_password message_string password"
         return 1
     fi
 
@@ -142,15 +142,21 @@ function store_password {
     [[ "$TRIX_ROOT" ]] || source /etc/trinity.sh
     
     if ! [[ -w "${TRIX_ROOT}/trinity.shadow" ]] ; then
-        echo_warn "Cannot store the password: file not writeable: ${TRIX_ROOT}/trinity.shadow"
+        echo_warn "store_password: file not writeable: ${TRIX_ROOT}/trinity.shadow"
         return 1
     fi
     
-    cat >> "${TRIX_ROOT}/trinity.shadow" << EOF
+    # If the message already exists, assume that it's an update of the password
+    # and update the first version, otherwise append.
+    if grep -q "^# ${1}$" "${TRIX_ROOT}/trinity.shadow" ; then
+        sed -i "/^# ${1}$"'/{n; s/.*/'"$2"'/;}' "${TRIX_ROOT}/trinity.shadow"
+    else
+        cat >> "${TRIX_ROOT}/trinity.shadow" << EOF
 
 # ${1}
 $2
 EOF
+    fi
 }
 
 
