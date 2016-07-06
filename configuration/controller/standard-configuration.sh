@@ -37,6 +37,7 @@ cat > "${TRIX_ROOT}/trinity.sh" << EOF
 
 TRIX_VERSION="$TRIX_VERSION"
 TRIX_ROOT="$TRIX_ROOT"
+TRIX_SHADOW="${TRIX_ROOT}/trinity.shadow"
 TRIX_CTRL_HOSTNAME=$(hostname)
 
 EOF

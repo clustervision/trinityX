@@ -126,36 +126,38 @@ function get_password {
 }
 
 
-# Save the password to the password file
+# Save the password to the shadow file
+# The shadow file being a standard shell file, the fields are in the form
+# variable="password". The variable names must be sanitized.
 
-# Syntax: store_password message_string password
+# Syntax: store_password variable_name password
 
 function store_password {
     
     if (( $# != 2 )) ; then
-        echo_warn "store_password: wrong number of arguments. Usage: store_password message_string password"
+        echo_warn "store_password: usage: store_password variable_name password"
         return 1
     fi
 
     # we need the installation path, and the calling script may not have sourced
     # it already
-    [[ "$TRIX_ROOT" ]] || source /etc/trinity.sh
-    
-    if ! [[ -w "${TRIX_ROOT}/trinity.shadow" ]] ; then
-        echo_warn "store_password: file not writeable: ${TRIX_ROOT}/trinity.shadow"
+    [[ "$TRIX_SHADOW" ]] || source /etc/trinity.sh
+     
+    if ! [[ -w "${TRIX_SHADOW}" ]] ; then
+        echo_warn "store_password: shadow file not writeable: ${TRIX_SHADOW}"
         return 1
     fi
     
-    # If the message already exists, assume that it's an update of the password
-    # and update the first version, otherwise append.
-    if grep -q "^# ${1}$" "${TRIX_ROOT}/trinity.shadow" ; then
-        sed -i "/^# ${1}$"'/{n; s/.*/'"$2"'/;}' "${TRIX_ROOT}/trinity.shadow"
+    # Sanitize the variable name
+    VARNAME="$(echo -n "$1" | tr -c '[:alnum:]' _)"
+    
+    # If the variable name already exists, assume that it's an update of the
+    # password and update the first version, otherwise append.
+    
+    if grep -q "^${VARNAME}=" "${TRIX_SHADOW}" ; then
+        sed -i 's/\('"${VARNAME}"'=\).*/\1'"\"${2}\"/" "${TRIX_SHADOW}"
     else
-        cat >> "${TRIX_ROOT}/trinity.shadow" << EOF
-
-# ${1}
-$2
-EOF
+        echo "${VARNAME}=\"${2}\"" >> "${TRIX_SHADOW}"
     fi
 }
 
