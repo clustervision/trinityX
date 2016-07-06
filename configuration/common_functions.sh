@@ -28,44 +28,44 @@ export COL_CYAN=$ESC_SEQ"36;01m"
 # Display a string in a big fat header in colors
 
 function echo_header {
-    echo -e "$COL_GREEN"
+    echo -e "${NOCOLOR-$COL_GREEN}"
     echo -e "################################################################################\n##"
     echo "##  $@"
     echo -e "##\n################################################################################"
-    echo -e "$COL_RESET"
+    echo -e "${NOCOLOR-$COL_RESET}"
 }
 
 # Display a standard progress message
 
 function echo_progress {
-    echo -e "$COL_CYAN"
+    echo -e "${NOCOLOR-$COL_CYAN}"
     echo " ----->>>  $@  <<<-----"
-    echo -e "$COL_RESET"
+    echo -e "${NOCOLOR-$COL_RESET}"
 }
 
 
 # Display an information message
 
 function echo_info {
-    echo -e "$COL_MAGENTA"
+    echo -e "${NOCOLOR-$COL_MAGENTA}"
     echo "[ info ]   $@"
-    echo -e "$COL_RESET"
+    echo -e "${NOCOLOR-$COL_RESET}"
 }
 
 # Display a warning message
 
 function echo_warn {
-    echo -e "$COL_YELLOW"
+    echo -e "${NOCOLOR-$COL_YELLOW}"
     echo "[ warn ]   $@"
-    echo -e "$COL_RESET"
+    echo -e "${NOCOLOR-$COL_RESET}"
 }
 
 # Display an error message
 
 function echo_error {
-    echo -e "$COL_RED"
+    echo -e "${NOCOLOR-$COL_RED}"
     echo "[ ERROR ]  $@"
-    echo -e "$COL_RESET"
+    echo -e "${NOCOLOR-$COL_RESET}"
 }
 
 # Same, and wait for user input
