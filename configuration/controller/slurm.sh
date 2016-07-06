@@ -9,8 +9,9 @@ source /etc/trinity.sh
 echo "
 ${SLURMDBD_MYSQL_DB?"Variable SLURMDBD_MYSQL_DB was not set"}
 ${SLURMDBD_MYSQL_USER?"Variable SLURMDBD_MYSQL_USER  was not set"}
-${SLURMDBD_MYSQL_PASS?"Variable SLURMDBD_MYSQL_PASS was not set"}
 ">/dev/null
+_SLURMDBD_MYSQL_PASS=`get_password $SLURMDBD_MYSQL_PASS`
+store_password SLURMDBD_MYSQL_PASS $_SLURMDBD_MYSQL_PASS
 
 echo_info "Creating ${TRIX_ROOT}/shared/etc"
 
@@ -32,7 +33,6 @@ chmod 400 ${TRIX_ROOT}/shared/etc/munge/munge.key && chown munge:munge ${TRIX_RO
 
 echo_info "Update munge unit files."
 
-mkdir -p /etc/systemd/system/munge.service.d
 
 if [ !  -d /etc/systemd/system/munge.service.d ]; then
     mkdir -p /etc/systemd/system/munge.service.d
@@ -75,9 +75,32 @@ if [ ! -f ${TRIX_ROOT}/shared/etc/slurm/slurm.conf ]; then
     fi
     sed -i -e "s/{{ SLURMDBD_MYSQL_DB }}/${SLURMDBD_MYSQL_DB}/" /etc/slurm/slurmdbd.conf
     sed -i -e "s/{{ SLURMDBD_MYSQL_USER }}/${SLURMDBD_MYSQL_USER}/" /etc/slurm/slurmdbd.conf
-    sed -i -e "s|{{ SLURMDBD_MYSQL_PASS }}|${SLURMDBD_MYSQL_PASS}|" /etc/slurm/slurmdbd.conf
+    sed -i -e "s|{{ SLURMDBD_MYSQL_PASS }}|${_SLURMDBD_MYSQL_PASS}|" /etc/slurm/slurmdbd.conf
 fi
     
+echo_info "Creating db for slurm accounting"
+
+function do_sql_req {
+    source "$TRIX_SHADOW"
+    if [ -f ~/.my.cnf ]; then
+        echo $@ | /usr/bin/mysql
+        return 0
+    fi
+    if [ ${MYSQL_ROOT_PASSWORD} ]; then
+        echo $@ | /usr/bin/mysql -u root --password="${MYSQL_ROOT_PASSWORD}"
+        return 0
+    fi
+    echo $@ | /usr/bin/mysql -u root 
+}
+
+
+do_sql_req "CREATE DATABASE IF NOT EXISTS ${SLURMDBD_MYSQL_DB};"
+do_sql_req "CREATE USER '${SLURMDBD_MYSQL_USER}'@'%' IDENTIFIED BY '${_SLURMDBD_MYSQL_PASS}';"
+do_sql_req "CREATE USER '${SLURMDBD_MYSQL_USER}'@'localhost' IDENTIFIED BY '${_SLURMDBD_MYSQL_PASS}';"
+do_sql_req "GRANT ALL PRIVILEGES ON ${SLURMDBD_MYSQL_DB}.* TO '${SLURMDBD_MYSQL_USER}'@'%';"
+do_sql_req "FLUSH PRIVILEGES;"
+
+
 
 echo_info "Start slurm accounting."
 
