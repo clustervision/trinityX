@@ -152,8 +152,12 @@ function apply_config {
 
 # And finally, loop over the parameters
 
+echo "Beginning of script: $(date)"
+
 for cfg in "$@" ; do
     echo_header "CONFIGURATION FILE: $cfg"
     apply_config "$cfg"
 done
+
+echo "End of script: $(date)"
 
