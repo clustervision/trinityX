@@ -48,8 +48,19 @@ fi
 
 EOF
 
-chmod 640 "${TRIX_ROOT}/trinity.sh"
+chmod 644 "${TRIX_ROOT}/trinity.sh"
 ln -f -s "${TRIX_ROOT}/trinity.sh" /etc/trinity.sh
+
+
+#---------------------------------------
+
+echo_info "Creating the Trinity private file"
+
+cat > "${TRIX_ROOT}/trinity.shadow" << EOF
+# Trinity shadow file
+EOF
+
+chmod 600 "${TRIX_ROOT}/trinity.shadow"
 
 
 #---------------------------------------

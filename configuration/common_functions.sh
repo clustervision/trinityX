@@ -114,14 +114,46 @@ typeset -fx append_line
 
 #---------------------------------------
 
-# Generate a random string if the environment variable is unset or empty
+# Password management functions
 
-# Syntax:  get_password variable
-# The output is printed on stdout
+# Generate a random string if the parameter is unset or empty
+
+# Syntax: get_password somestring
+# The output string is printed on stdout
 
 function get_password {
     echo ${1:-$(openssl rand -base64 8 | head -c 8)}
 }
 
+
+# Save the password to the password file
+
+# Syntax: store_password message_string password
+
+function store_password {
+    
+    if (( $# != 2 )) ; then
+        echo_warn "Cannot store the password: wrong number of arguments: $@"
+        return 1
+    fi
+
+    # we need the installation path, and the calling script may not have sourced
+    # it already
+    [[ "$TRIX_ROOT" ]] || source /etc/trinity.sh
+    
+    if ! [[ -w "${TRIX_ROOT}/trinity.shadow" ]] ; then
+        echo_warn "Cannot store the password: file not writeable: ${TRIX_ROOT}/trinity.shadow"
+        return 1
+    fi
+    
+    cat >> "${TRIX_ROOT}/trinity.shadow" << EOF
+
+# ${1}
+$2
+EOF
+}
+
+
 typeset -fx get_password
+typeset -fx store_password
 
