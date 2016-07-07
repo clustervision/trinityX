@@ -1,27 +1,14 @@
 #!/usr/bin/env bash
 
-function please_wait () {
-  pid=$1
-  text=$2
-  delay=0.75
-  cspace=$(printf "%0.s." {1..60})
-  cgreen="\e[32m"
-  creset="\e[0m"
-  cred="\e[31m"
-  while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-    printf '%-.35s %b\r' "$text $cspace " "[    ]"
-    sleep $delay
-    printf '%-.35s %b\r' "$text $cspace " "[ .  ]"
-    sleep $delay
-    printf '%-.35s %b\r' "$text $cspace " "[ .. ]"
-    sleep $delay
-    printf '%-.35s %b\r' "$text $cspace " "[  . ]"
-    sleep $delay
-  done
-  printf '%-.35s %b\r\n' "$text $cspace " "[$cgreen ok $creset]"
-}
+readonly cp="/usr/bin/cp"
+
+source "$POST_CONFIG"
+source /etc/trinity.sh
+source ${TRIX_ROOT}/trinity.shadow
 
 function create_repository_file () {
+  printf '%s %s\n' $FUNCNAME $@
+  [[ -e additional-repos/zabbix.repo ]] && cp additional-repos/zabbix.repo /etc/yum.repos.d/ || \
   printf '%b\n' '[zabbix]' \
                 'name=Zabbix Official Repository - $basearch' \
                 'baseurl=http://repo.zabbix.com/zabbix/3.0/rhel/7/$basearch/' \
@@ -37,6 +24,8 @@ function create_repository_file () {
 }
 
 function add_gpg_key () {
+  printf '%s %s\n' $FUNCNAME $@
+  [[ -e additional-repos/RPM-GPG-KEY-ZABBIX ]] && cp additional-repos/RPM-GPG-KEY-ZABBIX /etc/pki/rpm-gpg/ || \
   printf '%b\n' '-----BEGIN PGP PUBLIC KEY BLOCK-----' \
               'Version: GnuPG v1.4.5 (GNU/Linux)\n' \
               'mQGiBFCNJaYRBAC4nIW8o2NyOIswb82Xn3AYSMUcNZuKB2fMtpu0WxSXIRiX2BwC' \
@@ -63,13 +52,41 @@ function add_gpg_key () {
 }
 
 function install_zabbix_controller () {
-  yum install zabbix-server-mysql zabbix-web-mysql
+  printf '%s %s\n' $FUNCNAME $@
+  yum -q -y install zabbix-server-mysql zabbix-web-mysql mariadb-server
+}
+
+function start_services () {
+  systemctl start mariadb
+  systemctl enable mariadb
+}
+
+function setup_zabbix_controller () {
+  printf '%s %s\n' $FUNCNAME $@
+  if mysql -u root -e 'use zabbix' &>/dev/null; then
+    printf "Zabbix installation detected, do you want erase the old installation or continue?\n"
+    read -r -p "Are you sure? [y/N] " response
+    case $response in
+      [yY][eE][sS]|[yY])
+        mysql -u root -e "drop database zabbix;"
+        ;;
+      *)
+        printf "Interrupted by user: exiting\n"
+        exit 1
+        ;;
+    esac
+  fi
+  mysql -u root -e "create database zabbix character set utf8 collate utf8_bin;"
+  mysql -u root -e "grant all privileges on zabbix.* to zabbix@localhost identified by 'foopass';"
+  zcat /usr/share/doc/zabbix-server-mysql-3.0.3/create.sql.gz | mysql -uroot zabbix
 }
 
 function main () {
   create_repository_file
   add_gpg_key
   install_zabbix_controller
+  start_services
+  setup_zabbix_controller
 }
 
 printf '%s\n\n' 'Zabbix installation script:'
