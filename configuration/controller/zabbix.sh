@@ -2,6 +2,10 @@
 
 readonly cp="/usr/bin/cp"
 
+source "$POST_CONFIG"
+source /etc/trinity.sh
+source ${TRIX_ROOT}/trinity.shadow
+
 function create_repository_file () {
   printf '%s %s\n' $FUNCNAME $@
   [[ -e additional-repos/zabbix.repo ]] && cp additional-repos/zabbix.repo /etc/yum.repos.d/ || \
@@ -67,7 +71,7 @@ function setup_zabbix_controller () {
         mysql -u root -e "drop database zabbix;"
         ;;
       *)
-        printf "Interrupted by user: exit\n"
+        printf "Interrupted by user: exiting\n"
         exit 1
         ;;
     esac
@@ -78,7 +82,6 @@ function setup_zabbix_controller () {
 }
 
 function main () {
-  printf '%s %s\n' $FUNCNAME $@
   create_repository_file
   add_gpg_key
   install_zabbix_controller
