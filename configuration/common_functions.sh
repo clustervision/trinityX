@@ -139,13 +139,12 @@ function store_variable {
     VARNAME="$(echo -n "$2" | tr -c '[:alnum:]' _)"
     
     # If the variable name already exists, assume that it's an update of the
-    # password and update the first version, otherwise append.
+    # password. Delete the existing line, as it will be appended again to the
+    # file.
     
-    if grep -q "^${VARNAME}=" "$1" ; then
-        sed -i 's/\('"${VARNAME}"'=\).*/\1'"\"${3}\"/" "$1"
-    else
-        echo "${VARNAME}=\"${3}\"" >> "$1"
-    fi
+    sed -i '/^'${VARNAME}'=/d' "$1"
+
+    echo "${VARNAME}=\"${3}\"" >> "$1"
 }
 
 typeset -fx store_variable

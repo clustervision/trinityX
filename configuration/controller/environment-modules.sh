@@ -15,11 +15,11 @@ echo_info 'Creating the shared modules directories'
 #     |-- local             site-local modules, available by default
 #      -- modulegroups      modulefiles to load groups (advanced, local, etc)
 
-mkdir -pv "${TRIX_ROOT}/shared/modulefiles"
-mkdir -pv "${TRIX_ROOT}/shared/modulefiles/modulegroups"
-mkdir -pv "${TRIX_ROOT}/shared/modulefiles/CV-standard"
-mkdir -pv "${TRIX_ROOT}/shared/modulefiles/CV-advanced"
-mkdir -pv "${TRIX_ROOT}/shared/modulefiles/local"
+mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles"
+mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles/modulegroups"
+mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles/CV-standard"
+mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles/CV-advanced"
+mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles/local"
 
 
 echo_info 'Adding the group path to the default configuration'

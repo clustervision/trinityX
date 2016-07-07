@@ -22,6 +22,7 @@ cp -r${QUIETRUN-v} "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
 
 if ls "${POST_TOPDIR}"/packages/local-repo/repodata/*primary.sqlite.* >/dev/null 2>&1 ; then
     cp ${QUIETRUN--v} ${POST_FILEDIR}/trix-local.repo /etc/yum.repos.d/
+    sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' /etc/yum.repos.d/trix-local.repo
 else
     echo_warn 'No "local-repo" repository on the installation media.'
 fi
