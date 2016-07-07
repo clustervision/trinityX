@@ -32,5 +32,8 @@ else
     echo "\"/etc/trinity.sh\" is created during the Trinity X installation."
 fi
 
+
+echo -e ${QUIETRUN+"\nIf you read this, then the silent option (-q) is enabled."}
+
 echo_progress "That's all folks!"
 

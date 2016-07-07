@@ -2,15 +2,16 @@
 
 readonly PROGNAME=$(basename $0)
 readonly PROGDIR=$(readlink -m $(dirname $0))
+KICKSTART=default.ks
 
 function usage () {
   printf '%s\n\n%s\n' "Builds a file structure to be used in building a ISO or USB disk." \
                       "USAGE:" \
-                      "$ ${PROGNAME} -i [ISO file] -m [md5sum] -b [y/n]" \
+                      "$ ${PROGNAME} -i [ISO file] -m [md5sum] -b [y/n] [ -k kickstart-file ]" \
                       "File will be checked to verify its an ISO and contains a CentOS image."
 }
 
-while getopts "i:m:b:" opt; do
+while getopts "i:m:b:k:" opt; do
   case "${opt}" in
     i)
       ISO=${OPTARG}
@@ -24,6 +25,9 @@ while getopts "i:m:b:" opt; do
       ;;
     m)
       HASH=${OPTARG}
+      ;;
+    k)
+      KICKSTART=${OPTARG}
       ;;
     *)
       usage
@@ -53,7 +57,7 @@ function copy_iso_files () {
   cp -r "${PROGDIR}"/iso/LiveOS/. "${PROGDIR}"/distribution/LiveOS
   cp -r "${PROGDIR}"/iso/Packages/. "${PROGDIR}"/distribution/Packages
   cp -r "${PROGDIR}"/iso/repodata/. "${PROGDIR}"/distribution/repodata
-  cp kickstart/trinity.ks "${PROGDIR}"/distribution/ks
+  cp kickstart/${KICKSTART} "${PROGDIR}"/distribution/ks/trinity.ks
   cp custom/isolinux.cfg "${PROGDIR}"/distribution/isolinux
   umount "${PROGDIR}"/iso
 }
