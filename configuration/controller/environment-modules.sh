@@ -33,7 +33,7 @@ append_line "${TRIX_ROOT}/shared/modulefiles/local" "$dest"
 
 echo_info 'Adding the group modulefiles'
 
-cp -v "${POST_FILEDIR}/CV-advanced" "${TRIX_ROOT}/shared/modulefiles/modulegroups"
+cp ${QUIETRUN--v} "${POST_FILEDIR}/CV-advanced" "${TRIX_ROOT}/shared/modulefiles/modulegroups"
 
 
 echo_info 'Adjusting the trinityX installation path'

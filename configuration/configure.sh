@@ -69,7 +69,7 @@ function run_one_script {
     # Start with installing the packages if we have a list
     if [[ -r "$POST_PKGLIST" ]] ; then
         echo_progress "Installing packages: $POST_PKGLIST"
-        yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
+        yum -y ${QUIETRUN+-q} install $(grep -v '^#\|^$' "$POST_PKGLIST")
         ret=$?
     else
         echo_info "No package file found: $POST_PKGLIST"
@@ -154,14 +154,26 @@ function apply_config {
 
 echo "Beginning of script: $(date)"
 
-for param in "$@" ; do
-    if [[ "$param" == "--nocolor" ]] ; then
-        export NOCOLOR=""
-    else
-        echo_header "CONFIGURATION FILE: $param"
-        apply_config "$param"
-    fi
+while (( $# )) ; do
+
+    case "$1" in
+
+        -q )
+            export QUIETRUN=""
+            ;;
+
+        --nocolor )
+            export NOCOLOR=""
+            ;;
+
+        * )
+            echo_header "CONFIGURATION FILE: $1"
+            apply_config "$1"
+            ;;
+    esac
+    shift
 done
+
 
 echo "End of script: $(date)"
 

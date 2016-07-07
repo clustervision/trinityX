@@ -8,7 +8,7 @@ source /etc/trinity.sh
 
 echo_info 'Copying the repository file'
 
-cp -v ${POST_FILEDIR}/slurm.repo /etc/yum.repos.d/
+cp ${QUIETRUN--v} ${POST_FILEDIR}/slurm.repo /etc/yum.repos.d/
 
 
 echo "
@@ -66,7 +66,7 @@ if [ ! -f ${TRIX_ROOT}/shared/etc/slurm/slurm.conf ]; then
 
     echo_info "Copy slurm config files"
 
-    cp ${POST_FILEDIR}/slurm*.conf /etc/slurm/
+    cp ${QUIETRUN--v} ${POST_FILEDIR}/slurm*.conf /etc/slurm/
 
     echo_info "Changing variable placeholders."
 

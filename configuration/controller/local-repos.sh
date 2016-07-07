@@ -17,11 +17,11 @@ echo_info "Copying packages and setting up the local repository:"
 
 
 # Always copy the whole tree as it may be required by other local repos
-cp -rv "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
+cp -r${QUIETRUN-v} "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
 
 
 if ls "${POST_TOPDIR}"/packages/local-repo/repodata/*primary.sqlite.* >/dev/null 2>&1 ; then
-    cp -v ${POST_FILEDIR}/trix-local.repo /etc/yum.repos.d/
+    cp ${QUIETRUN--v} ${POST_FILEDIR}/trix-local.repo /etc/yum.repos.d/
 else
     echo_warn 'No "local-repo" repository on the installation media.'
 fi
