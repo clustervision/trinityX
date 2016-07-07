@@ -26,7 +26,8 @@
 # Right number of arguments?
 
 if ! (( $# )) ; then
-    echo "Syntax: $0 config_file [config_file ...]" >&2
+    echo "Syntax: $0 [-q] [--no-color] config_file [config_file ...]" >&2
+    echo "Please refer to the documentation for more details." >&2
     exit 1
 fi
 

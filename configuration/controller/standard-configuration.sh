@@ -22,9 +22,9 @@ SSHROOT="${STDCFG_SSHROOT:-0}"
 
 echo_info "Creating Trinity directory tree"
 
-mkdir -pv "$TRIX_ROOT"
-mkdir -pv "${TRIX_ROOT}/shared"
-mkdir -pv "${TRIX_ROOT}/applications"
+mkdir -p${QUIETRUN-v} "$TRIX_ROOT"
+mkdir -p${QUIETRUN-v} "${TRIX_ROOT}/shared"
+mkdir -p${QUIETRUN-v} "${TRIX_ROOT}/applications"
 
 
 #---------------------------------------
