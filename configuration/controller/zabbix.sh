@@ -84,7 +84,7 @@ function setup_zabbix_controller () {
 function main () {
   create_repository_file
   add_gpg_key
-  install_zabbix_controller
+  #install_zabbix_controller
   start_services
   setup_zabbix_controller
 }
