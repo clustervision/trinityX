@@ -9,8 +9,9 @@ rm -rf /etc/openldap/slapd.d/cn\=config/olcDatabase*{hdb,monitor}*
 # Update configuration files
 TMP_DIR=$(mktemp -d)
 
+SLAPD_ROOT_PW="$(get_password "$SLAPD_ROOT_PW")"
 
-HASH=$(slappasswd -s $SLAPD_ROOT_PW)
+HASH=$(slappasswd -s "$SLAPD_ROOT_PW")
 sed -e "s,{{ rootPW }},$HASH," -e "s,{{ serverID }},$SLAPD_SERVER_ID," "${POST_FILEDIR}"/conf/config.ldif > $TMP_DIR/config.ldif
 sed -e "s,{{ rootPW }},$HASH," "${POST_FILEDIR}"/conf/local.ldif > $TMP_DIR/local.ldif
 sed -e "s,{{ rootPW }},$HASH," "${POST_FILEDIR}"/conf/proxy.ldif > $TMP_DIR/proxy.ldif
@@ -50,6 +51,10 @@ ldapadd -D cn=manager,dc=local -w $SLAPD_ROOT_PW -f "${POST_FILEDIR}"/conf/schem
 # Setup obol
 cp -v "${POST_FILEDIR}"/obol /usr/local/bin
 chmod +x /usr/local/bin/obol
+
+# Store the password
+
+store_password "SLAPD_ROOT_PW" "$SLAPD_ROOT_PW"
 
 # Cleanup
 rm -rf "$TMP_DIR"
