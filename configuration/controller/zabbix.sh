@@ -49,13 +49,32 @@ function add_gpg_key () {
 
 function install_zabbix_controller () {
   printf '%s %s\n' $FUNCNAME $@
-  yum -q -a install zabbix-server-mysql zabbix-web-mysql
+  yum -q -y install zabbix-server-mysql zabbix-web-mysql mariadb-server
+}
+
+function start_services () {
+  systemctl start mariadb
+  systemctl enable mariadb
 }
 
 function setup_zabbix_controller () {
   printf '%s %s\n' $FUNCNAME $@
-  cd /usr/share/doc/zabbix-server-mysql-3.0.0
-  zcat create.sql.gz | mysql -uroot zabbix
+  if mysql -u root -e 'use zabbix' &>/dev/null; then
+    printf "Zabbix installation detected, do you want erase the old installation or continue?\n"
+    read -r -p "Are you sure? [y/N] " response
+    case $response in
+      [yY][eE][sS]|[yY])
+        mysql -u root -e "drop database zabbix;"
+        ;;
+      *)
+        printf "Interrupted by user: exit\n"
+        exit 1
+        ;;
+    esac
+  fi
+  mysql -u root -e "create database zabbix character set utf8 collate utf8_bin;"
+  mysql -u root -e "grant all privileges on zabbix.* to zabbix@localhost identified by 'foopass';"
+  zcat /usr/share/doc/zabbix-server-mysql-3.0.3/create.sql.gz | mysql -uroot zabbix
 }
 
 function main () {
@@ -63,6 +82,7 @@ function main () {
   create_repository_file
   add_gpg_key
   install_zabbix_controller
+  start_services
   setup_zabbix_controller
 }
 
