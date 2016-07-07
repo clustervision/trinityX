@@ -8,7 +8,6 @@ source ${TRIX_ROOT}/trinity.shadow
 
 function create_repository_file () {
   printf '%s %s\n' $FUNCNAME $@
-  [[ -e additional-repos/zabbix.repo ]] && cp additional-repos/zabbix.repo /etc/yum.repos.d/ || \
   printf '%b\n' '[zabbix]' \
                 'name=Zabbix Official Repository - $basearch' \
                 'baseurl=http://repo.zabbix.com/zabbix/3.0/rhel/7/$basearch/' \
@@ -23,9 +22,8 @@ function create_repository_file () {
                 'gpgcheck=1' > /etc/yum.repos.d/zabbix.repo
 }
 
-function add_gpg_key () {
+function add_pgp_key () {
   printf '%s %s\n' $FUNCNAME $@
-  [[ -e additional-repos/RPM-GPG-KEY-ZABBIX ]] && cp additional-repos/RPM-GPG-KEY-ZABBIX /etc/pki/rpm-gpg/ || \
   printf '%b\n' '-----BEGIN PGP PUBLIC KEY BLOCK-----' \
               'Version: GnuPG v1.4.5 (GNU/Linux)\n' \
               'mQGiBFCNJaYRBAC4nIW8o2NyOIswb82Xn3AYSMUcNZuKB2fMtpu0WxSXIRiX2BwC' \
@@ -53,22 +51,27 @@ function add_gpg_key () {
 
 function install_zabbix_controller () {
   printf '%s %s\n' $FUNCNAME $@
-  yum -q -y install zabbix-server-mysql zabbix-web-mysql mariadb-server
+  ! [[ -e /etc/pki/rpm-gpg/RPM-GPG-KEY-ZABBIX ]] && add_pgp_key
+  ! [[ -e /etc/yum.repos.d/zabbix.repo ]] && create_repository_file
+  for package in {zabbix-server-mysql,zabbix-web-mysql,mariadb-server}; do
+    if ! yum list -q installed "$package" &>/dev/null; then yum install -q -y "$package"; fi
+  done
 }
 
 function start_services () {
+  printf '%s %s\n' $FUNCNAME $@
   systemctl start mariadb
   systemctl enable mariadb
 }
 
 function setup_zabbix_controller () {
   printf '%s %s\n' $FUNCNAME $@
-  if mysql -u root -e 'use zabbix' &>/dev/null; then
-    printf "Zabbix installation detected, do you want erase the old installation or continue?\n"
-    read -r -p "Are you sure? [y/N] " response
+  if mysql -u root -p "${MYSQL_ROOT_PASSWORD}" -e 'use zabbix' &>/dev/null; then
+    printf "Zabbix database detected, you need to erase it to continue.\n"
+    read -r -p "Are you sure you want do drop that database? [y/N] " response
     case $response in
       [yY][eE][sS]|[yY])
-        mysql -u root -e "drop database zabbix;"
+        mysql -u root -p "${MYSQL_ROOT_PASSWORD}" -e "drop database zabbix;"
         ;;
       *)
         printf "Interrupted by user: exiting\n"
@@ -76,16 +79,14 @@ function setup_zabbix_controller () {
         ;;
     esac
   fi
-  mysql -u root -e "create database zabbix character set utf8 collate utf8_bin;"
-  mysql -u root -e "grant all privileges on zabbix.* to zabbix@localhost identified by 'foopass';"
+  mysql -u root -p "${MYSQL_ROOT_PASSWORD}" -e "create database zabbix character set utf8 collate utf8_bin;"
+  mysql -u root -p "${MYSQL_ROOT_PASSWORD}" -e "grant all privileges on zabbix.* to zabbix@localhost identified by 'foopass';"
   zcat /usr/share/doc/zabbix-server-mysql-3.0.3/create.sql.gz | mysql -uroot zabbix
 }
 
 function main () {
-  create_repository_file
-  add_gpg_key
-  #install_zabbix_controller
-  start_services
+  install_zabbix_controller
+  #start_services
   setup_zabbix_controller
 }
 
