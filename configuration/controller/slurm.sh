@@ -9,6 +9,7 @@ source /etc/trinity.sh
 echo_info 'Copying the repository file'
 
 cp ${QUIETRUN--v} ${POST_FILEDIR}/slurm.repo /etc/yum.repos.d/
+sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' /etc/yum.repos.d/slurm.repo
 
 
 echo "
