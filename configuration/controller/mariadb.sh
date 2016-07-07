@@ -40,7 +40,6 @@ function remove_anonymous_users {
 
 MYSQL_PASS=`get_password $MYSQL_ROOT_PASSWORD`
 store_password MYSQL_ROOT_PASSWORD $MYSQL_PASS
-echo $MYSQL_PASS
 setup_root_pass $MYSQL_PASS
 remove_test_db
 remove_anonymous_users
