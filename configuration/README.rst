@@ -18,7 +18,7 @@ initial configuration, and not to updating configurations later.
 
 This document will present the high-level use of the tool. For more technical
 details, including how to write new post scripts, please see the contents of
-the `doc`_ directory.
+the **doc** directory.
 
 
 
@@ -37,15 +37,15 @@ well as various post scripts) to know what it has to do.
 At the very least they must contain those two environment variables:
 
 - ``POSTDIR``
-  The base directory in which the post scripts are located.
-  If it is a relative path, then it is relative to the directory where the
-  configuration file is located.
+    The base directory in which the post scripts are located.
+    If it is a relative path, then it is relative to the directory where the
+    configuration file is located.
 
 - ``POSTLIST``
-  An array containing the names of the post scripts that have to be run
-  for that specific configuration, in the order in which they will run. Note
-  that there are rules to the name of the post script, see `Post scripts`_ for
-  more details.
+    An array containing the names of the post scripts that have to be run
+    for that specific configuration, in the order in which they will run. Note
+    that there are rules to the name of the post script, see `Post scripts`_ for
+    more details.
 
 Usually the configuration file will also contain variables used by the post
 scripts in the list.
@@ -62,21 +62,21 @@ the ``POSTLIST`` of the configuration file.
 Assuming that the post script is called ``myscript``, those files would be:
 
 - ``myscript.pkglist``
-  A list of RPM packages to install first.
+    A list of RPM packages to install first.
 
 - ``myscript.sh``
-  A Bash script to execute after the installation of the packages.
+    A Bash script to execute after the installation of the packages.
 
 - ``myscript``
-  A directory containing files required by the shell script, for example
-  configuration templates for the specific software that was just installed.
+    A directory containing files required by the shell script, for example
+    configuration templates for the specific software that was just installed.
 
 All of those elements are optional. A post script may install packages, may
 run a Bash script and may include a private directory. Technically it's possible
 to have an entry in the ``POSTLIST`` that has none of there, in which case
 nothing would be done.
 
-For more information about writing postscripts, see the `doc`_ directory.
+For more information about writing postscripts, see the **doc** directory.
 
 
 
@@ -94,6 +94,16 @@ The tool is not immensely smart. It will stop on errors and ask for the user to
 press Enter to continue, so as to give the possibility to do some manual fixing
 before continuing. But it doesn't do any conditional execution, and therefore
 will run all scripts, all the time.
+
+As it asks for user input when things go wrong, its output cannot be entirely
+redirected to a file. The easiest way to keep a log of the installation is::
+
+    ./configure.sh file.cfg 2>&1 | tee -a your_log_file
+
+``tee`` will keep the output on the terminal and write a copy to the log file.
+
+If you are offended by color codes in your log files, use the ``--nocolor``
+option.
 
 
 Example
