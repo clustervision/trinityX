@@ -66,15 +66,7 @@ function start_services () {
 
 function setup_zabbix_credentials () {
   ZABBIX_MYSQL_PASSWORD=`get_password $ZABBIX_MYSQL_PASSWORD`
-  store_password ZABBIX_MYSQL_PASSWORD $ZABBIX_MYSQL_PASSWORD
-  echo $ZABBIX_MYSQL_PASSWORD
-  _ZABBIX_MYSQL_PASS=`get_password $ZABBIX_MYSQL_PASSWORD`
-  store_password ZABBIX_MYSQL_PASSWORD $_ZABBIX_MYSQL_PASSWORD
-  echo "
-    ${ZABBIX_MYSQL_DB?"Variable ZABBIX_MYSQL_DB was not set"}
-    ${ZABBIX_MYSQL_USER?"Variable ZABBIX_MYSQL_USER  was not set"}
-    ${ZABBIX_MYSQL_PASSWORD?"Variable ZABBIX_MYSQL_PASSWORD  was not set"}
-   "
+  store_password ZABBIX_MYSQL_PASSWORD "${ZABBIX_MYSQL_PASSWORD}"
 }
 
 function setup_zabbix_database () {
@@ -85,7 +77,6 @@ function setup_zabbix_database () {
     case $response in
       [yY][eE][sS]|[yY])
         mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "drop database zabbix;"
-        setup_zabbix_credentials
         ;;
       *)
         printf "Interrupted by user: exiting\n"
@@ -95,7 +86,7 @@ function setup_zabbix_database () {
   fi
   setup_zabbix_credentials
   mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "create database zabbix character set utf8 collate utf8_bin;"
-  mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "grant all privileges on zabbix.* to zabbix@localhost identified by 'foopass';"
+  mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "grant all privileges on zabbix.* to zabbix@localhost identified by '$ZABBIX_MYSQL_PASSWORD';"
   zcat /usr/share/doc/zabbix-server-mysql-3.0.3/create.sql.gz | mysql -uroot zabbix
 }
 
