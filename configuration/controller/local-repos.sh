@@ -15,20 +15,14 @@ source /etc/trinity.sh
 
 echo_info "Copying packages and setting up the local repository:"
 
-if ls "${POST_TOPDIR}"/packages/repodata/*primary.sqlite.* >/dev/null 2>&1 ; then
 
-	cp -rv "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
+# Always copy the whole tree as it may be required by other local repos
+cp -rv "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
 
-	cat > /etc/yum.repos.d/trix-local.repo << EOF
-[trix-local]
-name=trinityX - local repository
-baseurl=file://${TRIX_ROOT}/packages/
-enabled=1
-gpgcheck=0
-EOF
 
+if ls "${POST_TOPDIR}"/packages/local-repo/repodata/*primary.sqlite.* >/dev/null 2>&1 ; then
+    cp -v ${POST_FILEDIR}/trix-local.repo /etc/yum.repos.d/
 else
-	echo_warn 'The "packages" directory on the install media does not contain an RPM repo.'
-	exit 1
+    echo_warn 'No "local-repo" repository on the installation media.'
 fi
 
