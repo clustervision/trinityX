@@ -4,5 +4,5 @@
 
 echo_info 'Running yum update'
 
-yum -y update
+yum -y ${QUIETRUN+-q} update
 

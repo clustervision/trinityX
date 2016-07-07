@@ -6,6 +6,11 @@ source "$POST_CONFIG"
 source /etc/trinity.sh
 
 
+echo_info 'Copying the repository file'
+
+cp ${QUIETRUN--v} ${POST_FILEDIR}/slurm.repo /etc/yum.repos.d/
+
+
 echo "
 ${SLURMDBD_MYSQL_DB?"Variable SLURMDBD_MYSQL_DB was not set"}
 ${SLURMDBD_MYSQL_USER?"Variable SLURMDBD_MYSQL_USER  was not set"}
@@ -61,7 +66,7 @@ if [ ! -f ${TRIX_ROOT}/shared/etc/slurm/slurm.conf ]; then
 
     echo_info "Copy slurm config files"
 
-    cp ${POST_FILEDIR}/slurm*.conf /etc/slurm/
+    cp ${QUIETRUN--v} ${POST_FILEDIR}/slurm*.conf /etc/slurm/
 
     echo_info "Changing variable placeholders."
 
