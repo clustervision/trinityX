@@ -6,6 +6,11 @@ source "$POST_CONFIG"
 source /etc/trinity.sh
 
 
+echo_info 'Copying the repository file'
+
+cp -v ${POST_FILEDIR}/slurm.repo /etc/yum.repos.d/
+
+
 echo "
 ${SLURMDBD_MYSQL_DB?"Variable SLURMDBD_MYSQL_DB was not set"}
 ${SLURMDBD_MYSQL_USER?"Variable SLURMDBD_MYSQL_USER  was not set"}
