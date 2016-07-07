@@ -49,7 +49,7 @@ function add_pgp_key () {
               '-----END PGP PUBLIC KEY BLOCK-----' > /etc/pki/rpm-gpg/RPM-GPG-KEY-ZABBIX
 }
 
-function install_zabbix_controller () {
+function install_zabbix_packages () {
   printf '%s %s\n' $FUNCNAME $@
   ! [[ -e /etc/pki/rpm-gpg/RPM-GPG-KEY-ZABBIX ]] && add_pgp_key
   ! [[ -e /etc/yum.repos.d/zabbix.repo ]] && create_repository_file
@@ -64,14 +64,28 @@ function start_services () {
   systemctl enable mariadb
 }
 
-function setup_zabbix_controller () {
+function setup_zabbix_credentials () {
+  ZABBIX_MYSQL_PASSWORD=`get_password $ZABBIX_MYSQL_PASSWORD`
+  store_password ZABBIX_MYSQL_PASSWORD $ZABBIX_MYSQL_PASSWORD
+  echo $ZABBIX_MYSQL_PASSWORD
+  _ZABBIX_MYSQL_PASS=`get_password $ZABBIX_MYSQL_PASSWORD`
+  store_password ZABBIX_MYSQL_PASSWORD $_ZABBIX_MYSQL_PASSWORD
+  echo "
+    ${ZABBIX_MYSQL_DB?"Variable ZABBIX_MYSQL_DB was not set"}
+    ${ZABBIX_MYSQL_USER?"Variable ZABBIX_MYSQL_USER  was not set"}
+    ${ZABBIX_MYSQL_PASSWORD?"Variable ZABBIX_MYSQL_PASSWORD  was not set"}
+   "
+}
+
+function setup_zabbix_database () {
   printf '%s %s\n' $FUNCNAME $@
-  if mysql -u root -p "${MYSQL_ROOT_PASSWORD}" -e 'use zabbix' &>/dev/null; then
+  if mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e 'use zabbix' &>/dev/null; then
     printf "Zabbix database detected, you need to erase it to continue.\n"
     read -r -p "Are you sure you want do drop that database? [y/N] " response
     case $response in
       [yY][eE][sS]|[yY])
-        mysql -u root -p "${MYSQL_ROOT_PASSWORD}" -e "drop database zabbix;"
+        mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "drop database zabbix;"
+        setup_zabbix_credentials
         ;;
       *)
         printf "Interrupted by user: exiting\n"
@@ -79,15 +93,17 @@ function setup_zabbix_controller () {
         ;;
     esac
   fi
-  mysql -u root -p "${MYSQL_ROOT_PASSWORD}" -e "create database zabbix character set utf8 collate utf8_bin;"
-  mysql -u root -p "${MYSQL_ROOT_PASSWORD}" -e "grant all privileges on zabbix.* to zabbix@localhost identified by 'foopass';"
+  setup_zabbix_credentials
+  mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "create database zabbix character set utf8 collate utf8_bin;"
+  mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "grant all privileges on zabbix.* to zabbix@localhost identified by 'foopass';"
   zcat /usr/share/doc/zabbix-server-mysql-3.0.3/create.sql.gz | mysql -uroot zabbix
 }
 
 function main () {
-  install_zabbix_controller
+  install_zabbix_packages
+  #setup_zabbix_credentials
   #start_services
-  setup_zabbix_controller
+  setup_zabbix_database
 }
 
 printf '%s\n\n' 'Zabbix installation script:'
