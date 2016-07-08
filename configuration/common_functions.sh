@@ -139,12 +139,17 @@ function store_variable {
     VARNAME="$(echo -n "$2" | tr -c '[:alnum:]' _)"
     
     # If the variable name already exists, assume that it's an update of the
-    # password. Delete the existing line, as it will be appended again to the
-    # file.
-    
-    sed -i '/^'${VARNAME}'=/d' "$1"
+    # password. Exit with an error if the variable is declared read-only, update
+    # it otherwise.
 
-    echo "${VARNAME}=\"${3}\"" >> "$1"
+    if grep -q "^declare -r ${VARNAME}=" "$TRIX_SHADOW" ; then
+        echo_warn "store_variable: will not overwrite a read-only variable: ${VARNAME}"
+        return 1
+    else
+        # delete the line if it exists, and append the new value
+        sed -i '/^'"${VARNAME}"'=/d' "$1"
+        echo "${SET_RO+declare -r }${VARNAME}=\"${3}\"" >> "$1"
+    fi
 }
 
 typeset -fx store_variable
@@ -179,7 +184,7 @@ function store_password {
     # it already
     [[ "$TRIX_SHADOW" ]] || source /etc/trinity.sh
     
-    store_variable "$TRIX_SHADOW" "$@"
+    SET_RO="" store_variable "$TRIX_SHADOW" "$@"
 }
 
 
