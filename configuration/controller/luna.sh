@@ -141,7 +141,7 @@ chmod 600 /etc/luna.conf
 echo_info "Copy systemd unit files."
 
 [ -f /etc/systemd/system/lweb.service ]  || cp -pr ${POST_FILEDIR}/lweb.service /etc/systemd/system/lweb.service
-[ -f /etc/systemd/system/ltorrent.service ]  || cp -pr ${POST_FILEDIR}/lweb.service /etc/systemd/system/ltorrent.service
+[ -f /etc/systemd/system/ltorrent.service ]  || cp -pr ${POST_FILEDIR}/ltorrent.service /etc/systemd/system/ltorrent.service
 
 echo_info "Reload systemd config."
 
