@@ -19,13 +19,6 @@ function replace_template {
     sed -i -e "s/{{ ${FROM} }}/${TO}/g" $FILE
 }
 
-
-echo_info 'Copying the repository file'
-
-cp ${QUIETRUN--v} ${POST_FILEDIR}/luna.repo /etc/yum.repos.d/
-sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' /etc/yum.repos.d/luna.repo
-
-
 echo_info "Check config variables available."
 
 echo "LUNA_FRONTEND=${LUNA_FRONTEND?"Should be defined"}"

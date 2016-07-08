@@ -16,14 +16,19 @@ source /etc/trinity.sh
 echo_info "Copying packages and setting up the local repository:"
 
 
-# Always copy the whole tree as it may be required by other local repos
+# Copy the whole tree with all local repos
 cp -r${QUIETRUN-v} "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
 
 
-if ls "${POST_TOPDIR}"/packages/local-repo/repodata/*primary.sqlite.* >/dev/null 2>&1 ; then
-    cp ${QUIETRUN--v} ${POST_FILEDIR}/trix-local.repo /etc/yum.repos.d/
-    sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' /etc/yum.repos.d/trix-local.repo
-else
-    echo_warn 'No "local-repo" repository on the installation media.'
-fi
+# For each repo file present, check that there is actually a matching repo...
+
+for repo in "${POST_FILEDIR}"/*.repo ; do
+    bname="$(basename "$repo" .repo)"
+    if ls "${POST_TOPDIR}/packages/${bname}/repodata/"*primary.sqlite.* >/dev/null 2>&1 ; then
+        cp ${QUIETRUN--v} "${repo}" /etc/yum.repos.d/ && \
+            sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' "/etc/yum.repos.d/${bname}.repo"
+    else
+        echo_warn "No \"${bname}\" repository on the installation media."
+    fi
+done
 
