@@ -7,7 +7,7 @@ Detailed documentation of the installer can be found in configuration/README.rst
 ```
 yum install git
 git clone http://github.com/clustervision/trinityx
-cd trinityX
+cd trinityX/configuration
 ```
 - edit controller.cfg to suit your needs (most defaults are correct but you probably need to adjust the network interfaces)
 - Run:
