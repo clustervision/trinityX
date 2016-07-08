@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 # set up slurmctld daemon
 
 source "$POST_CONFIG"
@@ -61,7 +61,8 @@ if [ ! -f ${TRIX_ROOT}/shared/etc/slurm/slurm.conf ]; then
 
     echo_info "Copy slurm config files"
 
-    cp ${QUIETRUN--v} ${POST_FILEDIR}/slurm*.conf /etc/slurm/
+    cp ${POST_FILEDIR}/slurm*.conf /etc/slurm/
+    cp ${POST_FILEDIR}/topology.conf /etc/slurm/
 
     echo_info "Changing variable placeholders."
 
@@ -95,8 +96,8 @@ function do_sql_req {
 
 
 do_sql_req "CREATE DATABASE IF NOT EXISTS ${SLURMDBD_MYSQL_DB};"
-do_sql_req "CREATE USER '${SLURMDBD_MYSQL_USER}'@'%' IDENTIFIED BY '${_SLURMDBD_MYSQL_PASS}';"
 do_sql_req "CREATE USER '${SLURMDBD_MYSQL_USER}'@'localhost' IDENTIFIED BY '${_SLURMDBD_MYSQL_PASS}';"
+do_sql_req "CREATE USER '${SLURMDBD_MYSQL_USER}'@'%' IDENTIFIED BY '${_SLURMDBD_MYSQL_PASS}';"
 do_sql_req "GRANT ALL PRIVILEGES ON ${SLURMDBD_MYSQL_DB}.* TO '${SLURMDBD_MYSQL_USER}'@'%';"
 do_sql_req "FLUSH PRIVILEGES;"
 

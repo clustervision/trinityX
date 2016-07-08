@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 source "$POST_CONFIG"
 
 source /etc/trinity.sh
