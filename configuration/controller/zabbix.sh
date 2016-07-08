@@ -2,9 +2,9 @@
 
 readonly cp="/usr/bin/cp"
 
-source "$POST_CONFIG"
 source /etc/trinity.sh
-source ${TRIX_ROOT}/trinity.shadow
+source "${TRIX_SHADOW}"
+source "${POST_CONFIG}"
 
 function create_repository_file () {
   printf '%s %s\n' $FUNCNAME $@
@@ -71,6 +71,10 @@ function setup_zabbix_credentials () {
 
 function setup_zabbix_database () {
   printf '%s %s\n' $FUNCNAME $@
+  if ! systemctl status mariadb &>/dev/null; then
+    printf "MariaDB seems to not have started: exiting\n"
+    exit 1
+  fi
   if mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e 'use zabbix' &>/dev/null; then
     printf "Zabbix database detected, you need to erase it to continue.\n"
     read -r -p "Are you sure you want do drop that database? [y/N] " response
@@ -90,11 +94,16 @@ function setup_zabbix_database () {
   zcat /usr/share/doc/zabbix-server-mysql-3.0.3/create.sql.gz | mysql -uroot zabbix
 }
 
+function zabbix_server_configuration () {
+  sed -i -e "/^DBHost=/{h;s/=.*/=$(hostname -s)/};\${x;/^$/{s//DBHost=$(hostname -s)/;H};x}" /etc/zabbix/zabbix_server.conf
+  sed -i -e "/^DBName=/{h;s/=.*/="${ZABBIX_MYSQL_DB}"/};\${x;/^$/{s//DBName=${ZABBIX_MYSQL_DB}/;H};x}" /etc/zabbix/zabbix_server.conf
+  sed -i -e "/^DBName=/{h;s/=.*/="${ZABBIX_MYSQL_USER}"/};\${x;/^$/{s//DBName=${ZABBIX_MYSQL_DB}/;H};x}" /etc/zabbix/zabbix_server.conf
+}
+
 function main () {
   install_zabbix_packages
-  #setup_zabbix_credentials
-  #start_services
   setup_zabbix_database
+  zabbix_server_configuration
 }
 
 printf '%s\n\n' 'Zabbix installation script:'
