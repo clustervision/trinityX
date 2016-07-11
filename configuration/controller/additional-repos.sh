@@ -26,7 +26,7 @@ fi
 echo_info 'Installing RPM files'
 
 if ls "${POST_FILEDIR}/"*.rpm >/dev/null 2>&1 ; then
-	yum -y ${QUIETRUN+-q} install "${POST_FILEDIR}/"*.rpm
+	yum -y install "${POST_FILEDIR}/"*.rpm
 	(( ret += $? ))
 fi
 
@@ -35,7 +35,7 @@ fi
 echo_info 'Installing repo files'
 
 if ls "${POST_FILEDIR}/"*.repo >/dev/null 2>&1 ; then
-	cp ${QUIETRUN--v} "${POST_FILEDIR}/"*.repo /etc/yum.repos.d
+	cp "${POST_FILEDIR}/"*.repo /etc/yum.repos.d
 	(( ret += $? ))
 fi
 

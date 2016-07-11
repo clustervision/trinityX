@@ -70,7 +70,7 @@ function run_one_script {
     # Start with installing the packages if we have a list
     if [[ -r "$POST_PKGLIST" ]] ; then
         echo_progress "Installing packages: $POST_PKGLIST"
-        yum -y ${QUIETRUN+-q} install $(grep -v '^#\|^$' "$POST_PKGLIST")
+        yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
         ret=$?
     else
         echo_info "No package file found: $POST_PKGLIST"

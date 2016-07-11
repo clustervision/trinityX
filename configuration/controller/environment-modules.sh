@@ -15,11 +15,11 @@ echo_info 'Creating the shared modules directories'
 #     |-- local             site-local modules, available by default
 #      -- modulegroups      modulefiles to load groups (advanced, local, etc)
 
-mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles"
-mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles/modulegroups"
-mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles/CV-standard"
-mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles/CV-advanced"
-mkdir -p${SILENTRUN-v} "${TRIX_ROOT}/shared/modulefiles/local"
+mkdir -p "${TRIX_ROOT}/shared/modulefiles"
+mkdir -p "${TRIX_ROOT}/shared/modulefiles/modulegroups"
+mkdir -p "${TRIX_ROOT}/shared/modulefiles/CV-standard"
+mkdir -p "${TRIX_ROOT}/shared/modulefiles/CV-advanced"
+mkdir -p "${TRIX_ROOT}/shared/modulefiles/local"
 
 
 echo_info 'Adding the group path to the default configuration'
@@ -33,7 +33,7 @@ append_line "${TRIX_ROOT}/shared/modulefiles/local" "$dest"
 
 echo_info 'Adding the group modulefiles'
 
-cp ${QUIETRUN--v} "${POST_FILEDIR}/CV-advanced" "${TRIX_ROOT}/shared/modulefiles/modulegroups"
+cp "${POST_FILEDIR}/CV-advanced" "${TRIX_ROOT}/shared/modulefiles/modulegroups"
 
 
 echo_info 'Adjusting the trinityX installation path'

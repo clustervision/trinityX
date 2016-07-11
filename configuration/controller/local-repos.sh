@@ -17,7 +17,7 @@ echo_info "Copying packages and setting up the local repository:"
 
 
 # Copy the whole tree with all local repos
-cp -r${QUIETRUN-v} "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
+cp -r "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
 
 
 # For each repo file present, check that there is actually a matching repo...
@@ -25,7 +25,7 @@ cp -r${QUIETRUN-v} "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
 for repo in "${POST_FILEDIR}"/*.repo ; do
     bname="$(basename "$repo" .repo)"
     if ls "${POST_TOPDIR}/packages/${bname}/repodata/"*primary.sqlite.* >/dev/null 2>&1 ; then
-        cp ${QUIETRUN--v} "${repo}" /etc/yum.repos.d/ && \
+        cp "${repo}" /etc/yum.repos.d/ && \
             sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' "/etc/yum.repos.d/${bname}.repo"
     else
         echo_warn "No \"${bname}\" repository on the installation media."

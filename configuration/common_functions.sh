@@ -13,6 +13,24 @@ fi
 
 #---------------------------------------
 
+# Simple implementation of the quiet run option
+# We have to use functions to delay the evaluation of QUIETRUN, otherwise it's
+# done when the file is sourced...
+
+
+function cp         { $(which cp) ${QUIETRUN--v} "${@}" ; }
+function yum        { $(which yum) ${QUIETRUN+-q} "${@}" ; }
+function mkdir      { $(which mkdir) ${QUIETRUN--v} "${@}" ; }
+function systemctl  { $(which systemctl) ${QUIETRUN+-q} "${@}" ; }
+
+typeset -fx cp
+typeset -fx yum
+typeset -fx mkdir
+typeset -fx systemctl
+
+
+#---------------------------------------
+
 # Colors!
 
 export ESC_SEQ="\x1b["
