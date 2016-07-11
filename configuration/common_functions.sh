@@ -142,7 +142,7 @@ function store_variable {
     # password. Exit with an error if the variable is declared read-only, update
     # it otherwise.
 
-    if grep -q "^declare -r ${VARNAME}=" "$TRIX_SHADOW" ; then
+    if grep -q "^declare -r ${VARNAME}=" "$1" ; then
         echo_warn "store_variable: will not overwrite a read-only variable: ${VARNAME}"
         return 1
     else
