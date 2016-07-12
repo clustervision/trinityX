@@ -3,7 +3,7 @@
 readonly PROGNAME=$(basename $0)
 readonly PROGDIR=$(readlink -m $(dirname $0))
 
-KICKSTART='default.ks'
+KICKSTART='kickstart/default.ks'
 MKISO='no'
 
 function usage () {
@@ -68,7 +68,7 @@ function copy_iso_files () {
   cp -r "${PROGDIR}"/iso/LiveOS/. "${PROGDIR}"/distribution/LiveOS
   cp -r "${PROGDIR}"/iso/Packages/. "${PROGDIR}"/distribution/Packages
   cp -r "${PROGDIR}"/iso/repodata/. "${PROGDIR}"/distribution/repodata
-  cp kickstart/${KICKSTART} "${PROGDIR}"/distribution/ks/trinity.ks
+  cp $(readlink -f "${KICKSTART}") "${PROGDIR}"/distribution/ks/trinity.ks
   cp custom/isolinux.cfg "${PROGDIR}"/distribution/isolinux
   umount "${PROGDIR}"/iso
 }
