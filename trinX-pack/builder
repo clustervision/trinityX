@@ -39,7 +39,7 @@ while getopts ":i:m:b:k:" opt; do
 done
 shift $((OPTIND-1))
 
-if { [ -z "${ISO+x}" ] || ! [ -f "${ISO}" ] || ! [ -f "${KICKSTART}" ]; }; then
+if { [[ -z "${ISO+x}" ]] || ! [[ -f "${ISO}" ]] || ! [[ -f "${KICKSTART}" ]]; }; then
   usage
   exit 1
 fi
@@ -47,7 +47,7 @@ fi
 function check_iso_md5sum () {
   printf '%s %s\n' $FUNCNAME $@
   local MD5=($(md5sum "${ISO}"))
-  if [ "${MD5}" != "${HASH}" ]; then
+  if [[ "${MD5}" != "${HASH}" ]]; then
     printf '%s\n' 'ISO checksum failed, please check your ISO file.'
     exit 1
   fi
@@ -87,10 +87,10 @@ function build_custom_iso () {
 }
 
 function main () {
-  ! [ -z "${HASH+x}" ] && check_iso_md5sum
+  if ! [[ -z "${HASH+x}" ]]; then check_iso_md5sum; fi
   create_directory_structure
   copy_iso_files
-  [[ "${MKISO}" =~ ^([yY][eE][sS]|[yY])$ ]] && build_custom_iso
+  if [[ "${MKISO}" =~ ^([yY][eE][sS]|[yY])$ ]]; then build_custom_iso; fi
   cleanup
 }
 
