@@ -4,15 +4,16 @@ readonly PROGNAME=$(basename $0)
 readonly PROGDIR=$(readlink -m $(dirname $0))
 
 KICKSTART='default.ks'
+MKISO='no'
 
 function usage () {
   printf '%s\n\n%s\n' "Builds a file structure to be used in building a ISO or USB disk." \
                       "USAGE:" \
-                      "$ ${PROGNAME} -i [ISO file] -m [md5sum] -b [y/n] -k [kickstart-file]" \
-                      "File will be checked to verify its an ISO and contains a CentOS image."
+                      "$ ${PROGNAME} -i [ISO file] -m [md5sum] -b [y/N] -k [kickstart]" \
+                      "File can be checked to verify it contains a valid CentOS image."
 }
 
-while getopts "i:m:b:k" opt; do
+while getopts ":i:m:b:k:" opt; do
   case "${opt}" in
     i)
       ISO=${OPTARG}
@@ -38,10 +39,19 @@ while getopts "i:m:b:k" opt; do
 done
 shift $((OPTIND-1))
 
-if { [ -z "${ISO}" ] || [ -z "${HASH}" ] || [ -z "${MKISO}" ] || ! [ -f ${ISO} ]; }; then
+if { [ -z "${ISO+x}" ] || ! [ -f "${ISO}" ] || ! [ -f "${KICKSTART}" ]; }; then
   usage
   exit 1
 fi
+
+function check_iso_md5sum () {
+  printf '%s %s\n' $FUNCNAME $@
+  local MD5=($(md5sum "${ISO}"))
+  if [ "${MD5}" != "${HASH}" ]; then
+    printf '%s\n' 'ISO checksum failed, please check your ISO file.'
+    exit 1
+  fi
+}
 
 function create_directory_structure () {
   printf '%s %s\n' $FUNCNAME $@
@@ -77,9 +87,10 @@ function build_custom_iso () {
 }
 
 function main () {
+  ! [ -z "${HASH+x}" ] && check_iso_md5sum
   create_directory_structure
   copy_iso_files
-  build_custom_iso
+  [[ "${MKISO}" =~ ^([yY][eE][sS]|[yY])$ ]] && build_custom_iso
   cleanup
 }
 
