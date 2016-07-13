@@ -24,7 +24,7 @@ echo_info "Creating Trinity directory tree"
 
 mkdir -p "$TRIX_ROOT"
 mkdir -p "${TRIX_ROOT}/shared"
-mkdir -p "${TRIX_ROOT}/applications"
+mkdir -p "${TRIX_ROOT}/shared/applications"
 
 
 #---------------------------------------
