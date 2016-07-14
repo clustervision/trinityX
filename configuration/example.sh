@@ -33,7 +33,8 @@ else
 fi
 
 
-echo -e ${QUIETRUN+"\nIf you read this, then the silent option (-q) is enabled."}
+echo -n -e ${QUIETRUN+"\nIf you read this, then the silent option (-q) is enabled.\n"}
+echo -n -e ${VERBOSE+"\nIf you read this, then the verbose option (-v) is enabled.\n"}
 
 echo_progress "That's all folks!"
 
