@@ -15,7 +15,7 @@ source "$POST_CONFIG"
 if [[ "$NODE_IMG_NAME" =~ ^/.* ]] ; then
     TARGET="$NODE_IMG_NAME"
 else
-    TARGET="${TRIX_IMG_ROOT:-/trinity/images}/${NODE_IMG_NAME:-unknown-$(date +%F-%R)}"
+    TARGET="${TRIX_IMG_ROOT:-/trinity/images}/${NODE_IMG_NAME:-unknown-$(date +%F-%H-%M)}"
 fi
 
 
@@ -29,14 +29,10 @@ mkdir -p "$TARGET"
 echo_info 'Initializing the RPM dabatase in the target directory'
 
 rpm --root "$TARGET" --initdb
-yumdownloader --destdir /tmp centos-release
-rpm --root "$TARGET" -ivh /tmp/centos-release\*.rpm
+rpm --root "$TARGET" -ivh "${POST_FILEDIR}/centos-release\*.rpm"
 
 
 echo_info 'Setting up the yum configuration'
-
-#cp /etc/yum.conf "${TARGET}/etc"
-#sed -i 's/\(^keepcache\).*/\1=1/g' "${TARGET}/etc/yum.conf"
 
 cp "${POST_FILEDIR}/yum.conf" "${TARGET}/etc"
 
@@ -44,14 +40,15 @@ cp "${POST_FILEDIR}/yum.conf" "${TARGET}/etc"
 #---------------------------------------
 
 # To avoid having to copy a lot of stuff between the host and the chroot image,
-# we use filesystem binding. We have a lot of things to bind, because we don't
+# we use filesystem binding. We have a lot of things to bind because we don't
 # want to have copies of RPMs in the image -- everything has to go to the host
 # so that we can have a copy later if we want. It makes things a bit more
 # complex, so hang on.
 
 # "$TRIX_ROOT"      ->  for the local repos + trinity.sh*
 # "$POST_TOPDIR"    ->  for the configuration scripts and files
-# /var/cache/yum    ->  to keep a copy of all the RPMs on the host
+# /var/cache/yum    ->  to keep a copy of all the RPMs on the host, and speed up
+#                       installation of multiple images
 
 DIRLIST=( \
             "$TRIX_ROOT" \
@@ -68,7 +65,7 @@ for dir in "${DIRLIST[@]}" ; do
     mount --bind "$dir" "${TARGET}/$dir"
 done
 
-[[ "$QUIET" ]] || mount | grep "$TARGET"
+[[ "$QUIET" ]] || { echo ; mount | grep "$TARGET" ; }
 
 
 #---------------------------------------
@@ -93,10 +90,9 @@ if [[ $"NODE_IMG_CONFIG" ]] ; then
     
     echo_info 'Running the configuration tool on the new image'
     
-    echo chroot "${TARGET}" "${POST_TOPDIR}/configuration/configure.sh" \
+    chroot "${TARGET}" "${POST_TOPDIR}/configuration/configure.sh" \
             ${VERBOSE+-v}  ${QUIET+-q} ${DEBUG+-d} ${NOCOLOR+--nocolor} \
-            "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
-    
+           "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
 fi
 
     
