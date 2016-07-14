@@ -17,7 +17,7 @@ echo_info 'Copying packages and setting up the local repository'
 
 
 # Copy the whole tree with all local repos
-mkdir -p ${TRIX_ROOT}/shared"
+mkdir -p "${TRIX_ROOT}/shared"
 cp -r "${POST_TOPDIR}/packages" "${TRIX_ROOT}/shared"
 
 
