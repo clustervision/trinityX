@@ -19,9 +19,9 @@ fi
 
 function cp         { command cp ${VERBOSE+-v} "${@}" ; }
 function mv         { command mv ${VERBOSE+-v} "${@}" ; }
-function yum        { command yum ${QUIETRUN+-q} "${@}" ; }
+function yum        { command yum ${QUIET+-q} "${@}" ; }
 function mkdir      { command mkdir ${VERBOSE+-v} "${@}" ; }
-function systemctl  { command systemctl ${QUIETRUN+-q} "${@}" ; }
+function systemctl  { command systemctl ${QUIET+-q} "${@}" ; }
 
 typeset -fx cp
 typeset -fx mv
