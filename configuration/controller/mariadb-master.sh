@@ -127,3 +127,5 @@ do_sql_req "CREATE DATABASE ${TMPNAME#*/};"
 echo_info "Success!"
 
 do_sql_req "DROP DATABASE ${TMPNAME#*/};"
+
+# test comment
