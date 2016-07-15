@@ -15,7 +15,7 @@ source "$POST_CONFIG"
 if [[ "$NODE_IMG_NAME" =~ ^/.* ]] ; then
     TARGET="$NODE_IMG_NAME"
 else
-    TARGET="${TRIX_IMG_ROOT:-/trinity/images}/${NODE_IMG_NAME:-unknown-$(date +%F-%H-%M)}"
+    TARGET="${TRIX_IMAGES}/${NODE_IMG_NAME:-unknown-$(date +%F-%H-%M)}"
 fi
 
 
