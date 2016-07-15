@@ -1,7 +1,7 @@
 
 # Create the initial compute image
 
-# Adaptation of the upstream Luna readme
+# Started as an adaptation of the upstream Luna readme
 # https://github.com/dchirikov/luna
 
 source /etc/trinity.sh
@@ -45,10 +45,70 @@ cp "${POST_FILEDIR}/yum.conf" "${TARGET}/etc"
 # so that we can have a copy later if we want. It makes things a bit more
 # complex, so hang on.
 
+# First, some functions to make our life easier
+
+
+# Bind an arbitrary number of mounts under a common root dir
+
+# Syntax: bind_mounts root_dir dir1 [dir2 ...]
+
+function bind_mounts {
+
+    if (( $# < 2 )) ; then
+        echo_warn 'bind_mounts: not enough arguments, no mount done.'
+        return 1
+    fi
+
+    root_dir="$1"
+    shift
+    
+    for dir in "$@" ; do
+        mkdir -p "${root_dir}/${dir}"
+        mount --bind "$dir" "${root_dir}/${dir}"
+    done
+}
+
+
+# Unbind mounts
+
+#  !!! WARNING !!!
+# They must be unbound in reverse order of binding, or interesting times will
+# ensue! Why? Two words: recursive bind.
+
+# Syntax: unbind_mounts root_dir dir1 [dir2 ...]
+# It will unbind in the order dirN .. dir1
+
+function unbind_mounts {
+    
+    if (( $# < 2 )) ; then
+        echo_warn 'unbind_mounts: not enough arguments, no umount done.'
+        return 1
+    fi
+    
+    root_dir="$1"
+    shift
+    
+    for i in $(seq $# -1 1) ; do
+        umount "${root_dir}/${@:$i:1}"
+    done
+}
+
+
+#---------------------------------------
+
+# Now for the directories themselves
+
+# Used for the duration of the configuration:
+# ===========================================
 # "$TRIX_ROOT"      ->  for the local repos + trinity.sh*
 # "$POST_TOPDIR"    ->  for the configuration scripts and files
 # /var/cache/yum    ->  to keep a copy of all the RPMs on the host, and speed up
 #                       installation of multiple images
+
+# Used only for the initial package installation:
+# ===============================================
+# /etc/yum.repos.d  ->  so that we have the same repos until post script setup
+
 
 DIRLIST=( \
             "$TRIX_ROOT" \
@@ -56,16 +116,15 @@ DIRLIST=( \
             /var/cache/yum \
         )
 
+DIRTMPLIST=( \
+                /etc/yum.repos.d \
+           )
+
 
 echo_info 'Binding the host directories'
 
-for dir in "${DIRLIST[@]}" ; do
-
-    mkdir -p "${TARGET}/$dir"
-    mount --bind "$dir" "${TARGET}/$dir"
-done
-
-[[ "$QUIET" ]] || { echo ; mount | grep "$TARGET" ; }
+bind_mounts "$TARGET" "${DIRLIST[@]}"
+bind_mounts "$TARGET" "${DIRTMPLIST[@]}"
 
 
 #---------------------------------------
@@ -84,9 +143,14 @@ if [[ -r "${POST_FILEDIR}/target.pkglist" ]] ; then
 fi
 
 
+# And unbind the temporary directories
+
+unbind_mounts "$TARGET" "${DIRTMPLIST[@]}"
+
+
 #---------------------------------------
 
-if [[ $"NODE_IMG_CONFIG" ]] ; then
+if [[ "$NODE_IMG_CONFIG" ]] ; then
     
     echo_info 'Running the configuration tool on the new image'
     
@@ -100,19 +164,5 @@ fi
 
 echo_info 'Unbinding the host directories'
 
-#############
-#  WARNING  #
-#############
-# They must be unbound in reverse order, or interesting times will ensue.
-# Why? Two words: recursive bind.
-
-dirnum=${#DIRLIST[@]}
-
-while (( $dirnum )) ; do
-    (( dirnum-- ))
-    sleep 1s
-    umount "${TARGET}/${DIRLIST[$dirnum]}"
-done
-
-[[ "$QUIET" ]] || mount | grep "$TARGET"
+unbind_mounts "$TARGET" "${DIRLIST[@]}"
 
