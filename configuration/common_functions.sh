@@ -187,11 +187,20 @@ function store_variable {
     else
         # delete the line if it exists, and append the new value
         sed -i '/^'"${VARNAME}"'=/d' "$1"
-        echo "${SET_RO+declare -r }${VARNAME}=\"${3}\"" >> "$1"
+        echo "${SET_RO+declare -r }${VARNAME}=${SYSTEM-\"}${3}${SYSTEM-\"}" >> "$1"
     fi
 }
 
+
+# Same but without the surrounding quotes, for system config file use
+
+function store_system_variable {
+    SYSTEM= store_variable "$@"
+}
+
+
 typeset -fx store_variable
+typeset -fx store_system_variable
 
 
 #---------------------------------------
@@ -223,7 +232,7 @@ function store_password {
     # it already
     [[ "$TRIX_SHADOW" ]] || source /etc/trinity.sh
     
-    SET_RO="" store_variable "$TRIX_SHADOW" "$@"
+    SET_RO= store_variable "$TRIX_SHADOW" "$@"
 }
 
 
