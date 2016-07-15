@@ -111,3 +111,10 @@ sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux /etc/selinux/conf
 setenforce 0
 echo_warn "Please remember to reboot the node after completing the configuration!"
 
+
+#---------------------------------------
+
+echo_info 'Moving the user homes to the shared folder'
+
+store_system_variable /etc/default/useradd HOME "$TRIX_HOME"
+

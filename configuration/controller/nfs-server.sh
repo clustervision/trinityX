@@ -3,6 +3,7 @@
 source /etc/trinity.sh
 source "$POST_CONFIG"
 
+
 # Enable the NFS server and exports
 
 SHARED_OPTS="${NFS_SHARED_OPTS:-ro,no_root_squash}"
@@ -10,13 +11,13 @@ SHARED_OPTS="${NFS_SHARED_OPTS:-ro,no_root_squash}"
 
 echo_info 'Adding the shared export'
 
-append_line "${TRIX_ROOT}/shared (${SHARED_OPTS})" /etc/exports
-store_variable /etc/trinity.sh NFS_SHARED "${TRIX_ROOT}/shared"
+append_line "${TRIX_SHARED} (${SHARED_OPTS})" /etc/exports
 
 
 if [[ "$NFS_HOME_OPTS" ]] ; then
     echo_info 'Adding the /home export'
-    append_line "/home (${NFS_HOME_OPTS})" /etc/exports
+    append_line "${TRIX_HOME} (${NFS_HOME_OPTS})" /etc/exports
+    store_variable /etc/trinity.sh HOME_ON_NFS 1
 fi
 
 
