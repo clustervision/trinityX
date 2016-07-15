@@ -26,6 +26,9 @@ function setup_root_pass {
 [mysql]
 user=root
 password=$PASS
+[mysqldump]
+user=root
+password=$PASS
 EOF
     chmod 600 ~/.my.cnf
 
