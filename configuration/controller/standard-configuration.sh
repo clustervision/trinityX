@@ -14,7 +14,7 @@ source "$POST_CONFIG"
 # Fallback values for configuration parameters
 
 TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trix}"
-TRIX_VERSION="${STDCFG_TRIX_VERSION:-10}"
+TRIX_VERSION="${STDCFG_TRIX_VERSION:-unknown}"
 SSHROOT="${STDCFG_SSHROOT:-0}"
 
 
@@ -23,8 +23,9 @@ SSHROOT="${STDCFG_SSHROOT:-0}"
 echo_info "Creating Trinity directory tree"
 
 mkdir -p "$TRIX_ROOT"
+mkdir -p "${TRIX_ROOT}/images"
 mkdir -p "${TRIX_ROOT}/shared"
-mkdir -p "${TRIX_ROOT}/applications"
+mkdir -p "${TRIX_ROOT}/shared/applications"
 
 
 #---------------------------------------
@@ -38,6 +39,7 @@ cat > "${TRIX_ROOT}/trinity.sh" << EOF
 TRIX_VERSION="$TRIX_VERSION"
 TRIX_ROOT="$TRIX_ROOT"
 TRIX_SHADOW="${TRIX_ROOT}/trinity.shadow"
+TRIX_IMG_ROOT="${TRIX_ROOT}/images"
 TRIX_CTRL_HOSTNAME=$(hostname)
 
 EOF

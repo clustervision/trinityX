@@ -26,7 +26,7 @@
 # Right number of arguments?
 
 if ! (( $# )) ; then
-    echo "Syntax: $0 [-q] [--no-color] config_file [config_file ...]" >&2
+    echo "Syntax: $0 [-v|-q] [-d] [--no-color] config_file [config_file ...]" >&2
     echo "Please refer to the documentation for more details." >&2
     exit 1
 fi
@@ -86,7 +86,7 @@ function run_one_script {
     # Then run the script if we have one
     if [[ -r "$POST_SCRIPT" ]] ; then
         echo_progress "Running post script: $POST_SCRIPT"
-        bash "$POST_SCRIPT"
+        bash ${DEBUG+-x} "$POST_SCRIPT"
         ret=$?
     else
         echo_info "No post script found: $POST_SCRIPT"
@@ -155,16 +155,28 @@ function apply_config {
 
 echo "Beginning of script: $(date)"
 
+unset QUIET VERBOSE DEBUG NOCOLOR
+
 while (( $# )) ; do
 
     case "$1" in
 
         -q )
-            export QUIETRUN=""
+            declare -x QUIET=
+            unset VERBOSE
+            ;;
+
+        -v )
+            declare -x VERBOSE=
+            unset QUIET
+            ;;
+
+        -d )
+            declare -x DEBUG=
             ;;
 
         --nocolor )
-            export NOCOLOR=""
+            declare -x NOCOLOR=
             ;;
 
         * )

@@ -13,11 +13,12 @@
 source /etc/trinity.sh
 
 
-echo_info "Copying packages and setting up the local repository:"
+echo_info 'Copying packages and setting up the local repository'
 
 
 # Copy the whole tree with all local repos
-cp -r "${POST_TOPDIR}/packages" "${TRIX_ROOT}"
+mkdir -p "${TRIX_ROOT}/shared"
+cp -r "${POST_TOPDIR}/packages" "${TRIX_ROOT}/shared"
 
 
 # For each repo file present, check that there is actually a matching repo...

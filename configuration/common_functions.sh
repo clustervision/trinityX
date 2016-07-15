@@ -17,13 +17,14 @@ fi
 # We have to use functions to delay the evaluation of QUIETRUN, otherwise it's
 # done when the file is sourced...
 
-
-function cp         { $(which cp) ${QUIETRUN--v} "${@}" ; }
-function yum        { $(which yum) ${QUIETRUN+-q} "${@}" ; }
-function mkdir      { $(which mkdir) ${QUIETRUN--v} "${@}" ; }
-function systemctl  { $(which systemctl) ${QUIETRUN+-q} "${@}" ; }
+function cp         { command cp ${VERBOSE+-v} "${@}" ; }
+function mv         { command mv ${VERBOSE+-v} "${@}" ; }
+function yum        { command yum ${QUIET+-q} "${@}" ; }
+function mkdir      { command mkdir ${VERBOSE+-v} "${@}" ; }
+function systemctl  { command systemctl ${QUIET+-q} "${@}" ; }
 
 typeset -fx cp
+typeset -fx mv
 typeset -fx yum
 typeset -fx mkdir
 typeset -fx systemctl

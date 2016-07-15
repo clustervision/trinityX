@@ -106,9 +106,27 @@ If you are offended by color codes in your log files, use the ``--nocolor``
 option.
 
 
+Parameters
+~~~~~~~~~~
+The complete list of command line parameters is:
+
+- ``-v``
+    Gives a more verbose output than normal.
+
+- ``-q``
+    Gives a quieter output than normal.
+
+- ``-d``
+    Runs all post scripts in full debug mode (``bash -x``)
+
+- ``--nocolor``
+    Display all output messages without any color.
+    Note that this only applies to the messages coming from the configuration
+    tool itself; other commands called by post scripts may still use colors.
+
+
 Example
 ~~~~~~~
-
 A very simple example of a post script is provided in the same directory as the
 configuration tool. It displays the various environment variables that are made
 available to the Bash scripts.

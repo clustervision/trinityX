@@ -48,6 +48,17 @@ fi
 
 #---------------------------------------
 
+# Enable HTTPS on public zone
+
+if (( $FWD_HTTPS_PUBLIC )) ; then
+    echo_info "Enabling HTTPS on the public zone"
+    firewall-cmd --zone=public --add-service=https
+    firewall-cmd --permanent --zone=public --add-service=https
+fi
+
+
+#---------------------------------------
+
 echo_info 'Reloading firewalld'
 
 firewall-cmd --reload
