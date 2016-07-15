@@ -26,8 +26,24 @@
 # Right number of arguments?
 
 if ! (( $# )) ; then
-    echo "Syntax: $0 [-v|-q] [-d] [--no-color] config_file [config_file ...]" >&2
-    echo "Please refer to the documentation for more details." >&2
+    echo "Syntax: $0 [options] config_file [config_file ...]" >&2
+    echo "
+Options:    -v                  be more verbose
+            -q                  be quieter
+            -d                  run the post scripts in debug mode (bash -x)
+            --nocolor           don't use color escape codes in the messages
+            --dontstopmenow     don't wait for user input on error
+            --bailout           exit when a post script returns an error code
+            --hitthewall        exit on any error inside a post script (bash -e)
+
+-v and -q are mutually exclusive.
+--dontstopmenow is mutually exclusive with --bailout and --hitthewall
+--hitthewall selects --bailout too
+
+All options are positional, that is they apply only to the configuration files
+after them on the command line
+" >&2
+    echo 'Please refer to the documentation for more details.' >&2
     exit 1
 fi
 
@@ -60,7 +76,6 @@ source "$POST_COMMON"
 
 function run_one_script {
     
-    
     export POST_PKGLIST="${POSTDIR}/${1}.pkglist"
     export POST_SCRIPT="${POSTDIR}/${1}.sh"
     export POST_FILEDIR="${POSTDIR}/${1}"
@@ -86,7 +101,7 @@ function run_one_script {
     # Then run the script if we have one
     if [[ -r "$POST_SCRIPT" ]] ; then
         echo_progress "Running post script: $POST_SCRIPT"
-        bash ${DEBUG+-x} "$POST_SCRIPT"
+        bash ${DEBUG+-x} ${HARDSTOP+-e} "$POST_SCRIPT"
         ret=$?
     else
         echo_info "No post script found: $POST_SCRIPT"
@@ -158,30 +173,46 @@ echo "Beginning of script: $(date)"
 unset QUIET VERBOSE DEBUG NOCOLOR
 
 while (( $# )) ; do
-
+    
     case "$1" in
-
+        
         -q )
             declare -x QUIET=
             unset VERBOSE
             ;;
-
+        
         -v )
             declare -x VERBOSE=
             unset QUIET
             ;;
-
+        
         -d )
             declare -x DEBUG=
             ;;
-
+        
         --nocolor )
             declare -x NOCOLOR=
             ;;
-
+        
+        --dontstopmenow )
+            declare -x NOSTOP=
+            unset HARDSTOP
+            unset SOFTSTOP
+            ;;
+        
+        --hitthewall )
+            declare -x HARDSTOP=
+            ;&
+        
+        --bailout )
+            declare -x SOFTSTOP=
+            unset NOSTOP
+            ;;
+        
         * )
             echo_header "CONFIGURATION FILE: $1"
             apply_config "$1"
+            echo_footer
             ;;
     esac
     shift

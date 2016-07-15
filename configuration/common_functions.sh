@@ -54,6 +54,14 @@ function echo_header {
     echo -e "${NOCOLOR-$COL_RESET}"
 }
 
+# Display a big fat footer in colors
+
+function echo_footer {
+    echo -e "${NOCOLOR-$COL_GREEN}"
+    echo -e "################################################################################"
+    echo -e "${NOCOLOR-$COL_RESET}"
+}
+
 # Display a standard progress message
 
 function echo_progress {
@@ -85,13 +93,21 @@ function echo_error {
     echo -e "${NOCOLOR-$COL_RED}"
     echo "[ ERROR ]  $@"
     echo -e "${NOCOLOR-$COL_RESET}"
+    
+    if [[ "${SOFTSTOP+x}" == x ]] ; then
+        echo 'Stop requested, exiting now.'
+        exit 1
+    fi
 }
 
 # Same, and wait for user input
 
 function echo_error_wait {
     echo_error "$@"
-    read -p "           Press Enter to continue."
+    
+    if [[ "${NOSTOP+x}" == x ]] ; then
+        read -p "           Press Enter to continue."
+    fi
 }
 
 typeset -fx echo_header
