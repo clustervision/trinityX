@@ -68,10 +68,7 @@ ssh emaster 'echo "  StrictHostKeyChecking no" >> /root/.ssh/config'
 ssh emaster yum -y install git
 ssh emaster git clone quentinleburel@github.com:clustervision/trinityx
 
-# Patching JF's horrible stuff
-ssh emaster 'sed -i "s/read -p/#/" /root/trinityx/configuration/common_functions.sh'
-
 # Starting the installation script
-ssh emaster "cd /root/trinityx/configuration; ./configure.sh --nocolor emaster.cfg 2>&1 | tee -a /var/log/trinity-installer.log"
+ssh emaster "cd /root/trinityx/configuration; ./configure.sh --dontstopmenow --nocolor emaster.cfg 2>&1 | tee -a /var/log/trinity-installer.log"
 
 
