@@ -128,4 +128,3 @@ echo_info "Success!"
 
 do_sql_req "DROP DATABASE ${TMPNAME#*/};"
 
-# test comment
