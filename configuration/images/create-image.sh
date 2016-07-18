@@ -29,7 +29,7 @@ mkdir -p "$TARGET"
 echo_info 'Initializing the RPM dabatase in the target directory'
 
 rpm --root "$TARGET" --initdb
-rpm --root "$TARGET" -ivh "${POST_FILEDIR}/centos-release\*.rpm"
+rpm --root "$TARGET" -ivh "${POST_FILEDIR}/${NODE_INITIAL_RPM:-centos-release\*.rpm}"
 
 
 echo_info 'Setting up the yum configuration'
