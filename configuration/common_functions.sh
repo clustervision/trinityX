@@ -21,12 +21,16 @@ function cp         { command cp ${VERBOSE+-v} "${@}" ; }
 function mv         { command mv ${VERBOSE+-v} "${@}" ; }
 function yum        { command yum ${QUIET+-q} "${@}" ; }
 function mkdir      { command mkdir ${VERBOSE+-v} "${@}" ; }
+function mount      { command mount ${VERBOSE+-v} "${@}" ; }
+function umount     { command umount ${VERBOSE+-v} "${@}" ; }
 function systemctl  { command systemctl ${QUIET+-q} "${@}" ; }
 
 typeset -fx cp
 typeset -fx mv
 typeset -fx yum
 typeset -fx mkdir
+typeset -fx mount
+typeset -fx umount
 typeset -fx systemctl
 
 
@@ -51,6 +55,14 @@ function echo_header {
     echo -e "################################################################################\n##"
     echo "##  $@"
     echo -e "##\n################################################################################"
+    echo -e "${NOCOLOR-$COL_RESET}"
+}
+
+# Display a big fat footer in colors
+
+function echo_footer {
+    echo -e "${NOCOLOR-$COL_GREEN}"
+    echo -e "################################################################################"
     echo -e "${NOCOLOR-$COL_RESET}"
 }
 
@@ -85,13 +97,21 @@ function echo_error {
     echo -e "${NOCOLOR-$COL_RED}"
     echo "[ ERROR ]  $@"
     echo -e "${NOCOLOR-$COL_RESET}"
+    
+    if [[ "${SOFTSTOP+x}" == x ]] ; then
+        echo 'Stop requested, exiting now.'
+        exit 1
+    fi
 }
 
 # Same, and wait for user input
 
 function echo_error_wait {
     echo_error "$@"
-    read -p "           Press Enter to continue."
+    
+    if [[ "${NOSTOP+x}" == x ]] ; then
+        read -p "           Press Enter to continue."
+    fi
 }
 
 typeset -fx echo_header
@@ -167,11 +187,20 @@ function store_variable {
     else
         # delete the line if it exists, and append the new value
         sed -i '/^'"${VARNAME}"'=/d' "$1"
-        echo "${SET_RO+declare -r }${VARNAME}=\"${3}\"" >> "$1"
+        echo "${SET_RO+declare -r }${VARNAME}=${SYSTEM-\"}${3}${SYSTEM-\"}" >> "$1"
     fi
 }
 
+
+# Same but without the surrounding quotes, for system config file use
+
+function store_system_variable {
+    SYSTEM= store_variable "$@"
+}
+
+
 typeset -fx store_variable
+typeset -fx store_system_variable
 
 
 #---------------------------------------
@@ -203,7 +232,7 @@ function store_password {
     # it already
     [[ "$TRIX_SHADOW" ]] || source /etc/trinity.sh
     
-    SET_RO="" store_variable "$TRIX_SHADOW" "$@"
+    SET_RO= store_variable "$TRIX_SHADOW" "$@"
 }
 
 

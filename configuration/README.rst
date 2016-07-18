@@ -119,10 +119,45 @@ The complete list of command line parameters is:
 - ``-d``
     Runs all post scripts in full debug mode (``bash -x``)
 
+
+The following options are mainly useful for automated testing:
+
 - ``--nocolor``
     Display all output messages without any color.
     Note that this only applies to the messages coming from the configuration
     tool itself; other commands called by post scripts may still use colors.
+
+- ``--dontstopmenow``
+    Do not stop for user input when an error occurs.
+
+- ``--bailout``
+    Soft stop: exit the configuration tool when any post script returns an error
+    code. This is not default as not all post scripts have error code
+    management.
+
+- ``--hitthewall``
+    Hard stop: exit both the current post script and the configuration tool when
+    any error of any form happens in the script. This may be overkill in a lot
+    of cases as there are legitimate situations where a post script may not care
+    about the return code of any command within, including an error, yet will be
+    terminated. (Think of ``grep`` returning a non-zero code when the string
+    isn't matched...)
+
+
+A few additional rules:
+
+- ``-v`` and ``-q`` are mutually exclusive;
+
+- ``--dontstopmenow`` is mutually exclusive with ``--bailout`` and
+  ``--hitthewall``
+
+- ``--hitthewall`` selects ``--bailout`` too
+
+
+All options are *positional*, that is they apply only to the configuration files
+after them on the command line. Therefore it's possible to run two or three
+configurations with normal parameters, and a last one in full debug and hard
+exit mode.
 
 
 Example
