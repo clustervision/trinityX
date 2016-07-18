@@ -9,13 +9,18 @@ MKISO='no'
 OUTPUT_ISO="${PROGDIR}/custom.iso"
 
 function usage () {
-  printf '%s\n\n%s\n' "Builds a file structure to be used in building a ISO or USB disk." \
-                      "USAGE:" \
-                      "$ ${PROGNAME} -i [ISO file] -m [md5sum] -b [y/N] -k [kickstart] -o [output]" \
-                      "File can be checked to verify it contains a valid CentOS image."
+  printf '%b\n' "Builds a file structure to be used in building a ISO or USB disk.\n" \
+                      "USAGE:\n" \
+                      "$ ${PROGNAME} -i [ISO file] -b [y/N] \n" \
+                      "  -i [ISO file]  - Path to CentOS ISO (default: ${OUTPUT_ISO})" \
+                      "  -b [y//N]      - Build ISO (default: no)\n" \
+                      "Options:\n" \
+                      "  -m [md5sum]    - File can be checked to verify if it contains a valid CentOS image." \
+                      "  -k [kickstart] - Optional kickstart file to be passed to the ISO structure." \
+                      "  -o [output]    - Path to output file.\n"
 }
 
-while getopts ":i:m:b:k:" opt; do
+while getopts ":i:m:b:k:o:" opt; do
   case "${opt}" in
     i)
       ISO=${OPTARG}
