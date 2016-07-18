@@ -3,13 +3,15 @@
 readonly PROGNAME=$(basename $0)
 readonly PROGDIR=$(readlink -m $(dirname $0))
 
+#default file locations
 KICKSTART='kickstart/default.ks'
 MKISO='no'
+OUTPUT_ISO="${PROGDIR}/custom.iso"
 
 function usage () {
   printf '%s\n\n%s\n' "Builds a file structure to be used in building a ISO or USB disk." \
                       "USAGE:" \
-                      "$ ${PROGNAME} -i [ISO file] -m [md5sum] -b [y/N] -k [kickstart]" \
+                      "$ ${PROGNAME} -i [ISO file] -m [md5sum] -b [y/N] -k [kickstart] -o [output]" \
                       "File can be checked to verify it contains a valid CentOS image."
 }
 
@@ -30,6 +32,9 @@ while getopts ":i:m:b:k:" opt; do
       ;;
     k)
       KICKSTART=${OPTARG}
+      ;;
+    o)
+      OUTPUT_ISO=${OPTARG}
       ;;
     *)
       usage
@@ -83,7 +88,7 @@ function cleanup () {
 function build_custom_iso () {
   printf '%s %s\n' $FUNCNAME $@
   cd "${PROGDIR}"/distribution
-  mkisofs -o "${PROGDIR}"/custom.iso -b isolinux/isolinux.bin -c boot.cat -no-emul-boot -V 'CentOS 7 x86_64' -boot-load-size 4 -boot-info-table -R -J -v -T .
+  mkisofs -o "${OUTPUT_ISO}" -b isolinux/isolinux.bin -c boot.cat -no-emul-boot -V 'CentOS 7 x86_64' -boot-load-size 4 -boot-info-table -R -J -v -T .
 }
 
 function main () {
