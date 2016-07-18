@@ -25,11 +25,11 @@ cp -r "${POST_TOPDIR}/packages" "${TRIX_ROOT}/shared"
 
 for repo in "${POST_FILEDIR}"/*.repo ; do
     bname="$(basename "$repo" .repo)"
-    if ls "${POST_TOPDIR}/packages/${bname}/repodata/"*primary.sqlite.* >/dev/null 2>&1 ; then
-        cp "${repo}" /etc/yum.repos.d/ && \
-            sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' "/etc/yum.repos.d/${bname}.repo"
-    else
-        echo_warn "No \"${bname}\" repository on the installation media."
+    cp "${repo}" /etc/yum.repos.d/
+    sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' "/etc/yum.repos.d/${bname}.repo"
+    if ! ls "${POST_TOPDIR}/packages/${bname}/repodata/"*primary.sqlite.* >/dev/null 2>&1 ; then
+        echo_warn "Repository \"${bname}\" is empty, disabling the repo file."
+        sed -i 's/^\(enabled=\).*/\10/g' "/etc/yum.repos.d/${bname}.repo"
     fi
 done
 
