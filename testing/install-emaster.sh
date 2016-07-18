@@ -71,6 +71,7 @@ ssh emaster git clone git@github.com:clustervision/trinityx
 ssh emaster "cd trinityx; git checkout QLB-testing-framework"
 
 # Starting the installation script
-ssh emaster "cd /root/trinityx/configuration; ./configure.sh --dontstopmenow --nocolor ../testing/emaster.cfg 2>&1 | tee -a /var/log/trinity-installer.log"
+ssh emaster "cd /root/trinityx/configuration; cp -v ../testing/emaster.cfg ."
+ssh emaster "cd /root/trinityx/configuration; ./configure.sh --dontstopmenow --nocolor emaster.cfg 2>&1 | tee -a /var/log/trinity-installer.log"
 
 
