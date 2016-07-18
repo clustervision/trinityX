@@ -23,6 +23,7 @@ echo_info "Check config variables available."
 
 echo "LUNA_FRONTEND=${LUNA_FRONTEND?"Should be defined"}"
 echo "LUNA_NETWORK=${LUNA_NETWORK?"Should be defined"}"
+echo "LUNA_NETWORK_NAME=${LUNA_NETWORK_NAME:-cluster}"
 echo "LUNA_PREFIX=${LUNA_PREFIX?"Should be defined"}"
 
 LUNA_NETMASK=`ipcalc -s -m ${LUNA_NETWORK}/${LUNA_PREFIX} | sed 's/.*=//'`
@@ -91,15 +92,10 @@ echo_info "Create ssh keys."
 
 if [ ! -f /etc/nginx/conf.d/nginx-luna.conf ]; then
     # copy config files
-    mv /etc/dhcp/dhcpd.conf{,.bkp_luna}
     mv /etc/nginx/nginx.conf{,.bkp_luna}
-    cp ${POST_FILEDIR}/dhcpd.conf /etc/dhcp/
     cp ${POST_FILEDIR}/nginx.conf /etc/nginx/
     mkdir -p /etc/nginx/conf.d/
     cp ${POST_FILEDIR}/nginx-luna.conf /etc/nginx/conf.d/
-    for VAR in LUNA_NETWORK LUNA_NETMASK  LUNA_FRONTEND LUNA_DHCP_RANGE_START LUNA_DHCP_RANGE_END; do
-        replace_template $VAR /etc/dhcp/dhcpd.conf
-    done
 fi
 
 echo_info "Start mongo."
@@ -149,6 +145,8 @@ systemctl daemon-reload
 
 /usr/sbin/luna cluster init
 /usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND}
+/usr/sbin/luna network add -n ${LUNA_NETWORK_NAME} -N ${LUNA_NETWORK} -P ${LUNA_PREFIX}
+/usr/sbin/luna cluster makedhcp -N ${LUNA_NETWORK_NAME} -s ${LUNA_DHCP_RANGE_START} -e ${LUNA_DHCP_RANGE_END}
 
 for service in  xinetd nginx dhcpd lweb ltorrent; do
     systemctl enable $service
