@@ -109,7 +109,7 @@ function echo_error {
 function echo_error_wait {
     echo_error "$@"
     
-    if [[ "${NOSTOP+x}" == x ]] ; then
+    if ! [[ -v NOSTOP ]] ; then
         read -p "           Press Enter to continue."
     fi
 }
