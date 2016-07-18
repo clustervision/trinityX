@@ -1,5 +1,6 @@
 #!/bin/bash
 
+WORK_DIR=/root/quentin/trinityx
 LOG=/root/quentin/emaster-log
 VM_NAME=QLB-emaster
 
@@ -9,9 +10,9 @@ sleep 10
 
 # Preparing the ISO
 echo "Building the ISO..."
-./builder -i /var/lib/libvirt/images/CentOS-7-x86_64-Minimal-1511.iso -m f90e4d28fa377669b2db16cbcb451fcb9a89d2460e3645993e30e137ac37d284 -b y -k emaster.ks > $LOG 2>&1
+$WORK_DIR/trinX-pack/builder -i /var/lib/libvirt/images/CentOS-7-x86_64-Minimal-1511.iso -m 88c0437f0a14c6e2c94426df9d43cd67 -b y -k $WORK_DIR/testing/emaster.ks > $LOG 2>&1
 echo "Moving the ISO to /var/lib/libvirt/images..."
-mv custom.iso /var/lib/libvirt/images/Centos-7-x86_64_Minimal-1511-KICKSTART.iso
+mv $WORK_DIR/trinX-pack/custom.iso /var/lib/libvirt/images/Centos-7-x86_64_Minimal-1511-KICKSTART.iso
 echo "Shutting down the VM..."
 virsh destroy $VM_NAME
 echo "Ejecting the ISO just in case..."
