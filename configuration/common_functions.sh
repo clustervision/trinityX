@@ -239,3 +239,34 @@ function store_password {
 typeset -fx get_password
 typeset -fx store_password
 
+
+#---------------------------------------
+
+# Variable testing functions
+# Due to the sheer amount of acceptables values for a flag enabled or disabled,
+# better have some functions for that.
+
+# Returns a single 0/1 value for the state of a variable used as a flag
+# A flag is OFF when either of these conditions is met:
+# - it is unset
+# - it is set to "0", "n" or "no" (in small or capital letters)
+# In all other cases, it's ON.
+
+# Syntax: flag_on variable_name
+
+function flag_on {
+    
+    # always return false if we don't have the right arguments
+    if (( $# != 1 )) ; then
+        echo_warn 'flag_on: wrong number of arguments.'
+        return 1
+    fi
+    
+    name="$1"
+    value="${!name}"
+    
+    [[ ! -v "$name" || "${value,,}" =~ 0|n|no ]] && return 1 || return 0
+}
+
+typeset -fx flag_on
+

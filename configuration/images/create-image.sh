@@ -29,8 +29,7 @@ mkdir -p "$TARGET"
 echo_info 'Initializing the RPM dabatase in the target directory'
 
 rpm --root "$TARGET" --initdb
-rpm --root "$TARGET" -ivh "${POST_FILEDIR}/centos-release\*.rpm"
-
+rpm --root "$TARGET" -ivh "${POST_FILEDIR}/${NODE_INITIAL_RPM:-centos-release\*.rpm}"
 
 echo_info 'Setting up the yum configuration'
 
@@ -109,22 +108,32 @@ function unbind_mounts {
 # ===============================================
 # /etc/yum.repos.d  ->  so that we have the same repos until post script setup
 
+# Note that some of those directories are optional and controlled by
+# configuration options.
+
 
 DIRLIST=( \
             "$TRIX_ROOT" \
             "$POST_TOPDIR" \
-            /var/cache/yum \
         )
 
+
 DIRTMPLIST=( \
-                /etc/yum.repos.d \
            )
+
+
+# Add the host repos and yum cache only if requested
+
+if flag_on NODE_HOST_REPOS ; then
+    DIRLIST+=( /var/cache/yum )
+    DIRTMPLIST+=( /etc/yum.repos.d )
+fi
 
 
 echo_info 'Binding the host directories'
 
-bind_mounts "$TARGET" "${DIRLIST[@]}"
-bind_mounts "$TARGET" "${DIRTMPLIST[@]}"
+(( ${#DIRLIST[@]} )) && bind_mounts "$TARGET" "${DIRLIST[@]}"
+(( ${#DIRTMPLIST[@]} )) && bind_mounts "$TARGET" "${DIRTMPLIST[@]}"
 
 
 #---------------------------------------
@@ -145,12 +154,12 @@ fi
 
 # And unbind the temporary directories
 
-unbind_mounts "$TARGET" "${DIRTMPLIST[@]}"
+(( ${#DIRTMPLIST[@]} )) && unbind_mounts "$TARGET" "${DIRTMPLIST[@]}"
 
 
 #---------------------------------------
 
-if [[ "$NODE_IMG_CONFIG" ]] ; then
+if flag_on NODE_IMG_CONFIG ; then
     
     echo_info 'Running the configuration tool on the new image'
     
@@ -164,5 +173,5 @@ fi
 
 echo_info 'Unbinding the host directories'
 
-unbind_mounts "$TARGET" "${DIRLIST[@]}"
+(( ${#DIRLIST[@]} )) && unbind_mounts "$TARGET" "${DIRLIST[@]}"
 
