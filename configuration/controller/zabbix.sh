@@ -94,16 +94,47 @@ function setup_zabbix_database () {
   zcat /usr/share/doc/zabbix-server-mysql-3.0.3/create.sql.gz | mysql -uroot zabbix
 }
 
-function zabbix_server_configuration () {
-  sed -i -e "/^DBHost=/{h;s/=.*/=$(hostname -s)/};\${x;/^$/{s//DBHost=$(hostname -s)/;H};x}" /etc/zabbix/zabbix_server.conf
-  sed -i -e "/^DBName=/{h;s/=.*/="${ZABBIX_MYSQL_DB}"/};\${x;/^$/{s//DBName=${ZABBIX_MYSQL_DB}/;H};x}" /etc/zabbix/zabbix_server.conf
-  sed -i -e "/^DBName=/{h;s/=.*/="${ZABBIX_MYSQL_USER}"/};\${x;/^$/{s//DBName=${ZABBIX_MYSQL_DB}/;H};x}" /etc/zabbix/zabbix_server.conf
+function zabbix_server_config () {
+  printf '%s %s\n' $FUNCNAME $@
+
+  local TIMEZONE=$(readlink /etc/localtime | sed "s/..\/usr\/share\/zoneinfo\///")
+
+  sed -i -e "/^DBHost=/{h;s/=.*/=$(hostname -s)/};\${x;/^$/{s//DBHost=$(hostname -s)/;H};x}"                                 /etc/zabbix/zabbix_server.conf
+  sed -i -e "/^DBName=/{h;s/=.*/="${ZABBIX_MYSQL_DB}"/};\${x;/^$/{s//DBName=${ZABBIX_MYSQL_DB}/;H};x}"                       /etc/zabbix/zabbix_server.conf
+  sed -i -e "/^DBUser=/{h;s/=.*/="${ZABBIX_MYSQL_USER}"/};\${x;/^$/{s//DBUser=${ZABBIX_MYSQL_USER}/;H};x}"                   /etc/zabbix/zabbix_server.conf
+  sed -i -e "/^DBPassword=/{h;s/=.*/="${ZABBIX_MYSQL_PASSWORD}"/};\${x;/^$/{s//DBPassword=${ZABBIX_MYSQL_PASSWORD}/;H};x}"   /etc/zabbix/zabbix_server.conf
+  sed -i -e "/php_value date.timezone/c\        php_value date.timezone "${TIMEZONE}""                                       /etc/httpd/conf.d/zabbix.conf
+
+  printf '%b\n' "<?php" \
+                "// Zabbix GUI configuration file." \
+                "global \$DB\n;" \
+                "\$DB['TYPE']     = 'MYSQL';" \
+                "\$DB['SERVER']   = 'localhost';" \
+                "\$DB['PORT']     = '0';" \
+                "\$DB['DATABASE'] = '"${${ZABBIX_MYSQL_DB}}"';" \
+                "\$DB['USER']     = '"${${ZABBIX_MYSQL_USER}}"';" \
+                "\$DB['PASSWORD'] = '"${ZABBIX_MYSQL_PASSWORD}"';\n" \
+                "// Schema name. Used for IBM DB2 and PostgreSQL." \
+                "\$DB['SCHEMA'] = '';\n" \
+                "\$ZBX_SERVER      = 'localhost';" \
+                "\$ZBX_SERVER_PORT = '10051';" \
+                "\$ZBX_SERVER_NAME = 'local cluster';\n" \
+                "\$IMAGE_FORMAT_DEFAULT = IMAGE_FORMAT_PNG;" > /etc/zabbix/web/zabbix.conf.php
+}
+
+function zabbix_server_services () {
+  printf '%s %s\n' $FUNCNAME $@
+  systemctl restart zabbix-server
+  systemctl restart httpd
+  systemctl enable zabbix-server
+  systemctl enable httpd
 }
 
 function main () {
   install_zabbix_packages
   setup_zabbix_database
-  zabbix_server_configuration
+  zabbix_server_config
+  zabbix_server_services
 }
 
 printf '%s\n\n' 'Zabbix installation script:'
