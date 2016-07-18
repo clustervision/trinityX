@@ -67,9 +67,10 @@ ssh emaster 'echo "  StrictHostKeyChecking no" >> /root/.ssh/config'
 
 # Pulling git and installing the beast
 ssh emaster yum -y install git
-ssh emaster git clone quentinleburel@github.com:clustervision/trinityx
+ssh emaster git clone git@github.com:clustervision/trinityx
+ssh emaster "cd trinityx; git checkout QLB-testing-framework"
 
 # Starting the installation script
-ssh emaster "cd /root/trinityx/configuration; ./configure.sh --dontstopmenow --nocolor emaster.cfg 2>&1 | tee -a /var/log/trinity-installer.log"
+ssh emaster "cd /root/trinityx/configuration; ./configure.sh --dontstopmenow --nocolor ../testing/emaster.cfg 2>&1 | tee -a /var/log/trinity-installer.log"
 
 
