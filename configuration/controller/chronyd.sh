@@ -38,7 +38,7 @@ if [[ "$CHRONY_SERVER" ]] && ! [[ "$CHRONY_SERVER" == 0 ]] ; then
 fi
 
 
-if (( $modified )) ; then
+if (( $modified )) && ! flag_on CHROOT_INSTALL ; then
     
     echo_info 'Restarting the service'
     systemctl restart chronyd

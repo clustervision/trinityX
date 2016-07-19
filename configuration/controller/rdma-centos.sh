@@ -6,9 +6,11 @@
 # You will want to disable this post script if you're using a HW-specific RDMA
 # configuration.
 
+source "$POST_CONFIG"
+
 echo_info 'Enabling and starting the RDMA service'
 
 systemctl enable rdma
 # The restart fails but the start behaves like a restart, so...
-systemctl start rdma
+flag_on CHROOT_INSTALL || systemctl start rdma
 
