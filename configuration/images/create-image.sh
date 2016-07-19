@@ -161,6 +161,10 @@ fi
 
 if flag_on NODE_IMG_CONFIG ; then
     
+    echo_info 'Creating the /etc/trinity.sh symlink in the image'
+    
+    ln -s "$TRIX_SHFILE" "${TARGET}/etc/trinity.sh"
+    
     echo_info 'Running the configuration tool on the new image'
     
     chroot "${TARGET}" "${POST_TOPDIR}/configuration/configure.sh" \
@@ -168,7 +172,7 @@ if flag_on NODE_IMG_CONFIG ; then
            "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
 fi
 
-    
+
 #---------------------------------------
 
 echo_info 'Unbinding the host directories'
