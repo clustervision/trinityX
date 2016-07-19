@@ -8,9 +8,12 @@ function check_zabbix_installation () {
   echo_progress $FUNCNAME $@
   local RPM_PKG_MISSING=""
   for package in {zabbix-server-mysql,zabbix-web-mysql,mariadb-server}; do
-    if ! yum list -q installed "$package" &>/dev/null; then RPM_PKG_MISSING+="${package} "; fi
+    if ! yum list -q installed "$package" &>/dev/null; then RPM_PKG_MISSING+=" ${package}"; fi
   done
-  echo_error "Zabbix does not seem to be installed. Packages missing: ${RPM_PKG_MISSING}."
+  if [[ -n "${RPM_PKG_MISSING-unset}" ]]; then
+    echo_error "Zabbix does not seem to be installed. Packages missing:${RPM_PKG_MISSING}."
+    exit 1
+  fi
 }
 
 function setup_zabbix_credentials () {
@@ -25,11 +28,13 @@ function setup_zabbix_database () {
     echo_error "MariaDB seems to not have started: exiting."
   fi
   if mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e 'use zabbix' &>/dev/null; then
-    echo_warning "Zabbix database detected, you need to erase it to continue."
+    echo_warn "Zabbix database detected, you need to erase it to continue."
     if [[ $ZABBIX_DATABASE_OVERWRITE =~ ^([yY][eE][sS]|[yY])$ ]]; then
       mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "drop database zabbix;"
     else
       echo_error "Will not continue: zabbix database present and ZABBIX_DATABASE_OVERWRITE is set to no."
+      exit 1
+    fi
   fi
   setup_zabbix_credentials
   mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "create database zabbix character set utf8 collate utf8_bin;"
@@ -42,7 +47,7 @@ function zabbix_server_config () {
 
   local TIMEZONE=$(readlink /etc/localtime | sed "s/..\/usr\/share\/zoneinfo\///")
 
-  sed -i -e "/^DBHost=/{h;s/=.*/=$(hostname -s)/};\${x;/^$/{s//DBHost=$(hostname -s)/;H};x}"                                 /etc/zabbix/zabbix_server.conf
+  sed -i -e "/^DBHost=/{h;s/=.*/=localhost/};\${x;/^$/{s//DBHost=$(hostname -s)/;H};x}"                                 /etc/zabbix/zabbix_server.conf
   sed -i -e "/^DBName=/{h;s/=.*/="${ZABBIX_MYSQL_DB}"/};\${x;/^$/{s//DBName=${ZABBIX_MYSQL_DB}/;H};x}"                       /etc/zabbix/zabbix_server.conf
   sed -i -e "/^DBUser=/{h;s/=.*/="${ZABBIX_MYSQL_USER}"/};\${x;/^$/{s//DBUser=${ZABBIX_MYSQL_USER}/;H};x}"                   /etc/zabbix/zabbix_server.conf
   sed -i -e "/^DBPassword=/{h;s/=.*/="${ZABBIX_MYSQL_PASSWORD}"/};\${x;/^$/{s//DBPassword=${ZABBIX_MYSQL_PASSWORD}/;H};x}"   /etc/zabbix/zabbix_server.conf
@@ -54,8 +59,8 @@ function zabbix_server_config () {
                 "\$DB['TYPE']     = 'MYSQL';" \
                 "\$DB['SERVER']   = 'localhost';" \
                 "\$DB['PORT']     = '0';" \
-                "\$DB['DATABASE'] = '"${${ZABBIX_MYSQL_DB}}"';" \
-                "\$DB['USER']     = '"${${ZABBIX_MYSQL_USER}}"';" \
+                "\$DB['DATABASE'] = '"${ZABBIX_MYSQL_DB}"';" \
+                "\$DB['USER']     = '"${ZABBIX_MYSQL_USER}"';" \
                 "\$DB['PASSWORD'] = '"${ZABBIX_MYSQL_PASSWORD}"';\n" \
                 "// Schema name. Used for IBM DB2 and PostgreSQL." \
                 "\$DB['SCHEMA'] = '';\n" \
