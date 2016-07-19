@@ -82,20 +82,24 @@ function run_one_script {
 
     ret=0
     
-    # Start with installing the packages if we have a list
-    if [[ -r "$POST_PKGLIST" ]] ; then
-        echo_progress "Installing packages: $POST_PKGLIST"
-        yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
-        ret=$?
-    else
-        echo_info "No package file found: $POST_PKGLIST"
+    if ! flag_on SKIPPKGLIST ; then
+        
+        # Start with installing the packages if we have a list
+        if [[ -r "$POST_PKGLIST" ]] ; then
+            echo_progress "Installing packages: $POST_PKGLIST"
+            yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
+            ret=$?
+        else
+            echo_info "No package file found: $POST_PKGLIST"
+        fi
+        
+        # Take a break if the installation didn't go right
+        if (( $ret )) ; then
+            echo_error_wait "Error during package installation: $POST_PKGLIST"
+        fi
     fi
     
-    # Take a break if the installation didn't go right
-    if (( $ret )) ; then
-        echo_error_wait "Error during package installation: $POST_PKGLIST"
-    fi
-    
+
     ret=0
     
     # Then run the script if we have one
@@ -207,6 +211,10 @@ while (( $# )) ; do
         --bailout )
             declare -x SOFTSTOP=
             unset NOSTOP
+            ;;
+
+        --skip-pkglist )
+            declare -x SKIPPKGLIST=
             ;;
         
         * )
