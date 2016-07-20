@@ -171,7 +171,7 @@ if flag_on NODE_IMG_CONFIG ; then
 
     # The main part of that piece of code runs in a subshell as we need to
     # source the new configuration file to get the list of post scripts. Once we
-    # have installed all the packages, we unmount the host temporary dirs to
+    # have installed all the packages, we unbind the host temporary dirs to
     # protect them, then we can pivot into the chroot and run the configure
     # script again.
 
@@ -190,6 +190,11 @@ if flag_on NODE_IMG_CONFIG ; then
     
     [[ -v longlist ]] && yum --installroot="$TARGET" -y install $longlist
     )
+    
+    if flag_on NODE_YUM_UPDATE ; then
+        echo_info 'Running yum update in the image'
+        yum --installroot="$TARGET" -y update
+    fi
 
 
     # We'll have to unbind the temporary dirs twice:
