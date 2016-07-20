@@ -267,7 +267,7 @@ function flag_is_set {
     name="$1"
     value="${!name}"
     
-    [[ -v "$name" && ! "${value,,}" =~ 0|n|no ]]
+    [[ -v "$name" && ! "${value,,}" =~ ^(0|n|no)$ ]]
 }
 
 
@@ -281,7 +281,7 @@ function flag_is_unset {
     name="$1"
     value="${!name}"
     
-    [[ ! -v "$name" || "${value,,}" =~ 0|n|no ]]
+    [[ ! -v "$name" || "${value,,}" =~ ^(0|n|no)$ ]]
 }
 
 
