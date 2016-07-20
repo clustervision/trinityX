@@ -10,7 +10,7 @@ source "$POST_CONFIG"
 
 #---------------------------------------
 
-if flag_on STDCFG_SSHROOT ; then
+if flag_is_set STDCFG_SSHROOT ; then
     echo_info "Allowing SSH login as root"
     sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
 else

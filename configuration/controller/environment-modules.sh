@@ -6,7 +6,7 @@ source /etc/trinity.sh
 source "$POST_CONFIG"
 
 
-if ! flag_on CHROOT_INSTALL ; then
+if flag_is_unset CHROOT_INSTALL ; then
     
     echo_info 'Creating the shared modules directories'
     

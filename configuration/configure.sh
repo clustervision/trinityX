@@ -82,7 +82,7 @@ function run_one_script {
 
     ret=0
     
-    if ! flag_on SKIPPKGLIST ; then
+    if flag_is_unset SKIPPKGLIST ; then
         
         # Start with installing the packages if we have a list
         if [[ -r "$POST_PKGLIST" ]] ; then

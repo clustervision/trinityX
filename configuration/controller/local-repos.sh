@@ -16,7 +16,7 @@ echo_info 'Copying packages and setting up the local repositories'
 # On a node, those are made available via bind mount at installation time, and
 # NFS later.
 
-if ! flag_on CHROOT_INSTALL ; then
+if  flag_is_unset CHROOT_INSTALL ; then
     # Copy the whole tree with all local repos
     mkdir -p "${TRIX_ROOT}/shared"
     cp -r "${POST_TOPDIR}/packages" "${TRIX_ROOT}/shared"
@@ -41,7 +41,7 @@ done
 
 # Disable remote repositories if requested
 
-if flag_on REPOS_DISABLE_REMOTE ; then
+if flag_is_set REPOS_DISABLE_REMOTE ; then
     
     echo_info 'Disabling all remote repositories'
     

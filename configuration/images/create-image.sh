@@ -124,7 +124,7 @@ DIRTMPLIST=( \
 
 # Add the host repos and yum cache only if requested
 
-if flag_on NODE_HOST_REPOS ; then
+if flag_is_set NODE_HOST_REPOS ; then
     DIRLIST+=( /var/cache/yum )
     DIRTMPLIST+=( /etc/yum.repos.d )
 fi
@@ -158,7 +158,7 @@ fi
 # This is the big block for image configuration. Better read the comments
 # carefully before changing anything.
 
-if flag_on NODE_IMG_CONFIG ; then
+if flag_is_set NODE_IMG_CONFIG ; then
     
     echo_info 'Creating the /etc/trinity.sh symlink in the image'
         
@@ -191,7 +191,7 @@ if flag_on NODE_IMG_CONFIG ; then
     [[ -v longlist ]] && yum --installroot="$TARGET" -y install $longlist
     )
     
-    if flag_on NODE_YUM_UPDATE ; then
+    if flag_is_set NODE_YUM_UPDATE ; then
         echo_info 'Running yum update in the image'
         yum --installroot="$TARGET" -y update
     fi

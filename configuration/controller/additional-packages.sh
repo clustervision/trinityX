@@ -5,5 +5,5 @@
 source "$POST_CONFIG"
 
 systemctl enable haveged
-flag_on CHROOT_INSTALL || systemctl restart haveged
+flag_is_unset CHROOT_INSTALL && systemctl restart haveged
 

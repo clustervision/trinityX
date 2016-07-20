@@ -246,27 +246,45 @@ typeset -fx store_password
 # Due to the sheer amount of acceptables values for a flag enabled or disabled,
 # better have some functions for that.
 
-# Returns a single 0/1 value for the state of a variable used as a flag
-# A flag is OFF when either of these conditions is met:
-# - it is unset
-# - it is set to "0", "n" or "no" (in small or capital letters)
-# In all other cases, it's ON.
+# Return a single 0/1 value for the state of a variable used as a flag, and a
+# -1 if there weren't enough parameters.
 
-# Syntax: flag_on variable_name
+# A flag is UNSET or OFF when any of these conditions is met:
+# - the variable is unset
+# - the variable is set to "0", "n" or "no" (in small or capital letters)
+# In all other cases, it's SET or ON.
 
-function flag_on {
+# Syntax: flag_is_set variable_name
+#         flag_is_unset variable_name
+
+function flag_is_set {
     
-    # always return false if we don't have the right arguments
     if (( $# != 1 )) ; then
-        echo_warn 'flag_on: wrong number of arguments.'
-        return 1
+        echo_warn 'flag_is_set: wrong number of arguments.'
+        return 254
     fi
     
     name="$1"
     value="${!name}"
     
-    [[ ! -v "$name" || "${value,,}" =~ 0|n|no ]] && return 1 || return 0
+    [[ -v "$name" && ! "${value,,}" =~ 0|n|no ]]
 }
 
-typeset -fx flag_on
+
+function flag_is_unset {
+    
+    if (( $# != 1 )) ; then
+        echo_warn 'flag_is_unset: wrong number of arguments.'
+        return 254
+    fi
+    
+    name="$1"
+    value="${!name}"
+    
+    [[ ! -v "$name" || "${value,,}" =~ 0|n|no ]]
+}
+
+
+typeset -fx flag_is_set
+typeset -fx flag_is_unset
 
