@@ -179,7 +179,12 @@ flag_is_set HA && append_line "$CTRL_IP  $CTRL_HOSTNAME" /etc/hosts
 if [[ -r /etc/trinity.sh ]] ; then
     source /etc/trinity.sh
     for i in HA CTRL{1,2,}_{HOSTNAME,IP} ; do
-        [[ -v $i ]] && store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
+        if [[ -v $i ]] ; then
+            store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
+        else
+            # make sure that we're not picking up background noise
+            append_line "unset $i TRIX_$i" "${TRIX_SHFILE}"
+        fi
     done
 fi
 
