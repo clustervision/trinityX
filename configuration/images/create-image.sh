@@ -222,5 +222,5 @@ fi
 echo_info 'Unbinding the host directories'
 
 (( ${#DIRLIST[@]} )) && unbind_mounts "$TARGET" "${DIRLIST[@]}"
-(( ${#DIRTMPLIST[@]} )) && unbind_mounts "$TARGET" "${DIRTMPLIST[@]}"
+(( ${#DIRTMPLIST[@]} )) && unbind_mounts "$TARGET" "${DIRTMPLIST[@]}" || true
 
