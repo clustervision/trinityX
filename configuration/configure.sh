@@ -25,9 +25,11 @@
 
 # Right number of arguments?
 
-if ! (( $# )) ; then
-    echo "Syntax: $0 [options] config_file [config_file ...]" >&2
+function syntax_exit {
     echo "
+Syntax:     $0 [options] <config file> [<config file> ...]
+Alternate:  $0 [options] --config <config_file> [<post script> ...]
+
 Options:    -v                  be more verbose
             -q                  be quieter
             -d                  run the post scripts in debug mode (bash -x)
@@ -37,15 +39,29 @@ Options:    -v                  be more verbose
             --hitthewall        exit on any error inside a post script (bash -e)
 
 -v and -q are mutually exclusive.
---dontstopmenow is mutually exclusive with --bailout and --hitthewall
---hitthewall selects --bailout too
+--dontstopmenow is mutually exclusive with --bailout and --hitthewall.
+--hitthewall selects --bailout too.
 
-All options are positional, that is they apply only to the configuration files
-after them on the command line
+In the main syntax form, all options are positional: they apply only to the
+configuration files after them on the command line. In the alternate syntax
+form, all options must be specified *before* --config.
+
+This alternate syntax is used to run a specific set of post scripts, within the
+configuration environment provided by the config file. When the --config
+option is encountered in the argument list, the following happens:
+
+- the next argument is the configuration file;
+- all the remaining arguments are the names of the scripts to run.
+
+It is possible to mix regular configuration files with chosen scripts, as long
+as the chosen scripts are last and the sequence is respected.
+
+Please refer to the documentation for more details.
 " >&2
-    echo 'Please refer to the documentation for more details.' >&2
     exit 1
-fi
+}
+
+(( $# )) || syntax_exit
 
 
 #---------------------------------------
@@ -128,12 +144,28 @@ function run_one_script {
 
 function apply_config {
     
+    echo_header "CONFIGURATION FILE: $1"
+
     POST_CONFIG="$(readlink -e "$1")"
     CONFDIR="$(dirname "$POST_CONFIG")"
 
     source "$POST_CONFIG"
     export POST_CONFIG
     
+    # If we're running only handpicked scripts, we need to shift
+    if (( $# > 1 )) ; then
+        shift
+        echo_info "Running only the following scripts: $@"
+        POSTLIST=( "$@" )
+    fi
+
+    # Did the user even specify some post scripts?
+
+    if ! (( ${#POSTLIST[@]} )) ; then
+        echo_warn 'No post script specified!'
+        return 1
+    fi
+
     # Deal with variations in the POSTDIR values:
     # - defined and absolute -> nothing to do
     # - defined and relative -> prepend CONFDIR
@@ -165,6 +197,7 @@ function apply_config {
     done
     
     unset POST_CONFIG
+    echo_footer
 }
 
 
@@ -225,15 +258,26 @@ while (( $# )) ; do
             declare -x SOFTSTOP=
             unset NOSTOP
             ;;
-
+        
         --skip-pkglist )
             declare -x SKIPPKGLIST=
             ;;
         
+        --config )
+            # Special case: the user wants to run some hand-picked post scripts
+            # Do we have a list of scripts at least?
+            if (( $# <= 2 )) ; then
+                echo_error '--config used without enough parameters'
+                syntax_exit
+            else
+                shift                   # get rid of the --config
+                apply_config "$@"
+                shift $(( $# - 1 ))     # leave one for the last shift
+            fi
+            ;;
+        
         * )
-            echo_header "CONFIGURATION FILE: $1"
             apply_config "$1"
-            echo_footer
             ;;
     esac
     shift
