@@ -170,11 +170,24 @@ function apply_config {
 
 #---------------------------------------
 
-# And finally, loop over the parameters
+# Prepare the grounds and clean up the environment
 
 echo "Beginning of script: $(date)"
 
 unset QUIET VERBOSE DEBUG NOCOLOR
+
+
+# Check if stdout is being redirected or piped to something else.
+# In both cases, disable the color codes to avoid polluting the output.
+
+if [[ -p /dev/stdout ]] || [[ ! -t 1 && ! -p /dev/stdout ]] ; then
+    declare -x NOCOLOR=
+fi
+
+
+#---------------------------------------
+
+# And finally, loop over the parameters
 
 while (( $# )) ; do
     
