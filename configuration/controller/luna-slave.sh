@@ -1,11 +1,6 @@
 #!/bin/bash
 set -e
 
-echo_info "Check config variables available."
-
-echo "LUNA_MONGO_PASS=${LUNA_MONGO_PASS:?"Should be defined"}"
-
-
 echo_info "Disable SELinux."
 
 sed -i -e 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
@@ -92,19 +87,6 @@ echo_info "Start mongo."
 
 systemctl start mongod
 systemctl enable mongod
-
-echo_info "Configure mongo auth."
-
-cat << EOF > /etc/luna.conf
-[MongoDB]
-replicaset=luna
-server=localhost
-authdb=luna
-user=luna
-password=${LUNA_MONGO_PASS}
-EOF
-chown luna:luna /etc/luna.conf
-chmod 600 /etc/luna.conf
 
 echo_info "Copy systemd unit files."
 
