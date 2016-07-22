@@ -29,6 +29,9 @@ if [[ -r /etc/trinity.sh ]] ; then
                 TRIX_SHFILE \
                 TRIX_SHADOW
 
+    display_var HA \
+                TRIX_CTRL{1,2,}_{HOSTNAME,IP}
+
 else
     echo_warn "The file \"/etc/trinity.sh\" does not exist (yet) on this system."
     echo "\"/etc/trinity.sh\" is created during the Trinity X installation."
