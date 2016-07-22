@@ -5,7 +5,7 @@ source "$POST_CONFIG"
 source /etc/trinity.sh
 
 
-display_var CHRONY_UPSTREAM CHRONY_SERVER
+display_var CHRONY_{UPSTREAM,SERVER} TRIX_CTRL{1,2}_HOSTNAME
 
 
 if flag_is_set CHRONY_UPSTREAM ; then
@@ -19,7 +19,7 @@ if flag_is_set CHRONY_UPSTREAM ; then
     
     # if no server was specified, this is client mode so use the controllers
     if ! [[ "$CHRONY_UPSTREAM" ]] ; then
-        CHRONY_UPSTREAM="$CTRL1_HOSTNAME $CTRL2_HOSTNAME"
+        CHRONY_UPSTREAM="$TRIX_CTRL1_HOSTNAME $TRIX_CTRL2_HOSTNAME"
     fi
     
     # and add our own
