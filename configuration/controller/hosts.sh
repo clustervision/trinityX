@@ -93,7 +93,7 @@ case $hname in
         ctrlip="$CTRL1_IP"
         ;;
 
-    "${CTRL1_HOSTNAME%.*}" )
+    "${CTRL2_HOSTNAME%.*}" )
         ctrlname="$CTRL2_HOSTNAME"
         ctrlip="$CTRL2_IP"
         ;;
