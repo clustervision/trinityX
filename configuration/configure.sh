@@ -110,10 +110,32 @@ function run_one_script {
     
     # Then run the script if we have one
     if [[ -r "$POST_SCRIPT" ]] ; then
+
         echo_progress "Running post script: $POST_SCRIPT"
-        bash ${DEBUG+-x} ${HARDSTOP+-e} "$POST_SCRIPT"
+
+        # We're doing a little hackaroo here.
+        # The idea is that some variables in POST_CONFIG may include some
+        # variables defined in trinity.sh. They shouldn't, but they may. So load
+        # trinity.sh first, then POST_CONFIG.
+        # And because some misguided attempt at broken configuration may
+        # redefine the trinity.sh variables in POST_CONFIG, re-source trinity.sh
+        # afterwards... And because we have no guarantee that trinity.sh exists
+        # already, those have to be conditional.
+        # Finally, load the password file if it exists already.
+        # We cannot do all of that at a higher level because each script may
+        # modify the .sh{,adow} files, and subsequent scripts will need the
+        # updated versions in their environment.
+       
+        bash ${DEBUG+-x} ${HARDSTOP+-e -o pipefail} -c " \\
+            [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
+            source \"$POST_CONFIG\"
+            [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
+            [[ -r \"$TRIX_SHADOW\" ]] && source \"$TRIX_SHADOW\"
+            source \"$POST_SCRIPT\" "
+
         ret=$?
     else
+
         flag_is_set VERBOSE && echo_info "No post script found: $POST_SCRIPT"
     fi
     
