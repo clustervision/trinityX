@@ -288,3 +288,28 @@ function flag_is_unset {
 typeset -fx flag_is_set
 typeset -fx flag_is_unset
 
+
+#---------------------------------------
+
+# Function to display the state of variables
+# Mainly used at the beginning of each script to recap the parameters
+
+# Syntax: display_var var1 [var2 ...]
+
+function display_var {
+
+    for i in "$@" ; do
+        if flag_is_unset "$i" ; then
+            value="(unset)"
+        else
+            value="${!i:-(empty)}"
+        fi
+
+        printf "%-32s = %s\n" "$i" "$value"
+    done
+    echo
+}
+
+
+typeset -fx display_var
+
