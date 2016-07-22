@@ -41,7 +41,7 @@ if flag_is_set CHRONY_SERVER ; then
     append_line '#  ----  Trinity machines  ----' /etc/chrony.conf
     
     if [[ "$CHRONY_SERVER" == 1 ]] ; then
-        sed -i 's/^#allow.*/allow/g' /etc/chrony.conf
+        append_line "allow" /etc/chrony.conf
     else
         for i in ${CHRONY_SERVER[@]} ; do
             echo "allow $i" | tee -a /etc/chrony.conf
