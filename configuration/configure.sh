@@ -46,16 +46,6 @@ In the main syntax form, all options are positional: they apply only to the
 configuration files after them on the command line. In the alternate syntax
 form, all options must be specified *before* --config.
 
-This alternate syntax is used to run a specific set of post scripts, within the
-configuration environment provided by the config file. When the --config
-option is encountered in the argument list, the following happens:
-
-- the next argument is the configuration file;
-- all the remaining arguments are the names of the scripts to run.
-
-It is possible to mix regular configuration files with chosen scripts, as long
-as the chosen scripts are last and the sequence is respected.
-
 Please refer to the documentation for more details.
 " >&2
     exit 1
@@ -106,7 +96,7 @@ function run_one_script {
             yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
             ret=$?
         else
-            echo_info "No package file found: $POST_PKGLIST"
+            flag_is_set VERBOSE && echo_info "No package file found: $POST_PKGLIST"
         fi
         
         # Take a break if the installation didn't go right
@@ -124,7 +114,7 @@ function run_one_script {
         bash ${DEBUG+-x} ${HARDSTOP+-e} "$POST_SCRIPT"
         ret=$?
     else
-        echo_info "No post script found: $POST_SCRIPT"
+        flag_is_set VERBOSE && echo_info "No post script found: $POST_SCRIPT"
     fi
     
     # Take a break if the script returned an error code
