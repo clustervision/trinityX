@@ -211,9 +211,10 @@ if flag_is_set NODE_IMG_CONFIG ; then
 
     echo_info 'Running the configuration tool on the new image'
     
-    chroot "${TARGET}" "${POST_TOPDIR}/configuration/configure.sh" \
-            ${VERBOSE+-v}  ${QUIET+-q} ${DEBUG+-d} ${NOCOLOR+--nocolor} \
-            --skip-pkglist "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
+    CHROOT_INSTALL=1 chroot "${TARGET}" \
+        "${POST_TOPDIR}/configuration/configure.sh" \
+        ${VERBOSE+-v}  ${QUIET+-q} ${DEBUG+-d} ${NOCOLOR+--nocolor} \
+        --skip-pkglist "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
 fi
 
 
