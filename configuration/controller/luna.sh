@@ -23,7 +23,8 @@ echo_info "Check config variables available."
 
 echo "LUNA_FRONTEND=${LUNA_FRONTEND?"Should be defined"}"
 echo "LUNA_NETWORK=${LUNA_NETWORK?"Should be defined"}"
-echo "LUNA_NETWORK_NAME=${LUNA_NETWORK_NAME:-cluster}"
+LUNA_NETWORK_NAME=${LUNA_NETWORK_NAME:-cluster}
+echo "LUNA_NETWORK_NAME=${LUNA_NETWORK_NAME}"
 echo "LUNA_PREFIX=${LUNA_PREFIX?"Should be defined"}"
 
 LUNA_NETMASK=`ipcalc -s -m ${LUNA_NETWORK}/${LUNA_PREFIX} | sed 's/.*=//'`
@@ -173,9 +174,15 @@ systemctl daemon-reload
 /usr/sbin/luna cluster init
 /usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND}
 /usr/sbin/luna network add -n ${LUNA_NETWORK_NAME} -N ${LUNA_NETWORK} -P ${LUNA_PREFIX}
-/usr/sbin/luna cluster makedhcp -N ${LUNA_NETWORK_NAME} -s ${LUNA_DHCP_RANGE_START} -e ${LUNA_DHCP_RANGE_END}
+
+echo_info "Start services."
 
 for service in  xinetd nginx dhcpd lweb ltorrent; do
     systemctl enable $service
     systemctl start $service
 done
+
+echo_info "Configure DNS and DHCP."
+
+/usr/sbin/luna cluster makedhcp -N ${LUNA_NETWORK_NAME} -s ${LUNA_DHCP_RANGE_START} -e ${LUNA_DHCP_RANGE_END}
+/usr/sbin/luna cluster makedns
