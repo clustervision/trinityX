@@ -90,10 +90,19 @@ sed -e 's/^\(\W\+disable\W\+\=\W\)yes/\1no/g' -i /etc/xinetd.d/tftp
 sed -e 's|^\(\W\+server_args\W\+\=\W-s\W\)/var/lib/tftpboot|\1/tftpboot|g' -i /etc/xinetd.d/tftp
 [ -f /tftpboot/luna_undionly.kpxe ] || cp /usr/share/ipxe/undionly.kpxe /tftpboot/luna_undionly.kpxe
 
+echo_info "Setup DNS."
+
+/usr/bin/cat >>/etc/named.conf <<EOF
+include "/etc/named.luna.zones"; 
+EOF
+
+/usr/bin/sed -i -e 's/\(.*listen-on port 53 { \).*\( };\)/\1any;\2/' /etc/named.conf
+
 echo_info "Create ssh keys."
 
 [ -f /root/.ssh/id_rsa ] || ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
 
+echo_info "Setup nginx."
 
 if [ ! -f /etc/nginx/conf.d/nginx-luna.conf ]; then
     # copy config files
@@ -103,13 +112,26 @@ if [ ! -f /etc/nginx/conf.d/nginx-luna.conf ]; then
     cp ${POST_FILEDIR}/nginx-luna.conf /etc/nginx/conf.d/
 fi
 
+echo_info "Configure firewalld."
+
+if /usr/bin/firewall-cmd --state >/dev/null ; then
+    /usr/bin/firewall-cmd --permanent --add-port=27017/tcp
+    /usr/bin/firewall-cmd --permanent --add-port=7050/tcp
+    /usr/bin/firewall-cmd --permanent --add-port=53/tcp
+    /usr/bin/firewall-cmd --permanent --add-port=53/udp
+    /usr/bin/firewall-cmd --permanent --add-port=69/udp
+    /usr/bin/firewall-cmd --permanent --add-port=67/udp
+    /usr/bin/firewall-cmd --reload
+else 
+    echo_warn "Firewalld is not running. Ports should be should be open manually later on."
+fi
+
 echo_info "Start mongo."
 
 systemctl start mongod
 systemctl enable mongod
 
 echo_info "Configure mongo auth."
-
 
 #sed -i -e "s/^[# \t]\+replSet.*/replSet = luna/" /etc/mongod.conf
 #systemctl restart mongod
