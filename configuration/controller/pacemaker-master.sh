@@ -20,7 +20,8 @@ echo "PACEMAKER_MASTER_HOST=${PACEMAKER_MASTER_HOST:?"Should be defined"}"
 echo "PACEMAKER_SLAVE_HOST=${PACEMAKER_SLAVE_HOST:?"Should be defined"}"
 echo "PACEMAKER_FLOATING_HOST=${PACEMAKER_FLOATING_HOST:?"Should be defined"}"
 PACEMAKER_MASTER_HOST_IP=$(/usr/bin/getent ahosts ${PACEMAKER_MASTER_HOST} | /usr/bin/awk 'NR==1{print $1}')
-ipcalc -np $(ip a show to  ${PACEMAKER_MASTER_HOST_IP} | awk 'NR==2{print $2}') | awk '{print "PACEMAKER_MASTER_HOST_IP_"$0}' | eval
+PACEMAKER_MASTER_HOSTNAME=$(/usr/bin/hostname)
+eval $(ipcalc -np $(ip a show to  ${PACEMAKER_MASTER_HOST_IP} | awk 'NR==2{print $2}') | awk '{print "PACEMAKER_MASTER_HOST_IP_"$0}')
 PACEMAKER_NETWORK=${PACEMAKER_MASTER_HOST_IP_NETWORK}
 PACEMAKER_PREFIX=${PACEMAKER_MASTER_HOST_IP_PREFIX}
 echo 
@@ -31,14 +32,14 @@ fi
 
 echo_info "Check if remote host is available."
 
-PACEMAKER_SLAVE_HOSTNAME=`/usr/bin/ssh ${PACEMAKER_SLAVE_HOST} hostname || (echo_error "Unable to connect to ${PACEMAKER_SLAVE_HOST}"; exit 1)`
+PACEMAKER_SLAVE_HOSTNAME=`/usr/bin/ssh ${PACEMAKER_SLAVE_HOST} /usr/bin/hostname || (echo_error "Unable to connect to ${PACEMAKER_SLAVE_HOST}"; exit 1)`
 
 echo_info "Create corosync.conf."
 
 [ -f /etc/corosync/corosync.conf ] && (echo_error "/etc/corosync/corosync.conf already exists on this node. Exiting.;" exit 2)
 
 /usr/bin/cp ${POST_FILEDIR}/templ_corosync.conf /etc/corosync/corosync.conf
-for VAR in PACEMAKER_NETWORK PACEMAKER_MASTER_HOST PACEMAKER_SLAVE_HOST; do
+for VAR in PACEMAKER_NETWORK PACEMAKER_MASTER_HOSTNAME PACEMAKER_SLAVE_HOSTNAME; do
     replace_template $VAR /etc/corosync/corosync.conf
 done
 
@@ -67,7 +68,7 @@ echo ${PACEMAKER_PASS} | passwd --stdin hacluster
 
 echo_info "Authenticate cluster."
 
-/usr/sbin/pcs cluster auth ${PACEMAKER_MASTER_HOST} ${PACEMAKER_SLAVE_HOST} -u hacluster -p ${PACEMAKER_PASS}
+/usr/sbin/pcs cluster auth ${PACEMAKER_MASTER_HOSTNAME} ${PACEMAKER_SLAVE_HOSTNAME} -u hacluster -p ${PACEMAKER_PASS}
 
 echo_info "Initialize cluster."
 
