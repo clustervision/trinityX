@@ -6,7 +6,7 @@ source "$POST_CONFIG"
 modified=0
 
 
-if [[ "$CHRONY_UPSTREAM" ]] ; then
+if flag_is_set CHRONY_UPSTREAM ; then
     
     echo_info 'Setting up upstream time servers'
     
@@ -22,7 +22,7 @@ if [[ "$CHRONY_UPSTREAM" ]] ; then
 fi
 
 
-if [[ "$CHRONY_SERVER" ]] && ! [[ "$CHRONY_SERVER" == 0 ]] ; then
+if flag_is_set CHRONY_SERVER ; then
     
     echo_info 'Enabling client access'
     
@@ -38,12 +38,14 @@ if [[ "$CHRONY_SERVER" ]] && ! [[ "$CHRONY_SERVER" == 0 ]] ; then
 fi
 
 
-if (( $modified )) ; then
-    
-    echo_info 'Restarting the service'
-    systemctl restart chronyd
-else
-    
-    echo_warn 'No change requested'
+if flag_is_unset CHROOT_INSTALL ; then
+    if (( $modified )) ; then
+        
+        echo_info 'Restarting the service'
+        systemctl restart chronyd
+    else
+        
+        echo_warn 'No change requested'
+    fi
 fi
 

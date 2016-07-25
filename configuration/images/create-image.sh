@@ -124,7 +124,7 @@ DIRTMPLIST=( \
 
 # Add the host repos and yum cache only if requested
 
-if flag_on NODE_HOST_REPOS ; then
+if flag_is_set NODE_HOST_REPOS ; then
     DIRLIST+=( /var/cache/yum )
     DIRTMPLIST+=( /etc/yum.repos.d )
 fi
@@ -152,26 +152,75 @@ if [[ -r "${POST_FILEDIR}/target.pkglist" ]] ; then
 fi
 
 
-# And unbind the temporary directories
-
-(( ${#DIRTMPLIST[@]} )) && unbind_mounts "$TARGET" "${DIRTMPLIST[@]}"
-
 
 #---------------------------------------
 
-if flag_on NODE_IMG_CONFIG ; then
+# This is the big block for image configuration. Better read the comments
+# carefully before changing anything.
+
+if flag_is_set NODE_IMG_CONFIG ; then
     
+    echo_info 'Creating the /etc/trinity.sh symlink in the image'
+        
+    ln -s "$TRIX_SHFILE" "${TARGET}/etc/trinity.sh"
+
+
+    # This is a big hack to work around the fact that chroots don't have
+    # internet access! So basically we have to install everything *before* we
+    # get into the chroot, then skip the packages when we're inside.
+
+    # The main part of that piece of code runs in a subshell as we need to
+    # source the new configuration file to get the list of post scripts. Once we
+    # have installed all the packages, we unbind the host temporary dirs to
+    # protect them, then we can pivot into the chroot and run the configure
+    # script again.
+
+
+    echo_info 'Installing the packages for all post scripts'
+
+    (
+    NEWCFG="$(dirname "${POST_CONFIG}")/${NODE_IMG_CONFIG}"
+
+    source "${NEWCFG}"
+
+    for pscript in ${POSTLIST[@]} ; do
+        pkgfile="$(dirname "${NEWCFG}")/${POSTDIR}/${pscript}.pkglist"
+        [[ -r "$pkgfile" ]] && longlist+=" $(grep -v '^#\|^$' "$pkgfile")"
+    done
+    
+    [[ -v longlist ]] && yum --installroot="$TARGET" -y install $longlist
+    )
+    
+    if flag_is_set NODE_YUM_UPDATE ; then
+        echo_info 'Running yum update in the image'
+        yum --installroot="$TARGET" -y update
+    fi
+
+
+    # We'll have to unbind the temporary dirs twice:
+    # - here first, so that no post script will modify anything in those dirs;
+    # - after the end of that block, to cover both code paths.
+
+    echo_info 'Unbinding the temporary directories'
+
+    (( ${#DIRTMPLIST[@]} )) && unbind_mounts "$TARGET" "${DIRTMPLIST[@]}"
+    unset DIRTMPLIST
+
+
+    # And finally, the pivot:
+
     echo_info 'Running the configuration tool on the new image'
     
     chroot "${TARGET}" "${POST_TOPDIR}/configuration/configure.sh" \
             ${VERBOSE+-v}  ${QUIET+-q} ${DEBUG+-d} ${NOCOLOR+--nocolor} \
-           "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
+            --skip-pkglist "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
 fi
 
-    
+
 #---------------------------------------
 
 echo_info 'Unbinding the host directories'
 
 (( ${#DIRLIST[@]} )) && unbind_mounts "$TARGET" "${DIRLIST[@]}"
+(( ${#DIRTMPLIST[@]} )) && unbind_mounts "$TARGET" "${DIRTMPLIST[@]}" || true
 

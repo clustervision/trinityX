@@ -85,7 +85,7 @@ Usage
 
 Running the configuration tool is very simple::
 
-    ./configure.sh file.cfg [file2.cfg ...]
+    ./configure.sh [options] <config_file> [<config_file> ...]
 
 It will load each configuration file named in the parameters in order, and run
 all scripts in each of those files.
@@ -98,12 +98,48 @@ will run all scripts, all the time.
 As it asks for user input when things go wrong, its output cannot be entirely
 redirected to a file. The easiest way to keep a log of the installation is::
 
-    ./configure.sh file.cfg 2>&1 | tee -a your_log_file
+    ./configure.sh file.cfg |& tee -a your_log_file
 
 ``tee`` will keep the output on the terminal and write a copy to the log file.
 
-If you are offended by color codes in your log files, use the ``--nocolor``
-option.
+The color output is automatically disabled if the script detects that its output
+is not an interactive TTY.
+
+
+Alternate syntax
+~~~~~~~~~~~~~~~~
+
+In normal use the list of post scripts to execute is a configuration option,
+specified in the config file. Changing the scripts requires editing the file.
+There are cases when this is cumbersome (testing, re-running a failed script),
+so the configuration tools supports an alternate syntax::
+
+    ./configure.sh [options] --config <config_file> [<post script> ...]
+
+This alternate syntax is used to run a specific set of post scripts, within the
+configuration environment provided by the config file. When the ``--config``
+option is encountered in the argument list, the following happens:
+
+- the next argument is the configuration file;
+
+- all the remaining arguments are the names of the scripts to run.
+
+The names of the scripts obey the same rules as within the configuration file:
+they are base names (no extensions and no directories), and must reside within
+the ``POSTDIR`` specified in the configuration file.
+
+Any list of post scripts specified inside the configuration file (variable
+``POSTLIST``) is ignored, and only the chosen scripts are run.
+
+It is possible to mix regular configuration files with chosen scripts, as long
+as the chosen scripts are last and the sequence is respected. For example, this
+is perfectly valid::
+
+    ./configure.sh 1.cfg -d --config 2.cfg script1 script2
+
+The scripts specified in the ``POSTLIST`` of ``1.cfg`` will run first, in
+standard mode. Then the two additional ones will run in debug mode, in the
+configuration environment of ``2.cfg``.
 
 
 Parameters
@@ -149,15 +185,14 @@ A few additional rules:
 - ``-v`` and ``-q`` are mutually exclusive;
 
 - ``--dontstopmenow`` is mutually exclusive with ``--bailout`` and
-  ``--hitthewall``
+  ``--hitthewall``;
 
-- ``--hitthewall`` selects ``--bailout`` too
+- ``--hitthewall`` selects ``--bailout`` too.
 
 
-All options are *positional*, that is they apply only to the configuration files
-after them on the command line. Therefore it's possible to run two or three
-configurations with normal parameters, and a last one in full debug and hard
-exit mode.
+In the main syntax form, all options are positional: they apply only to the
+configuration files after them on the command line. In the alternate syntax
+form, all options must be specified *before* ``--config``.
 
 
 Example
