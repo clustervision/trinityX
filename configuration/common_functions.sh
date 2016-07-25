@@ -305,8 +305,8 @@ function display_var {
             value="${!i:-(empty)}"
         fi
 
-        printf "%-32s = %s\n" "$i" "$value"
-    done
+        echo "${i}¦=¦${value}"
+    done | column -t -s '¦'
     echo
 }
 
