@@ -240,8 +240,8 @@ TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
     target-role="Master" \
     is-managed="true"
 
-/usr/sbin/pcs -f ${TMPFILE} resource op add MariaDB monitor interval="5s" role="Master" OCF_CHECK_LEVEL="1"
-/usr/sbin/pcs -f ${TMPFILE} resource op add MariaDB monitor interval="2s" role="Slave" OCF_CHECK_LEVEL="1"
+/usr/sbin/pcs -f ${TMPFILE} resource op add MariaDB monitor interval="15s" role="Master" OCF_CHECK_LEVEL="1"
+/usr/sbin/pcs -f ${TMPFILE} resource op add MariaDB monitor interval="20s" role="Slave" OCF_CHECK_LEVEL="1"
 
 /usr/sbin/pcs -f ${TMPFILE} constraint colocation add master MariaDB-master with ClusterIP
 
