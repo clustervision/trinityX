@@ -177,6 +177,17 @@ echo \
     " | /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST}  \
     /usr/bin/mysql -u root --password=${MYSQL_ROOT_PASSWORD}
 
+echo_info "Stop replication."
+
+echo \
+    "STOP SLAVE; \
+    " | /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST}  \
+    /usr/bin/mysql -u root --password=${MYSQL_ROOT_PASSWORD}
+echo \
+    "RESET SLAVE ALL; \
+    " | /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST}  \
+    /usr/bin/mysql -u root --password=${MYSQL_ROOT_PASSWORD}
+
 echo_info "Disable systemd services."
 
 /usr/bin/systemctl stop mariadb
@@ -184,13 +195,22 @@ echo_info "Disable systemd services."
 /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/systemctl stop mariadb
 /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/systemctl disable mariadb
 
+echo_info "Copy agent."
+
+/usr/bin/mkdir -p /usr/lib/ocf/resource.d/percona
+/usr/bin/cp ${POST_FILEDIR}/mysql_prm_agent /usr/lib/ocf/resource.d/percona/mysql
+chomod 755 /usr/lib/ocf/resource.d/percona/mysql
+/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/mkdir -p /usr/lib/ocf/resource.d/percona
+/usr/bin/scp ${POST_FILEDIR}/mysql_prm_agent ${MARIADB_REP_SLAVE_HOST}:/usr/lib/ocf/resource.d/percona/mysql
+/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} chomod 755 /usr/lib/ocf/resource.d/percona/mysql
+
 echo_info "Add pacemaker config."
 
 TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
 /usr/bin/chmod 600 ${TMPFILE}
 /usr/sbin/pcs cluster cib ${TMPFILE}
 
-/usr/sbin/pcs -f ${TMPFILE} resource create MariaDB ocf:heartbeat:mysql \
+/usr/sbin/pcs -f ${TMPFILE} resource create MariaDB ocf:percona:mysql \
     binary=/usr/libexec/mysqld \
     client_binary=/usr/bin/mysql \
     config=/etc/my.cnf \
@@ -205,7 +225,24 @@ TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
     enable_creation=true \
     replication_user=${MARIADB_REP_USER} \
     replication_passwd=${MARIADB_REP_PASS} \
-    --master
+    max_slave_lag=60 \
+    evict_outdated_slaves="false"
+/usr/sbin/pcs -f ${TMPFILE} resource update MariaDB op add start interval="0" timeout="60s"
+/usr/sbin/pcs -f ${TMPFILE} resource update MariaDB op add stop  interval="0" timeout="60s"
+/usr/sbin/pcs -f ${TMPFILE} resource master MariaDB
+/usr/sbin/pcs -f ${TMPFILE} resource meta MariaDB-master \
+    master-max="1" \
+    master-node-max="1" \
+    clone-max="2" \
+    clone-node-max="1" \
+    notify="true" \
+    globally-unique="false" \
+    target-role="Master" \
+    is-managed="true"
+
+/usr/sbin/pcs -f ${TMPFILE} resource op add MariaDB monitor interval="5s" role="Master" OCF_CHECK_LEVEL="1"
+/usr/sbin/pcs -f ${TMPFILE} resource op add MariaDB monitor interval="2s" role="Slave" OCF_CHECK_LEVEL="1"
+
 /usr/sbin/pcs -f ${TMPFILE} constraint colocation add master MariaDB-master with ClusterIP
 
 /usr/sbin/pcs cluster cib-push ${TMPFILE}
