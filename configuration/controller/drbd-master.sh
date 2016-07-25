@@ -81,18 +81,18 @@ while [ "x$(/usr/sbin/drbdadm dstate trinity_disk)" != "xUpToDate/UpToDate" ]; d
     sleep 3
 done
 
-echo_info "Format /dev/drdb1"
+echo_info "Format /dev/drbd/by-res/trinity_disk"
 
-#/usr/sbin/mkfs.ext4 -m 0 /dev/drbd1
-/usr/sbin/mkfs.xfs /dev/drbd1
+#/usr/sbin/mkfs.ext4 -m 0 /dev/drbd/by-res/trinity_disk
+/usr/sbin/mkfs.xfs /dev/drbd/by-res/trinity_disk
 
 [ -d ${DRBD_PATH_TO_MOUNT}.bkp ] && (echo_error "${DRBD_PATH_TO_MOUNT}.bkp exists. Can not proceed.")
 [ -d ${DRBD_PATH_TO_MOUNT} ] && /usr/bin/mv ${DRBD_PATH_TO_MOUNT}{,.bkp}
 
-echo_info "mount /dev/drbd1 as ${DRBD_PATH_TO_MOUNT}"
+echo_info "mount /dev/drbd/by-res/trinity_disk as ${DRBD_PATH_TO_MOUNT}"
 
 mkdir ${DRBD_PATH_TO_MOUNT}
-/usr/bin/mount /dev/drbd1 ${DRBD_PATH_TO_MOUNT}
+/usr/bin/mount /dev/drbd/by-res/trinity_disk ${DRBD_PATH_TO_MOUNT}
 
 echo_info "Restore data."
 
@@ -100,3 +100,35 @@ pushd ${DRBD_PATH_TO_MOUNT}.bkp
 /usr/bin/tar -cf - . | (cd ${DRBD_PATH_TO_MOUNT} && /usr/bin/tar -xf -)
 popd
 /usr/bin/rm -rf "${DRBD_PATH_TO_MOUNT}.bkp"
+
+echo_info "Add pacemaker config."
+
+TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
+/usr/bin/chmod 600 ${TMPFILE}
+/usr/sbin/pcs cluster cib ${TMPFILE}
+
+/usr/sbin/pcs -f ${TMPFILE} \
+    resource create DRBD ocf:linbit:drbd drbd_resource=trinity_disk
+/usr/sbin/pcs -f ${TMPFILE} \
+    resource master DRBD
+/usr/sbin/pcs -f ${TMPFILE} \
+    resource meta DRBD-master \
+    master-max="1" \
+    master-node-max="1" \
+    clone-max="2" \
+    clone-node-max="1" \
+    notify="true"
+/usr/sbin/pcs -f ${TMPFILE} \
+    resource create fs_trinity ocf:heartbeat:Filesystem \
+    device="/dev/drbd/by-res/trinity_disk" \
+    directory="/trinity" \
+    fstype="xfs" \
+    op monitor interval="61s"
+/usr/sbin/pcs -f ${TMPFILE} \
+    constraint colocation add fs_trinity with DRBD-master INFINITY with-rsc-role=Master
+/usr/sbin/pcs -f ${TMPFILE} \
+    constraint colocation add master DRBD-master with ClusterIP
+/usr/sbin/pcs -f ${TMPFILE} \
+    constraint order promote DRBD-master then start fs_trinity
+
+/usr/sbin/pcs cluster cib-push ${TMPFILE}
