@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 source "$POST_CONFIG"
-source /trinity/trinity.sh
+source /etc/trinity.sh
 source "$TRIX_SHADOW"
 
 function do_sql_req {

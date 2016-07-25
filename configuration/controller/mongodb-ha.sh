@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 source "$POST_CONFIG"
-source /trinity/trinity.sh
+source /etc/trinity.sh
 source "$TRIX_SHADOW"
 
 echo_info "Check if variables are defined."
