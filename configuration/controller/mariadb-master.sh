@@ -37,12 +37,20 @@ if [ ! "${MARIADB_REP_PASS}" ]; then
     MARIADB_REP_PASS=`get_password $MARIADB_REP_PASS`
     store_password MARIADB_REP_PASS ${MARIADB_REP_PASS}
 fi
+echo "PACEMAKER_MONITOR_USER=${PACEMAKER_MONITOR_USER:?"Should be defined"}"
+if [ ! "${PACEMAKER_MONITOR_USER_PASS}" ]; then
+    PACEMAKER_MONITOR_USER_PASS=`get_password $PACEMAKER_MONITOR_USER_PASS`
+    store_password PACEMAKER_MONITOR_USER_PASS ${PACEMAKER_MONITOR_USER_PASS}
+fi
+
 MASTER_NUM=1
 SLAVE_NUM=2
 
+MARIADB_REP_MASTER_HOSTNAME=$(/usr/bin/hostname -s )
+
 echo_info "Check if remote host is available."
 
-MARIADB_REP_SLAVE_HOSTNAME=`/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} hostname || (echo_error "Unable to connect to ${MARIADB_REP_SLAVE_HOST}"; exit 1)`
+MARIADB_REP_SLAVE_HOSTNAME=`/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/hostname -s || (echo_error "Unable to connect to ${MARIADB_REP_SLAVE_HOST}"; exit 1)`
 
 echo_info "Create config file."
 
@@ -64,29 +72,57 @@ echo_info "Restart local batabase"
 
 echo_info "Create replication user."
 
-do_sql_req "CREATE USER '${MARIADB_REP_USER}'@'localhost' IDENTIFIED BY '${MARIADB_REP_PASS}';"
-do_sql_req "CREATE USER '${MARIADB_REP_USER}'@'%' IDENTIFIED BY '${MARIADB_REP_PASS}';"
-do_sql_req "GRANT REPLICATION SLAVE ON *.* TO '${MARIADB_REP_USER}'@'%';"
+do_sql_req "DROP USER '${MARIADB_REP_USER}'@'localhost';" || true
 do_sql_req "FLUSH PRIVILEGES;"
+do_sql_req "CREATE USER '${MARIADB_REP_USER}'@'localhost' IDENTIFIED BY '${MARIADB_REP_PASS}';"
+do_sql_req "FLUSH PRIVILEGES;"
+do_sql_req "DROP USER '${MARIADB_REP_USER}'@'%';"  || true
+do_sql_req "FLUSH PRIVILEGES;"
+do_sql_req "CREATE USER '${MARIADB_REP_USER}'@'%' IDENTIFIED BY '${MARIADB_REP_PASS}';"
+do_sql_req "GRANT SUPER, REPLICATION SLAVE, REPLICATION CLIENT, PROCESS, RELOAD ON *.* TO '${MARIADB_REP_USER}'@'%';"
+do_sql_req "GRANT SUPER, REPLICATION SLAVE, REPLICATION CLIENT, PROCESS, RELOAD ON *.* TO '${MARIADB_REP_USER}'@'localhost';"
+do_sql_req "FLUSH PRIVILEGES;"
+
+echo_info "Create user for pacemaker healthcheck."
+
+do_sql_req "DROP USER '${PACEMAKER_MONITOR_USER}'@'localhost';" || true
+do_sql_req "FLUSH PRIVILEGES;"
+do_sql_req "CREATE USER '${PACEMAKER_MONITOR_USER}'@'localhost' IDENTIFIED BY '${PACEMAKER_MONITOR_USER_PASS}';"
+do_sql_req "FLUSH PRIVILEGES;"
+do_sql_req "DROP USER '${PACEMAKER_MONITOR_USER}'@'%';"  || true
+do_sql_req "FLUSH PRIVILEGES;"
+do_sql_req "CREATE USER '${PACEMAKER_MONITOR_USER}'@'%' IDENTIFIED BY '${PACEMAKER_MONITOR_USER_PASS}';"
+do_sql_req "FLUSH PRIVILEGES;"
+do_sql_req "CREATE DATABASE IF NOT EXISTS ${PACEMAKER_MONITOR_DB};"
+do_sql_req "GRANT ALL PRIVILEGES ON ${PACEMAKER_MONITOR_DB}.* TO '${PACEMAKER_MONITOR_USER}'@'%';"
+do_sql_req "GRANT ALL PRIVILEGES ON ${PACEMAKER_MONITOR_DB}.* TO '${PACEMAKER_MONITOR_USER}'@'localhost';"
+do_sql_req "CREATE TABLE pacemaker.test (test int);" || true
+do_sql_req "FLUSH PRIVILEGES;"
+
+echo_info "Read current master status"
+
 read LOG_FILE LOG_POS <<<$(do_sql_req "SHOW MASTER STATUS;" | awk 'NF==2{print}')
 
 echo_info "Dump database."
 
-
-TMPFILE=$(/usr/bin/mktemp -p /root)
+TMPFILE=$(/usr/bin/mktemp -p /root sqldump.XXXXXXXXX)
 /usr/bin/chmod 600 ${TMPFILE}
 /usr/bin/mysqldump -u root --password=${MYSQL_ROOT_PASSWORD} -A > ${TMPFILE}
-/usr/bin/scp ${TMPFILE} ${MARIADB_REP_SLAVE_HOST}:${TMPFILE}
+/usr/bin/scp -p ${TMPFILE} ${MARIADB_REP_SLAVE_HOST}:${TMPFILE}
 
 do_sql_req "UNLOCK TABLES;"
 
-echo_info "Restore dump on other side."
+echo_info "Start remote MariaDB server"
+
+/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/systemctl start mariadb
+
+echo_info "Restore dump on slave."
 
 /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/mysql < ${TMPFILE}
 
 echo_info "Copy credential file."
 
-/usr/bin/scp /root/.my.cnf ${MARIADB_REP_SLAVE_HOST}:/root/.my.cnf
+/usr/bin/scp -p /root/.my.cnf ${MARIADB_REP_SLAVE_HOST}:/root/.my.cnf
 
 echo_info "Restart remote database."
 
@@ -95,12 +131,17 @@ echo_info "Restart remote database."
 echo_info "Start replicating."
 
 echo \
+    "STOP SLAVE; \
+    " | /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST}  \
+    /usr/bin/mysql -u root --password=${MYSQL_ROOT_PASSWORD} || true
+
+echo \
     "RESET SLAVE ALL; \
     " | /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST}  \
     /usr/bin/mysql -u root --password=${MYSQL_ROOT_PASSWORD}
 
 echo \
-    "CHANGE MASTER TO MASTER_HOST='${MARIADB_REP_MASTER_HOST}', \
+    "CHANGE MASTER TO MASTER_HOST='${MARIADB_REP_MASTER_HOSTNAME}', \
      MASTER_USER='${MARIADB_REP_USER}', \
      MASTER_PASSWORD='${MARIADB_REP_PASS}', \
      MASTER_LOG_FILE='${LOG_FILE}', \
@@ -109,7 +150,7 @@ echo \
     /usr/bin/mysql -u root --password=${MYSQL_ROOT_PASSWORD}
 
 echo \
-    "START SLAVE;; \
+    "START SLAVE; \
     " | /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST}  \
     /usr/bin/mysql -u root --password=${MYSQL_ROOT_PASSWORD}
 
@@ -125,3 +166,46 @@ echo_info "Success!"
 
 do_sql_req "DROP DATABASE ${TMPNAME#*/};"
 
+echo_info "Show master status."
+
+do_sql_req "SHOW MASTER STATUS\G"
+
+echo_info "Show slave status."
+
+echo \
+    "SHOW SLAVE STATUS\G \
+    " | /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST}  \
+    /usr/bin/mysql -u root --password=${MYSQL_ROOT_PASSWORD}
+
+echo_info "Disable systemd services."
+
+/usr/bin/systemctl stop mariadb
+/usr/bin/systemctl disable mariadb
+/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/systemctl stop mariadb
+/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/systemctl disable mariadb
+
+echo_info "Add pacemaker config."
+
+TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
+/usr/bin/chmod 600 ${TMPFILE}
+/usr/sbin/pcs cluster cib ${TMPFILE}
+
+/usr/sbin/pcs -f ${TMPFILE} resource create MariaDB ocf:heartbeat:mysql \
+    binary=/usr/libexec/mysqld \
+    client_binary=/usr/bin/mysql \
+    config=/etc/my.cnf \
+    datadir=/var/lib/mysql \
+    user=mysql group=mysql \
+    log=/var/log/mariadb/mariadb.log \
+    pid=/var/run/mariadb/mariadb.pid \
+    socket=/var/lib/mysql/mysql.sock \
+    test_table=${PACEMAKER_MONITOR_DB}.test \
+    test_user=${PACEMAKER_MONITOR_USER} \
+    test_passwd=${PACEMAKER_MONITOR_USER_PASS} \
+    enable_creation=true \
+    replication_user=${MARIADB_REP_USER} \
+    replication_passwd=${MARIADB_REP_PASS} \
+    --master
+/usr/sbin/pcs -f ${TMPFILE} constraint colocation add master MariaDB-master with ClusterIP
+
+/usr/sbin/pcs cluster cib-push ${TMPFILE}
