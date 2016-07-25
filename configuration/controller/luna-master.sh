@@ -230,16 +230,22 @@ done
 
 echo_info "Add services to pacemaker."
 
-/usr/sbin/pcs resource create mongod --group Luna systemd:mongod
-/usr/sbin/pcs resource create lweb --group Luna systemd:lweb --force     # need to use 'force' to ommit https://github.com/ClusterLabs/pcs/issues/71
-/usr/sbin/pcs resource create ltorrent --group Luna  systemd:ltorrent --force 
-/usr/sbin/pcs resource clone Luna
+TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
+/usr/bin/chmod 600 ${TMPFILE}
+/usr/sbin/pcs cluster cib ${TMPFILE}
 
-/usr/sbin/pcs resource create mongod-arbiter systemd:mongod-arbiter --force
-/usr/sbin/pcs constraint colocation add mongod-arbiter with ClusterIP
+/usr/sbin/pcs -f ${TMPFILE} resource create mongod --group Luna systemd:mongod
+/usr/sbin/pcs -f ${TMPFILE} resource create lweb --group Luna systemd:lweb --force     # need to use 'force' to ommit https://github.com/ClusterLabs/pcs/issues/71
+/usr/sbin/pcs -f ${TMPFILE} resource create ltorrent --group Luna  systemd:ltorrent --force 
+/usr/sbin/pcs -f ${TMPFILE} resource clone Luna
 
-/usr/sbin/pcs resource create dhcpd systemd:dhcpd
-/usr/sbin/pcs constraint colocation add dhcpd with ClusterIP
+/usr/sbin/pcs -f ${TMPFILE} resource create mongod-arbiter systemd:mongod-arbiter --force
+/usr/sbin/pcs -f ${TMPFILE} constraint colocation add mongod-arbiter with ClusterIP
 
-/usr/sbin/pcs resource create named systemd:named
-/usr/sbin/pcs resource clone named
+/usr/sbin/pcs -f ${TMPFILE} resource create dhcpd systemd:dhcpd
+/usr/sbin/pcs -f ${TMPFILE} constraint colocation add dhcpd with ClusterIP
+
+/usr/sbin/pcs -f ${TMPFILE} resource create named systemd:named
+/usr/sbin/pcs -f ${TMPFILE} resource clone named
+
+/usr/sbin/pcs cluster cib-push ${TMPFILE}
