@@ -69,14 +69,17 @@ echo ${PACEMAKER_PASS} | passwd --stdin hacluster
 echo_info "Authenticate cluster."
 
 /usr/sbin/pcs cluster auth ${PACEMAKER_MASTER_HOSTNAME} ${PACEMAKER_SLAVE_HOSTNAME} -u hacluster -p ${PACEMAKER_PASS}
+/usr/bin/ssh ${PACEMAKER_SLAVE_HOST} /usr/sbin/pcs cluster auth ${PACEMAKER_MASTER_HOSTNAME} ${PACEMAKER_SLAVE_HOSTNAME} -u hacluster -p ${PACEMAKER_PASS}
 
 echo_info "Initialize cluster."
 
 /usr/sbin/pcs cluster start --all
 
-echo_warn "Disable STONITH. Please do not confider it as a production use case."
+echo_warn "Disable STONITH and quorum. Please do not confider it as a production use case."
 
 /usr/sbin/pcs property set stonith-enabled=false
+/usr/sbin/pcs property set no-quorum-policy=ignore
+/usr/sbin/pcs property resource defaults migration-threshold=1
 
 echo_info "Add floating ip."
 
