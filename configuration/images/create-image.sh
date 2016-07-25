@@ -214,7 +214,7 @@ if flag_is_set NODE_IMG_CONFIG ; then
     CHROOT_INSTALL=1 chroot "${TARGET}" \
         "${POST_TOPDIR}/configuration/configure.sh" \
         ${VERBOSE+-v}  ${QUIET+-q} ${DEBUG+-d} ${NOCOLOR+--nocolor} \
-        --skip-pkglist "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
+        --skip-pkg "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
 fi
 
 

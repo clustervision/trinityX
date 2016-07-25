@@ -5,10 +5,8 @@
 echo_info "The following parameters are available in the environment:"
 
 display_var POST_TOPDIR \
-            POST_PKGLIST \
-            POST_SCRIPT \
-            POST_FILEDIR \
-            POST_CONFIG
+            POST_CONFIG \
+            POST_FILEDIR
 
 
 echo_info "The following parameters come from the specific configuration file (POST_CONFIG):"
