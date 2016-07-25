@@ -1,4 +1,7 @@
 
+.. vim: nowrap:tw=0
+
+
 Trinity X documentation
 =======================
 
