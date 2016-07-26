@@ -37,7 +37,7 @@ echo_info "Copy /etc/hosts to ${CTRL2_IP}"
 
 echo_info "Find out which interface owns ${CTRL_IP}"
 
-TMPVAR=$(/usr/sbin/ip a show to 10.40.255.254 | awk 'NR==1{print $2}')
+TMPVAR=$(/usr/sbin/ip a show to ${CTRL_IP} | awk 'NR==1{print $2}')
 CTRL1_IF=${TMPVAR%:}
 echo "${CTRL1_IF:?"Error in finding interface."}"
 
