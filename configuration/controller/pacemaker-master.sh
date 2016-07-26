@@ -79,7 +79,7 @@ echo_warn "Disable STONITH and quorum. Please do not confider it as a production
 
 /usr/sbin/pcs property set stonith-enabled=false
 /usr/sbin/pcs property set no-quorum-policy=ignore
-/usr/sbin/pcs property resource defaults migration-threshold=1
+/usr/sbin/pcs resource defaults migration-threshold=1
 
 echo_info "Add dummy resource."
 
