@@ -241,9 +241,11 @@ TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
 
 /usr/sbin/pcs -f ${TMPFILE} resource create mongod-arbiter systemd:mongod-arbiter --force
 /usr/sbin/pcs -f ${TMPFILE} constraint colocation add mongod-arbiter with ClusterIP
+/usr/sbin/pcs -f ${TMPFILE} constraint order start ClusterIP then start mongod-arbiter
 
 /usr/sbin/pcs -f ${TMPFILE} resource create dhcpd systemd:dhcpd
 /usr/sbin/pcs -f ${TMPFILE} constraint colocation add dhcpd with ClusterIP
+/usr/sbin/pcs -f ${TMPFILE} constraint order start ClusterIP then start dhcpd
 
 /usr/sbin/pcs -f ${TMPFILE} resource create named systemd:named
 /usr/sbin/pcs -f ${TMPFILE} resource clone named
