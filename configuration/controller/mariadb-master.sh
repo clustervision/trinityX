@@ -199,10 +199,10 @@ echo_info "Copy agent."
 
 /usr/bin/mkdir -p /usr/lib/ocf/resource.d/percona
 /usr/bin/cp ${POST_FILEDIR}/mysql_prm_agent /usr/lib/ocf/resource.d/percona/mysql
-chomod 755 /usr/lib/ocf/resource.d/percona/mysql
+chmod 755 /usr/lib/ocf/resource.d/percona/mysql
 /usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/mkdir -p /usr/lib/ocf/resource.d/percona
 /usr/bin/scp ${POST_FILEDIR}/mysql_prm_agent ${MARIADB_REP_SLAVE_HOST}:/usr/lib/ocf/resource.d/percona/mysql
-/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} chomod 755 /usr/lib/ocf/resource.d/percona/mysql
+/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} chmod 755 /usr/lib/ocf/resource.d/percona/mysql
 
 echo_info "Add pacemaker config."
 
@@ -241,7 +241,7 @@ TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
     is-managed="true"
 
 /usr/sbin/pcs -f ${TMPFILE} resource op add MariaDB monitor interval="15s" role="Master" OCF_CHECK_LEVEL="1"
-/usr/sbin/pcs -f ${TMPFILE} resource op add MariaDB monitor interval="20s" role="Slave" OCF_CHECK_LEVEL="1"
+/usr/sbin/pcs -f ${TMPFILE} resource op add MariaDB monitor interval="25s" role="Slave" OCF_CHECK_LEVEL="1"
 
 /usr/sbin/pcs -f ${TMPFILE} constraint colocation add master MariaDB-master with ClusterIP
 
