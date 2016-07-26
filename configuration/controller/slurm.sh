@@ -131,7 +131,7 @@ if [ !  -d /etc/systemd/system/slurm.service.d ]; then
     mkdir -p /etc/systemd/system/slurm.service.d
     cat << EOF > /etc/systemd/system/slurm.service.d/customexec.conf
 [Unit]
-Requires=munge.service
+Requires=munge.service slurmdbd.service
 
 [Service]
 Restart=always
