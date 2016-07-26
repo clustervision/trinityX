@@ -11,7 +11,6 @@ function wait_master {
     done
 }
 
-
 echo_info "Check if variables are defined."
 
 echo "MONGODB_FLOATING_HOST=${MONGODB_FLOATING_HOST:?"Should be defined"}"
@@ -210,6 +209,8 @@ echo_info "Configure luna to support cluster configuration."
 
 echo_info "Create named configs."
 
+/usr/bin/systemctl start named
+/usr/bin/ssh ${MONGODB_SLAVE_HOST} /usr/bin/systemctl start named
 /usr/sbin/luna cluster makedns
 
 
@@ -234,9 +235,9 @@ TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
 /usr/bin/chmod 600 ${TMPFILE}
 /usr/sbin/pcs cluster cib ${TMPFILE}
 
-/usr/sbin/pcs -f ${TMPFILE} resource create mongod --group Luna systemd:mongod
 /usr/sbin/pcs -f ${TMPFILE} resource create lweb --group Luna systemd:lweb --force     # need to use 'force' to ommit https://github.com/ClusterLabs/pcs/issues/71
 /usr/sbin/pcs -f ${TMPFILE} resource create ltorrent --group Luna  systemd:ltorrent --force 
+/usr/sbin/pcs -f ${TMPFILE} resource create mongod --group Luna systemd:mongod
 /usr/sbin/pcs -f ${TMPFILE} resource clone Luna
 
 /usr/sbin/pcs -f ${TMPFILE} resource create mongod-arbiter systemd:mongod-arbiter --force
