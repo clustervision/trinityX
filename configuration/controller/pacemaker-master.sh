@@ -81,7 +81,13 @@ echo_warn "Disable STONITH and quorum. Please do not confider it as a production
 /usr/sbin/pcs property set no-quorum-policy=ignore
 /usr/sbin/pcs property resource defaults migration-threshold=1
 
+echo_info "Add dummy resource."
+
+/usr/sbin/pcs resource create trinity ocf:heartbeat:Dummy
+
 echo_info "Add floating ip."
 
 /usr/sbin/pcs resource create ClusterIP ocf:heartbeat:IPaddr2 \
     ip=${PACEMAKER_FLOATING_HOST} cidr_netmask=${PACEMAKER_PREFIX} op monitor interval=30s
+/usr/sbin/pcs constraint colocation add ClusterIP with trinity
+/usr/sbin/pcs constraint order start trinity then start ClusterIP
