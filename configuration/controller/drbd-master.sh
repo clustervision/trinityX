@@ -33,11 +33,6 @@ echo_info "Check if block device is available."
 
 (/usr/bin/ssh ${DRBD_PARTNER_IP} ls ${DRBD_DEVICE} && ls ${DRBD_DEVICE}) || (echo_error "${DRBD_DEVICE} not present on one of the nodes."; exit 2)
 
-echo_info "Check if device is in use."
-
-[ "$(/usr/sbin/blkid ${DRBD_DEVICE})" ] && (echo_error "${DRBD_DEVICE} seems in use."; exit 4)
-[ "$(/usr/bin/ssh ${DRBD_PARTNER_IP} /usr/sbin/blkid ${DRBD_DEVICE})" ] && (echo_error "${DRBD_DEVICE} seems in use on ${DRBD_PARTNER_IP}."; exit 4)
-
 echo_info "Configure firewalld."
 
 if /usr/bin/firewall-cmd --state >/dev/null ; then
@@ -76,10 +71,10 @@ systemctl enable drbd
 
 /usr/bin/ssh ${DRBD_PARTNER_IP} "systemctl start drbd; systemctl enable drbd"
 
-while [ "x$(/usr/sbin/drbdadm dstate trinity_disk)" != "xUpToDate/UpToDate" ]; do
-    echo_info "Waiting for UpToDate/UpToDate"
-    sleep 3
-done
+#while [ "x$(/usr/sbin/drbdadm dstate trinity_disk)" != "xUpToDate/UpToDate" ]; do
+#    echo_info "Waiting for UpToDate/UpToDate"
+#    sleep 3
+#done
 
 echo_info "Format /dev/drbd/by-res/trinity_disk"
 
