@@ -175,14 +175,14 @@ systemctl daemon-reload
 /usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND}
 /usr/sbin/luna network add -n ${LUNA_NETWORK_NAME} -N ${LUNA_NETWORK} -P ${LUNA_PREFIX}
 
+echo_info "Configure DNS and DHCP."
+
+/usr/sbin/luna cluster makedhcp -N ${LUNA_NETWORK_NAME} -s ${LUNA_DHCP_RANGE_START} -e ${LUNA_DHCP_RANGE_END}
+/usr/sbin/luna cluster makedns
+
 echo_info "Start services."
 
 for service in  xinetd nginx dhcpd lweb ltorrent; do
     systemctl enable $service
     systemctl start $service
 done
-
-echo_info "Configure DNS and DHCP."
-
-/usr/sbin/luna cluster makedhcp -N ${LUNA_NETWORK_NAME} -s ${LUNA_DHCP_RANGE_START} -e ${LUNA_DHCP_RANGE_END}
-/usr/sbin/luna cluster makedns
