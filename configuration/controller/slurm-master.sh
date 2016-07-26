@@ -44,9 +44,13 @@ TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
 /usr/sbin/pcs -f ${TMPFILE} \
     constraint colocation add Slurm with ClusterIP
 /usr/sbin/pcs -f ${TMPFILE} \
-    constraint colocation add Slurm with DRBD-master INFINITY with-rsc-role=Master
+    constraint colocation add Slurm with fs_trinity
+#/usr/sbin/pcs -f ${TMPFILE} \
+#    constraint colocation add Slurm with DRBD-master INFINITY with-rsc-role=Master
+#/usr/sbin/pcs -f ${TMPFILE} \
+#    constraint order promote DRBD-master then start Slurm
 /usr/sbin/pcs -f ${TMPFILE} \
-    constraint order promote DRBD-master then start Slurm
+    constraint order start fs_trinity then start Slurm
 /usr/sbin/pcs -f ${TMPFILE} \
     constraint order start ClusterIP then start Slurm
 
