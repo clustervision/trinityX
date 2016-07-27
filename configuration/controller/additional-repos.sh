@@ -16,6 +16,7 @@ ret=0
 if [[ "$ADDREPOS_KEYS" ]] ; then
     echo_info 'Installing repository GPG keys'
     for i in $ADDREPOS_KEYS ; do
+        cp "${POST_FILEDIR}/$i" /etc/pki/rpm-gpg/
         rpm --import "${POST_FILEDIR}/$i"
         (( ret += $? ))
     done

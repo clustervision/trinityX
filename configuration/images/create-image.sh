@@ -107,6 +107,7 @@ function unbind_mounts {
 # Used only for the initial package installation:
 # ===============================================
 # /etc/yum.repos.d  ->  so that we have the same repos until post script setup
+# /etc/pki/rpm-gpg  ->  so that the repo keys are available
 
 # Note that some of those directories are optional and controlled by
 # configuration options.
@@ -126,7 +127,8 @@ DIRTMPLIST=( \
 
 if flag_is_set NODE_HOST_REPOS ; then
     DIRLIST+=( /var/cache/yum )
-    DIRTMPLIST+=( /etc/yum.repos.d )
+    DIRTMPLIST+=( /etc/yum.repos.d \
+                  /etc/pki/rpm-gpg )
 fi
 
 
