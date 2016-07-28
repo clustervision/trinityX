@@ -99,9 +99,8 @@ The standard variables defined at the creation of the file are:
 
 By convention, all values stored in the file start with the string ``TRIX_``. This is done in order to avoid namespace issue between those system-wide values, and anything coming from a configuration file.
 
-In a completely standard installation, the initial state would look like this:
+In a completely standard installation, the initial state would look like this::
 
-.. code-block:: bash
     # TrinityX environment file
     # Please do not modify!
     

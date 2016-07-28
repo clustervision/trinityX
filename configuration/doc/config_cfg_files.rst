@@ -44,9 +44,8 @@ Creating a configuration file for a new project is quite straightforward. The si
 
 As the configuration files are valid Bash scripts too, it is also possible to source ``controller.cfg`` at the very top of the new configuration file, and then only set the variables that differ from the default values.
 
-Assuming that the new configuration file resides in the same directory as ``controller.cfg``, this will work:
+Assuming that the new configuration file resides in the same directory as ``controller.cfg``, this will work::
 
-.. code-block:: bash
    source "${POST_CONFDIR}/controller.cfg"
 
 
