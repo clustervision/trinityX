@@ -165,6 +165,14 @@ As all of those files a sourced each time a script is ran, all changes to either
 
 
 
-.. include:: relative_links.rst
 .. _controller.cfg: ../controller.cfg
+
+.. Relative file links
+
+.. _Documentation: README.rst
+.. _Configuration tool usage: config_tool.rst
+.. _Configuration files: config_cfg_files.rst
+.. _Post scripts: config_post_scripts.rst
+.. _Environment variables: config_env_vars.rst
+.. _Common functions: config_common_funcs.rst
 

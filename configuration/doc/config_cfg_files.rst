@@ -62,6 +62,14 @@ Until a better solution is implemented, exert caution when changing the order of
 
 
 
-.. include:: relative_links.rst
 .. _controller.cfg: ../controller.cfg
+
+.. Relative file links
+
+.. _Documentation: README.rst
+.. _Configuration tool usage: config_tool.rst
+.. _Configuration files: config_cfg_files.rst
+.. _Post scripts: config_post_scripts.rst
+.. _Environment variables: config_env_vars.rst
+.. _Common functions: config_common_funcs.rst
 
