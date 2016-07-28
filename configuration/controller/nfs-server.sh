@@ -11,12 +11,12 @@ SHARED_OPTS="${NFS_SHARED_OPTS:-ro,no_root_squash}"
 
 echo_info 'Adding the shared export'
 
-append_line "${TRIX_SHARED} (${SHARED_OPTS})" /etc/exports
+append_line /etc/exports "${TRIX_SHARED} (${SHARED_OPTS})"
 
 
 if [[ "$NFS_HOME_OPTS" ]] ; then
     echo_info 'Adding the /home export'
-    append_line "${TRIX_HOME} (${NFS_HOME_OPTS})" /etc/exports
+    append_line /etc/exports "${TRIX_HOME} (${NFS_HOME_OPTS})"
     store_variable /etc/trinity.sh HOME_ON_NFS 1
 fi
 

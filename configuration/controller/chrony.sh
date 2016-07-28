@@ -15,7 +15,7 @@ if flag_is_set CHRONY_UPSTREAM ; then
     # disable existing servers
     sed -i 's/^\(server .*\)/#\1/g' /etc/chrony.conf
     
-    append_line '#  ----  Trinity machines  ----' /etc/chrony.conf
+    append_line /etc/chrony.conf '#  ----  Trinity machines  ----'
     
     # if no server was specified, this is client mode so use the controllers
     if ! [[ "$CHRONY_UPSTREAM" ]] ; then
@@ -38,10 +38,10 @@ if flag_is_set CHRONY_SERVER ; then
     # start with disabling what may be leftovers from a previous installation
     sed -i 's/^\(allow.*\)/#\1/g' /etc/chrony.conf
     
-    append_line '#  ----  Trinity machines  ----' /etc/chrony.conf
+    append_line /etc/chrony.conf '#  ----  Trinity machines  ----'
     
     if [[ "$CHRONY_SERVER" == 1 ]] ; then
-        append_line "allow" /etc/chrony.conf
+        append_line /etc/chrony.conf "allow"
     else
         for i in ${CHRONY_SERVER[@]} ; do
             echo "allow $i" | tee -a /etc/chrony.conf

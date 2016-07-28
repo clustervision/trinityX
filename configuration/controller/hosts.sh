@@ -131,7 +131,7 @@ fi <<< "$ifips"
 
 # Loop on the pairs and write to the hosts file
 
-append_line '#  ----  Trinity machines  ----' /etc/hosts
+append_line /etc/hosts '#  ----  Trinity machines  ----'
 
 for i in CTRL{1,2} ; do
 
@@ -148,16 +148,16 @@ for i in CTRL{1,2} ; do
             while read -a ifip ; do
 
                 if [[ "$ctrlip" == "${ifip[1]}" ]] ; then
-                    append_line "${ifip[1]}  ${fname:+$fname }$hname ${hname}-${ifip[0]}" /etc/hosts
+                    append_line /etc/hosts "${ifip[1]}  ${fname:+$fname }$hname ${hname}-${ifip[0]}"
                 else
-                    append_line "${ifip[1]}  ${hname}-${ifip[0]}" /etc/hosts
+                    append_line /etc/hosts "${ifip[1]}  ${hname}-${ifip[0]}"
                 fi
             done <<< "$ifips"
 
         else
 
             # not our machine, just write the data from the env varibales
-            append_line "$tmpip  $tmpname" /etc/hosts
+            append_line /etc/hosts "$tmpip  $tmpname"
         fi
     fi
 done
@@ -165,7 +165,7 @@ done
 
 # And if we're HA, we need to add the floating IP too
 
-flag_is_set HA && append_line "$CTRL_IP  $CTRL_HOSTNAME" /etc/hosts
+flag_is_set HA && append_line /etc/hosts "$CTRL_IP  $CTRL_HOSTNAME"
 
 
 #---------------------------------------
@@ -183,7 +183,7 @@ if [[ -r /etc/trinity.sh ]] ; then
             store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
         else
             # make sure that we're not picking up background noise
-            append_line "unset $i TRIX_$i" "${TRIX_SHFILE}"
+            append_line "${TRIX_SHFILE}" "unset $i TRIX_$i"
         fi
     done
 fi

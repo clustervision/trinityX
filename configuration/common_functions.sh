@@ -126,18 +126,18 @@ typeset -fx echo_error
 # Note that it matches the exact string alone on its line, because otherwise it
 # would be just mad to deal with all the corner cases...
 
-# Syntax: append_line string filename
+# Syntax: append_line filename string
 
 function append_line {
     if (( $# != 2 )) ; then
-        echo_warn 'append_line: usage: append_line string filename'
+        echo_warn 'append_line: usage: append_line filename string'
         exit 1
     fi
     
-    if [[ -r "$2" ]] && grep -q -- "^${1}$" "$2" ; then
-        echo "Line already present in destination file: $1"
+    if [[ -r "$1" ]] && grep -q -- "^${2}$" "$1" ; then
+        echo "Line already present in destination file: $2"
     else
-        echo "$1" | tee -a "$2"
+        echo "$2" | tee -a "$1"
     fi
 }
 
