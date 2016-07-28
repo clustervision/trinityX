@@ -149,49 +149,74 @@ typeset -fx append_line
 # Variable management functions
 
 # Store a variable in a file
-# The fields are in the form variable="password"
+# This is the generic backend that is used by all other functions
+
+# The fields are in the form:
+# - variable="password"             (default)
+# - variable=password               (flag_is_set SYSTEM_VAR)
+# - declare -r variable="password"  (flag_is_set SH_RO_VAR)
+
 # The variable is updated if it exists already in the file
-# The variable names are sanitized.
+# The variable name is not sanitized, this is left to theh other functions
 
-# Syntax: store_variable file variable value
+# Syntax: store_variable_backend filename variable value
 
-function store_variable {
-    
+function store_variable_backend {
+
     if (( $# != 3 )) ; then
-        echo_warn "store_variable: usage: store_variable file variable value"
+        echo_warn "store_variable_backend: usage: store_variable_backend filename variable value"
         return 1
     fi
 
-    if ! ( [[ -r "$1" ]] && [[ -w "$1" ]] ); then
-        echo_warn "store_variable: destination file not RW: $1"
-        return 1
-    fi
-    
-    # Sanitize the variable name
-    VARNAME="$(echo -n "$2" | tr -c '[:alnum:]' _)"
-    
     # If the variable name already exists, assume that it's an update of the
     # password. Exit with an error if the variable is declared read-only, update
     # it otherwise.
 
-    if grep -q "^declare -r ${VARNAME}=" "$1" ; then
-        echo_warn "store_variable: will not overwrite a read-only variable: ${VARNAME}"
+    if [[ -r "$1" ]] && grep -q "^declare -r $2=" "$1" ; then
+        echo_warn "store_variable_backend: will not overwrite a read-only variable: $2"
         return 1
     else
         # delete the line if it exists, and append the new value
-        sed -i '/^'"${VARNAME}"'=/d' "$1"
-        echo "${SET_RO+declare -r }${VARNAME}=${SYSTEM-\"}${3}${SYSTEM-\"}" >> "$1"
+        [[ -w "$1" ]] && sed -i '/^'"$2"'=/d' "$1"
+        echo "${SH_RO_VAR+declare -r }${2}=${SYSTEM_VAR-\"}${3}${SYSTEM_VAR-\"}" | tee -a "$1"
     fi
 }
 
 
-# Same but without the surrounding quotes, for system config file use
 
-function store_system_variable {
-    SYSTEM= store_variable "$@"
+# The default store_variable
+# Sanitizes the variable name
+
+function store_variable {
+
+    if (( $# != 3 )) ; then
+        echo_warn "store_variable: usage: store_variable filename variable value"
+        return 1
+    fi
+
+    # Sanitize the variable name
+    VARNAME="$(echo -n "$2" | tr -c '[:alnum:]' _)"
+    store_variable_backend "$1" "$VARNAME" "$3"
 }
 
 
+# Store a system variable without surrounding quotes
+# Sanitizes the variable name but with slightly softer rules
+
+function store_system_variable {
+
+    if (( $# != 3 )) ; then
+        echo_warn "store_system_variable: usage: store_system_variable filename variable value"
+        return 1
+    fi
+
+    # Sanitize the variable name
+    VARNAME="$(echo -n "$2" | tr -c '[:alnum:].:-' _)"
+    SYSTEM_VAR= store_variable_backend "$1" "$VARNAME" "$3"
+}
+
+
+typeset -fx store_variable_backend
 typeset -fx store_variable
 typeset -fx store_system_variable
 
@@ -217,15 +242,13 @@ function get_password {
 function store_password {
     
     if (( $# != 2 )) ; then
-        echo_warn "store_password: usage: store_password variable_name password"
+        echo_warn "store_password: usage: store_password variable password"
         return 1
     fi
 
-    # we need the installation path, and the calling script may not have sourced
-    # it already
-    [[ "$TRIX_SHADOW" ]] || source /etc/trinity.sh
-    
-    SET_RO= store_variable "$TRIX_SHADOW" "$@"
+    # We're calling store_variable, not the backend, because we want
+    # sanitization of the variable name
+    SH_RO_VAR= store_variable "$TRIX_SHADOW" "$@"
 }
 
 
