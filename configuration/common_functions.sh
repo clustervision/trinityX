@@ -114,12 +114,10 @@ function echo_error_wait {
     fi
 }
 
-typeset -fx echo_header
-typeset -fx echo_progress
+# Only export the functions that are available to the post scripts
 typeset -fx echo_info
 typeset -fx echo_warn
 typeset -fx echo_error
-typeset -fx echo_error_wait
 
 
 #---------------------------------------
