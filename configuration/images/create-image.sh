@@ -183,8 +183,8 @@ if flag_is_set NODE_IMG_CONFIG ; then
     (
     # We have to keep the same name for the variables for the configuration file,
     # as it is the only portable way to let a cfg file source another one.
-    CONFDIR="$(dirname "$POST_CONFIG")"
-    POST_CONFIG="${CONFDIR}/${NODE_IMG_CONFIG}"
+    POST_CONFDIR="$(dirname "$POST_CONFIG")"
+    POST_CONFIG="${POST_CONFDIR}/${NODE_IMG_CONFIG}"
     source "$POST_CONFIG"
 
     for pscript in ${POSTLIST[@]} ; do

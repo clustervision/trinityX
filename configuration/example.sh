@@ -4,8 +4,8 @@
 
 echo_info "The following parameters are available in the environment:"
 
-display_var CONFDIR \
-            POST_TOPDIR \
+display_var POST_TOPDIR \
+            POST_CONFDIR \
             POST_CONFIG \
             POST_FILEDIR
 

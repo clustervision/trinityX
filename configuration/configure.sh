@@ -174,12 +174,12 @@ function apply_config {
     echo_header "CONFIGURATION FILE: $1"
 
     POST_CONFIG="$(readlink -e "$1")"
-    CONFDIR="$(dirname "$POST_CONFIG")"
+    POST_CONFDIR="$(dirname "$POST_CONFIG")"
 
     if [[ -r "$POST_CONFIG" ]] ; then
         source "$POST_CONFIG"
         export POST_CONFIG
-        export CONFDIR
+        export POST_CONFDIR
     else
         echo_error_wait "Fatal error: configuration file \"$POST_CONFIG\" doesn't exist."
         return 1
@@ -201,15 +201,15 @@ function apply_config {
 
     # Deal with variations in the POSTDIR values:
     # - defined and absolute -> nothing to do
-    # - defined and relative -> prepend CONFDIR
+    # - defined and relative -> prepend POST_CONFDIR
     # - undefined -> same as the conf file without extension
 
     if flag_is_set POSTDIR ; then
         if ! [[ "$POSTDIR" =~ ^/.* ]] ; then
-            POSTDIR="${CONFDIR}/${POSTDIR}"
+            POSTDIR="${POST_CONFDIR}/${POSTDIR}"
         fi
     else
-        POSTDIR="${CONFDIR}/$(basename "$POST_CONFIG" .cfg)"
+        POSTDIR="${POST_CONFDIR}/$(basename "$POST_CONFIG" .cfg)"
     fi
 
     if ! [[ -d "$POSTDIR" && -x "$POSTDIR" ]] ; then
@@ -227,7 +227,7 @@ function apply_config {
         run_one_script "$post"
     done
 
-    unset POST_CONFIG CONFDIR POSTDIR
+    unset POST_CONFIG POST_CONFDIR POSTDIR
     echo_footer
 }
 
