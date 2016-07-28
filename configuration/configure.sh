@@ -141,7 +141,7 @@ function run_one_script {
         # modify the .sh{,adow} files, and subsequent scripts will need the
         # updated versions in their environment.
 
-        bash ${DEBUG+-x} ${HARDSTOP+-e -o pipefail} -c " \\
+        bash ${DEBUG+-x} ${HARDSTOP+-e -o pipefail} -c "
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
             source \"$POST_CONFIG\"
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
@@ -179,6 +179,7 @@ function apply_config {
     if [[ -r "$POST_CONFIG" ]] ; then
         source "$POST_CONFIG"
         export POST_CONFIG
+        export CONFDIR
     else
         echo_error_wait "Fatal error: configuration file \"$POST_CONFIG\" doesn't exist."
         return 1
@@ -226,7 +227,7 @@ function apply_config {
         run_one_script "$post"
     done
 
-    unset POST_CONFIG
+    unset POST_CONFIG CONFDIR POSTDIR
     echo_footer
 }
 

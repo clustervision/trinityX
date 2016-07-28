@@ -181,9 +181,10 @@ if flag_is_set NODE_IMG_CONFIG ; then
     echo_info 'Installing the packages for all post scripts'
 
     (
-    # We have to keep the same name for the variable for the configuration file,
+    # We have to keep the same name for the variables for the configuration file,
     # as it is the only portable way to let a cfg file source another one.
-    POST_CONFIG="$(dirname "${POST_CONFIG}")/${NODE_IMG_CONFIG}"
+    CONFDIR="$(dirname "$POST_CONFIG")"
+    POST_CONFIG="${CONFDIR}/${NODE_IMG_CONFIG}"
     source "$POST_CONFIG"
 
     for pscript in ${POSTLIST[@]} ; do
