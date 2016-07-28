@@ -128,19 +128,14 @@ typeset -fx echo_error
 
 # Syntax: append_line string filename
 
-export alsyntax="Error: wrong number of parameters.
-Syntax: append_line string filename
-Current parameters: ${@}
-"
-
 function append_line {
     if (( $# != 2 )) ; then
-        errcho "$alsyntax"
+        echo_warn 'append_line: usage: append_line string filename'
         exit 1
     fi
     
-    if grep -q -- "^${1}$" "$2" ; then
-        echo_info "Line already present in destination file: $1"
+    if [[ -r "$2" ]] && grep -q -- "^${1}$" "$2" ; then
+        echo "Line already present in destination file: $1"
     else
         echo "$1" | tee -a "$2"
     fi
