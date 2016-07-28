@@ -246,6 +246,13 @@ function store_password {
         return 1
     fi
 
+    # We need an existing shadow file. If we have the variable in the
+    # environment, then the base install has probably been done.
+    if flag_is_unset TRIX_SHADOW || ! [[ -r "$TRIX_SHADOW" ]] ; then
+        echo_warn "store_password: the Trinity shadow file doesn't exist: ${TRIX_SHADOW:-\"\"}"
+        return 1
+    fi
+
     # We're calling store_variable, not the backend, because we want
     # sanitization of the variable name
     SH_RO_VAR= store_variable "$TRIX_SHADOW" "$@"
