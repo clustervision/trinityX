@@ -20,6 +20,7 @@ Display functions are wrappers to output messages with a special meaning in a co
 
 
 Syntax::
+
     echo_info message
     echo_warn message
     echo_error message
@@ -65,6 +66,7 @@ Display the contents of one or more environment variables
 
 
 Syntax::
+
     display_var var1 [var2 ...]
 
 ``varX`` are variable names, and not their contents. Those variables may or may not exist, and may or may not be set.
@@ -92,6 +94,7 @@ A flag is unset if the variable doesn't exist, or is set to 0, "n" or "no" (in c
 
 
 Syntax::
+
     flag_is_set var
     flag_is_unset var
 
@@ -137,12 +140,14 @@ Append a line to a file. If the exact same line exists in the file already, don'
 
 
 Syntax::
+
     append_line filename string
 
 The string is a Bash string (between double quotes), not a list of parameters: ``"The complete string"``, not ``The complete string``.
 
 
 Example::
+
     # append_line /tmp/test line1
     line1
     
@@ -165,6 +170,7 @@ Store a variable in a file. If the variable exists in the file already, the orig
 
 
 Syntax::
+
     store_variable filename variable value
     store_system_variable filename variable value
 
@@ -180,6 +186,7 @@ Syntax::
 
 
 Example::
+
     # store_variable /tmp/test VAR1,incorrect test
     VAR1_incorrect="test"
     
@@ -210,12 +217,14 @@ Generate a random password if the parameter is empty. The password is 8 characte
 
 
 Syntax::
+
     get_password string
 
 ``string`` is typically the contents of a variable that is supposed to contain a password. If it's empty or non-existent, a new password is printed on stdout.
 
 
 Example::
+
     # get_password 
     3ghc5ww3
     
@@ -236,12 +245,14 @@ The shadow file is designed to be sourced by post scripts, to obtain the require
 
 
 Syntax::
+
     store_password variable password
 
 The sanitization rules for the variable name are the same as with ``store_variable``.
 
 
 Example::
+
     # PASSWD_SOMETHING="$(get_password)"
     
     # store_password PASSWD_SOMETHING "$PASSWD_SOMETHING"
