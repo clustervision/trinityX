@@ -10,16 +10,9 @@ source "$POST_CONFIG"
 
 #---------------------------------------
 
-# Display the value that we will need, Dmitry-style
+# Display the variables that we will need
 
-echo "HA             = ${HA-not set}"
-echo "CTRL_HOSTNAME  = ${CTRL_HOSTNAME-not set}"
-echo "CTRL_IP        = ${CTRL_IP-not set}"
-echo "CTRL1_HOSTNAME = ${CTRL1_HOSTNAME-not set}"
-echo "CTRL1_IP       = ${CTRL1_IP-not set}"
-echo "CTRL2_HOSTNAME = ${CTRL2_HOSTNAME-not set}"
-echo "CTRL2_IP       = ${CTRL2_IP-not set}"
-echo "hostname       = $(hostname -s)"
+display_var HA CTRL{1,2,}_{HOSTNAME,IP} HOSTNAME
 
 
 #---------------------------------------
