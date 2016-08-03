@@ -2,19 +2,6 @@
 
 # Trinity X configuration tool
 
-# USAGE:
-# configure.sh config_file
-#
-# The configuration file is a valid shell script that contains environment
-# variables. It will be sourced later, and then various post-scripts will be
-# able to access those variables for their configuration.
-#
-# At least one configuration file is required. If more than one is specified,
-# they will run in that order. It is up to the user to break the installation if
-# something goes wrong; the scripts will run regardless of the success of
-# failure of previous scripts.
-
-
 
 ################################################################################
 ##
@@ -34,9 +21,12 @@ Options:    -v                  be more verbose
             -q                  be quieter
             -d                  run the post scripts in debug mode (bash -x)
             --nocolor           don't use color escape codes in the messages
-            --dontstopmenow     don't wait for user input on error
-            --bailout           exit when a post script returns an error code
-            --hitthewall        exit on any error inside a post script (bash -e)
+            --dontstopmenow or --continue
+                                don't wait for user input on error
+            --bailout or --stop 
+                                exit when a post script returns an error code
+            --hitthewall or --hardstop
+                                exit on any error inside a post script (bash -e)
 
 -v and -q are mutually exclusive.
 --dontstopmenow is mutually exclusive with --bailout and --hitthewall.
@@ -46,17 +36,7 @@ In the main syntax form, all options are positional: they apply only to the
 configuration files after them on the command line. In the alternate syntax
 form, all options must be specified *before* --config.
 
-This alternate syntax is used to run a specific set of post scripts, within the
-configuration environment provided by the config file. When the --config
-option is encountered in the argument list, the following happens:
-
-- the next argument is the configuration file;
-- all the remaining arguments are the names of the scripts to run.
-
-It is possible to mix regular configuration files with chosen scripts, as long
-as the chosen scripts are last and the sequence is respected.
-
-Please refer to the documentation for more details.
+Please refer to the documentation for additional information.
 " >&2
     exit 1
 }
@@ -91,48 +71,95 @@ source "$POST_COMMON"
 # All the other parameters are environment variables.
 
 function run_one_script {
-    
-    export POST_PKGLIST="${POSTDIR}/${1}.pkglist"
-    export POST_SCRIPT="${POSTDIR}/${1}.sh"
-    export POST_FILEDIR="${POSTDIR}/${1}"
+
+    [[ -r "${POSTDIR}/${1}.grplist" ]] && POST_GRPLIST="${POSTDIR}/${1}.grplist"
+    [[ -r "${POSTDIR}/${1}.pkglist" ]] && POST_PKGLIST="${POSTDIR}/${1}.pkglist"
+    [[ -r "${POSTDIR}/${1}.sh" ]] && POST_SCRIPT="${POSTDIR}/${1}.sh"
+    [[ -x "${POSTDIR}/${1}" ]] && export POST_FILEDIR="${POSTDIR}/${1}"
+
+    # Do we have something? Anything? If not, kick the user.
+
+    if flag_is_unset POST_GRPLIST && flag_is_unset POST_PKGLIST && \
+       flag_is_unset POST_SCRIPT ; then
+
+        echo_error "The name \"${1}\" doesn't match any file in the POSTDIR directory: ${POSTDIR}"
+        return 1
+    fi
 
     ret=0
-    
-    if flag_is_unset SKIPPKGLIST ; then
-        
-        # Start with installing the packages if we have a list
-        if [[ -r "$POST_PKGLIST" ]] ; then
+
+    if flag_is_unset SKIPPKG ; then
+
+        # Start with installing the groups and packages if we have lists
+
+        if flag_is_set POST_GRPLIST ; then
+            echo_progress "Installing package groups: $POST_GRPLIST"
+            yum -y groupinstall $(grep -v '^#\|^$' "$POST_GRPLIST")
+            ret=$?
+        elif flag_is_set VERBOSE; then
+            echo_info "No package group file found: $POST_GRPLIST"
+        fi
+
+        # Take a break if the installation didn't go right
+        if (( $ret )) ; then
+            echo_error_wait "Error during package group installation: $POST_GRPLIST"
+        fi
+
+
+        if flag_is_set POST_PKGLIST ; then
             echo_progress "Installing packages: $POST_PKGLIST"
             yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
             ret=$?
-        else
+        elif flag_is_set VERBOSE ; then
             echo_info "No package file found: $POST_PKGLIST"
         fi
-        
+
         # Take a break if the installation didn't go right
         if (( $ret )) ; then
             echo_error_wait "Error during package installation: $POST_PKGLIST"
         fi
     fi
-    
+
 
     ret=0
-    
+
     # Then run the script if we have one
-    if [[ -r "$POST_SCRIPT" ]] ; then
+    if flag_is_set POST_SCRIPT ; then
+
         echo_progress "Running post script: $POST_SCRIPT"
-        bash ${DEBUG+-x} ${HARDSTOP+-e} "$POST_SCRIPT"
+
+        # We're doing a little hackaroo here.
+        # The idea is that some variables in POST_CONFIG may include some
+        # variables defined in trinity.sh. They shouldn't, but they may. So load
+        # trinity.sh first, then POST_CONFIG.
+        # And because some misguided attempt at broken configuration may
+        # redefine the trinity.sh variables in POST_CONFIG, re-source trinity.sh
+        # afterwards... And because we have no guarantee that trinity.sh exists
+        # already, those have to be conditional.
+        # Finally, load the password file if it exists already.
+        # We cannot do all of that at a higher level because each script may
+        # modify the .sh{,adow} files, and subsequent scripts will need the
+        # updated versions in their environment.
+
+        bash ${DEBUG+-x} ${HARDSTOP+-e -o pipefail} -c "
+            [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
+            source \"$POST_CONFIG\"
+            [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
+            [[ -r \"$TRIX_SHADOW\" ]] && source \"$TRIX_SHADOW\"
+            source \"$POST_SCRIPT\" "
+
         ret=$?
-    else
+
+    elif flag_is_set VERBOSE ; then
         echo_info "No post script found: $POST_SCRIPT"
     fi
-    
+
     # Take a break if the script returned an error code
     if (( $ret )) ; then
         echo_error_wait "Error during post script: $POST_SCRIPT"
     fi
-    
-    unset POST_PKGLIST POST_SCRIPT POST_FILEDIR
+
+    unset POST_{GRPLIST,PKGLIST,SCRIPT,FILEDIR}
 }
 
 
@@ -143,15 +170,21 @@ function run_one_script {
 # Syntax: apply_config configuration_file
 
 function apply_config {
-    
+
     echo_header "CONFIGURATION FILE: $1"
 
     POST_CONFIG="$(readlink -e "$1")"
-    CONFDIR="$(dirname "$POST_CONFIG")"
+    POST_CONFDIR="$(dirname "$POST_CONFIG")"
 
-    source "$POST_CONFIG"
-    export POST_CONFIG
-    
+    if [[ -r "$POST_CONFIG" ]] ; then
+        source "$POST_CONFIG"
+        export POST_CONFIG
+        export POST_CONFDIR
+    else
+        echo_error_wait "Fatal error: configuration file \"$POST_CONFIG\" doesn't exist."
+        return 1
+    fi
+
     # If we're running only handpicked scripts, we need to shift
     if (( $# > 1 )) ; then
         shift
@@ -168,35 +201,33 @@ function apply_config {
 
     # Deal with variations in the POSTDIR values:
     # - defined and absolute -> nothing to do
-    # - defined and relative -> prepend CONFDIR
+    # - defined and relative -> prepend POST_CONFDIR
     # - undefined -> same as the conf file without extension
-    
-    if [[ "$POSTDIR" ]] ; then
+
+    if flag_is_set POSTDIR ; then
         if ! [[ "$POSTDIR" =~ ^/.* ]] ; then
-            POSTDIR="${CONFDIR}/${POSTDIR}"
+            POSTDIR="${POST_CONFDIR}/${POSTDIR}"
         fi
     else
-        POSTDIR="$(basename "$POST_CONFIG" .cfg)"
+        POSTDIR="${POST_CONFDIR}/$(basename "$POST_CONFIG" .cfg)"
     fi
-    
-    POSTDIR=$(readlink -f "$POSTDIR")
 
-    if (( $? )) ; then
+    if ! [[ -d "$POSTDIR" && -x "$POSTDIR" ]] ; then
         echo_error_wait "Configuration directory doesn't exist: $POSTDIR"
-        return
+        return 1
     fi
-    
+
     #echo_info "Configuration directory: $POSTDIR"
     #echo_info "List of post scripts: ${POSTLIST[@]}"
-    
+
     # Alright, so at that point we have our config file loaded, and we know
     # where the directory is, we can loop over the list of post scripts.
-    
+
     for post in "${POSTLIST[@]}" ; do
         run_one_script "$post"
     done
-    
-    unset POST_CONFIG
+
+    unset POST_CONFIG POST_CONFDIR POSTDIR
     echo_footer
 }
 
@@ -223,46 +254,46 @@ fi
 # And finally, loop over the parameters
 
 while (( $# )) ; do
-    
+
     case "$1" in
-        
+
         -q )
             declare -x QUIET=
             unset VERBOSE
             ;;
-        
+
         -v )
             declare -x VERBOSE=
             unset QUIET
             ;;
-        
+
         -d )
             declare -x DEBUG=
             ;;
-        
+
         --nocolor )
             declare -x NOCOLOR=
             ;;
-        
-        --dontstopmenow )
+
+        --dontstopmenow|--continue )
             declare -x NOSTOP=
             unset HARDSTOP
             unset SOFTSTOP
             ;;
-        
-        --hitthewall )
+
+        --hitthewall|--hardstop )
             declare -x HARDSTOP=
             ;&
-        
-        --bailout )
+
+        --bailout|--stop )
             declare -x SOFTSTOP=
             unset NOSTOP
             ;;
-        
-        --skip-pkglist )
-            declare -x SKIPPKGLIST=
+
+        --skip-pkg )
+            declare -x SKIPPKG=
             ;;
-        
+
         --config )
             # Special case: the user wants to run some hand-picked post scripts
             # Do we have a list of scripts at least?
@@ -275,7 +306,7 @@ while (( $# )) ; do
                 shift $(( $# - 1 ))     # leave one for the last shift
             fi
             ;;
-        
+
         * )
             apply_config "$1"
             ;;

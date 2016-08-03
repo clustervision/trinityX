@@ -40,7 +40,7 @@ echo_info 'Adding the group path to the default configuration'
 
 dest='/usr/share/Modules/init/.modulespath'
 
-append_line "${TRIX_SHARED}/modulefiles/modulegroups" "$dest"
-append_line "${TRIX_SHARED}/modulefiles/CV-standard" "$dest"
-append_line "${TRIX_SHARED}/modulefiles/local" "$dest"
+append_line "$dest" "${TRIX_SHARED}/modulefiles/modulegroups"
+append_line "$dest" "${TRIX_SHARED}/modulefiles/CV-standard"
+append_line "$dest" "${TRIX_SHARED}/modulefiles/local"
 

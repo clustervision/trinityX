@@ -16,6 +16,7 @@ ret=0
 if [[ "$ADDREPOS_KEYS" ]] ; then
     echo_info 'Installing repository GPG keys'
     for i in $ADDREPOS_KEYS ; do
+        cp "${POST_FILEDIR}/$i" /etc/pki/rpm-gpg/
         rpm --import "${POST_FILEDIR}/$i"
         (( ret += $? ))
     done
@@ -38,6 +39,13 @@ if ls "${POST_FILEDIR}/"*.repo >/dev/null 2>&1 ; then
 	cp "${POST_FILEDIR}/"*.repo /etc/yum.repos.d
 	(( ret += $? ))
 fi
+
+
+# Finally, make sure that the cache is updated
+echo_info 'Updating yum cache'
+
+yum -y makecache
+(( ret += $? ))
 
 exit $ret
 
