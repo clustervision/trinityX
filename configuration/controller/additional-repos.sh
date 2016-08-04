@@ -42,10 +42,12 @@ fi
 
 
 # Finally, make sure that the cache is updated
-echo_info 'Updating yum cache'
+if flag_is_unset CHROOT_INSTALL ; then
+    echo_info 'Updating yum cache'
 
-yum -y makecache
-(( ret += $? ))
+    yum -y makecache
+    (( ret += $? ))
+fi
 
 exit $ret
 
