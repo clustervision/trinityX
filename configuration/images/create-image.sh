@@ -1,11 +1,7 @@
 
 # Create the initial compute image
 
-# Started as an adaptation of the upstream Luna readme
-# https://github.com/dchirikov/luna
-
-source /etc/trinity.sh
-source "$POST_CONFIG"
+display_var NODE_{IMG_NAME,INITIAL_RPM,HOST_REPOS,YUM_UPDATE,IMG_CONFIG}
 
 
 #---------------------------------------
@@ -18,10 +14,21 @@ else
     TARGET="${TRIX_IMAGES}/${NODE_IMG_NAME:-unknown-$(date +%F-%H-%M)}"
 fi
 
+TARGET_BASE="$(basename "$TARGET")"
+TARGET_SHADOW="${TARGET}.shadow"
 
-echo_info 'Creating the compute image directories'
+
+echo_info 'Creating the compute image directory'
 
 mkdir -p "$TARGET"
+
+
+echo_info 'Creating the shadow file for the image'
+
+cat > "$TARGET_SHADOW" << EOF
+# Trinity image shadow file
+# $TARGET_BASE
+EOF
 
 
 #---------------------------------------
@@ -227,5 +234,29 @@ fi
 echo_info 'Unbinding the host directories'
 
 (( ${#DIRLIST[@]} )) && unbind_mounts "$TARGET" "${DIRLIST[@]}"
-(( ${#DIRTMPLIST[@]} )) && unbind_mounts "$TARGET" "${DIRTMPLIST[@]}" || true
+(( ${#DIRTMPLIST[@]} )) && unbind_mounts "$TARGET" "${DIRTMPLIST[@]}"
+
+
+#---------------------------------------
+
+echo_info 'Setting the root password'
+
+# Hack to work around an open issue between SELinux and chpasswd -R
+# https://bugzilla.redhat.com/show_bug.cgi?id=1321375
+
+if grep -q 'selinuxfs.*rw' /etc/mtab ; then
+    mount -o ro,remount /sys/fs/selinux/
+    remount_selinuxfs=1
+fi
+
+root_pw="$(get_password "$NODE_ROOT_PW")"
+echo "root:$root_pw" | chpasswd -R "${TARGET}"
+
+# must be remounted rw or sshd doesn't work anymore!
+if flag_is_set remount_selinuxfs ; then
+    mount -o rw,remount /sys/fs/selinux/
+fi
+
+# And save the password to the image's shadow file
+ALT_SHADOW="$TARGET_SHADOW" store_password "IMG_ROOT_PW" "$root_pw"
 
