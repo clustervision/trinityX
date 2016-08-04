@@ -45,7 +45,7 @@ fi
 if flag_is_unset CHROOT_INSTALL ; then
     echo_info 'Updating yum cache'
 
-    yum -y makecache
+    yum -y makecache fast
     (( ret += $? ))
 fi
 
