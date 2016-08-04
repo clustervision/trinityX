@@ -24,7 +24,7 @@ if flag_is_set CHRONY_UPSTREAM ; then
     
     # and add our own
     for i in ${CHRONY_UPSTREAM[@]} ; do
-        echo "server $i iburst" | tee -a /etc/chrony.conf
+        append_line /etc/chrony.conf "server $i iburst"
     done
     
     modified=1
@@ -44,7 +44,7 @@ if flag_is_set CHRONY_SERVER ; then
         append_line /etc/chrony.conf "allow"
     else
         for i in ${CHRONY_SERVER[@]} ; do
-            echo "allow $i" | tee -a /etc/chrony.conf
+            append_line /etc/chrony.conf "allow $i"
         done
     fi
 fi
