@@ -107,6 +107,7 @@ function unbind_mounts {
 # Used only for the initial package installation:
 # ===============================================
 # /etc/yum.repos.d  ->  so that we have the same repos until post script setup
+# /etc/pki/rpm-gpg  ->  so that the repo keys are available
 
 # Note that some of those directories are optional and controlled by
 # configuration options.
@@ -126,7 +127,8 @@ DIRTMPLIST=( \
 
 if flag_is_set NODE_HOST_REPOS ; then
     DIRLIST+=( /var/cache/yum )
-    DIRTMPLIST+=( /etc/yum.repos.d )
+    DIRTMPLIST+=( /etc/yum.repos.d \
+                  /etc/pki/rpm-gpg )
 fi
 
 
@@ -179,12 +181,14 @@ if flag_is_set NODE_IMG_CONFIG ; then
     echo_info 'Installing the packages for all post scripts'
 
     (
-    NEWCFG="$(dirname "${POST_CONFIG}")/${NODE_IMG_CONFIG}"
-
-    source "${NEWCFG}"
+    # We have to keep the same name for the variables for the configuration file,
+    # as it is the only portable way to let a cfg file source another one.
+    POST_CONFDIR="$(dirname "$POST_CONFIG")"
+    POST_CONFIG="${POST_CONFDIR}/${NODE_IMG_CONFIG}"
+    source "$POST_CONFIG"
 
     for pscript in ${POSTLIST[@]} ; do
-        pkgfile="$(dirname "${NEWCFG}")/${POSTDIR}/${pscript}.pkglist"
+        pkgfile="$(dirname "$POST_CONFIG")/${POSTDIR}/${pscript}.pkglist"
         [[ -r "$pkgfile" ]] && longlist+=" $(grep -v '^#\|^$' "$pkgfile")"
     done
     
@@ -211,9 +215,10 @@ if flag_is_set NODE_IMG_CONFIG ; then
 
     echo_info 'Running the configuration tool on the new image'
     
-    chroot "${TARGET}" "${POST_TOPDIR}/configuration/configure.sh" \
-            ${VERBOSE+-v}  ${QUIET+-q} ${DEBUG+-d} ${NOCOLOR+--nocolor} \
-            --skip-pkglist "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
+    CHROOT_INSTALL=1 chroot "${TARGET}" \
+        "${POST_TOPDIR}/configuration/configure.sh" \
+        ${VERBOSE+-v}  ${QUIET+-q} ${DEBUG+-d} ${NOCOLOR+--nocolor} \
+        --skip-pkg "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}"
 fi
 
 
