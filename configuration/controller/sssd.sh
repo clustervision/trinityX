@@ -1,7 +1,6 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-
+display_var TRIX_CTRL_HOSTNAME
 
 echo_info 'Creating the SSSD configuration file'
 
@@ -12,7 +11,8 @@ chmod 600 /etc/sssd/sssd.conf
 echo_info 'Enabling and starting the service'
 
 systemctl enable sssd
-systemctl restart sssd
+flag_is_unset CHROOT_INSTALL && systemctl restart sssd
 
+echo_info 'Setting up the system to use sssd for authentication'
 authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
 
