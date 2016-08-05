@@ -49,7 +49,7 @@ setenforce 0
 echo_info "Unpack luna."
 
 pushd /
-[ -d /luna ] || tar -xzvf ${POST_FILEDIR}/luna-*.tgz
+[ -d /luna ] || git clone https://github.com/dchirikov/luna
 popd
 
 
@@ -116,7 +116,7 @@ fi
 echo_info "Configure firewalld."
 
 if /usr/bin/firewall-cmd --state >/dev/null ; then
-    /usr/bin/firewall-cmd --permanent --add-port=27017/tcp
+    /usr/bin/firewall-cmd --permanent --add-port=27017/tcp 
     /usr/bin/firewall-cmd --permanent --add-port=7050/tcp
     /usr/bin/firewall-cmd --permanent --add-port=53/tcp
     /usr/bin/firewall-cmd --permanent --add-port=53/udp
