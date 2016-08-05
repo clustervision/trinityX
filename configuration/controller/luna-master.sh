@@ -235,10 +235,19 @@ TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
 /usr/bin/chmod 600 ${TMPFILE}
 /usr/sbin/pcs cluster cib ${TMPFILE}
 
-/usr/sbin/pcs -f ${TMPFILE} resource create lweb --group Luna systemd:lweb --force     # need to use 'force' to ommit https://github.com/ClusterLabs/pcs/issues/71
-/usr/sbin/pcs -f ${TMPFILE} resource create ltorrent --group Luna  systemd:ltorrent --force 
-/usr/sbin/pcs -f ${TMPFILE} resource create mongod --group Luna systemd:mongod
-/usr/sbin/pcs -f ${TMPFILE} resource clone Luna
+#/usr/sbin/pcs -f ${TMPFILE} resource create mongod --group Luna systemd:mongod
+#/usr/sbin/pcs -f ${TMPFILE} resource create lweb --group Luna systemd:lweb --force     # need to use 'force' to ommit https://github.com/ClusterLabs/pcs/issues/71
+#/usr/sbin/pcs -f ${TMPFILE} resource create ltorrent --group Luna  systemd:ltorrent --force 
+#/usr/sbin/pcs -f ${TMPFILE} resource clone Luna
+
+/usr/sbin/pcs -f ${TMPFILE} resource create mongod systemd:mongod
+/usr/sbin/pcs -f ${TMPFILE} resource create lweb systemd:lweb --force
+/usr/sbin/pcs -f ${TMPFILE} resource create ltorrent systemd:ltorrent --force
+/usr/sbin/pcs -f ${TMPFILE} constraint order start mongod then lweb
+/usr/sbin/pcs -f ${TMPFILE} constraint order start mongod then ltorrent
+/usr/sbin/pcs -f ${TMPFILE} resource clone mongod
+/usr/sbin/pcs -f ${TMPFILE} resource clone lweb
+/usr/sbin/pcs -f ${TMPFILE} resource clone ltorrent
 
 /usr/sbin/pcs -f ${TMPFILE} resource create mongod-arbiter systemd:mongod-arbiter --force
 /usr/sbin/pcs -f ${TMPFILE} constraint colocation add mongod-arbiter with ClusterIP
