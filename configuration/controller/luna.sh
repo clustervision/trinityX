@@ -78,6 +78,11 @@ pushd /opt/luna
 ln -fs ../../luna/src/templates/
 popd
 
+echo_info "Copy dracut module"
+
+mkdir -p ${TRIX_ROOT}/luna/dracut/
+cp -pr /luna/src/dracut/95luna ${TRIX_ROOT}/luna/dracut/
+
 echo_info "Setup tftp."
 
 mkdir -p /tftpboot

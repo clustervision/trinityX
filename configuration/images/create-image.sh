@@ -154,12 +154,6 @@ if [[ -r "${POST_FILEDIR}/target.pkglist" ]] ; then
 fi
 
 
-#---------------------------------------
-
-echo_info 'Installing luna dracut module'
-
-cp -pr "/luna/src/dracut/95luna" "${TARGET}/usr/lib/dracut/modules.d/"
-
 
 #---------------------------------------
 
