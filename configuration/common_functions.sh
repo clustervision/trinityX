@@ -126,6 +126,9 @@ typeset -fx echo_error
 # Note that it matches the exact string alone on its line, because otherwise it
 # would be just mad to deal with all the corner cases...
 
+# By default the lines are displayed on stdout, except when the environment
+# variable QUIET is defined.
+
 # Syntax: append_line filename string
 
 function append_line {
@@ -137,7 +140,11 @@ function append_line {
     if [[ -r "$1" ]] && grep -q -- "^${2}$" "$1" ; then
         echo "Line already present in destination file: $2"
     else
-        echo "$2" | tee -a "$1"
+        if flag_is_set QUIET ; then
+            echo "$2" >> "$1"
+        else
+            echo "$2" | tee -a "$1"
+        fi
     fi
 }
 
@@ -157,7 +164,7 @@ typeset -fx append_line
 # - declare -r variable="password"  (flag_is_set SH_RO_VAR)
 
 # The variable is updated if it exists already in the file
-# The variable name is not sanitized, this is left to theh other functions
+# The variable name is not sanitized, this is left to the other functions
 
 # Syntax: store_variable_backend filename variable value
 
@@ -178,7 +185,8 @@ function store_variable_backend {
     else
         # delete the line if it exists, and append the new value
         [[ -w "$1" ]] && sed -i '/^'"$2"'=/d' "$1"
-        echo "${SH_RO_VAR+declare -r }${2}=${SYSTEM_VAR-\"}${3}${SYSTEM_VAR-\"}" | tee -a "$1"
+        line="${SH_RO_VAR+declare -r }${2}=${SYSTEM_VAR-\"}${3}${SYSTEM_VAR-\"}"
+        append_line "$1" "$line"
     fi
 }
 
@@ -198,6 +206,7 @@ function store_variable {
     VARNAME="$(echo -n "$2" | tr -c '[:alnum:]' _)"
     store_variable_backend "$1" "$VARNAME" "$3"
 }
+
 
 
 # Store a system variable without surrounding quotes
@@ -236,6 +245,8 @@ function get_password {
 
 
 # Save the password to the shadow file
+# If the environment variable ALT_SHADOW is defined, the password will be saved
+# to that file.
 
 # Syntax: store_password variable_name password
 
@@ -248,14 +259,14 @@ function store_password {
 
     # We need an existing shadow file. If we have the variable in the
     # environment, then the base install has probably been done.
-    if flag_is_unset TRIX_SHADOW || ! [[ -r "$TRIX_SHADOW" ]] ; then
+    if flag_is_unset ALT_SHADOW && ( flag_is_unset TRIX_SHADOW || ! [[ -r "$TRIX_SHADOW" ]] ) ; then
         echo_warn "store_password: the Trinity shadow file doesn't exist: ${TRIX_SHADOW:-\"\"}"
         return 1
     fi
 
     # We're calling store_variable, not the backend, because we want
     # sanitization of the variable name
-    SH_RO_VAR= store_variable "$TRIX_SHADOW" "$@"
+    SH_RO_VAR= QUIET= store_variable "${ALT_SHADOW:-$TRIX_SHADOW}" "$@"
 }
 
 
