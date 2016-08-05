@@ -53,6 +53,11 @@ echo_info "Configure firewalld"
 /usr/bin/ssh ${PACEMAKER_SLAVE_HOST} "/usr/bin/firewall-cmd --permanent --add-service=high-availability"
 /usr/bin/ssh ${PACEMAKER_SLAVE_HOST} "/usr/bin/firewall-cmd --reload"
 
+echo_info "Add custom NFS agent."
+
+/bin/mkdir -p /usr/lib/ocf/resource.d/cv
+/usr/bin/cp ${POST_FILEDIR}/nfsserver-agent /usr/lib/ocf/resource.d/cv/nfsserver
+
 echo_info "Start pcsd"
 
 systemctl start pcsd.service

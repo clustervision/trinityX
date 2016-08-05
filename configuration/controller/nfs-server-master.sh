@@ -32,10 +32,11 @@ TMPFILE=$(/usr/bin/mktemp -p /root pacemaker.XXXXXXXXX)
 echo_info "Add nfs daemon to pacemaker config."
 
 /usr/sbin/pcs -f ${TMPFILE} \
-    resource create nfs-daemon ocf:heartbeat:nfsserver \
+    resource create nfs-daemon ocf:cv:nfsserver \
     nfs_shared_infodir=${NFS_SHARED_INFODIR_PATH} \
     nfs_no_notify=true \
     nfs_ip=${NFS_FLOATING_IP} \
+    nfsd_nproc=64 \
     --group NFS
 
 echo_info "Parse exports."
