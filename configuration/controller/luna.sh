@@ -97,8 +97,6 @@ echo_info "Setup DNS."
 include "/etc/named.luna.zones"; 
 EOF
 
-/usr/bin/sed -i -e 's/\(.*listen-on port 53 { \).*\( };\)/\1any;\2/' /etc/named.conf
-
 echo_info "Create ssh keys."
 
 [ -f /root/.ssh/id_rsa ] || ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
@@ -153,7 +151,6 @@ db.createUser({user: "luna", pwd: "${_LUNA_MONGO_PASS}", roles: [{role: "dbOwner
 EOF
 cat << EOF > /etc/luna.conf
 [MongoDB]
-replicaset=luna
 server=localhost
 authdb=luna
 user=luna
@@ -170,6 +167,8 @@ echo_info "Copy systemd unit files."
 echo_info "Reload systemd config."
 
 systemctl daemon-reload
+
+echo_info "Initialize luna."
 
 /usr/sbin/luna cluster init
 /usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND}
