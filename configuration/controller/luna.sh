@@ -23,7 +23,8 @@ echo_info "Check config variables available."
 
 echo "LUNA_FRONTEND=${LUNA_FRONTEND?"Should be defined"}"
 echo "LUNA_NETWORK=${LUNA_NETWORK?"Should be defined"}"
-echo "LUNA_NETWORK_NAME=${LUNA_NETWORK_NAME:-cluster}"
+LUNA_NETWORK_NAME=${LUNA_NETWORK_NAME:-cluster}
+echo "LUNA_NETWORK_NAME=${LUNA_NETWORK_NAME}"
 echo "LUNA_PREFIX=${LUNA_PREFIX?"Should be defined"}"
 
 LUNA_NETMASK=`ipcalc -s -m ${LUNA_NETWORK}/${LUNA_PREFIX} | sed 's/.*=//'`
@@ -48,7 +49,7 @@ setenforce 0
 echo_info "Unpack luna."
 
 pushd /
-[ -d /luna ] || tar -xzvf ${POST_FILEDIR}/luna-*.tgz
+[ -d /luna ] || git clone https://github.com/dchirikov/luna
 popd
 
 
@@ -90,10 +91,17 @@ sed -e 's/^\(\W\+disable\W\+\=\W\)yes/\1no/g' -i /etc/xinetd.d/tftp
 sed -e 's|^\(\W\+server_args\W\+\=\W-s\W\)/var/lib/tftpboot|\1/tftpboot|g' -i /etc/xinetd.d/tftp
 [ -f /tftpboot/luna_undionly.kpxe ] || cp /usr/share/ipxe/undionly.kpxe /tftpboot/luna_undionly.kpxe
 
+echo_info "Setup DNS."
+
+/usr/bin/cat >>/etc/named.conf <<EOF
+include "/etc/named.luna.zones"; 
+EOF
+
 echo_info "Create ssh keys."
 
 [ -f /root/.ssh/id_rsa ] || ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
 
+echo_info "Setup nginx."
 
 if [ ! -f /etc/nginx/conf.d/nginx-luna.conf ]; then
     # copy config files
@@ -109,7 +117,6 @@ systemctl start mongod
 systemctl enable mongod
 
 echo_info "Configure mongo auth."
-
 
 #sed -i -e "s/^[# \t]\+replSet.*/replSet = luna/" /etc/mongod.conf
 #systemctl restart mongod
@@ -130,7 +137,6 @@ db.createUser({user: "luna", pwd: "${_LUNA_MONGO_PASS}", roles: [{role: "dbOwner
 EOF
 cat << EOF > /etc/luna.conf
 [MongoDB]
-replicaset=luna
 server=localhost
 authdb=luna
 user=luna
@@ -148,10 +154,18 @@ echo_info "Reload systemd config."
 
 systemctl daemon-reload
 
+echo_info "Initialize luna."
+
 /usr/sbin/luna cluster init
 /usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND}
 /usr/sbin/luna network add -n ${LUNA_NETWORK_NAME} -N ${LUNA_NETWORK} -P ${LUNA_PREFIX}
+
+echo_info "Configure DNS and DHCP."
+
 /usr/sbin/luna cluster makedhcp -N ${LUNA_NETWORK_NAME} -s ${LUNA_DHCP_RANGE_START} -e ${LUNA_DHCP_RANGE_END}
+/usr/sbin/luna cluster makedns
+
+echo_info "Start services."
 
 for service in  xinetd nginx dhcpd lweb ltorrent; do
     systemctl enable $service
