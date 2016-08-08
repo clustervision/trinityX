@@ -102,9 +102,9 @@ Package management
 
 - Do not store big binary files in the post script directory, or anywhere really. Git doesn't like that. If it's an RPM then ship in in the local repo. If it's a shared application, put it with the other applications.
 
-- The only exceptions to the above rule are the small RPMs used for additional repositories. Copy them to the private directory of the ``additional-repos`` post script, and they will be installed and ready before processing your own post script.
+- The only exceptions to the above rule are the small RPMs used for additional repositories only. Copy them to the private directory of the ``additional-repos`` post script, and they will be installed and ready before processing your own post script.
 
-- local repos
+- When no RPM is available in external repos and it's necessary to provide one with Trinity, then use the local repository, which exists for that purpose. When installing a group of packages for a specific post script, then create your own local repository: create a subdirectory in the `packages directory`_ and copy your files there; it will be automatically picked up by the ``local-repos`` post script, copied and installed on the controllers. In both cases, remember to create or update the repository metadata after copying your files! See the documentation in the `packages directory`_ for more details.
 
 
 Variable and configuration management
@@ -114,7 +114,7 @@ Variable and configuration management
 
 - Print out the variables that you will need at the beginning of your script. That way, the output messages will contain the exact state of the post script's input. Use the function ``display_var`` for that, see `Common functions`_.
 
-- Be careful in the choice of your variables in the configuration file. If possible, try to have a sane default value if no config option is set (i.e., empty configuration). For example, if ``something`` is required in 99% if cases but you want to give the option to disable it, make it ``DISABLE_SOMETHING`` and not ``ENABLE_SOMETHING``. With an empty config file, ``ENABLE_SOMETHING`` would not be set and that would break the 99% of cases. When a configuration option **must** have a value (for example a path to a file), make sure that you have a fallback value if the option is not set, and document it very well next to the option in ``controller.cfg`` and your shell script.
+- Be careful in the choice of your variables in the configuration file. If possible, try to have a sane default value if no config option is set (i.e., empty configuration). For example, if ``something`` is required in 99% if cases but you want to give the option to disable it, make it ``DISABLE_SOMETHING`` and not ``ENABLE_SOMETHING``. With an empty config file, ``ENABLE_SOMETHING`` would not be set and that would break the 99% of cases. When a configuration option must have a value (for example a path to a file), make sure that you have a fallback value if the option is not set, and document it very well next to the option in ``controller.cfg`` and your shell script.
 
 - Regarding the naming of configuration variables: for each option specific to a post script, pick a prefix that matches or refers to that script. For example, all options for the ``chrony`` post script start with ``CHRONY_``. That makes things much cleaner and clearer. General options (such as IP addresses, for example) can have non-prefixed names, but then it's up to you to make sure that there is no name collision and that the option name makes sense.
 
@@ -134,7 +134,7 @@ Shell script error management
 
 - The shell script component of all post scripts must manage its errors correctly. Amongst other things, this means that: it must check the return codes of the various functions, display helpful error messages, and clean up behind itself.
 
-- Using ``set -e`` in the script is **not** correct error management. Amongst other things, it prevents the script from displaying an error message when the error occurs, thus preventing the user from knowing what went wrong.
+- Using ``set -e`` in the script is **not** correct error management. Amongst other things, it prevents the script from displaying an error message when the error occurs, thus preventing the user from knowing what went wrong without debugging the script.
 
 - Other tricks that trigger an early and/or silent exit from the script must not be used. All tests for errors must be clearly visible and obvious, and the same goes for the command to exit the script. Exit must not be a side effect. For example, the parameter expansion ``${PARAMETER:?MESSAGE}`` displays the message if the parameter is null or unset *if the shell is interactive, but exits the shell if it's not interactive*. It is a perfect example of what should be avoided: the test leading to the exit is invisible, the exit itself is invisible and is a side effect, and the whole behaviour depends on the state of the environment.
 
@@ -144,14 +144,26 @@ Shell script error management
 Password management
 ~~~~~~~~~~~~~~~~~~~
 
+- Passwords are stored read-only in the shadow file, and the Trinity X functions will not overwrite them. For that reason, as well as basic logic, the passwords should only be stored at the very end of the post scripts, once everything else has been completed successfully.
+
+- When setting up software with password, it is critical to respect the `Shell script error management`_ rules and undo all configuration in case of an error. Passwords make reconfiguration pretty much impossible, so clean up behind yourselves.
+
+- The password variables should never be displayed during configuration. On customer systems the output will end up in an installation log, and there should not be any password in that log.
+
 
 Documentation
 ~~~~~~~~~~~~~
 
+- The post scripts should include reasonable documentation in the source code. It may seem obvious at the time you're writing it, but months or years later, what was that weird triple-rule sed for?
+
+- All configuration variables in the config files **must** be documented: role, range of values and default value must be documented.
+
+- If the post script is particularly complex and / or deserves more explanation than what can be included in source code comments, then a Markdown or ReST file should be provided with it and included in the configuration tool documentation.
 
 
 
 .. _controller.cfg: ../controller.cfg
+.. _packages directory: ../../packages
 
 .. Relative file links
 
