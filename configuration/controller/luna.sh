@@ -111,20 +111,6 @@ if [ ! -f /etc/nginx/conf.d/nginx-luna.conf ]; then
     cp ${POST_FILEDIR}/nginx-luna.conf /etc/nginx/conf.d/
 fi
 
-echo_info "Configure firewalld."
-
-if /usr/bin/firewall-cmd --state >/dev/null ; then
-    /usr/bin/firewall-cmd --permanent --add-port=27017/tcp 
-    /usr/bin/firewall-cmd --permanent --add-port=7050/tcp
-    /usr/bin/firewall-cmd --permanent --add-port=53/tcp
-    /usr/bin/firewall-cmd --permanent --add-port=53/udp
-    /usr/bin/firewall-cmd --permanent --add-port=69/udp
-    /usr/bin/firewall-cmd --permanent --add-port=67/udp
-    /usr/bin/firewall-cmd --reload
-else 
-    echo_warn "Firewalld is not running. Ports should be should be open manually later on."
-fi
-
 echo_info "Start mongo."
 
 systemctl start mongod
