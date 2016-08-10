@@ -145,7 +145,7 @@ function run_one_script {
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
             source \"$POST_CONFIG\"
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
-            [[ -r \"$TRIX_SHADOW\" ]] && source \"$TRIX_SHADOW\"
+            [[ -r \"\$TRIX_SHADOW\" ]] && source \"\$TRIX_SHADOW\"
             source \"$POST_SCRIPT\" "
 
         ret=$?
