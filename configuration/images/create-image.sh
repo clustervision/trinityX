@@ -184,6 +184,15 @@ if flag_is_set NODE_IMG_CONFIG ; then
     # protect them, then we can pivot into the chroot and run the configure
     # script again.
 
+    # TODO@HICHAM (remove this patch, once the issue is addressed)
+    # PATCH
+    echo_info 'Run the slurm-pre postscript in chroot to create UID/GIDs before RPMs are installed'
+
+    CHROOT_INSTALL=1 chroot "${TARGET}" \
+        "${POST_TOPDIR}/configuration/configure.sh" \
+        ${VERBOSE+-v}  ${QUIET+-q} ${DEBUG+-d} ${NOCOLOR+--nocolor} \
+        --config "${POST_TOPDIR}/configuration/${NODE_IMG_CONFIG}" slurm-pre
+    # ENDOF_PATCH
 
     echo_info 'Installing the packages for all post scripts'
 
