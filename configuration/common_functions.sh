@@ -184,7 +184,7 @@ function store_variable_backend {
         return 1
     else
         # delete the line if it exists, and append the new value
-        [[ -w "$1" ]] && sed -i '/^'"$2"'=/d' "$1"
+        [[ -w "$1" ]] && sed -i --follow-symlinks '/^'"$2"'=/d' "$1"
         line="${SH_RO_VAR+declare -r }${2}=${SYSTEM_VAR-\"}${3}${SYSTEM_VAR-\"}"
         append_line "$1" "$line"
     fi
