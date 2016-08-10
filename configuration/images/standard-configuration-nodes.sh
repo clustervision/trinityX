@@ -41,6 +41,13 @@ echo_warn "Please remember to reboot the node after completing the configuration
 
 #---------------------------------------
 
+echo_info "Disabling firewalld"
+
+systemctl disable firewalld.service
+
+
+#---------------------------------------
+
 echo_info "Using the controller as DNS server"
 
 cat > /etc/resolv.conf << EOF
