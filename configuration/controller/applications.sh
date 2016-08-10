@@ -19,13 +19,16 @@ for GROUP in 'CV-standard' 'CV-advanced' 'local'; do
 
     echo_info "Adding $GROUP module files to the system"
 
-    for MOD in $(ls "${POST_FILEDIR}/${GROUP}"); do
+    for MOD in ${POST_FILEDIR}/${GROUP}/*; do
+    
+        [[ -e "$MOD" ]] || continue;
+    
+        MODULE=$(basename "$MOD");
+        VERSION=$(ls "${POST_FILEDIR}/${GROUP}/${MODULE}");
+        echo_info "Adding ${MODULE}/${VERSION} to $GROUP";
 
-        VERSION=$(ls "${POST_FILEDIR}/${GROUP}/${MOD}");
-        echo_info "Adding ${MOD}/${VERSION} to $GROUP";
-
-        cp -r "${POST_FILEDIR}/${GROUP}/${MOD}" "${TRIX_SHARED}/modulefiles/${GROUP}/"
-        sed -i -e "s,{{ prefix }},$TRIX_SHARED," "${TRIX_SHARED}/modulefiles/${GROUP}/${MOD}/${VERSION}/modulefile"
+        cp -r "$MOD" "${TRIX_SHARED}/modulefiles/${GROUP}/"
+        sed -i -e "s,{{ prefix }},$TRIX_SHARED," "${TRIX_SHARED}/modulefiles/${GROUP}/${MODULE}/${VERSION}/modulefile"
 
     done
 
