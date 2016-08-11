@@ -8,5 +8,6 @@ yum -y update
 
 echo_info 'Restarting some services after the update'
 
+systemctl daemon-reexec
 systemctl restart dbus polkit sshd systemd-logind
 
