@@ -1,10 +1,6 @@
 
 # Chrony (time server) configuration
 
-source "$POST_CONFIG"
-source /etc/trinity.sh
-
-
 display_var CHRONY_{UPSTREAM,SERVER} TRIX_CTRL{1,2}_HOSTNAME
 
 

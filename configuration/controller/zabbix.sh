@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-source /etc/trinity.sh
-source "${TRIX_SHADOW}"
-source "${POST_CONFIG}"
-
 function check_zabbix_installation () {
   echo_progress $FUNCNAME $@
   local RPM_PKG_MISSING=""

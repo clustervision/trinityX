@@ -2,10 +2,6 @@
 set -e
 # set up slurmctld daemon
 
-source "$POST_CONFIG"
-source /etc/trinity.sh
-
-
 echo "
 ${SLURMDBD_MYSQL_DB?"Variable SLURMDBD_MYSQL_DB was not set"}
 ${SLURMDBD_MYSQL_USER?"Variable SLURMDBD_MYSQL_USER  was not set"}
@@ -82,7 +78,6 @@ fi
 echo_info "Creating db for slurm accounting"
 
 function do_sql_req {
-    source "$TRIX_SHADOW"
     if [ -f ~/.my.cnf ]; then
         echo $@ | /usr/bin/mysql
         return 0

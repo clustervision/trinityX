@@ -5,11 +5,6 @@
 # because of multiple interfaces?). We have to do it ourselves or nothing will
 # resolve and lots o' stuff will break.
 
-source "$POST_CONFIG"
-
-
-#---------------------------------------
-
 # Display the variables that we will need
 
 display_var HA CTRL{1,2,}_{HOSTNAME,IP} HOSTNAME

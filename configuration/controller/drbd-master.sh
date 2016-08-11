@@ -1,9 +1,6 @@
 #!/bin/bash
 
 
-source "$POST_CONFIG"
-source /etc/trinity.sh
-
 function replace_template {
     [ $# -gt 3 -o $# -lt 2 ] && echo "Wrong numger of argument in replace_template." && exit 1
     if [ $# -eq 3 ]; then

@@ -2,9 +2,6 @@
 
 # Basic configuration of firewalld, without TUI
 
-source "$POST_CONFIG"
-
-
 # So we want firewalld. Enable and start it now, otherwise lots of commands will
 # fail later.
 

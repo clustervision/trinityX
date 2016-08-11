@@ -5,10 +5,6 @@
 # This should include all the most common tasks that have to be performed after
 # a completely standard CentOS minimal installation.
 
-source "$POST_CONFIG"
-
-
-#---------------------------------------
 
 if flag_is_set STDCFG_SSHROOT ; then
     echo_info "Allowing SSH login as root"
