@@ -1,8 +1,5 @@
 #!/bin/bash
 set -e
-source "$POST_CONFIG"
-source /etc/trinity.sh
-source "$TRIX_SHADOW"
 
 function do_sql_req {
     if [ -f ~/.my.cnf ]; then

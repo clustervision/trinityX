@@ -1,10 +1,6 @@
 #!/bin/bash
 set -e
 
-source "$POST_CONFIG"
-source /etc/trinity.sh
-source "$TRIX_SHADOW"
-
 echo_info "Check config variables available."
 
 echo "LUNA_MONGO_PASS=${LUNA_MONGO_PASS:?"Should be defined"}"

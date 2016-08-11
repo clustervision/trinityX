@@ -8,9 +8,6 @@
 # Configuration variables are sourced by the configuration script, and are made
 # available in the shell environment.
 
-source "$POST_CONFIG"
-
-
 # Fallback values for configuration parameters
 
 TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trix}"

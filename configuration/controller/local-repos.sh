@@ -6,9 +6,6 @@
 # This is used for sites where there is no internet access, in which case all
 # packages dependencies are needed, as well as for custom-built packages.
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-
 
 echo_info 'Copying packages and setting up the local repositories'
 

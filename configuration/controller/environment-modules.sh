@@ -2,10 +2,6 @@
 
 # Environment modules setup
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-
-
 if flag_is_unset CHROOT_INSTALL ; then
     
     echo_info 'Creating the shared modules directories'

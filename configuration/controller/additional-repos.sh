@@ -6,8 +6,6 @@
 # of pulling them off of the internet, but again, there is no guarantee that the
 # controller has connectivity *during install*. It may have it later on.
 
-source "$POST_CONFIG"
-
 ret=0
 
 # Key files
