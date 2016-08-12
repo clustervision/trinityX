@@ -367,7 +367,8 @@ function disable_remote_repos {
         # then disable all remote and enable only our local ones
         sed -i -e '/^baseurl=http/a enabled=0' \
                -e '/^mirrorlist=http/a enabled=0' \
-               -e '/^baseurl=file:\/\/\/trinity/a enabled=1' "$repofile"
+               -e '/^baseurl=file:\/\/'${TRIX_SHARED//\//\\\/}'/a enabled=1' \
+               "$repofile"
     done
 }
 
