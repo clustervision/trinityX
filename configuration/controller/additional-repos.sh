@@ -39,6 +39,11 @@ if ls "${POST_FILEDIR}/"*.repo >/dev/null 2>&1 ; then
 fi
 
 
+# If the user says that we don't want remote repos, this applies to those too
+
+flag_is_set REPOS_DISABLE_REMOTE && disable_remote_repos
+
+
 # Finally, make sure that the cache is updated
 if flag_is_unset CHROOT_INSTALL ; then
     echo_info 'Updating yum cache'

@@ -38,13 +38,5 @@ done
 
 # Disable remote repositories if requested
 
-if flag_is_set REPOS_DISABLE_REMOTE ; then
-    
-    echo_info 'Disabling all remote repositories'
-    
-    while read repofile ; do
-        sed -i 's/^\(enabled=.*\)/#\1/g' "$repofile"
-        sed -i 's/]$/]'"\n"'enabled=0/g' "$repofile"
-    done < <(grep -rl =http /etc/yum.repos.d/)
-fi
+flag_is_set REPOS_DISABLE_REMOTE && disable_remote_repos || true
 

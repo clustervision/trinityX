@@ -347,3 +347,30 @@ function display_var {
 
 typeset -fx display_var
 
+
+#---------------------------------------
+
+# Disable all non-local repositories
+# This is a workaround for the fact that we don't have yum-utils installed by
+# default, and in some cases we need to disable remote repositories before being
+# able to use local ones to install yum-utils...
+
+# Syntax: disable_remote_repos
+
+function disable_remote_repos {
+
+    echo_info 'Disabling all remote repositories'
+
+    for repofile in /etc/yum.repos.d/* ; do
+        # disable everything that is explicitely enabled first
+        sed -i 's/^\(enabled=1\)/#\1/g' "$repofile"
+        # then disable all remote and enable only our local ones
+        sed -i -e '/^baseurl=http/a enabled=0' \
+               -e '/^mirrorlist=http/a enabled=0' \
+               -e '/^baseurl=file:\/\/\/trinity/a enabled=1' "$repofile"
+    done
+}
+
+
+typeset -fx disable_remote_repos
+
