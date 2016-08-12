@@ -12,6 +12,6 @@ cd trinityX/configuration
 - edit controller.cfg to suit your needs (most defaults are correct but you probably need to adjust the network interfaces)
 - Run:
 ```
-./configure.sh controller.cfg |& tee -a /var/log/trinity-installer.log
+./configure.sh controller.cfg images-compute.cfg |& tee -a /var/log/trinity-installer.log
 ```
 
