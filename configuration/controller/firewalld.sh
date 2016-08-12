@@ -2,6 +2,9 @@
 
 # Basic configuration of firewalld, without TUI
 
+display_var FWD_{PUBLIC_IF,TRUSTED_IF,NAT_PUBLIC,HTTPS_PUBLIC}
+
+
 # So we want firewalld. Enable and start it now, otherwise lots of commands will
 # fail later.
 
@@ -15,7 +18,7 @@ systemctl restart firewalld
 
 # Assign the various interfaces to their zones
 
-if [[ "$FWD_PUBLIC_IF" ]] ; then
+if flag_is_set FWD_PUBLIC_IF ; then
     for i in $FWD_PUBLIC_IF ; do
         echo_info "Assigning interfaces: $i -> Public"
         firewall-cmd --zone=public --change-interface=${i}
@@ -23,7 +26,7 @@ if [[ "$FWD_PUBLIC_IF" ]] ; then
     done
 fi
 
-if [[ "$FWD_TRUSTED_IF" ]] ; then
+if flag_is_set FWD_TRUSTED_IF ; then
     for i in $FWD_TRUSTED_IF ; do
         echo_info "Assigning interfaces: $i -> Trusted"
         firewall-cmd --zone=trusted --change-interface=${i}
@@ -36,7 +39,7 @@ fi
 
 # Set up masquerading
 
-if (( $FWD_NAT_PUBLIC )) ; then
+if flag_is_set FWD_NAT_PUBLIC ; then
     echo_info "Enabling NAT on the public zone"
     firewall-cmd --zone=public --add-masquerade
     firewall-cmd --permanent --zone=public --add-masquerade
@@ -47,7 +50,7 @@ fi
 
 # Enable HTTPS on public zone
 
-if (( $FWD_HTTPS_PUBLIC )) ; then
+if flag_is_set FWD_HTTPS_PUBLIC ; then
     echo_info "Enabling HTTPS on the public zone"
     firewall-cmd --zone=public --add-service=https
     firewall-cmd --permanent --zone=public --add-service=https
@@ -59,12 +62,4 @@ fi
 echo_info 'Reloading firewalld'
 
 firewall-cmd --reload
-
-
-#---------------------------------------
-
-# Store a bit of configuration in the environment file
-
-#echo "TRIX_IF_PUBLIC=\"$(firewall-cmd --zone=public --list-interfaces)\"" >> /etc/trinity.sh
-#echo "TRIX_IF_TRUSTED=\"$(firewall-cmd --zone=trusted --list-interfaces)\"" >> /etc/trinity.sh
 
