@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# If DOCKER_SHARES is defined, check if every host dir exists.
+# Fail early otherwise.
+
+if [[ ! -z $DOCKER_SHARES ]]; then
+
+    for SHARE in $(echo "$DOCKER_SHARES" | tr ';' ' '); do
+        DIR=$(echo "$SHARE" | cut -d':' -f1);
+
+        [[ ! -d "$DIR" ]] && echo "$DIR not found on host. Aborting" && exit 1;
+
+        VOLUMES="$VOLUMES -v $SHARE";
+    done
+
+fi
+
 # Pull docker image if exists on registry; fail otherwise
 # DOCKER_IMAGE is set in the job script
 
@@ -43,7 +58,7 @@ SET_ENV="if [[ ! -e /opt/mpi-drun ]]; then
 # Create and initialize a new container using image DOCKER_IMAGE
 # The container will need to run an ssh daemon on port 2222
 
-tar cpf - -C ~/ .ssh | docker run -i --name job-$SLURM_JOBID -p 2222:2222 --net host --entrypoint /bin/bash $DOCKER_IMAGE -c "$SET_ENV"
+tar cpf - -C ~/ .ssh | docker run -i --name job-$SLURM_JOBID -p 2222:2222 --net host --entrypoint /bin/bash $VOLUMES $DOCKER_IMAGE -c "$SET_ENV"
 docker start job-$SLURM_JOBID &>/dev/null
 
 # Exit at this point if DOCKER_INIT is set
@@ -55,7 +70,7 @@ docker start job-$SLURM_JOBID &>/dev/null
 # This will skip the HPN
 
 touch /tmp/hpn
-su -c "DOCKER_IMAGE=$DOCKER_IMAGE DOCKER_INIT=1 srun --jobid $SLURM_JOBID /bin/bash -c '[[ -e /tmp/hpn ]] || mpi-drun'" - $USER_NAME
+su -c "DOCKER_IMAGE=$DOCKER_IMAGE DOCKER_SHARES=\"$DOCKER_SHARES\" DOCKER_INIT=1 srun --jobid $SLURM_JOBID /bin/bash -c '[[ -e /tmp/hpn ]] || mpi-drun'" - $USER_NAME
 rm -f /tmp/hpn
 
 # Run the mpi application
