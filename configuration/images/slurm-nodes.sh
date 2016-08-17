@@ -4,7 +4,8 @@ echo_info "Setting up slurm config symlinks"
 
 rm -rf /etc/slurm && ln -s ${TRIX_SHARED}/etc/slurm /etc/slurm
 
-echo_info "Update munge unit files."
+echo_info "Update munge and slurmd unit files"
+
 if [[ ! -d /etc/systemd/system/munge.service.d ]]; then
     mkdir -p /etc/systemd/system/munge.service.d
 
@@ -21,12 +22,12 @@ if [[ ! -d /etc/systemd/system/munge.service.d ]]; then
 		EOF
 fi
 
-echo_info "Enable slurmd"
 if [[ ! -d /etc/systemd/system/slurmd.service.d ]]; then
     mkdir -p /etc/systemd/system/slurmd.service.d
 
     cat > /etc/systemd/system/slurmd.service.d/customexec.conf <<-EOF
 		[Unit]
+		After=munge.service
 		Requires=munge.service
 		
 		[Service]
@@ -34,5 +35,8 @@ if [[ ! -d /etc/systemd/system/slurmd.service.d ]]; then
 		EOF
 fi 
 
+echo_info "Enable munge and slurmd services"
+
+systemctl enable munge.service
 systemctl enable slurmd.service
 
