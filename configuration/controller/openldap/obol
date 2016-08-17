@@ -52,6 +52,11 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups):
     if not sn:
         sn = username
 
+    if config and hasattr(config, 'HOME'):
+        home = config.HOME + '/' + username
+    else
+        home = '/home/' + username
+
     add_record = [
      ('objectclass', ['top', 'person', 'organizationalPerson',
                       'inetOrgPerson', 'posixAccount', 'shadowAccount']),
@@ -61,7 +66,7 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups):
      ('loginShell', [shell]),
      ('uidNumber', [uidNumber]),
      ('gidNumber', [uidNumber]),
-     ('homeDirectory', ['/home/%s' % username])
+     ('homeDirectory', [home])
     ]
 
     if givenName:
@@ -366,6 +371,13 @@ if __name__ == '__main__':
     host = args.H
     conn = ldap.initialize(host)
     conn.simple_bind_s(dn, password)
+
+    # Load defaults from /etc/obol/config.py
+    try:
+        sys.path.append('/etc/obol/')
+        import config
+    except:
+        pass
 
     try:
         ldapuser = sys.modules[__name__]
