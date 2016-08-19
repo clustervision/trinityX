@@ -1,8 +1,6 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-source "${TRIX_SHADOW}"
+display_var TRIX_CTRL_HOSTNAME COMPUTE_TUN_NIC USE_OPENVSWITCH
 
 NEUTRON_PW="$(get_password "$NEUTRON_PW")"
 OS_RMQ_PW="$(get_password "$OS_RMQ_PW")"

@@ -1,15 +1,23 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-source "${TRIX_SHADOW}"
+display_var TRIX_CTRL_{HOSTNAME,IP}
+
+function error {
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop nova || true
+    systemctl kill -s SIGKILL openstack-nova-api.service || true
+    systemctl kill -s SIGKILL openstack-nova-consoleauth.service || true
+    systemctl kill -s SIGKILL openstack-nova-scheduler.service || true
+    systemctl kill -s SIGKILL openstack-nova-conductor.service || true
+    systemctl kill -s SIGKILL openstack-nova-novncproxy.service || true
+    exit 1
+}
+
+trap error ERR
+
 source /root/.admin-openrc
 
 NOVA_PW="$(get_password "$NOVA_PW")"
 NOVA_DB_PW="$(get_password "$NOVA_DB_PW")"
-
-store_password NOVA_DB_PW $NOVA_DB_PW
-store_password NOVA_PW $NOVA_PW
 
 echo_info "Setting up the nova database"
 
@@ -79,3 +87,6 @@ systemctl start openstack-nova-scheduler.service
 systemctl start openstack-nova-conductor.service
 systemctl start openstack-nova-novncproxy.service
 
+echo_info "Saving passwords"
+store_password NOVA_DB_PW $NOVA_DB_PW
+store_password NOVA_PW $NOVA_PW

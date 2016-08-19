@@ -1,15 +1,20 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-source "${TRIX_SHADOW}"
+display_var TRIX_CTRL_HOSTNAME
+
+function error {
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop glance || true
+    systemctl kill -s SIGKILL openstack-glance-api.service || true
+    systemctl kill -s SIGKILL openstack-glance-registry.service || true
+    exit 1
+}
+
+trap error ERR
+
 source /root/.admin-openrc
 
 GLANCE_PW="$(get_password "$GLANCE_PW")"
 GLANCE_DB_PW="$(get_password "$GLANCE_DB_PW")"
-
-store_password GLANCE_PW $GLANCE_PW
-store_password GLANCE_DB_PW $GLANCE_DB_PW
 
 echo_info "Setting up a glance database"
 
@@ -69,3 +74,6 @@ systemctl enable openstack-glance-registry.service
 systemctl start openstack-glance-api.service
 systemctl start openstack-glance-registry.service
 
+echo_info "Saving passwords"
+store_password GLANCE_PW $GLANCE_PW
+store_password GLANCE_DB_PW $GLANCE_DB_PW

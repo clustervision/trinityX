@@ -1,15 +1,20 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-source "${TRIX_SHADOW}"
+display_var TRIX_CTRL_{HOSTNAME,IP}
+
+function error {
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop cinder || true
+    systemctl kill -s SIGKILL openstack-cinder-api.service || true
+    systemctl kill -s SIGKILL openstack-cinder-scheduler.service || true
+    exit 1
+}
+
+trap error ERR
+
 source /root/.admin-openrc
 
 CINDER_PW="$(get_password "$CINDER_PW")"
 CINDER_DB_PW="$(get_password "$CINDER_DB_PW")"
-
-store_password CINDER_DB_PW $CINDER_DB_PW
-store_password CINDER_PW $CINDER_PW
 
 echo_info "Setting up a cinder database"
 
@@ -69,3 +74,7 @@ systemctl enable target.service
 systemctl start openstack-cinder-api.service
 systemctl start openstack-cinder-scheduler.service
 systemctl start target.service
+
+echo_info "Saving passwords"
+store_password CINDER_DB_PW $CINDER_DB_PW
+store_password CINDER_PW $CINDER_PW

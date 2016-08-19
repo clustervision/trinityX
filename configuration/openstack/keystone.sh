@@ -1,17 +1,20 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-source "${TRIX_SHADOW}"
+display_var TRIX_CTRL_HOSTNAME
+
+function error {
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop keystone || true
+    rm -f /etc/httpd/conf.d/wsgi-keystone.conf || true
+    rm -f /root/.admin-openrc || true
+    systemctl kill -s SIGKILL httpd.service || true
+    exit 1
+}
+
+trap error ERR
 
 KEYSTONE_ADMIN_TOKEN=$(openssl rand -hex 10)
-
 KEYSTONE_DB_PW="$(get_password "$KEYSTONE_DB_PW")"
 ADMIN_PW="$(get_password "$ADMIN_PW")"
-
-store_password KEYSTONE_DB_PW $KEYSTONE_DB_PW
-store_password ADMIN_PW $ADMIN_PW
-
 
 # Setup database
 echo_info "Setting up a database for keystone"
@@ -78,7 +81,7 @@ chmod 500 /root/.admin-openrc
 sed -ie "s,{{ adminPW }},$ADMIN_PW," /root/.admin-openrc
 sed -ie "s,{{ controller }},$TRIX_CTRL_HOSTNAME," /root/.admin-openrc
 
-#Disable keystone admin_token
+# Disable keystone admin_token
 echo_info "Disabling the keystone admin token"
 
 PIPELINE=$(openstack-config --get /etc/keystone/keystone-paste.ini pipeline:public_api pipeline)
@@ -90,3 +93,6 @@ openstack-config --set /etc/keystone/keystone-paste.ini pipeline:admin_api pipel
 PIPELINE=$(openstack-config --get /etc/keystone/keystone-paste.ini pipeline:api_v3 pipeline)
 openstack-config --set /etc/keystone/keystone-paste.ini pipeline:api_v3 pipeline "$(echo $PIPELINE | sed "s,^\(.*\)admin_token_auth \(.*\)$,\1\2,")"
 
+echo_info "Saving passwords"
+store_password KEYSTONE_DB_PW $KEYSTONE_DB_PW
+store_password ADMIN_PW $ADMIN_PW

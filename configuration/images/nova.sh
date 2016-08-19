@@ -1,8 +1,6 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-source "${TRIX_SHADOW}"
+display_var TRIX_CTRL_{HOSTNAME,IP} COMPUTE_MGMT_NIC USE_OPENVSWITCH
 
 NOVA_PW="$(get_password "$NOVA_PW")"
 OS_RMQ_PW="$(get_password "$OS_RMQ_PW")"

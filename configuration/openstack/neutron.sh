@@ -1,17 +1,25 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-source "${TRIX_SHADOW}"
+display_var TRIX_CTRL_HOSTNAME NEUTRON_{EXT_NIC,TUN_IP} USE_OPENVSWITCH
+
+function error {
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop neutron || true
+    systemctl kill -s SIGKILL neutron-server.service || true
+    systemctl kill -s SIGKILL neutron-dhcp-agent.service || true
+    systemctl kill -s SIGKILL neutron-metadata-agent.service || true
+    systemctl kill -s SIGKILL neutron-l3-agent.service || true
+    systemctl kill -s SIGKILL neutron-openvswitch-agent.service || true
+    systemctl kill -s SIGKILL neutron-linuxbridge-agent.service || true
+    exit 1
+}
+
+trap error ERR
+
 source /root/.admin-openrc
 
 METADATA_SECRET=$(openssl rand -hex 10)
-
 NEUTRON_PW="$(get_password "$NEUTRON_PW")"
 NEUTRON_DB_PW="$(get_password "$NEUTRON_DB_PW")"
-
-store_password NEUTRON_DB_PW $NEUTRON_DB_PW
-store_password NEUTRON_PW $NEUTRON_PW
 
 echo_info "Setting up the neutron database"
 
@@ -156,3 +164,6 @@ fi
 echo_info "Creating an initial neutron provider network (external)"
 neutron net-create --shared --provider:physical_network external --provider:network_type flat external --router:external
 
+echo_info "Saving passwords"
+store_password NEUTRON_DB_PW $NEUTRON_DB_PW
+store_password NEUTRON_PW $NEUTRON_PW

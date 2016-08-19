@@ -1,53 +1,30 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-source "${TRIX_SHADOW}"
+display_var TRIX_CTRL_HOSTNAME HORIZON_ALLOWED_HOSTS
 
 echo_info "Configuring horizon"
 CONF_FILE="/etc/openstack-dashboard/local_settings"
 
-if [[ $(grep -cE "^OPENSTACK_HOST" $CONF_FILE) -ne 0 ]]; then
-    sed -i "s,^\(OPENSTACK_HOST =\).*,\1 \"${TRIX_CTRL_HOSTNAME}\"," $CONF_FILE;
-else
-    echo "OPENSTACK_HOST = \"controller\"" >> $CONF_FILE;
-fi
+sed -i "s,^\(OPENSTACK_HOST =.*\),# \1," $CONF_FILE
+append_line $CONF_FILE "OPENSTACK_HOST = \"${TRIX_CTRL_HOSTNAME}\""
 
-if [[ $(grep -cE "^ALLOWED_HOSTS" $CONF_FILE) -ne 0 ]]; then
-    sed -i "s%^\(ALLOWED_HOSTS =\).*%\1 ${HORIZON_ALLOWED_HOSTS}%" $CONF_FILE;
-else
-    echo "ALLOWED_HOSTS = ${HORIZON_ALLOWED_HOSTS}" >> $CONF_FILE;
-fi
+sed -i "s%^\(ALLOWED_HOSTS =.*\)%# \1%" $CONF_FILE
+append_line $CONF_FILE "ALLOWED_HOSTS = ${HORIZON_ALLOWED_HOSTS}"
 
-if [[ $(grep -cE "^SESSION_ENGINE" $CONF_FILE) -ne 0 ]]; then
-    sed -i "s,^\(SESSION_ENGINE =\).*,\1 'django.contrib.sessions.backends.cache'," $CONF_FILE;
-else
-    echo "SESSION_ENGINE = 'django.contrib.sessions.backends.cache'" >> $CONF_FILE;
-fi
+sed -i "s,^\(SESSION_ENGINE =.*\),# \1," $CONF_FILE
+append_line $CONF_FILE "SESSION_ENGINE = 'django.contrib.sessions.backends.cache'"
 
-if [[ $(grep -cE "^OPENSTACK_KEYSTONE_URL" $CONF_FILE) -ne 0 ]]; then
-    sed -i "s,^\(OPENSTACK_KEYSTONE_URL =\).*,\1 \"http://%s:5000/v3\" % OPENSTACK_HOST," $CONF_FILE;
-else
-    echo "OPENSTACK_KEYSTONE_URL = \"http://%s:5000/v3\" % OPENSTACK_HOST" >> $CONF_FILE;
-fi
+sed -i "s,^\(OPENSTACK_KEYSTONE_URL =.*\),# \1," $CONF_FILE
+append_line $CONF_FILE "OPENSTACK_KEYSTONE_URL = \"http://%s:5000/v3\" % OPENSTACK_HOST"
 
-if [[ $(grep -cE "^OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT" $CONF_FILE) -ne 0 ]]; then
-    sed -i "s,^\(OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT =\).*,\1 True," $CONF_FILE;
-else
-    echo "OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT = True" >> $CONF_FILE;
-fi
+sed -i "s,^\(OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT =.*\),# \1," $CONF_FILE
+append_line $CONF_FILE "OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT = True"
 
-if [[ $(grep -cE "^OPENSTACK_KEYSTONE_DEFAULT_DOMAIN" $CONF_FILE) -ne 0 ]]; then
-    sed -i "s,^\(OPENSTACK_KEYSTONE_DEFAULT_DOMAIN =\).*,\1 'default'," $CONF_FILE;
-else
-    echo "OPENSTACK_KEYSTONE_DEFAULT_DOMAIN = 'default'" >> $CONF_FILE;
-fi
+sed -i "s,^\(OPENSTACK_KEYSTONE_DEFAULT_DOMAIN =.*\),# \1," $CONF_FILE
+append_line $CONF_FILE "OPENSTACK_KEYSTONE_DEFAULT_DOMAIN = 'default'"
 
-if [[ $(grep -cE "^OPENSTACK_KEYSTONE_DEFAULT_ROLE" $CONF_FILE) -ne 0 ]]; then
-    sed -i "s,^\(OPENSTACK_KEYSTONE_DEFAULT_ROLE =\).*,\1 'user'," $CONF_FILE;
-else
-    echo "OPENSTACK_KEYSTONE_DEFAULT_ROLE = 'user'" >> $CONF_FILE;
-fi
+sed -i "s,^\(OPENSTACK_KEYSTONE_DEFAULT_ROLE =.*\),# \1," $CONF_FILE
+append_line $CONF_FILE "OPENSTACK_KEYSTONE_DEFAULT_ROLE = 'user'"
 
 cat >> /etc/openstack-dashboard/local_settings <<EOF
 CACHES = {
