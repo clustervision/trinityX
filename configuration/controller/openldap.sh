@@ -52,6 +52,11 @@ echo_info "Add obol to the system"
 cp "${POST_FILEDIR}"/obol /usr/local/bin
 chmod +x /usr/local/bin/obol
 
+if flag_is_set NFS_HOME_OPTS ; then
+    echo_info 'Move the user homes to the shared folder'
+    store_system_variable /etc/obol/config.py HOME "$TRIX_HOME"
+fi
+
 # Store the password
 store_password "SLAPD_ROOT_PW" "$SLAPD_ROOT_PW"
 
