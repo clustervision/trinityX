@@ -18,7 +18,10 @@ fi
 # Pull docker image if exists on registry; fail otherwise
 # DOCKER_IMAGE is set in the job script
 
-docker pull $DOCKER_IMAGE &>/dev/null && (
+if ! docker pull $DOCKER_IMAGE &>/dev/null; then
+    echo "Could not find the image $DOCKER_IMAGE in the registry";
+    exit 1;
+fi
 
 # Fetch user/group info (real uid is supplied by mpi-drun)
 # since this script is run as root by mpi-drun (setuid)
@@ -81,6 +84,4 @@ docker exec -i job-$SLURM_JOBID /bin/bash -lc "su -c \"mpirun --mca orte_base_he
 # When done, delete the container from all the allocated nodes
 
 su -c "srun --jobid $SLURM_JOBID mpi-drun clean" - $USER_NAME
-
-) || (echo "Could not find the image $DOCKER_IMAGE in the registry" && exit 1);
 
