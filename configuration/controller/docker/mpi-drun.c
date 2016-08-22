@@ -1,3 +1,9 @@
+/* 
+ * A setuid wrapper to run mpi-drun.sh and mpi-dclean.sh bash scripts as the root user.
+ * mpi-drun will invoked by a non-root user.
+ * This is required in order to run docker commands as non-root users.
+ *
+ */
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
