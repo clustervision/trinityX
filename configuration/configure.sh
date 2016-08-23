@@ -52,7 +52,7 @@ Please refer to the documentation for additional information.
 MYPATH="$(dirname "$(readlink -f "$0")")"
 
 export POST_TOPDIR="$(dirname "${MYPATH}")"
-export POST_COMMON="${MYPATH}/common_functions.sh"
+export POST_COMMON="${MYPATH}/bin/common_functions.sh"
 
 source "$POST_COMMON"
 
