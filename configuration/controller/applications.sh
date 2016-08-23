@@ -15,7 +15,7 @@
 # This script will replace {{ prefix }} with the correct value
 #
 
-for GROUP in 'CV-standard' 'CV-advanced' 'local'; do
+for GROUP in 'cv-standard' 'cv-advanced' 'local'; do
 
     echo_info "Adding $GROUP module files to the system"
 
