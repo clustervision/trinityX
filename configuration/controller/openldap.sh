@@ -54,7 +54,8 @@ chmod +x /usr/local/bin/obol
 
 if flag_is_set NFS_HOME_OPTS ; then
     echo_info 'Move the user homes to the shared folder'
-    store_system_variable /etc/obol/config.py HOME "$TRIX_HOME"
+    mkdir "/etc/obol"
+    store_system_variable /etc/obol/config.py HOME "\"$TRIX_HOME\""
 fi
 
 # Store the password
