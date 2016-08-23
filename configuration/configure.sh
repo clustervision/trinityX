@@ -27,6 +27,8 @@ Options:    -v                  be more verbose
                                 exit when a post script returns an error code
             --hitthewall or --hardstop
                                 exit on any error inside a post script (bash -e)
+            --yum-retry
+                                retry installing packages that failed to install
 
 -v and -q are mutually exclusive.
 --dontstopmenow is mutually exclusive with --bailout and --hitthewall.
@@ -292,6 +294,10 @@ while (( $# )) ; do
 
         --skip-pkg )
             declare -x SKIPPKG=
+            ;;
+
+        --yum-retry )
+            declare -x YUMRETRY=
             ;;
 
         --config )
