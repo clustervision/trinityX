@@ -25,7 +25,7 @@ fi
 echo_info 'Installing RPM files'
 
 if ls "${POST_FILEDIR}/"*.rpm >/dev/null 2>&1 ; then
-	yum -y install "${POST_FILEDIR}/"*.rpm
+	install_rpm_files "${POST_FILEDIR}/"*.rpm
 	(( ret += $? ))
 fi
 

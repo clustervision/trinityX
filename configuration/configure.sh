@@ -54,9 +54,9 @@ Please refer to the documentation for additional information.
 MYPATH="$(dirname "$(readlink -f "$0")")"
 
 export POST_TOPDIR="$(dirname "${MYPATH}")"
-export POST_COMMON="${MYPATH}/bin/common_functions.sh"
 
-source "$POST_COMMON"
+source "${MYPATH}/bin/common_functions.sh"
+source "${MYPATH}/bin/rpm_mgmt.sh"
 
 
 
@@ -110,7 +110,7 @@ function run_one_script {
 
         if flag_is_set POST_PKGLIST ; then
             echo_progress "Installing packages: $POST_PKGLIST"
-            yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
+            install_packages $(grep -v '^#\|^$' "$POST_PKGLIST")
             ret=$?
         elif flag_is_set VERBOSE ; then
             echo_info "No package file found: $POST_PKGLIST"
