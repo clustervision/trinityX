@@ -1,8 +1,5 @@
 #!/bin/bash
 set -e
-source "$POST_CONFIG"
-source /etc/trinity.sh
-source "$TRIX_SHADOW"
 
 echo "NFS_HA_MOUNTPOINT=${NFS_HA_MOUNTPOINT:?"Should be defined"}"
 echo "NFS_SHARED_INFODIR=${NFS_SHARED_INFODIR:?"Should be defined"}"

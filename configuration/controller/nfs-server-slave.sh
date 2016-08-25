@@ -1,9 +1,5 @@
 #!/bin/bash
 
-source /etc/trinity.sh
-source "$POST_CONFIG"
-
-
 # Enable the NFS server and exports
 
 SHARED_OPTS="${NFS_SHARED_OPTS:-ro,no_root_squash}"
