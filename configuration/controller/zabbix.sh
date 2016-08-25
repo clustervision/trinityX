@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function check_zabbix_installation () {
-  echo_progress $FUNCNAME $@
+  echo_info $FUNCNAME $@
   local RPM_PKG_MISSING=""
   for package in {zabbix-server-mysql,zabbix-web-mysql,mariadb-server}; do
     if ! yum list -q installed "$package" &>/dev/null; then RPM_PKG_MISSING+=" ${package}"; fi
@@ -13,13 +13,13 @@ function check_zabbix_installation () {
 }
 
 function setup_zabbix_credentials () {
-  echo_progress $FUNCNAME $@
+  echo_info $FUNCNAME $@
   ZABBIX_MYSQL_PASSWORD=`get_password $ZABBIX_MYSQL_PASSWORD`
   store_password ZABBIX_MYSQL_PASSWORD "${ZABBIX_MYSQL_PASSWORD}"
 }
 
 function setup_zabbix_database () {
-  echo_progress $FUNCNAME $@
+  echo_info $FUNCNAME $@
   if ! systemctl status mariadb &>/dev/null; then
     echo_error "MariaDB seems to not have started: exiting."
   fi
@@ -39,7 +39,7 @@ function setup_zabbix_database () {
 }
 
 function zabbix_server_config () {
-  echo_progress $FUNCNAME $@
+  echo_info $FUNCNAME $@
 
   local TIMEZONE=$(readlink /etc/localtime | sed "s/..\/usr\/share\/zoneinfo\///")
 
@@ -67,7 +67,7 @@ function zabbix_server_config () {
 }
 
 function zabbix_server_services () {
-  echo_progress $FUNCNAME $@
+  echo_info $FUNCNAME $@
   systemctl restart zabbix-server
   systemctl restart httpd
   systemctl enable zabbix-server
