@@ -36,7 +36,7 @@ PACEMAKER_SLAVE_HOSTNAME=`/usr/bin/ssh ${PACEMAKER_SLAVE_HOST} /usr/bin/hostname
 
 echo_info "Create corosync.conf."
 
-[ -f /etc/corosync/corosync.conf ] && (echo_error "/etc/corosync/corosync.conf already exists on this node. Exiting.;" exit 2)
+[ -f /etc/corosync/corosync.conf ] && (echo_error "/etc/corosync/corosync.conf already exists on this node. Exiting."; exit 2)
 
 /usr/bin/cp ${POST_FILEDIR}/templ_corosync.conf /etc/corosync/corosync.conf
 for VAR in PACEMAKER_NETWORK PACEMAKER_MASTER_HOSTNAME PACEMAKER_SLAVE_HOSTNAME; do
