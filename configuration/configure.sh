@@ -27,6 +27,8 @@ Options:    -v                  be more verbose
                                 exit when a post script returns an error code
             --hitthewall or --hardstop
                                 exit on any error inside a post script (bash -e)
+            --yum-retry
+                                retry installing packages that failed to install
 
 -v and -q are mutually exclusive.
 --dontstopmenow is mutually exclusive with --bailout and --hitthewall.
@@ -52,9 +54,9 @@ Please refer to the documentation for additional information.
 MYPATH="$(dirname "$(readlink -f "$0")")"
 
 export POST_TOPDIR="$(dirname "${MYPATH}")"
-export POST_COMMON="${MYPATH}/common_functions.sh"
 
-source "$POST_COMMON"
+source "${MYPATH}/bin/common_functions.sh"
+source "${MYPATH}/bin/rpm_mgmt.sh"
 
 
 
@@ -108,7 +110,7 @@ function run_one_script {
 
         if flag_is_set POST_PKGLIST ; then
             echo_progress "Installing packages: $POST_PKGLIST"
-            yum -y install $(grep -v '^#\|^$' "$POST_PKGLIST")
+            install_packages $(grep -v '^#\|^$' "$POST_PKGLIST")
             ret=$?
         elif flag_is_set VERBOSE ; then
             echo_info "No package file found: $POST_PKGLIST"
@@ -292,6 +294,10 @@ while (( $# )) ; do
 
         --skip-pkg )
             declare -x SKIPPKG=
+            ;;
+
+        --yum-retry )
+            declare -x YUMRETRY=
             ;;
 
         --config )

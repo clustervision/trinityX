@@ -109,6 +109,9 @@ The following options are mainly useful for automated testing:
 - ``--hitthewall`` or ``--hardstop``
     Hard stop: exit both the current post script and the configuration tool when any error of any form happens in the shell script. This may be overkill in a lot of cases as there are legitimate situations where a post script may not care about the return code of any command within, including an error, yet will be terminated. (Think of ``grep`` returning a non-zero code when the string doesn't match anything, for example.)
 
+- ``--yum-retry``
+    Retry installing the packages that failed to install the first time around. This is a workaround for some network issues that yum can encounter; usually re-running yum for those packages fixes the issue. It will only retry once, if anything is still missing afterwards it will display the usual error message.
+
 
 A few additional rules:
 
