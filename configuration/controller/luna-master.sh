@@ -42,6 +42,8 @@ echo_info "Change mongod.conf file."
 /usr/bin/sed -i -e "s/^[#\t ]*keyFile = .*/keyFile = \/etc\/mongo.key/"  /etc/mongod.conf
 /usr/bin/sed -i -e "s/^[#\t ]*replSet = .*/replSet = luna/"  /etc/mongod.conf
 
+echo_info "Add replicaset to luna.conf"
+append_line /etc/luna.conf "replicaset=luna"
 
 echo_info "Stop luna services."
 
