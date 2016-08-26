@@ -34,9 +34,6 @@ store_password LUNA_MONGO_ROOT_PASS $_LUNA_MONGO_ROOT_PASS
 _LUNA_MONGO_PASS=`get_password $LUNA_MONGO_PASS`
 store_password LUNA_MONGO_PASS $_LUNA_MONGO_PASS
 
-echo "LUNA_MONGO_ROOT_PASS=${_LUNA_MONGO_ROOT_PASS?"Should be defined"}"
-echo "LUNA_MONGO_PASS=${_LUNA_MONGO_PASS?"Should be defined"}"
-
 
 echo_info "Disable SELinux."
 

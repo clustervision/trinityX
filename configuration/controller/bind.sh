@@ -1,6 +1,6 @@
 #!/bin/bash
 
-display_var TRIX_CTRL_IP
+display_var TRIX_CTRL{1,2}_IP
 
 # BIND (DNS server) configuration
 
@@ -20,6 +20,11 @@ sed -i "s,^\(search .*\),# \1,g" /etc/resolv.conf
 sed -i "s,^\(nameserver .*\),# \1,g" /etc/resolv.conf
 
 append_line /etc/resolv.conf "search cluster ipmi"
-append_line /etc/resolv.conf "nameserver $TRIX_CTRL_IP"
+
+for RESOLVER in TRIX_CTRL{1,2}_IP; do
+    if [[ -v $RESOLVER ]] ; then
+        append_line /etc/resolv.conf "nameserver "${!RESOLVER}""
+    fi
+done
 
 echo_warn "Please make sure to disable PEERDNS in your network-scripts to avoid resolv.conf override!"

@@ -1,7 +1,7 @@
 resource trinity_disk {
        net {
-         after-sb-0pri discard-younger-primary;
-         after-sb-1pri discard-secondary;
+         after-sb-0pri discard-zero-changes;
+         after-sb-1pri consensus;
          after-sb-2pri disconnect;
        }
        on {{ DRBD_LOCAL_HOSTNAME }} {

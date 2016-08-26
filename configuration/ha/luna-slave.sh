@@ -1,11 +1,6 @@
 #!/bin/bash
 set -e
 
-echo_info "Check config variables available."
-
-echo "LUNA_MONGO_PASS=${LUNA_MONGO_PASS:?"Should be defined"}"
-
-
 echo_info "Disable SELinux."
 
 sed -i -e 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
@@ -14,7 +9,7 @@ setenforce 0
 echo_info "Unpack luna."
 
 pushd /
-[ -d /luna ] || tar -xzvf ${POST_FILEDIR}/luna-*.tgz
+[ -d /luna ] || git clone https://github.com/dchirikov/luna
 popd
 
 
@@ -57,8 +52,6 @@ echo_info "Setup DNS."
 include "/etc/named.luna.zones"; 
 EOF
 
-/usr/bin/sed -i -e 's/\(.*listen-on port 53 { \).*\( };\)/\1any;\2/' /etc/named.conf
-
 echo_info "Create ssh keys."
 
 [ -f /root/.ssh/id_rsa ] || ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
@@ -73,38 +66,11 @@ if [ ! -f /etc/nginx/conf.d/nginx-luna.conf ]; then
     cp ${POST_FILEDIR}/nginx-luna.conf /etc/nginx/conf.d/
 fi
 
-echo_info "Configure firewalld."
-
-if /usr/bin/firewall-cmd --state >/dev/null ; then
-    /usr/bin/firewall-cmd --permanent --add-port=27017/tcp
-    /usr/bin/firewall-cmd --permanent --add-port=7050/tcp
-    /usr/bin/firewall-cmd --permanent --add-port=53/tcp
-    /usr/bin/firewall-cmd --permanent --add-port=53/udp
-    /usr/bin/firewall-cmd --permanent --add-port=69/udp
-    /usr/bin/firewall-cmd --permanent --add-port=67/udp
-    /usr/bin/firewall-cmd --reload
-else 
-    echo_warn "Firewalld is not running. Ports should be should be open manually later on."
-fi
-
 
 echo_info "Start mongo."
 
 systemctl start mongod
 systemctl enable mongod
-
-echo_info "Configure mongo auth."
-
-cat << EOF > /etc/luna.conf
-[MongoDB]
-replicaset=luna
-server=localhost
-authdb=luna
-user=luna
-password=${LUNA_MONGO_PASS}
-EOF
-chown luna:luna /etc/luna.conf
-chmod 600 /etc/luna.conf
 
 echo_info "Copy systemd unit files."
 
