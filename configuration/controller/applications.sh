@@ -15,7 +15,7 @@
 # This script will replace {{ prefix }} with the correct value
 #
 
-for GROUP in 'cv-standard' 'cv-advanced' 'local'; do
+for GROUP in 'cv-standard' 'cv-advanced' 'site-local'; do
 
     echo_info "Adding $GROUP module files to the system"
 
@@ -27,8 +27,8 @@ for GROUP in 'cv-standard' 'cv-advanced' 'local'; do
         VERSION=$(ls "${POST_FILEDIR}/${GROUP}/${MODULE}");
         echo_info "Adding ${MODULE}/${VERSION} to $GROUP";
 
-        cp -r "$MOD" "${TRIX_SHARED}/modulefiles/${GROUP}/"
-        sed -i -e "s,{{ prefix }},$TRIX_SHARED," "${TRIX_SHARED}/modulefiles/${GROUP}/${MODULE}/${VERSION}/modulefile"
+        cp -r "$MOD" "${TRIX_SHARED_MODFILES}/${GROUP}/"
+        sed -i -e "s,{{ prefix }},$TRIX_SHARED," "${TRIX_SHARED_MODFILES}/${GROUP}/${MODULE}/${VERSION}/modulefile"
 
     done
 
