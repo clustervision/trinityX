@@ -35,7 +35,7 @@ function setup_zabbix_database () {
   setup_zabbix_credentials
   mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "create database zabbix character set utf8 collate utf8_bin;"
   mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "grant all privileges on zabbix.* to zabbix@localhost identified by '$ZABBIX_MYSQL_PASSWORD';"
-  zcat /usr/share/doc/zabbix-server-mysql-3.0.3/create.sql.gz | mysql -uroot zabbix
+  zcat /usr/share/doc/zabbix-server-mysql-*/create.sql.gz | mysql -uroot zabbix
 }
 
 function zabbix_server_config () {
