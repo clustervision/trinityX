@@ -18,8 +18,13 @@ SSHROOT="${STDCFG_SSHROOT:-0}"
 
 TRIX_HOME="${TRIX_ROOT}/home"
 TRIX_IMAGES="${TRIX_ROOT}/images"
+TRIX_LOCAL="${TRIX_ROOT}/local"
+TRIX_LOCAL_APPS="${TRIX_ROOT}/local/applications"
+TRIX_LOCAL_MODFILES="${TRIX_ROOT}/local/modulefiles"
 TRIX_SHARED="${TRIX_ROOT}/shared"
-TRIX_APPS="${TRIX_ROOT}/shared/applications"
+TRIX_SHARED_TMP="${TRIX_ROOT}/shared/tmp"
+TRIX_SHARED_APPS="${TRIX_ROOT}/shared/applications"
+TRIX_SHARED_MODFILES="${TRIX_ROOT}/shared/modulefiles"
 
 TRIX_SHADOW="${TRIX_ROOT}/trinity.shadow"
 TRIX_SHFILE="${TRIX_SHARED}/trinity.sh"
@@ -29,11 +34,10 @@ TRIX_SHFILE="${TRIX_SHARED}/trinity.sh"
 
 echo_info "Creating Trinity directory tree"
 
-mkdir -p "$TRIX_ROOT"
-mkdir -p "$TRIX_HOME"
-mkdir -p "$TRIX_IMAGES"
-mkdir -p "$TRIX_SHARED"
-mkdir -p "$TRIX_APPS"
+for i in TRIX_{HOME,IMAGES,LOCAL,LOCAL_APPS,LOCAL_MODFILES} \
+         TRIX_{SHARED,SHARED_TMP,SHARED_APPS,SHARED_MODFILES} ; do
+    mkdir -p "${!i}"
+done
 
 
 #---------------------------------------
@@ -45,15 +49,20 @@ cat > "$TRIX_SHFILE" << EOF
 # Please do not modify!
 
 TRIX_VERSION="$TRIX_VERSION"
-
 TRIX_ROOT="$TRIX_ROOT"
-TRIX_HOME="$TRIX_HOME"
-TRIX_IMAGES="$TRIX_IMAGES"
-TRIX_SHARED="$TRIX_SHARED"
-TRIX_APPS="$TRIX_APPS"
 
-TRIX_SHFILE="$TRIX_SHFILE"
-TRIX_SHADOW="$TRIX_SHADOW"
+TRIX_HOME="${TRIX_ROOT}/home"
+TRIX_IMAGES="${TRIX_ROOT}/images"
+TRIX_LOCAL="${TRIX_ROOT}/local"
+TRIX_LOCAL_APPS="${TRIX_ROOT}/local/applications"
+TRIX_LOCAL_MODFILES="${TRIX_ROOT}/local/modulefiles"
+TRIX_SHARED="${TRIX_ROOT}/shared"
+TRIX_SHARED_TMP="${TRIX_ROOT}/shared/tmp"
+TRIX_SHARED_APPS="${TRIX_ROOT}/shared/applications"
+TRIX_SHARED_MODFILES="${TRIX_ROOT}/shared/modulefiles"
+
+TRIX_SHADOW="${TRIX_ROOT}/trinity.shadow"
+TRIX_SHFILE="${TRIX_SHARED}/trinity.sh"
 
 EOF
 

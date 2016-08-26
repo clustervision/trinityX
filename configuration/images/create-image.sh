@@ -31,6 +31,13 @@ cat > "$TARGET_SHADOW" << EOF
 EOF
 
 
+echo_info "Creating the local Trinity directory tree"
+
+for i in TRIX_{LOCAL,LOCAL_APPS,LOCAL_MODFILES,SHARED} ; do
+    mkdir -p "${TARGET}/${!i}"
+done
+
+
 #---------------------------------------
 
 echo_info 'Initializing the RPM dabatase in the target directory'
