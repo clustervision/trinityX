@@ -64,14 +64,14 @@ function not_installed {
 
     ret=0
     for pkg in "$@" ; do
-        if ! command rpm -q --quiet ${POST_CHROOT:---root \"${POST_CHROOT}\"} "$pkg" ; then
+        if ! command rpm -q --quiet ${POST_CHROOT:+--root \"${POST_CHROOT}\"} "$pkg" ; then
             # OK, not installed. But is it a feature?
             # This is an ugly thing that depends on the output format of yum.
             # When a package is installed, its repo name is @ + the name of the
             # repo from which it was installed. So if any package in the
             # provides list has an @ in the repo name, it's installed and the
             # feature is available.
-            if ! command yum -q ${POST_CHROOT:---root \"${POST_CHROOT}\"} provides "$pkg" | \
+            if ! command yum -q ${POST_CHROOT:+--installroot \"${POST_CHROOT}\"} provides "$pkg" | \
                     grep -q '^Repo *: @' ; then
                 (( ret++ ))
                 echo -n "$pkg "
@@ -109,7 +109,7 @@ function install_packages {
 
     while (( tries )) ; do
         ret=0
-        yum -y ${POST_CHROOT:---root \"${POST_CHROOT}\"} install $pkgs
+        yum -y ${POST_CHROOT:+--installroot \"${POST_CHROOT}\"} install $pkgs
         echo_info 'Checking if packages were installed correctly'
         pkgs="$(not_installed $pkgs)"
         ret=$?
@@ -148,7 +148,7 @@ function install_groups {
     # installed, no way to extract their contents easily, etc. So we just
     # install them and hope that it will work...
 
-    yum -y ${POST_CHROOT:---root \"${POST_CHROOT}\"} groupinstall "$@"
+    yum -y ${POST_CHROOT:+--installroot \"${POST_CHROOT}\"} groupinstall "$@"
     ret=$?
 
     flag_is_set POST_CHROOT && flag_is_set NODE_HOST_REPOS && umount_yum_dirs
@@ -179,8 +179,8 @@ function install_rpm_files {
 
     ret=0
     for pkg in "$@" ; do
-        if command rpm -U --test ${POST_CHROOT:---root \"${POST_CHROOT}\"} "$pkg" ; then
-            rpm -Uvh ${POST_CHROOT:---root \"${POST_CHROOT}\"} "$pkg"
+        if command rpm -U --test ${POST_CHROOT:+--root \"${POST_CHROOT}\"} "$pkg" ; then
+            rpm -Uvh ${POST_CHROOT:+--root \"${POST_CHROOT}\"} "$pkg"
             (( ret += $? ))
         fi
     done
