@@ -76,8 +76,6 @@ function zabbix_server_services () {
 }
 
 function zabbix_server_config () {
-  echo_info "Update Admin password and enable node auto registration"
-
   TOKEN=$(curl -s localhost/zabbix/api_jsonrpc.php \
               -H 'Content-Type: application/json-rpc' \
               -d '{"jsonrpc": "2.0",
@@ -90,6 +88,10 @@ function zabbix_server_config () {
                    }}' \
          | python -c "import json,sys; auth=json.load(sys.stdin); print(auth['result'])")
 
+  # -------------------------------
+
+  echo_info "Update Admin password"
+
   curl -s -XPOST localhost/zabbix/api_jsonrpc.php \
        -H 'Content-Type: application/json-rpc' \
        -d "{\"jsonrpc\": \"2.0\",
@@ -101,6 +103,10 @@ function zabbix_server_config () {
                 \"passwd\": \"$ZABBIX_ADMIN_PASSWORD\"
             }}"
   
+  # -------------------------------
+
+  echo_info "Enable automatic registration of zabbix agents"
+
   curl -s -XPOST localhost/zabbix/api_jsonrpc.php \
        -H 'Content-Type: application/json-rpc' \
        -d "{\"jsonrpc\": \"2.0\",
@@ -118,6 +124,55 @@ function zabbix_server_config () {
                                  {\"operationtype\": 4, \"opgroup\": [{\"groupid\": \"5\"}, {\"groupid\": \"2\"}]},
                                  {\"operationtype\": 6, \"optemplate\": [{\"templateid\": \"10102\"}, {\"templateid\": \"10001\"}, {\"templateid\": \"10104\"}]}]
             }}"
+
+  # -------------------------------
+
+  echo_info "Enable default trigger action: Send notifications"
+
+  curl -s -XPOST localhost/zabbix/api_jsonrpc.php \
+       -H 'Content-Type: application/json-rpc' \
+       -d "{\"jsonrpc\": \"2.0\",
+            \"method\": \"action.update\",
+            \"auth\": \"$TOKEN\",
+            \"id\": 4,
+            \"params\": {
+                \"actionid\": \"3\",
+                \"status\": \"0\"
+            }}"
+
+  # -------------------------------
+
+  echo_info "Add a local email mediatype which zabbix will use to send notifications"
+
+  curl -s -XPOST localhost/zabbix/api_jsonrpc.php \
+       -H 'Content-Type: application/json-rpc' \
+       -d "{\"jsonrpc\": \"2.0\",
+            \"method\": \"mediatype.create\",
+            \"auth\": \"$TOKEN\",
+            \"id\": 5,
+            \"params\": {
+                \"description\": \"Local e-mail\",
+                \"type\": 0,
+                \"smtp_server\": \"$TRIX_CTRL_HOSTNAME\",
+                \"smtp_helo\": \"$TRIX_CTRL_HOSTNAME\",
+                \"smtp_email\": \"zabbix@$TRIX_CTRL_HOSTNAME\"
+            }}"
+
+  # -------------------------------
+
+  echo_info "Setup notifications to be sent to the root user on the controller"
+
+  curl -s -XPOST localhost/zabbix/api_jsonrpc.php \
+       -H 'Content-Type: application/json-rpc' \
+       -d "{\"jsonrpc\": \"2.0\",
+            \"method\": \"user.addmedia\",
+            \"auth\": \"$TOKEN\",
+            \"id\": 5,
+            \"params\": {
+                \"users\": [{\"userid\": 1}],
+                \"medias\": {\"mediatypeid\": \"4\", \"sendto\": \"root@$TRIX_CTRL_HOSTNAME\", \"active\": 0, \"severity\": 63, \"period\": \"1-7,00:00-24:00\"}
+            }}"
+
 }
 
 function main () {
