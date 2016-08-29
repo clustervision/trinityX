@@ -8,6 +8,8 @@ yum -y update
 
 echo_info 'Restarting some services after the update'
 
-systemctl daemon-reexec
-systemctl restart dbus polkit sshd systemd-logind
+if flag_is_unset POST_CHROOT ; then
+    systemctl daemon-reexec
+    systemctl restart dbus polkit sshd systemd-logind
+fi
 
