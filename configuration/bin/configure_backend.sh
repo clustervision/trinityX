@@ -202,12 +202,17 @@ function apply_config {
         # ===================================
         # /etc/yum.repos.d  ->  so that we have the same repos until post script setup
         # /etc/pki/rpm-gpg  ->  so that the repo keys are available
+
+        # Used for both
+        # =============
         # /var/cache/yum    ->  to keep a copy of all the RPMs on the host, and speed up
-        #                       installation of multiple images
+        #                       installation of multiple images. Because of the
+        #                       yum update PS, it must be available there too.
 
 
         DIRCFGLIST=( "$TRIX_ROOT" \
-                     "$POST_TOPDIR" )
+                     "$POST_TOPDIR" \
+                     /var/cache/yum )
 
         # those are only bound on request
         if flag_is_set NODE_HOST_REPOS ; then
