@@ -14,25 +14,24 @@
 
 function syntax_exit {
     echo "
-Syntax:     $0 [options] <config file> [<config file> ...]
-Alternate:  $0 [options] --config <config_file> [<post script> ...]
+SYNTAX:     $0 [options] <config file> [<config file> ...]
+ALTERNATE:  $0 [options] --config <config_file> [<post script> ...]
 
-Options:    -v                  be more verbose
-            -q                  be quieter
-            -d                  run the post scripts in debug mode (bash -x)
-            --nocolor           don't use color escape codes in the messages
-            --dontstopmenow or --continue
-                                don't wait for user input on error
-            --bailout or --stop 
-                                exit when a post script returns an error code
-            --hitthewall or --hardstop
-                                exit on any error inside a post script (bash -e)
-            --yum-retry
-                                retry installing packages that failed to install
+OPTIONS:
+-v                  be more verbose
+-q                  be quieter
+-d                  run the post scripts in debug mode (bash -x)
+--nocolor           don't use color escape codes in the messages
+--continue          don't wait for user input on error
+--stop              exit when a post script returns an error code
+--hardstop          exit on any error inside a post script (bash -e)
+--yum-retry         retry once installing packages that failed to install
+--chroot <dir>      apply the configuration inside <dir>
 
+RULES:
 -v and -q are mutually exclusive.
---dontstopmenow is mutually exclusive with --bailout and --hitthewall.
---hitthewall selects --bailout too.
+--continue is mutually exclusive with --stop and --hardstop.
+--hardstop selects --stop too.
 
 In the main syntax form, all options are positional: they apply only to the
 configuration files after them on the command line. In the alternate syntax
@@ -134,6 +133,17 @@ while (( $# )) ; do
 
         --yum-retry )
             declare -x YUMRETRY=
+            ;;
+
+        --chroot )
+            # Do we apply the config files inside a chroot?
+            if (( $# < 2 )) ; then
+                echo_error '--chroot used without enough parameters'
+                syntax_exit
+            else
+                shift
+                POST_CHROOT="$1"
+            fi
             ;;
 
         --config )
