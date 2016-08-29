@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function check_zabbix_installation () {
-  echo_info $FUNCNAME $@
+  echo_info "Check if a previous installation exists"
   local RPM_PKG_MISSING=""
   for package in {zabbix-server-mysql,zabbix-web-mysql,mariadb-server}; do
     if ! yum list -q installed "$package" &>/dev/null; then RPM_PKG_MISSING+=" ${package}"; fi
@@ -15,11 +15,13 @@ function check_zabbix_installation () {
 function setup_zabbix_credentials () {
   echo_info $FUNCNAME $@
   ZABBIX_MYSQL_PASSWORD=`get_password $ZABBIX_MYSQL_PASSWORD`
+  ZABBIX_ADMIN_PASSWORD=`get_password $ZABBIX_ADMIN_PASSWORD`
   store_password ZABBIX_MYSQL_PASSWORD "${ZABBIX_MYSQL_PASSWORD}"
+  store_password ZABBIX_ADMIN_PASSWORD "${ZABBIX_ADMIN_PASSWORD}"
 }
 
 function setup_zabbix_database () {
-  echo_info $FUNCNAME $@
+  echo_info "Setup zabbix database"
   if ! systemctl status mariadb &>/dev/null; then
     echo_error "MariaDB seems to not have started: exiting."
   fi
@@ -38,8 +40,8 @@ function setup_zabbix_database () {
   zcat /usr/share/doc/zabbix-server-mysql-*/create.sql.gz | mysql -uroot zabbix
 }
 
-function zabbix_server_config () {
-  echo_info $FUNCNAME $@
+function zabbix_server_config_init () {
+  echo_info "Initialize zabbix configuration"
 
   local TIMEZONE=$(readlink /etc/localtime | sed "s/..\/usr\/share\/zoneinfo\///")
 
@@ -66,18 +68,64 @@ function zabbix_server_config () {
 }
 
 function zabbix_server_services () {
-  echo_info $FUNCNAME $@
+  echo_info "Enable and start zabbix service and dependencies"
   systemctl restart zabbix-server
   systemctl restart httpd
   systemctl enable zabbix-server
   systemctl enable httpd
 }
 
+function zabbix_server_config () {
+  echo_info "Update Admin password and enable node auto registration"
+
+  TOKEN=$(curl -s localhost/zabbix/api_jsonrpc.php \
+              -H 'Content-Type: application/json-rpc' \
+              -d '{"jsonrpc": "2.0",
+                   "method": "user.login",
+                   "auth": null,
+                   "id": 1,
+                   "params": {
+                        "user": "Admin",
+                        "password": "zabbix"
+                   }}' \
+         | python -c "import json,sys; auth=json.load(sys.stdin); print(auth['result'])")
+
+  curl -s -XPOST localhost/zabbix/api_jsonrpc.php \
+       -H 'Content-Type: application/json-rpc' \
+       -d "{\"jsonrpc\": \"2.0\",
+            \"method\": \"user.update\",
+            \"auth\": \"$TOKEN\",
+            \"id\": 2,
+            \"params\": {
+                \"userid\": \"1\",
+                \"passwd\": \"$ZABBIX_ADMIN_PASSWORD\"
+            }}"
+  
+  curl -s -XPOST localhost/zabbix/api_jsonrpc.php \
+       -H 'Content-Type: application/json-rpc' \
+       -d "{\"jsonrpc\": \"2.0\",
+            \"method\": \"action.create\",
+            \"auth\": \"$TOKEN\",
+            \"id\": 3, 
+            \"params\": {
+                \"name\": \"Auto registration\", 
+                \"eventsource\": 2,
+                \"evaltype\": 0,
+                \"def_shortdata\": \"Auto registration: {HOST.HOST}\",
+                \"def_longdata\": \"Host name: {HOST.HOST}\nHost IP: {HOST.IP}\nAgent port: {HOST.PORT}\",
+                \"conditions\": [{\"conditiontype\": 22, \"operator\": 2, \"value\": \"\"}],
+                \"operations\": [{\"operationtype\": 2},
+                                 {\"operationtype\": 4, \"opgroup\": [{\"groupid\": \"5\"}, {\"groupid\": \"2\"}]},
+                                 {\"operationtype\": 6, \"optemplate\": [{\"templateid\": \"10102\"}, {\"templateid\": \"10001\"}, {\"templateid\": \"10104\"}]}]
+            }}"
+}
+
 function main () {
   check_zabbix_installation
   setup_zabbix_database
-  zabbix_server_config
+  zabbix_server_config_init
   zabbix_server_services
+  zabbix_server_config
 }
 
 echo_info 'Zabbix installation script' && main
