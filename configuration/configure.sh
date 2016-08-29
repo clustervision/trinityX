@@ -65,7 +65,8 @@ source "${MYPATH}/bin/common_functions.sh"
 ##
 ################################################################################
 
-source "${MYPATH}/bin/rpm_mgmt.sh"
+source "${MYPATH}/bin/configure_support.sh"
+source "${MYPATH}/bin/configure_rpm.sh"
 source "${MYPATH}/bin/configure_backend.sh"
 
 

@@ -16,44 +16,6 @@ fi
 
 #---------------------------------------
 
-# Bind-mount some temporary directories.
-# Those are used to share the yum cache and configuration with the image, when
-# doing an installation into a chroot.
-
-YUMDIRLIST+=( /var/cache/yum \
-              /etc/yum.repos.d \
-              /etc/pki/rpm-gpg )
-
-
-function mount_yum_dirs {
-
-    for dir in "${YUMDIRLIST[@]}" ; do
-        mkdir -p "${POST_CHROOT}/${dir}"
-        mount --bind "$dir" "${POST_CHROOT}/${dir}"
-    done
-}
-
-
-
-#---------------------------------------
-
-# Unmount the previously-mounted directories
-
-#  !!! WARNING !!!
-# They must be unbound in reverse order of binding, or interesting times will
-# ensue! Why? Two words: recursive bind.
-
-function umount_yum_dirs {
-
-    for i in $(seq $(( ${#YUMDIRLIST[@]} - 1 )) -1 1) ; do
-        umount "${POST_CHROOT}/${YUMDIRLIST[$i]}"
-    done
-}
-
-
-
-#---------------------------------------
-
 # Check if all packages have been installed.
 # The names of those that have not been installed are printed on stdout.
 # The return code is 0 if all have been installed, something else otherwise.
@@ -64,14 +26,14 @@ function not_installed {
 
     ret=0
     for pkg in "$@" ; do
-        if ! command rpm -q --quiet ${POST_CHROOT:+--root \"${POST_CHROOT}\"} "$pkg" ; then
+        if ! command rpm -q --quiet ${POST_CHROOT:+--root "${POST_CHROOT}"} "$pkg" ; then
             # OK, not installed. But is it a feature?
             # This is an ugly thing that depends on the output format of yum.
             # When a package is installed, its repo name is @ + the name of the
             # repo from which it was installed. So if any package in the
             # provides list has an @ in the repo name, it's installed and the
             # feature is available.
-            if ! command yum -q ${POST_CHROOT:+--installroot \"${POST_CHROOT}\"} provides "$pkg" | \
+            if ! command yum -q ${POST_CHROOT:+--installroot "${POST_CHROOT}"} provides "$pkg" | \
                     grep -q '^Repo *: @' ; then
                 (( ret++ ))
                 echo -n "$pkg "
@@ -102,14 +64,12 @@ function install_packages {
     # if no parameter, return
     (( $# )) || return 0
 
-    flag_is_set POST_CHROOT && flag_is_set NODE_HOST_REPOS && mount_yum_dirs
-
     flag_is_set YUMRETRY && tries=2 || tries=1
     pkgs="$@"
 
     while (( tries )) ; do
         ret=0
-        yum -y ${POST_CHROOT:+--installroot \"${POST_CHROOT}\"} install $pkgs
+        yum -y ${POST_CHROOT:+--installroot "${POST_CHROOT}"} install $pkgs
         echo_info 'Checking if packages were installed correctly'
         pkgs="$(not_installed $pkgs)"
         ret=$?
@@ -121,8 +81,6 @@ function install_packages {
             break
         fi
     done
-
-    flag_is_set POST_CHROOT && flag_is_set NODE_HOST_REPOS && umount_yum_dirs
 
     return $ret
 }
@@ -140,20 +98,11 @@ function install_groups {
     # if no parameter, return
     (( $# )) || return 0
 
-    ret=0
-
-    flag_is_set POST_CHROOT && flag_is_set NODE_HOST_REPOS && mount_yum_dirs
-
     # There's no reliable way to manage groups. No way to tell if they were
     # installed, no way to extract their contents easily, etc. So we just
     # install them and hope that it will work...
 
-    yum -y ${POST_CHROOT:+--installroot \"${POST_CHROOT}\"} groupinstall "$@"
-    ret=$?
-
-    flag_is_set POST_CHROOT && flag_is_set NODE_HOST_REPOS && umount_yum_dirs
-
-    return $ret
+    yum -y ${POST_CHROOT:+--installroot "${POST_CHROOT}"} groupinstall "$@"
 }
 
 
@@ -175,12 +124,12 @@ function install_rpm_files {
     # if no parameter, return
     (( $# )) || return 0
 
-    # we don't need to mount the yum repos in the images to install RPM files
+    # Note: no need to mount the yum repos in the images to install RPM files
 
     ret=0
     for pkg in "$@" ; do
-        if command rpm -U --test ${POST_CHROOT:+--root \"${POST_CHROOT}\"} "$pkg" ; then
-            rpm -Uvh ${POST_CHROOT:+--root \"${POST_CHROOT}\"} "$pkg"
+        if command rpm -U --test ${POST_CHROOT:+--root "${POST_CHROOT}"} "$pkg" ; then
+            rpm -Uvh ${POST_CHROOT:+--root "${POST_CHROOT}"} "$pkg"
             (( ret += $? ))
         fi
     done

@@ -20,6 +20,7 @@ function run_one_script {
     [[ -r "${POSTDIR}/${1}.sh" ]] && POST_SCRIPT="${POSTDIR}/${1}.sh"
     [[ -x "${POSTDIR}/${1}" ]] && export POST_FILEDIR="${POSTDIR}/${1}"
 
+
     # Do we have something? Anything? If not, kick the user.
 
     if flag_is_unset POST_GRPLIST && flag_is_unset POST_PKGLIST && \
@@ -32,34 +33,35 @@ function run_one_script {
     ret=0
 
 
-    # Start with installing the groups and packages if we have lists
+    # First, bind mount the directories for yum
+    (( ${#DIRYUMLIST[@]} )) && bind_mounts "$POST_CHROOT" "${DIRYUMLIST[@]}"
+
+    # Install the groups and packages if we have lists
 
     if flag_is_set POST_GRPLIST ; then
         echo_progress "Installing package groups: $POST_GRPLIST"
         install_groups $(grep -v '^#\|^$' "$POST_GRPLIST")
-        ret=$?
+        (( ret+=$? ))
     elif flag_is_set VERBOSE; then
         echo_info "No package group file found: $POST_GRPLIST"
     fi
 
-    # Take a break if the installation didn't go right
-    if (( $ret )) ; then
-        echo_error_wait "Error during package group installation: $POST_GRPLIST"
-    fi
-
-
     if flag_is_set POST_PKGLIST ; then
         echo_progress "Installing packages: $POST_PKGLIST"
         install_packages $(grep -v '^#\|^$' "$POST_PKGLIST")
-        ret=$?
+        (( ret+=$? ))
     elif flag_is_set VERBOSE ; then
         echo_info "No package file found: $POST_PKGLIST"
     fi
 
+    # Unbind those directories
+    (( ${#DIRYUMLIST[@]} )) && unbind_mounts "$POST_CHROOT" "${DIRYUMLIST[@]}"
+
     # Take a break if the installation didn't go right
     if (( $ret )) ; then
-        echo_error_wait "Error during package installation: $POST_PKGLIST"
+        echo_error_wait 'Error during group or package installation, check the output for details.'
     fi
+
 
 
     ret=0
@@ -68,6 +70,9 @@ function run_one_script {
     if flag_is_set POST_SCRIPT ; then
 
         echo_progress "Running post script: $POST_SCRIPT"
+
+        # bind the configuration directories
+        (( ${#DIRCFGLIST[@]} )) && bind_mounts "$POST_CHROOT" "${DIRCFGLIST[@]}"
 
         # We're doing a little hackaroo here.
         # The idea is that some variables in POST_CONFIG may include some
@@ -82,7 +87,8 @@ function run_one_script {
         # modify the .sh{,adow} files, and subsequent scripts will need the
         # updated versions in their environment.
 
-        bash ${DEBUG+-x} ${HARDSTOP+-e -o pipefail} -c "
+        ${POST_CHROOT:+chroot "${POST_CHROOT}"} \
+            bash ${DEBUG+-x} ${HARDSTOP+-e -o pipefail} -c "
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
             source \"$POST_CONFIG\"
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
@@ -94,6 +100,9 @@ function run_one_script {
     elif flag_is_set VERBOSE ; then
         echo_info "No post script found: $POST_SCRIPT"
     fi
+
+    # unbind the configuration directories
+    (( ${#DIRCFGLIST[@]} )) && unbind_mounts "$POST_CHROOT" "${DIRCFGLIST[@]}"
 
     # Take a break if the script returned an error code
     if (( $ret )) ; then
@@ -163,8 +172,12 @@ function apply_config {
     #echo_info "Configuration directory: $POSTDIR"
     #echo_info "List of post scripts: ${POSTLIST[@]}"
 
+    
+    # We're done
     # Do we have to install in a chroot? If yes, we have to check a few things.
+
     if flag_is_set CHROOT || flag_is_set POST_CHROOT ; then
+
         # if POST_CHROOT is defined on the command line, we don't want to
         # override it with the config value: cmd line overrides the config, not
         # the other way around. So:
@@ -177,7 +190,38 @@ function apply_config {
         else
             export POST_CHROOT
         fi
+
+        # And we have to set up the directories that need to be bind mounted
+
+        # Used for the configuration:
+        # ===========================
+        # "$TRIX_ROOT"      ->  for the local repos + trinity.sh*
+        # "$POST_TOPDIR"    ->  for the configuration scripts and files
+        
+        # Used only for package installation:
+        # ===================================
+        # /etc/yum.repos.d  ->  so that we have the same repos until post script setup
+        # /etc/pki/rpm-gpg  ->  so that the repo keys are available
+        # /var/cache/yum    ->  to keep a copy of all the RPMs on the host, and speed up
+        #                       installation of multiple images
+
+
+        DIRCFGLIST=( "$TRIX_ROOT" \
+                     "$POST_TOPDIR" )
+
+        # those are only bound on request
+        if flag_is_set NODE_HOST_REPOS ; then
+            DIRYUMLIST=( /etc/yum.repos.d \
+                         /etc/pki/rpm-gpg \
+                         /var/cache/yum )
+        fi
+
+    else
+        # Make sure that we're not picking up background noise from a previous
+        # configuration file
+        unset DIRCFGLIST DIRYUMLIST
     fi
+
 
     # Alright, so at that point we have our config file loaded, and we know
     # where the directory is, we can loop over the list of post scripts.
