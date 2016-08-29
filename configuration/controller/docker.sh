@@ -8,7 +8,7 @@ append_line /etc/sysconfig/docker "INSECURE_REGISTRY=\"--insecure-registry ${TRI
 
 echo_info 'Enabling and starting docker daemeon'
 
-flag_is_unset CHROOT_INSTALL && systemctl start docker
+flag_is_unset POST_CHROOT && systemctl start docker
 systemctl enable docker
 
 echo_info 'Installing mpi-drun and dependencies'

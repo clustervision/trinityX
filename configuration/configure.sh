@@ -166,15 +166,5 @@ while (( $# )) ; do
     shift
 done
 
-
-#---------------------------------------
-
-# We must unset POST_CHROOT at the very end, to make sure that it's not carried
-# over to the next run. We couldn't do it earlier at it applies to all
-# configuration files specified for that run.
-
-unset POST_CHROOT
-
-
 echo "End of script: $(date)"
 

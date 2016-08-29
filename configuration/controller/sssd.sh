@@ -11,7 +11,7 @@ chmod 600 /etc/sssd/sssd.conf
 echo_info 'Enabling and starting the service'
 
 systemctl enable sssd
-flag_is_unset CHROOT_INSTALL && systemctl restart sssd
+flag_is_unset POST_CHROOT && systemctl restart sssd
 
 echo_info 'Setting up the system to use sssd for authentication'
 authconfig --enablemkhomedir --enablesssd --enablesssdauth --update

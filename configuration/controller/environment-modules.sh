@@ -2,7 +2,7 @@
 
 # Environment modules setup
 
-if flag_is_unset CHROOT_INSTALL ; then
+if flag_is_unset POST_CHROOT ; then
     
     echo_info 'Creating the shared modules directories'
     

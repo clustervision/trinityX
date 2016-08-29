@@ -51,6 +51,10 @@ The configuration tool defines only a few dynamic variables:
     
     The name of the directory itself is inferred from the name of the post script, see `Post scripts`_ for the naming rules.
 
+- ``POST_CHROOT``
+
+    The path of the chroot directory used for this configuration file. If not running in a chroot (i.e. for a standard configuration on a controller), this variable will not exist.
+
 
 
 Variables from files

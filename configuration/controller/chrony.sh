@@ -49,5 +49,5 @@ fi
 echo_info 'Enabling and restarting chronyd'
 
 systemctl enable chronyd
-flag_is_unset CHROOT_INSTALL && systemctl restart chronyd || true
+flag_is_unset POST_CHROOT && systemctl restart chronyd || true
 

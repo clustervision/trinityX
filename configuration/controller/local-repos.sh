@@ -13,7 +13,7 @@ echo_info 'Copying packages and setting up the local repositories'
 # On a node, those are made available via bind mount at installation time, and
 # NFS later.
 
-if  flag_is_unset CHROOT_INSTALL ; then
+if  flag_is_unset POST_CHROOT ; then
     # Copy the whole tree with all local repos
     mkdir -p "${TRIX_ROOT}/shared"
     cp -r "${POST_TOPDIR}/packages" "${TRIX_ROOT}/shared"

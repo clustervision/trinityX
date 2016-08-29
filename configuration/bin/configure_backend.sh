@@ -187,8 +187,6 @@ function apply_config {
         if (( $? )) || ! [[ -d "$POST_CHROOT" && -x "$POST_CHROOT" ]] ; then
             echo_error_wait "Chroot directory doesn't exist: $POST_CHROOT"
             return 1
-        else
-            export POST_CHROOT
         fi
 
         # And we have to set up the directories that need to be bind mounted
