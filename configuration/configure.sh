@@ -50,7 +50,8 @@ Please refer to the documentation for additional information.
 # Set up some environment variables and load the common file, which should
 # reside in the same directory as the configuration script.
 
-MYPATH="$(dirname "$(readlink -f "$0")")"
+export CONFIGSCRIPT="$(readlink -f "$0")"
+MYPATH="$(dirname "$CONFIGSCRIPT")"
 
 export POST_TOPDIR="$(dirname "${MYPATH}")"
 

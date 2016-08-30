@@ -137,7 +137,16 @@ function apply_config {
         return 1
     fi
 
+    # Is a chroot required?
+
+    if flag_is_set CHROOT_REQUIRED && \
+       flag_is_unset CHROOT && flag_is_unset POST_CHROOT ; then
+        echo_error 'This configuration can only be applied to a chroot image!'
+        exit 1
+    fi
+
     # If we're running only handpicked scripts, we need to shift
+
     if (( $# > 1 )) ; then
         shift
         echo_info "Processing only the following scripts: $@"
@@ -187,7 +196,16 @@ function apply_config {
         if (( $? )) || ! [[ -d "$POST_CHROOT" && -x "$POST_CHROOT" ]] ; then
             echo_error_wait "Chroot directory doesn't exist: $POST_CHROOT"
             return 1
+        else
+            echo_info "Using the following directory for chroot: $POST_CHROOT"
+            export POST_CHROOT
         fi
+
+        # If we're setting up an image in a chroot, we need to know the path of
+        # the existing Trinity install. So we need to load trinity.sh.
+        # If the file doesn't exist, this will fail miserably.
+
+        source /etc/trinity.sh
 
         # And we have to set up the directories that need to be bind mounted
 
@@ -208,21 +226,16 @@ function apply_config {
         #                       yum update PS, it must be available there too.
 
 
-        DIRCFGLIST=( "$TRIX_ROOT" \
-                     "$POST_TOPDIR" \
-                     /var/cache/yum )
+        export DIRCFGLIST=( "$TRIX_ROOT" \
+                            "$POST_TOPDIR" \
+                            /var/cache/yum )
 
         # those are only bound on request
         if flag_is_set NODE_HOST_REPOS ; then
-            DIRYUMLIST=( /etc/yum.repos.d \
-                         /etc/pki/rpm-gpg \
-                         /var/cache/yum )
+            export DIRYUMLIST=( /etc/yum.repos.d \
+                                /etc/pki/rpm-gpg \
+                                /var/cache/yum )
         fi
-
-    else
-        # Make sure that we're not picking up background noise from a previous
-        # configuration file
-        unset DIRCFGLIST DIRYUMLIST
     fi
 
 
@@ -233,7 +246,8 @@ function apply_config {
         run_one_script "$post"
     done
 
-    unset POST_CONFIG POST_CONFDIR POSTDIR
+    # Clean up the environment variables to avoid background noise later
+    unset POST_CONFIG POST_CONFDIR POSTDIR DIRCFGLIST DIRYUMLIST POST_CHROOT
     echo_footer
 }
 
