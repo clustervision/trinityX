@@ -38,6 +38,12 @@ for i in TRIX_{LOCAL,LOCAL_APPS,LOCAL_MODFILES,SHARED} ; do
 done
 
 
+echo_info 'Setting up the /etc/trinity.sh symlink'
+
+mkdir -p "${TARGET}/etc"
+ln -s "$TRIX_SHFILE" "${TARGET}/etc/trinity.sh"
+
+
 #---------------------------------------
 
 echo_info 'Initializing the RPM dabatase in the target directory'
@@ -52,19 +58,18 @@ cp "${POST_FILEDIR}/yum.conf" "${TARGET}/etc"
 
 #---------------------------------------
 
-echo_info 'Installing the core groups'
-
-if [[ -r "${POST_FILEDIR}/target.grplist" ]] ; then 
-    POST_CHROOT="$TARGET" \
-        install_groups $(grep -v '^#\|^$' "${POST_FILEDIR}/target.grplist")
-fi
+# If we have a a configuration to apply to the image, do it.
 
 
-echo_info 'Installing additional packages'
+if flag_is_set NODE_IMG_CONFIG ; then
+    echo_info "Applying configuration to the new image: $NODE_IMG_CONFIG"
 
-if [[ -r "${POST_FILEDIR}/target.pkglist" ]] ; then
-    POST_CHROOT="$TARGET" \
-        install_packages $(grep -v '^#\|^$' "${POST_FILEDIR}/target.pkglist")
+    "$CONFIGSCRIPT" ${VERBOSE+-v} ${QUIET+-q} ${DEBUG+-d} ${NOCOLOR+--nocolor} \
+        --chroot "$TARGET" "${NODE_IMG_CONFIG}"
+
+else
+    echo_error 'No image configuration file specified!'
+    exit 1
 fi
 
 
@@ -94,16 +99,5 @@ ALT_SHADOW="$TARGET_SHADOW" store_password "IMG_ROOT_PW" "$root_pw"
 
 #---------------------------------------
 
-# And finally, if we have a a configuration to apply to the image, do it.
-# Otherwise, print out the image path.
-
 echo_info "Path of the new image: \"$TARGET\""
-
-
-if flag_is_set NODE_IMG_CONFIG ; then
-    echo_info "Applying configuration to the new image: $NODE_IMG_CONFIG"
-
-    "${POST_TOPDIR}/configuration/configure.sh" --chroot "$TARGET" \
-        "${NODE_IMG_CONFIG}"
-fi
 
