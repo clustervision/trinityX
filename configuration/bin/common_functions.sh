@@ -22,6 +22,7 @@ function mv         { command mv ${VERBOSE+-v} "${@}" ; }
 function yum        { command yum ${QUIET+-q} "${@}" ; }
 function mkdir      { command mkdir ${VERBOSE+-v} "${@}" ; }
 function mount      { command mount ${VERBOSE+-v} "${@}" ; }
+function rsync      { command rsync ${VERBOSE+-v} "${@}" ; }
 function umount     { command umount ${VERBOSE+-v} "${@}" ; }
 function systemctl  { command systemctl ${QUIET+-q} "${@}" ; }
 
@@ -30,6 +31,7 @@ typeset -fx mv
 typeset -fx yum
 typeset -fx mkdir
 typeset -fx mount
+typeset -fx rsync
 typeset -fx umount
 typeset -fx systemctl
 
