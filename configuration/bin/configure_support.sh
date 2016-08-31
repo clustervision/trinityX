@@ -1,5 +1,5 @@
 
-# Support functions used by the configuration code
+# Support functions
 # Those do not belong in the common_functions.sh file as they are used only by
 # the installer code.
 

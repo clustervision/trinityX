@@ -8,6 +8,8 @@
 #---------------------------------------
 
 # Go through a single post script
+# This function is called by the apply_config code below, once of each of the
+# post scripts included in that config.
 
 # Syntax: run_one_script script_name
 
@@ -178,16 +180,14 @@ function apply_config {
         return 1
     fi
 
-    #echo_info "Configuration directory: $POSTDIR"
-    #echo_info "List of post scripts: ${POSTLIST[@]}"
-
     
-    # We're done
     # Do we have to install in a chroot? If yes, we have to check a few things.
+    # CHROOT is the variable from the configuration file, POST_CHROOT is the one
+    # from the command line.
 
     if flag_is_set CHROOT || flag_is_set POST_CHROOT ; then
 
-        # if POST_CHROOT is defined on the command line, we don't want to
+        # If POST_CHROOT is defined via the command line, we don't want to
         # override it with the config value: cmd line overrides the config, not
         # the other way around. So:
         POST_CHROOT="${POST_CHROOT:-$CHROOT}"
@@ -203,14 +203,15 @@ function apply_config {
 
         # If we're setting up an image in a chroot, we need to know the path of
         # the existing Trinity install. So we need to load trinity.sh.
-        # If the file doesn't exist, this will fail miserably.
+        # If the file doesn't exist, this will fail miserably. That's the
+        # intended behaviour, as we need a full Trinity controller install.
 
         source /etc/trinity.sh
 
         # And we have to set up the directories that need to be bind mounted
 
-        # Used for the configuration:
-        # ===========================
+        # Used during the shell script execution:
+        # =======================================
         # "$TRIX_ROOT"      ->  for the local repos + trinity.sh*
         # "$POST_TOPDIR"    ->  for the configuration scripts and files
         
@@ -223,7 +224,7 @@ function apply_config {
         # =============
         # /var/cache/yum    ->  to keep a copy of all the RPMs on the host, and speed up
         #                       installation of multiple images. Because of the
-        #                       yum update PS, it must be available there too.
+        #                       yum update PS, it must be available for the scripts.
 
 
         export DIRCFGLIST=( "$TRIX_ROOT" \
