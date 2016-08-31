@@ -52,15 +52,16 @@ rpm --root "$TARGET" --initdb
 rpm --root "$TARGET" -ivh "${POST_FILEDIR}/${NODE_INITIAL_RPM:-centos-release\*.rpm}"
 
 
-if flag_is_set NODE_HOST_REPOS ; then
-    echo_info 'Using the host repositories'
+if flag_is_set NODE_HOST_CACHE ; then
+    echo_info 'Using the host cache'
     cp "${POST_FILEDIR}/yum.conf" "${TARGET}/etc"
-    export NODE_HOST_REPOS=1
+    NODE_HOST_CACHE=1
 else
-    echo_info 'Not using the host repositories'
-    export NODE_HOST_REPOS=0
+    echo_info 'Not using the host cache'
+    NODE_HOST_CACHE=0
 fi
 
+export NODE_HOST_{CACHE,REPOS}
 
 
 #---------------------------------------
@@ -108,11 +109,11 @@ ALT_SHADOW="$TARGET_SHADOW" store_password "IMG_ROOT_PW" "$root_pw"
 
 # And a final bit of cleanup
 
-if flag_is_unset NODE_HOST_REPOS ; then
+if flag_is_unset NODE_HOST_CACHE ; then
     command yum -q --installroot "$TARGET" clean all
 fi
 
 echo_info "Path of the new image: \"$TARGET\""
 
-unset NODE_HOST_REPOS
+unset NODE_HOST_{CACHE,REPOS}
 

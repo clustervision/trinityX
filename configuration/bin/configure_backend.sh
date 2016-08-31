@@ -215,28 +215,35 @@ function apply_config {
         # "$TRIX_ROOT"      ->  for the local repos + trinity.sh*
         # "$POST_TOPDIR"    ->  for the configuration scripts and files
         
-        # Used only for package installation:
-        # ===================================
+        # Used only for package installation, if NODE_HOST_REPOS is enabled:
+        # ==================================================================
         # /etc/yum.repos.d  ->  so that we have the same repos until post script setup
         # /etc/pki/rpm-gpg  ->  so that the repo keys are available
 
-        # Used for both
-        # =============
+        # Used for both, if NODE_HOST_CACHE is enabled:
+        # =============================================
         # /var/cache/yum    ->  to keep a copy of all the RPMs on the host, and speed up
         #                       installation of multiple images. Because of the
         #                       yum update PS, it must be available for the scripts.
 
 
-        export DIRCFGLIST=( "$TRIX_ROOT" \
-                            "$POST_TOPDIR" \
-                            /var/cache/yum )
+        # No background noise here again
+        unset DIRYUMLIST
+        DIRCFGLIST=( "$TRIX_ROOT" \
+                     "$POST_TOPDIR" )
 
         # those are only bound on request
         if flag_is_set NODE_HOST_REPOS ; then
-            export DIRYUMLIST=( /etc/yum.repos.d \
-                                /etc/pki/rpm-gpg \
-                                /var/cache/yum )
+            DIRYUMLIST=( /etc/yum.repos.d \
+                         /etc/pki/rpm-gpg )
         fi
+
+        if flag_is_set NODE_HOST_CACHE ; then
+            DIRCFGLIST+=( /var/cache/yum )
+            DIRYUMLIST+=( /var/cache/yum )
+        fi
+
+        export DIRCFGLIST DIRYUMLIST
     fi
 
 
