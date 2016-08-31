@@ -45,7 +45,7 @@ function run_one_script {
         install_groups $(grep -v '^#\|^$' "$POST_GRPLIST")
         (( ret+=$? ))
     elif flag_is_set VERBOSE; then
-        echo_info "No package group file found: $POST_GRPLIST"
+        echo_info "No package group file found for post script $1"
     fi
 
     if flag_is_set POST_PKGLIST ; then
@@ -53,7 +53,7 @@ function run_one_script {
         install_packages $(grep -v '^#\|^$' "$POST_PKGLIST")
         (( ret+=$? ))
     elif flag_is_set VERBOSE ; then
-        echo_info "No package file found: $POST_PKGLIST"
+        echo_info "No package file found for post script $1"
     fi
 
     # Unbind those directories
@@ -100,7 +100,7 @@ function run_one_script {
         ret=$?
 
     elif flag_is_set VERBOSE ; then
-        echo_info "No post script found: $POST_SCRIPT"
+        echo_info "No shell script found for post script $1"
     fi
 
     # unbind the configuration directories

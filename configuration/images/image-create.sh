@@ -1,7 +1,7 @@
 
 # Create the initial compute image
 
-display_var NODE_{IMG_NAME,INITIAL_RPM,HOST_REPOS,YUM_UPDATE,IMG_CONFIG}
+display_var NODE_{IMG_NAME,INITIAL_RPM,IMG_CONFIG,HOST_REPOS,HOST_CACHE}
 
 
 #---------------------------------------
