@@ -51,9 +51,16 @@ echo_info 'Initializing the RPM dabatase in the target directory'
 rpm --root "$TARGET" --initdb
 rpm --root "$TARGET" -ivh "${POST_FILEDIR}/${NODE_INITIAL_RPM:-centos-release\*.rpm}"
 
-echo_info 'Setting up the yum configuration'
 
-cp "${POST_FILEDIR}/yum.conf" "${TARGET}/etc"
+if flag_is_set NODE_HOST_REPOS ; then
+    echo_info 'Using the host repositories'
+    cp "${POST_FILEDIR}/yum.conf" "${TARGET}/etc"
+    export NODE_HOST_REPOS=1
+else
+    echo_info 'Not using the host repositories'
+    export NODE_HOST_REPOS=0
+fi
+
 
 
 #---------------------------------------
@@ -99,5 +106,13 @@ ALT_SHADOW="$TARGET_SHADOW" store_password "IMG_ROOT_PW" "$root_pw"
 
 #---------------------------------------
 
+# And a final bit of cleanup
+
+if flag_is_unset NODE_HOST_REPOS ; then
+    command yum -q --installroot "$TARGET" clean all
+fi
+
 echo_info "Path of the new image: \"$TARGET\""
+
+unset NODE_HOST_REPOS
 
