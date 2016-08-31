@@ -1,19 +1,19 @@
 #!/bin/bash
 
-display_var TRIX_CTRL_HOSTNAME COMPUTE_TUN_NIC USE_OPENVSWITCH
+display_var OS_{CTRL_HOSTNAME,COMPUTE_TUN_NIC} NEUTRON_USE_OPENVSWITCH
 
 NEUTRON_PW="$(get_password "$NEUTRON_PW")"
 OS_RMQ_PW="$(get_password "$OS_RMQ_PW")"
 
 echo_info "Setting up neutron configuration files"
 openstack-config --set /etc/neutron/neutron.conf DEFAULT rpc_backend rabbit
-openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_host $TRIX_CTRL_HOSTNAME
+openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_host $OS_CTRL_HOSTNAME
 openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_userid openstack
 openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_password $OS_RMQ_PW
 openstack-config --set /etc/neutron/neutron.conf DEFAULT auth_strategy keystone
-openstack-config --set /etc/neutron/neutron.conf keystone_authtoken auth_uri http://${TRIX_CTRL_HOSTNAME}:5000
-openstack-config --set /etc/neutron/neutron.conf keystone_authtoken auth_url http://${TRIX_CTRL_HOSTNAME}:35357
-openstack-config --set /etc/neutron/neutron.conf keystone_authtoken memcached_servers ${TRIX_CTRL_HOSTNAME}:11211
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken auth_uri http://${OS_CTRL_HOSTNAME}:5000
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken auth_url http://${OS_CTRL_HOSTNAME}:35357
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken memcached_servers ${OS_CTRL_HOSTNAME}:11211
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken auth_type password
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken project_domain_name default
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken user_domain_name default
@@ -22,8 +22,8 @@ openstack-config --set /etc/neutron/neutron.conf keystone_authtoken username neu
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken password $NEUTRON_PW
 openstack-config --set /etc/neutron/neutron.conf oslo_concurrency lock_path /var/lib/neutron/tmp
 
-openstack-config --set /etc/nova/nova.conf neutron url http://${TRIX_CTRL_HOSTNAME}:9696
-openstack-config --set /etc/nova/nova.conf neutron auth_url http://${TRIX_CTRL_HOSTNAME}:35357
+openstack-config --set /etc/nova/nova.conf neutron url http://${OS_CTRL_HOSTNAME}:9696
+openstack-config --set /etc/nova/nova.conf neutron auth_url http://${OS_CTRL_HOSTNAME}:35357
 openstack-config --set /etc/nova/nova.conf neutron auth_type password
 openstack-config --set /etc/nova/nova.conf neutron project_domain_name default
 openstack-config --set /etc/nova/nova.conf neutron user_domain_name default
@@ -32,7 +32,7 @@ openstack-config --set /etc/nova/nova.conf neutron project_name service
 openstack-config --set /etc/nova/nova.conf neutron username neutron
 openstack-config --set /etc/nova/nova.conf neutron password $NEUTRON_PW
 
-if flag_is_set USE_OPENVSWITCH; then
+if flag_is_set NEUTRON_USE_OPENVSWITCH; then
     echo_info "Using neutron with openvswitch"
 
     openstack-config --set /etc/neutron/plugins/ml2/openvswitch_agent.ini agent tunnel_types vxlan
@@ -75,5 +75,5 @@ else
 fi
 
 echo_info "Saving interface roles in /opt/nic on the image"
-echo "export NODE_TUN_NIC=$COMPUTE_TUN_NIC" >> /opt/nic
+echo "export NODE_TUN_NIC=$OS_COMPUTE_TUN_NIC" >> /opt/nic
 

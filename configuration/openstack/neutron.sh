@@ -1,6 +1,6 @@
 #!/bin/bash
 
-display_var TRIX_CTRL_HOSTNAME NEUTRON_{EXT_NIC,TUN_IP} USE_OPENVSWITCH
+display_var TRIX_CTRL_HOSTNAME NEUTRON_{EXT_NIC,TUN_IP,USE_OPENVSWITCH}
 
 function error {
     mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop neutron || true
@@ -88,7 +88,7 @@ openstack-config --set /etc/neutron/dhcp_agent.ini DEFAULT enable_isolated_metad
 openstack-config --set /etc/neutron/metadata_agent.ini DEFAULT nova_metadata_ip $TRIX_CTRL_HOSTNAME
 openstack-config --set /etc/neutron/metadata_agent.ini DEFAULT metadata_proxy_shared_secret $METADATA_SECRET
 
-if flag_is_set USE_OPENVSWITCH; then
+if flag_is_set NEUTRON_USE_OPENVSWITCH; then
     echo_info "Using neutron with openvswitch"
     openstack-config --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 mechanism_drivers openvswitch,l2population
 
@@ -146,7 +146,7 @@ systemctl start neutron-dhcp-agent.service
 systemctl start neutron-metadata-agent.service
 systemctl start neutron-l3-agent.service
 
-if flag_is_set USE_OPENVSWITCH; then
+if flag_is_set NEUTRON_USE_OPENVSWITCH; then
     systemctl enable openvswitch.service
     systemctl start openvswitch.service
 
