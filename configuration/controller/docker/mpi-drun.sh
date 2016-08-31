@@ -58,10 +58,29 @@ SET_ENV="if [[ ! -e /opt/mpi-drun ]]; then
          fi
 "
 
+# Detect present infiniband/infinipath devices if any
+# These need to be exposed to the docker containers
+
+if [[ -d "/sys/class/infiniband" ]]; then
+    IB_DEVICES=$(find /dev/infiniband -printf " --device=%p")
+fi
+
+if [[ -e /dev/ipath ]]; then
+    IB_DEVICES=${IB_DEVICES}$(find /dev/ipath -printf " --device=%p")
+fi
+
 # Create and initialize a new container using image DOCKER_IMAGE
 # The container will need to run an ssh daemon on port 2222
 
-tar cpf - -C ~/ .ssh | docker run -i --name job-$SLURM_JOBID -p 2222:2222 --net host --entrypoint /bin/bash $VOLUMES $DOCKER_IMAGE -c "$SET_ENV"
+tar cpf - -C ~/ .ssh | docker run -i \
+                                  --name job-$SLURM_JOBID \
+                                  -p 2222:2222 \
+                                  --net host \
+                                  --entrypoint /bin/bash \
+                                  $VOLUMES \
+                                  $IB_DEVICES \
+                                  $DOCKER_IMAGE \
+                                  -c "$SET_ENV"
 docker start job-$SLURM_JOBID &>/dev/null
 
 # Exit at this point if DOCKER_INIT is set
