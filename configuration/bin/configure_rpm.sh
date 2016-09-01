@@ -26,14 +26,15 @@ function not_installed {
 
     ret=0
     for pkg in "$@" ; do
-        if ! command rpm -q --quiet "$pkg" ; then
+        if ! command rpm -q --quiet ${POST_CHROOT:+--root "${POST_CHROOT}"} "$pkg" ; then
             # OK, not installed. But is it a feature?
             # This is an ugly thing that depends on the output format of yum.
             # When a package is installed, its repo name is @ + the name of the
             # repo from which it was installed. So if any package in the
             # provides list has an @ in the repo name, it's installed and the
             # feature is available.
-            if ! yum -q provides "$pkg" | grep -q '^Repo *: @' ; then
+            if ! command yum -q ${POST_CHROOT:+--installroot "${POST_CHROOT}"} provides "$pkg" | \
+                    grep -q '^Repo *: @' ; then
                 (( ret++ ))
                 echo -n "$pkg "
             fi
@@ -68,7 +69,7 @@ function install_packages {
 
     while (( tries )) ; do
         ret=0
-        yum -y install $pkgs
+        yum -y ${POST_CHROOT:+--installroot "${POST_CHROOT}"} install $pkgs
         echo_info 'Checking if packages were installed correctly'
         pkgs="$(not_installed $pkgs)"
         ret=$?
@@ -83,6 +84,27 @@ function install_packages {
 
     return $ret
 }
+
+
+
+#---------------------------------------
+
+# Install package groups and check
+
+# Syntax: install_groups <group_names ...>
+
+function install_groups {
+
+    # if no parameter, return
+    (( $# )) || return 0
+
+    # There's no reliable way to manage groups. No way to tell if they were
+    # installed, no way to extract their contents easily, etc. So we just
+    # install them and hope that it will work...
+
+    yum -y ${POST_CHROOT:+--installroot "${POST_CHROOT}"} groupinstall "$@"
+}
+
 
 
 #---------------------------------------
@@ -102,10 +124,12 @@ function install_rpm_files {
     # if no parameter, return
     (( $# )) || return 0
 
+    # Note: no need to mount the yum repos in the images to install RPM files
+
     ret=0
     for pkg in "$@" ; do
-        if command rpm -U --test "$pkg" ; then
-            rpm -Uvh "$pkg"
+        if command rpm -U --test ${POST_CHROOT:+--root "${POST_CHROOT}"} "$pkg" ; then
+            rpm -Uvh ${POST_CHROOT:+--root "${POST_CHROOT}"} "$pkg"
             (( ret += $? ))
         fi
     done

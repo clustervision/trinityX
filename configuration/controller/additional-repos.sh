@@ -45,7 +45,7 @@ flag_is_set REPOS_DISABLE_REMOTE && disable_remote_repos
 
 
 # Finally, make sure that the cache is updated
-if flag_is_unset CHROOT_INSTALL ; then
+if flag_is_unset POST_CHROOT ; then
     echo_info 'Updating yum cache'
 
     yum -y makecache fast

@@ -3,5 +3,5 @@
 # Setup for the additional package list
 
 systemctl enable haveged
-flag_is_unset CHROOT_INSTALL && systemctl restart haveged || true
+flag_is_unset POST_CHROOT && systemctl restart haveged || true
 

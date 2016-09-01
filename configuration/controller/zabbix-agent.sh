@@ -11,4 +11,6 @@ sed -i -e "s,^\(Hostname=.*\),# \1," /etc/zabbix/zabbix_agentd.conf
 echo_info "Enable zabbix-agent service"
 
 systemctl enable zabbix-agent
-flag_is_unset CHROOT_INSTALL && systemctl restart zabbix-agent
+
+flag_is_unset POST_CHROOT && systemctl restart zabbix-agent || true
+

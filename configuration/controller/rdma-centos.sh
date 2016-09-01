@@ -10,5 +10,5 @@ echo_info 'Enabling and starting the RDMA service'
 
 systemctl enable rdma
 # The restart fails but the start behaves like a restart, so...
-flag_is_unset CHROOT_INSTALL && systemctl start rdma || true
+flag_is_unset POST_CHROOT && systemctl start rdma || true
 
