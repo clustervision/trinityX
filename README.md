@@ -8,7 +8,7 @@ Detailed documentation of the installer can be found in configuration/README.rst
 
 ```
 yum install git
-git clone -b development http://github.com/clustervision/trinityx
+git clone http://github.com/clustervision/trinityx
 cd trinityX/configuration
 ```
 
