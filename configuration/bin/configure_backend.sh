@@ -99,12 +99,12 @@ function run_one_script {
 
         ret=$?
 
+        # unbind the configuration directories
+        (( ${#DIRCFGLIST[@]} )) && unbind_mounts "$POST_CHROOT" "${DIRCFGLIST[@]}"
+
     elif flag_is_set VERBOSE ; then
         echo_info "No shell script found for post script $1"
     fi
-
-    # unbind the configuration directories
-    (( ${#DIRCFGLIST[@]} )) && unbind_mounts "$POST_CHROOT" "${DIRCFGLIST[@]}"
 
     # Take a break if the script returned an error code
     if (( $ret )) ; then

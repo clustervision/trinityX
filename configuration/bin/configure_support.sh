@@ -27,6 +27,7 @@ function bind_mounts {
     for dir in "$@" ; do
         mkdir -p "${root_dir}/${dir}"
         mount --bind "$dir" "${root_dir}/${dir}"
+        (( $? )) && flag_is_set VERBOSE && echo_warn "Failed to bind $dir"
     done
 }
 
@@ -52,6 +53,7 @@ function unbind_mounts {
 
     for i in $(seq $# -1 1) ; do
         umount "${root_dir}/${@:$i:1}"
+        (( $? )) && flag_is_set VERBOSE && echo_warn "Failed to unbind ${@:$i:1}"
     done
 }
 
