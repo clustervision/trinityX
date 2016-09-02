@@ -31,8 +31,13 @@ USER_NAME=$(id -u $1 -n)
 GROUP_ID=$(id -g)
 GROUP_NAME=$(id -gn)
 
+# Save the image's entrypoint
+# Docker inspect provides values in the format: {[/path/to/cmd --params]}
+
+IMAGE_ENTRYPOINT="$(docker inspect -f '{{.Config.Entrypoint}}' $DOCKER_IMAGE | cut -d'[' -f2 | cut -d']' -f1)"
+
 # Set of commands to initialize a new container
-# Will run the default docker entrypoint if already initialized
+# Will run the image's entrypoint if already initialized
 
 SET_ENV="if [[ ! -e /opt/mpi-drun ]]; then
             ssh-keygen -A &>/dev/null;
@@ -54,7 +59,7 @@ SET_ENV="if [[ ! -e /opt/mpi-drun ]]; then
 
             touch /opt/mpi-drun;
          else
-            /docker-entrypoint.sh;
+            $IMAGE_ENTRYPOINT;
          fi
 "
 
