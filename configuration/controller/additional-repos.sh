@@ -1,6 +1,5 @@
-#!/bin/bash
 
-# Add other repositories by default
+# Add other RPM repositories
 
 # It may seem weird to install those repo files from a local directory instead
 # of pulling them off of the internet, but again, there is no guarantee that the
@@ -9,31 +8,28 @@
 ret=0
 
 # Key files
-# No reliable naming convention, so they have to be provided
 
-if [[ "$ADDREPOS_KEYS" ]] ; then
+if ls "${POST_FILEDIR}/keys/"* >/dev/null 2>&1 ; then
     echo_info 'Installing repository GPG keys'
-    for i in $ADDREPOS_KEYS ; do
-        cp "${POST_FILEDIR}/$i" /etc/pki/rpm-gpg/
-        rpm --import "${POST_FILEDIR}/$i"
-        (( ret += $? ))
-    done
+    cp "${POST_FILEDIR}/keys/"* /etc/pki/rpm-gpg/
+    rpm --import "${POST_FILEDIR}/keys/"*
+    (( ret += $? ))
 fi
 
 
 # Repo packages
-echo_info 'Installing RPM files'
 
 if ls "${POST_FILEDIR}/"*.rpm >/dev/null 2>&1 ; then
+    echo_info 'Installing RPM files'
 	install_rpm_files "${POST_FILEDIR}/"*.rpm
 	(( ret += $? ))
 fi
 
 
 # Individual repo files
-echo_info 'Installing repo files'
 
 if ls "${POST_FILEDIR}/"*.repo >/dev/null 2>&1 ; then
+    echo_info 'Installing repo files'
 	cp "${POST_FILEDIR}/"*.repo /etc/yum.repos.d
 	(( ret += $? ))
 fi
@@ -45,6 +41,7 @@ flag_is_set REPOS_DISABLE_REMOTE && disable_remote_repos
 
 
 # Finally, make sure that the cache is updated
+
 if flag_is_unset POST_CHROOT ; then
     echo_info 'Updating yum cache'
 
