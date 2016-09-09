@@ -9,7 +9,7 @@ setenforce 0
 echo_info "Unpack luna."
 
 pushd /
-[ -d /luna ] || git clone https://github.com/dchirikov/luna
+[ -d /luna ] || git clone https://github.com/clustervision/luna
 popd
 
 
