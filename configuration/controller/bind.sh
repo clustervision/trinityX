@@ -1,6 +1,6 @@
 #!/bin/bash
 
-display_var TRIX_CTRL{1,2}_IP
+display_var TRIX_CTRL{1,2}_IP BIND_{FORWARDERS,DISABLE_DNSSEC}
 
 # BIND (DNS server) configuration
 
@@ -47,6 +47,12 @@ if flag_is_set BIND_FORWARDERS ; then
     if ! grep -q /etc/named.forwarders.conf /etc/named.conf ; then
         sed -i '/recursion yes/a \\tinclude "/etc/named.forwarders.conf";' /etc/named.conf
     fi
+fi
+
+
+if flag_is_set BIND_DISABLE_DNSSEC ; then
+    echo_info 'Disabling DNSSEC'
+    sed -i 's/^\([[:space:]]\+\)\(dnssec-enable.*\)/\1\/\/\2/g' /etc/named.conf
 fi
 
 
