@@ -14,6 +14,7 @@ echo_info 'Enable and start named service'
 systemctl enable named
 systemctl start named
 
+
 echo_info "Use this DNS server as the default resolver"
 
 sed -i "s,^\(search .*\),# \1,g" /etc/resolv.conf
@@ -27,4 +28,8 @@ for RESOLVER in TRIX_CTRL{1,2}_IP; do
     fi
 done
 
-echo_warn "Please make sure to disable PEERDNS in your network-scripts to avoid resolv.conf override!"
+
+echo_info 'Setting up dhclient to avoid overwriting our configuration'
+
+cp "${POST_FILEDIR}/dhclient-enter-hooks" /etc/dhcp
+
