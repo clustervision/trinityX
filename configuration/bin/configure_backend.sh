@@ -19,6 +19,7 @@ function run_one_script {
 
     [[ -r "${POSTDIR}/${1}.grplist" ]] && POST_GRPLIST="${POSTDIR}/${1}.grplist"
     [[ -r "${POSTDIR}/${1}.pkglist" ]] && POST_PKGLIST="${POSTDIR}/${1}.pkglist"
+    [[ -r "${POSTDIR}/${1}.remlist" ]] && POST_REMLIST="${POSTDIR}/${1}.remlist"
     [[ -r "${POSTDIR}/${1}.sh" ]] && POST_SCRIPT="${POSTDIR}/${1}.sh"
     [[ -x "${POSTDIR}/${1}" ]] && export POST_FILEDIR="${POSTDIR}/${1}"
 
@@ -26,7 +27,7 @@ function run_one_script {
     # Do we have something? Anything? If not, kick the user.
 
     if flag_is_unset POST_GRPLIST && flag_is_unset POST_PKGLIST && \
-       flag_is_unset POST_SCRIPT ; then
+       flag_is_unset POST_REMLIST && flag_is_unset POST_SCRIPT ; then
 
         echo_error "The name \"${1}\" doesn't match any file in the POSTDIR directory: ${POSTDIR}"
         return 1
@@ -64,6 +65,17 @@ function run_one_script {
         echo_error_wait 'Error during group or package installation, check the output for details.'
     fi
 
+
+    # If we have a removal list, go through it. We don't check anything here,
+    # this is a best effort situation.
+    # Removing packages shouldn't require any bind-mounted directory.
+
+    if flag_is_set POST_REMLIST ; then
+        echo_progress "Removing packages: $POST_REMLIST"
+        remove_packages $(grep -v '^#\|^$' "$POST_REMLIST")
+    elif flag_is_set VERBOSE ; then
+        echo_info "No package file found for post script $1"
+    fi
 
 
     ret=0
@@ -111,7 +123,7 @@ function run_one_script {
         echo_error_wait "Error during post script: $POST_SCRIPT"
     fi
 
-    unset POST_{GRPLIST,PKGLIST,SCRIPT,FILEDIR}
+    unset POST_{GRPLIST,PKGLIST,REMLIST,SCRIPT,FILEDIR}
 }
 
 
