@@ -102,10 +102,14 @@ fi
 
 #---------------------------------------
 
-echo_info "Generating the root's private SSH keys if required"
+echo_info "Generating the root's private SSH keys"
 
-[[ -e /root/.ssh/id_rsa ]] || ssh-keygen -t rsa -b 4096 -N "" -f /root/.ssh/id_rsa
-[[ -e /root/.ssh/id_ed25519 ]] || ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519
+[[ -e /root/.ssh/id_rsa ]] || \
+    ssh-keygen -t rsa -b 4096 -N "" -f /root/.ssh/id_rsa
+[[ -e /root/.ssh/id_ecdsa ]] || \
+    ssh-keygen -t ecdsa -b 521 -N "" -f /root/.ssh/id_ecdsa
+[[ -e /root/.ssh/id_ed25519 ]] || \
+    ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519
 
 
 echo_info 'Copying the SSH info to the shared directory'
