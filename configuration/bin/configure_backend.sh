@@ -226,6 +226,7 @@ function apply_config {
         # =======================================
         # "$TRIX_ROOT"      ->  for the local repos + trinity.sh*
         # "$POST_TOPDIR"    ->  for the configuration scripts and files
+        # /dev              ->  for files like urandom which are needed
         
         # Used only for package installation, if NODE_HOST_REPOS is enabled:
         # ==================================================================
@@ -242,7 +243,8 @@ function apply_config {
         # No background noise here again
         unset DIRYUMLIST
         DIRCFGLIST=( "$TRIX_ROOT" \
-                     "$POST_TOPDIR" )
+                     "$POST_TOPDIR" \
+                     /dev )
 
         # those are only bound on request
         if flag_is_set NODE_HOST_REPOS ; then
