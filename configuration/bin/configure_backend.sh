@@ -226,12 +226,15 @@ function apply_config {
         # =======================================
         # "$TRIX_ROOT"      ->  for the local repos + trinity.sh*
         # "$POST_TOPDIR"    ->  for the configuration scripts and files
-        # /dev              ->  for files like urandom which are needed
         
         # Used only for package installation, if NODE_HOST_REPOS is enabled:
         # ==================================================================
         # /etc/yum.repos.d  ->  so that we have the same repos until post script setup
         # /etc/pki/rpm-gpg  ->  so that the repo keys are available
+
+        # Used for both:
+        # ==============
+        # /dev              ->  for urandom and such
 
         # Used for both, if NODE_HOST_CACHE is enabled:
         # =============================================
@@ -240,16 +243,16 @@ function apply_config {
         #                       yum update PS, it must be available for the scripts.
 
 
-        # No background noise here again
-        unset DIRYUMLIST
         DIRCFGLIST=( "$TRIX_ROOT" \
                      "$POST_TOPDIR" \
                      /dev )
 
+        DIRYUMLIST=( /dev )
+
         # those are only bound on request
         if flag_is_set NODE_HOST_REPOS ; then
-            DIRYUMLIST=( /etc/yum.repos.d \
-                         /etc/pki/rpm-gpg )
+            DIRYUMLIST+=( /etc/yum.repos.d \
+                          /etc/pki/rpm-gpg )
         fi
 
         if flag_is_set NODE_HOST_CACHE ; then
