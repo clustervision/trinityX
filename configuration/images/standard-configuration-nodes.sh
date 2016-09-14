@@ -28,6 +28,16 @@ fi
 
 #---------------------------------------
 
+echo_info 'Creating the SSH host key pairs'
+
+[[ -e /etc/ssh/ssh_host_rsa_key ]] || \
+    ssh-keygen -t rsa -b 4096 -N "" -f /etc/ssh/ssh_host_rsa_key
+[[ -e /etc/ssh/ssh_host_ed25519_key ]] || \
+    ssh-keygen -t ed25519 -N "" -f /etc/ssh/ssh_host_ed25519_key
+
+
+#---------------------------------------
+
 echo_info "Disabling SELinux"
 
 sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux /etc/selinux/config
