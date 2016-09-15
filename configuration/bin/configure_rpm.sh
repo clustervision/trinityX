@@ -109,6 +109,22 @@ function install_groups {
 
 #---------------------------------------
 
+# Remove packages
+
+# Syntax: remove_packages <pkg_names ...>
+
+function remove_packages {
+
+    # if no parameter, return
+    (( $# )) || return 0
+
+    yum -y ${POST_CHROOT:+--installroot "${POST_CHROOT}"} remove "$@"
+}
+
+
+
+#---------------------------------------
+
 # Install RPM files and check
 
 # This is a workaround for an annoying behaviour of rpm. If you try to install

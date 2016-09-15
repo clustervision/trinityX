@@ -26,6 +26,39 @@ if [[ -r "${TRIX_ROOT}/root/.ssh/id_ed25519.pub" ]] ; then
 fi
 
 
+echo_info 'Creating the SSH host key pairs'
+
+[[ -e /etc/ssh/ssh_host_rsa_key ]] || \
+    ssh-keygen -t rsa -b 4096 -N "" -f /etc/ssh/ssh_host_rsa_key
+[[ -e /etc/ssh/ssh_host_ecdsa_key ]] || \
+    ssh-keygen -t ecdsa -b 521 -N "" -f /etc/ssh/ssh_host_ecdsa_key
+[[ -e /etc/ssh/ssh_host_ed25519_key ]] || \
+    ssh-keygen -t ed25519 -N "" -f /etc/ssh/ssh_host_ed25519_key
+
+
+echo_info "Generating the root's private SSH keys"
+
+[[ -e /root/.ssh/id_rsa ]] || \
+    ssh-keygen -t rsa -b 4096 -N "" -f /root/.ssh/id_rsa
+[[ -e /root/.ssh/id_ecdsa ]] || \
+    ssh-keygen -t ecdsa -b 521 -N "" -f /root/.ssh/id_ecdsa
+[[ -e /root/.ssh/id_ed25519 ]] || \
+    ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519
+
+
+echo_info 'Disabling host key check between nodes'
+
+if ! grep -q -- "---  TrinityX ---" /etc/ssh/ssh_config ; then
+    cat "${POST_FILEDIR}/ssh_config_extra" >> /etc/ssh/ssh_config
+fi
+
+
+if flag_is_set STDCFG_SSHROOT ; then
+    echo_info 'Allowing password-less SSH as root between nodes'
+    append_line /root/.ssh/authorized_keys "$(cat /root/.ssh/id_ed25519.pub)"
+fi
+
+
 #---------------------------------------
 
 echo_info "Disabling SELinux"

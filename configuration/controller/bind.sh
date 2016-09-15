@@ -1,6 +1,6 @@
 #!/bin/bash
 
-display_var TRIX_CTRL{1,2}_IP
+display_var TRIX_CTRL{1,2}_IP BIND_{FORWARDERS,DISABLE_DNSSEC}
 
 # BIND (DNS server) configuration
 
@@ -10,9 +10,6 @@ sed -i -e 's/\(.*listen-on port 53 { \).*\( };\)/\1any;\2/' /etc/named.conf
 echo_info 'Make named accept queries from all nodes that are not blocked by the firewall'
 sed -i -e 's,\(.*allow-query\s.*{ \).*\( };\),\1any;\2,' /etc/named.conf
 
-echo_info 'Enable and start named service'
-systemctl enable named
-systemctl start named
 
 echo_info "Use this DNS server as the default resolver"
 
@@ -27,4 +24,39 @@ for RESOLVER in TRIX_CTRL{1,2}_IP; do
     fi
 done
 
-echo_warn "Please make sure to disable PEERDNS in your network-scripts to avoid resolv.conf override!"
+
+echo_info 'Setting up dhclient to avoid overwriting our configuration'
+
+cp "${POST_FILEDIR}/dhclient-enter-hooks" /etc/dhcp
+
+
+if flag_is_set BIND_FORWARDERS ; then
+    echo_info 'Setting up the DNS forwarders'
+
+    # Create a forwarders files that we will include in the main config file
+    (
+    echo '// ICS BIND DNS forwarders'
+    echo 'forwarders {'
+    for i in $BIND_FORWARDERS ; do
+        echo -e "\t${i};"
+    done
+    echo -e '};'
+    ) | tee /etc/named.forwarders.conf
+
+    # And include it
+    if ! grep -q /etc/named.forwarders.conf /etc/named.conf ; then
+        sed -i '/recursion yes/a \\tinclude "/etc/named.forwarders.conf";' /etc/named.conf
+    fi
+fi
+
+
+if flag_is_set BIND_DISABLE_DNSSEC ; then
+    echo_info 'Disabling DNSSEC'
+    sed -i 's/^\([[:space:]]\+\)\(dnssec-enable.*\)/\1\/\/\2/g' /etc/named.conf
+fi
+
+
+echo_info 'Enabling and starting the named service'
+systemctl enable named
+systemctl start named
+

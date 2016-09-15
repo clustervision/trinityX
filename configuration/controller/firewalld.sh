@@ -18,19 +18,38 @@ systemctl restart firewalld
 
 # Assign the various interfaces to their zones
 
+# In a perfect world, the permanent configuration would be set with the
+# --permanent option to firewall-cmd. But in the case of the version shipping
+# with CentOS 7, it's just broken and the permanent config is ignored. So we
+# need to store the permanent zone in the ifcfg files...
+
 if flag_is_set FWD_PUBLIC_IF ; then
     for i in $FWD_PUBLIC_IF ; do
-        echo_info "Assigning interfaces: $i -> Public"
-        firewall-cmd --zone=public --change-interface=${i}
-        firewall-cmd --zone=public --change-interface=${i} --permanent
+        ifcfg="/etc/sysconfig/network-scripts/ifcfg-${i}"
+        if [[ -r "$ifcfg" ]] ; then
+            echo_info "Assigning interfaces: $i -> Public"
+            firewall-cmd --zone=public --change-interface=${i}
+            #firewall-cmd --permanent --zone=public --change-interface=${i}
+            store_system_variable "$ifcfg" NM_CONTROLLED no
+            store_system_variable "$ifcfg" ZONE public
+        else
+            echo_warn "Interface $i doesn't have an ifcfg file, skipping..."
+        fi
     done
 fi
 
 if flag_is_set FWD_TRUSTED_IF ; then
     for i in $FWD_TRUSTED_IF ; do
-        echo_info "Assigning interfaces: $i -> Trusted"
-        firewall-cmd --zone=trusted --change-interface=${i}
-        firewall-cmd --zone=trusted --change-interface=${i} --permanent
+        ifcfg="/etc/sysconfig/network-scripts/ifcfg-${i}"
+        if [[ -r "$ifcfg" ]] ; then
+            echo_info "Assigning interfaces: $i -> Trusted"
+            firewall-cmd --zone=trusted --change-interface=${i}
+            #firewall-cmd --permanent --zone=trusted --change-interface=${i}
+            store_system_variable "$ifcfg" NM_CONTROLLED no
+            store_system_variable "$ifcfg" ZONE trusted
+        else
+            echo_warn "Interface $i doesn't have an ifcfg file, skipping..."
+            fi
     done
 fi
 
