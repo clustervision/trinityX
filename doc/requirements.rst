@@ -68,11 +68,11 @@ The network configuration of the controllers must be done before installing Trin
 
 - IP addresses and netmasks of all interfaces that will be used by Trinity X;
 
-- hostname and domainname (the commands `hostname`, `hostname -s` and `hostname -d` must return the correct values);
+- hostname and domainname (the commands `hostname`, `hostname -s` and `hostname -d` must return the correct values).
 
-- if using NetworkManager, the configuration files for the network interfaces must not include the `PEERDNS=yes` directive, as this will interfere with the DNS of Trinity X.
+The timezone must also be set correctly before installation.
 
-If the user homes or the Trinity X installation directory (part of or whole) are to be set up on remote or distributed volumes or filesystems, all relevant configuration must be done before installing Trinity X. If necessary, remember to disable the NFS post script.
+If the user homes or the Trinity X installation directory (part of or whole) are to be set up on remote or distributed volume(s) or filesystem(s), all relevant configuration must be done before installing Trinity X. If necessary, remember to disable the NFS post script.
 
 
 Compute nodes
