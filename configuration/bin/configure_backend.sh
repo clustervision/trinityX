@@ -49,6 +49,16 @@ function run_one_script {
         echo_info "No package group file found for post script $1"
     fi
 
+    # If we have a removal list, go through it. We don't check anything here,
+    # this is a best effort situation.
+
+    if flag_is_set POST_REMLIST ; then
+        echo_progress "Removing packages: $POST_REMLIST"
+        remove_packages $(grep -v '^#\|^$' "$POST_REMLIST")
+    elif flag_is_set VERBOSE ; then
+        echo_info "No package file found for post script $1"
+    fi
+
     if flag_is_set POST_PKGLIST ; then
         echo_progress "Installing packages: $POST_PKGLIST"
         install_packages $(grep -v '^#\|^$' "$POST_PKGLIST")
@@ -63,18 +73,6 @@ function run_one_script {
     # Take a break if the installation didn't go right
     if (( $ret )) ; then
         echo_error_wait 'Error during group or package installation, check the output for details.'
-    fi
-
-
-    # If we have a removal list, go through it. We don't check anything here,
-    # this is a best effort situation.
-    # Removing packages shouldn't require any bind-mounted directory.
-
-    if flag_is_set POST_REMLIST ; then
-        echo_progress "Removing packages: $POST_REMLIST"
-        remove_packages $(grep -v '^#\|^$' "$POST_REMLIST")
-    elif flag_is_set VERBOSE ; then
-        echo_info "No package file found for post script $1"
     fi
 
 
