@@ -107,6 +107,13 @@ ALT_SHADOW="$TARGET_SHADOW" store_password "IMG_ROOT_PW" "$root_pw"
 
 #---------------------------------------
 
+echo_info 'Setting the timezone'
+
+cp -P /etc/localtime "${TARGET}/etc"
+
+
+#---------------------------------------
+
 # And a final bit of cleanup
 
 if flag_is_unset NODE_HOST_CACHE ; then
