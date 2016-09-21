@@ -33,7 +33,7 @@ This file can be edited to reflect the user's own installation choices. All conf
     
     # ./configure.sh controller.cfg
 
-For further details about the use of the configuration script, including its command line options, please see `Trinity X configuration tool`_
+For further details about the use of the configuration script, including its command line options, please see `Configuration tool usage`_
 
 For further details about the configuration files, please see `Configuration files`_.
 
@@ -173,4 +173,12 @@ When the local repository was created with the correct group files, the output o
         core
      Optional Groups:
        +debugging
+
+
+
+.. Relative file links
+
+.. _Trinity X pre-installation requirements: requirements.rst
+.. _Configuration tool usage: config_tool.rst
+.. _Configuration files: config_cfg_files.rst
 
