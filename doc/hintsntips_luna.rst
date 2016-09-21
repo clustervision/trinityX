@@ -3,6 +3,32 @@ Hints and tips for a Luna installation
 ======================================
 
 
+Generating pdsh group from Luna groups
+--------------------------------------
+
+`pdsh <https://github.com/grondo/pdsh>`_ is a popular parallel shell tool, allowing to run the same command or set of commands on multiple machines at the same time. It is installed by default on Trinity X systems, and the sysadmins may chose to use it over other alternatives.
+
+As of Trinity X release 1 there is no integration of Luna with ``pdsh``, and the configuration files required by ``pdsh`` have to be created by the sysadmins. Although it's possible to write a script around the output of ``luna node list``, the Trinity X source tree comes with a pre-written tool: ``scripts/luna2pdsh.sh``.
+
+A typical output would be similar to this::
+
+    [root@controller trinityX]# ./scripts/luna2pdsh.sh 
+    
+    Group: compute
+    node001
+    node002
+    
+    Group: compute2
+    node003
+
+It will create group files in ``/etc/dsh/groups``, that can be used with the ``dshgroup`` module of ``pdsh``::
+
+    # pdsh -g compute hostname
+    node001
+    node002
+
+Note that the files include all node names known to Luna, including those that haven't been discovered yet (i.e., Luna doesn't know their MAC addresses, and no entry will exist in the DNS records). If you have added nodes recently, boot them up at least once to make sure that Luna discovers them, then run ``luna cluster makedns`` followed by the ``luna2pdsh.sh`` script again.
+
 
 Custom kernel version and parameters
 ------------------------------------

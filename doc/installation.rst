@@ -33,7 +33,7 @@ This file can be edited to reflect the user's own installation choices. All conf
     
     # ./configure.sh controller.cfg
 
-For further details about the use of the configuration script, including its command line options, please see `Configuration tool usage`_
+For further details about the use of the configuration script, including its command line options, please see `Configuration tool usage`_.
 
 For further details about the configuration files, please see `Configuration files`_.
 
