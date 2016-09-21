@@ -65,7 +65,6 @@ echo_info "Disabling SELinux"
 
 sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux /etc/selinux/config
 setenforce 0
-echo_warn "Please remember to reboot the node after completing the configuration!"
 
 
 #---------------------------------------
