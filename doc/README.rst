@@ -6,8 +6,6 @@ Trinity X documentation
 Installation documentation
 --------------------------
 
-The installation documentation contains the following chapters:
-
 - `Trinity X pre-installation requirements`_
 
 - `Trinity X installation procedure`_
@@ -16,11 +14,15 @@ The installation documentation contains the following chapters:
 Configuration tool documentation
 --------------------------------
 
-The documentation for the configuration tool contains the following chapters:
+General use
+~~~~~~~~~~~
 
 - `Configuration tool usage`_
 
 - `Configuration files`_
+
+Developer documentation
+~~~~~~~~~~~~~~~~~~~~~~~
 
 - `Post scripts`_
 
