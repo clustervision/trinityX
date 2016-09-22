@@ -35,6 +35,11 @@ Luna documentation
 ------------------
 
 
+Docker documentation
+--------------------
+
+- `Running dockerized MPI jobs`_
+
 
 .. Relative file links
 
@@ -45,4 +50,4 @@ Luna documentation
 .. _Post scripts: config_post_scripts.rst
 .. _Environment variables: config_env_vars.rst
 .. _Common functions: config_common_funcs.rst
-
+.. _Running dockerized MPI jobs: running_docker_jobs.rst
