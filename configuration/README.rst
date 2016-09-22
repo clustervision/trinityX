@@ -12,5 +12,5 @@ The complete documentation is available in the `doc folder`_.
 
 .. Relative links
 
-.. _doc: doc/README.rst
+.. _doc: ../doc/README.rst
 

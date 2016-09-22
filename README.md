@@ -1,6 +1,6 @@
 # trinityX - quick start for the impatients
 
-Detailed documentation of the installer can be found in configuration/README.rst
+Detailed documentation of the installer can be found in doc/README.rst
 
 - Install CentOS Minimal on your controller
 
