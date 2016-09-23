@@ -56,7 +56,7 @@ function run_one_script {
         echo_progress "Removing packages: $POST_REMLIST"
         remove_packages $(grep -v '^#\|^$' "$POST_REMLIST")
     elif flag_is_set VERBOSE ; then
-        echo_info "No package file found for post script $1"
+        echo_info "No removal file found for post script $1"
     fi
 
     if flag_is_set POST_PKGLIST ; then
