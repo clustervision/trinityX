@@ -6,6 +6,9 @@
 # a completely standard CentOS minimal installation.
 
 
+display_var STDCFG_{SSHROOT,CTRL_GATEWAY} TRIX_{ROOT,CTRL_IP} POST_FILEDIR
+
+
 if flag_is_set STDCFG_SSHROOT ; then
     echo_info "Allowing SSH login as root"
     sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
