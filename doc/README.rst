@@ -31,8 +31,12 @@ Developer documentation
 - `Common functions`_
 
 
-Luna documentation
-------------------
+Hints and tips
+--------------
+
+- `Hints and tips for a Trinity X installation`_
+
+- `Hints and tips for a Luna installation`_
 
 
 Docker documentation
@@ -50,4 +54,7 @@ Docker documentation
 .. _Post scripts: config_post_scripts.rst
 .. _Environment variables: config_env_vars.rst
 .. _Common functions: config_common_funcs.rst
+.. _Hints and tips for a Trinity X installation: hintsntips_trix.rst
+.. _Hints and tips for a Luna installation: hintsntips_luna.rst
 .. _Running dockerized MPI jobs: running_docker_jobs.rst
+

@@ -1,6 +1,6 @@
 
-Hints and tips for an Trinity X installation
-============================================
+Hints and tips for a Trinity X installation
+===========================================
 
 Authenticating users against a remote ldap directory
 ----------------------------------------------------
