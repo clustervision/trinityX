@@ -281,6 +281,8 @@ The IP address is provided via DHCP for a standard configuration, so we only nee
     PREFIX=24
     ONBOOT=yes
 
+.. note:: We don't need to add the ``DEVICE=enp0s3`` line. Although it's not shown in the output above, Luna will add it automatically to the file that will be installed on the node.
+
 Finally we can specify the boot interface, which in this case will be the same as the main interface. The main role for that option is to allow sysadmins to specify a different provisioning interface, for example to install over Infiniband. A side benefit of setting it is that the node will have its final IP during the installation process, making SSH into it a bit easier. If not set, the IP during installation will be a dynamic one. So::
 
     # luna group change -n compute --boot_if enp0s3
@@ -329,6 +331,175 @@ At that point everything is done:
 - the new group was configured for local storage and networking.
 
 The only things left now are to add compute nodes to that group and to provision them.
+
+
+
+Setting up a login node image
+-----------------------------
+
+In most HPC clusters the configuration of a login node is very similar to that of a compute node. They authenticate their users the same way, they access the same remote filesystems, they rely on the same services provided by the controllers, and they are monitored through the same infrastructure. For that reason, the easiest way to build a login node is to start from a compute node image. Then we can deploy the node with the same provisioning tool, in that case Luna.
+
+You could start by cloning a compute node image and modifying it by hand, but there's an simpler way: Trinity X includes configuration files to do that for you::
+
+    # ./configure.sh images-create-login.cfg
+
+The image generated is very similar to a standard compute node image. In their respective default configurations, the main differences are:
+
+- ``firewalld`` and ``fail2ban`` are enabled on the login nodes;
+
+- the login nodes don't use the controller as a gateway.
+
+On the hardware side, the login node will have an additional NIC connected to an external network. That NIC won't be managed by Luna, so we will have to configure it ourselves.
+
+Just like for the compute node images, the network configuration is minimal. This point is very important as the ``firewalld`` zones need to be set in the configuration file for each interface, so extra care needs to be taken at that step.
+
+The rest of the procedure follow `Setting up a compute node image`_ very closely. Start with packing the image::
+
+    # luna osimage add -n login -p /trinity/images/login-2016-09-23-14-23
+    
+    # luna osimage pack -n login
+
+Let's assume that the new login node will have ``enp0s3`` as its internal interface, and ``enp0s8`` as its external one. The internal interface (connected to the same internal network as the nodes) will be used by Luna to provision the login node, so just like with compute nodes we need to tell Luna about it::
+
+    # luna group add -n login -o login -i enp0s3
+    
+    # luna group change -n login -i enp0s3 --setnet cluster
+    
+    # luna group change -n login --boot_if enp0s3
+
+Now we have to add the second interface, and we can check that it's been taken into account::
+
+    # luna group change -n login -i enp0s8 --add
+    
+    # luna group list
+    +------------+--------------+-------------------------------------------------------------+
+    | Name       | Osimage      | Interfaces                                                  |
+    +------------+--------------+-------------------------------------------------------------+
+    | login      | [login]      | BMC:None, enp0s3:[cluster]:192.168.124.0/24, enp0s8:None    |
+    +------------+--------------+-------------------------------------------------------------+
+
+We'll want the login node to use a diskfull installation, so edit the partitioning and post script to match your requirements for those machines, then apply them to the group::
+
+    # luna group change -n login --partscript --edit < luna-partscript
+    
+    # luna group change -n login --postscript --edit < luna-postscript
+
+Now for networking. For ``enp0s3`` it will be almost the same as for the compute nodes, with the difference that we must specify that the ``firewalld`` zone is ``trusted``. ``enp0s8``, the public interface, will be up to you and to the configuration of the network used to access the cluster. It can use a DHCP or a static IP, a proxy, etc. Again, we must specify the ``firewalld`` zone, in that case ``public``. Those are examples of minimal configuration files for various cases::
+
+    # more luna-ifscript-enp0s*
+    ::::::::::::::
+    luna-ifscript-enp0s3
+    ::::::::::::::
+    ONBOOT=yes
+    ZONE=trusted
+    ::::::::::::::
+    luna-ifscript-enp0s8-dhcp
+    ::::::::::::::
+    ONBOOT=yes
+    DEFROUTE=yes
+    ZONE=public
+    BOOTPROTO=dhcp
+    ::::::::::::::
+    luna-ifscript-enp0s8-static
+    ::::::::::::::
+    ONBOOT=yes
+    DEFROUTE=yes
+    ZONE=public
+    BOOTPROTO=none
+    IPADDR=10.0.0.10
+    PREFIX=16
+
+Apply your configuration to both interfaces, and check that the generated ``ifcfg-*`` files will be what you expect::
+
+    # luna group change -n login -i enp0s3 --edit < luna-ifscript-enp0s3
+    
+    # luna group change -n login -i enp0s8 --edit < luna-ifscript-enp0s8-static
+    
+    # luna group show -n login -i enp0s3
+    NETWORK=192.168.124.0
+    PREFIX=24
+    ONBOOT=yes
+    ZONE=trusted
+    
+    [root@ref-centos7 configuration]# luna group show -n login -i enp0s8
+    ONBOOT=yes
+    DEFROUTE=yes
+    ZONE=public
+    BOOTPROTO=none
+    IPADDR=10.0.0.10
+    PREFIX=16
+
+Now all that is left is to add the login node. We'll specify both the name and the internal IP of the node::
+
+    # luna node add -g login -n login1
+    
+    # luna node change -n login1 -i enp0s3 --ip 192.168.124.222
+    
+    # luna node list
+    +------------+--------------+----------------------+--------------------------------------------------+
+    | Name       | Group        | MAC                  | IPs                                              |
+    +------------+--------------+----------------------+--------------------------------------------------+
+    | login1     | [login]      | None                 | enp0s3:192.168.124.222, enp0s8:None, BMC:None    |
+    +------------+--------------+----------------------+--------------------------------------------------+
+
+Boot up the login node, discover it (either by chosing its name in the PXE menu or automatically if switch-based detection is configured) and let Luna install it. It will pick up the MAC address automatically, then we can update the local DNS zone::
+
+    # luna node list
+    +------------+--------------+----------------------+--------------------------------------------------+
+    | Name       | Group        | MAC                  | IPs                                              |
+    +------------+--------------+----------------------+--------------------------------------------------+
+    | login1     | [login]      | 08:00:27:9f:fe:a9    | enp0s3:192.168.124.222, enp0s8:None, BMC:None    |
+    +------------+--------------+----------------------+--------------------------------------------------+
+    
+    # luna cluster makedns
+
+Once the installation is done, we can SSH into the new login node and check that the interfaces are correct::
+
+    # ssh login1
+    
+    [root@login1 ~]# ip a s dev enp0s3
+    2: enp0s3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+        link/ether 08:00:27:9f:fe:a9 brd ff:ff:ff:ff:ff:ff
+        inet 192.168.124.222/24 brd 192.168.124.255 scope global enp0s3
+           valid_lft forever preferred_lft forever
+        inet6 fe80::a00:27ff:fe9f:fea9/64 scope link 
+           valid_lft forever preferred_lft forever
+        
+    [root@login1 ~]# ip a s dev enp0s8
+    3: enp0s8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+        link/ether 08:00:27:a9:c3:7d brd ff:ff:ff:ff:ff:ff
+        inet 10.0.0.10/16 brd 10.0.255.255 scope global enp0s8
+           valid_lft forever preferred_lft forever
+        inet6 fe80::a00:27ff:fea9:c37d/64 scope link 
+           valid_lft forever preferred_lft forever
+    
+    [root@login1 ~]# firewall-cmd --get-active-zones
+    public
+      interfaces: enp0s8
+    trusted
+      interfaces: enp0s3
+
+And finally, one last step. We want to make sure that Luna won't reinstall the login node every time it boots, as its configuration may change over time to match the needs of the users. By default Luna will always reprovision a node at boot, whether diskless (obviously) or diskfull (slightly counter-intuitively). So we need to tell it to boot from the local disk instead of reprovisioning::
+
+    # luna node change -n login1 --localboot y
+    
+    # luna node show -n login1
+    +---------------+----------------------------------------+
+    | Parameter     | Value                                  |
+    +---------------+----------------------------------------+
+    | name          | login1                                 |
+    | bmcnetwork    | None                                   |
+    | group         | [login]                                |
+    | interfaces    | enp0s3:192.168.124.222, enp0s8:None    |
+    | localboot     | True                                   |
+    | mac           | 08:00:27:9f:fe:a9                      |
+    | port          | None                                   |
+    | service       | False                                  |
+    | setupbmc      | True                                   |
+    | switch        | None                                   |
+    +---------------+----------------------------------------+
+
+And that's it! We now have a login node ready for use.
 
 
 
