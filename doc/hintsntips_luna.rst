@@ -442,7 +442,11 @@ Now all that is left is to add the login node. We'll specify both the name and t
     | login1     | [login]      | None                 | enp0s3:192.168.124.222, enp0s8:None, BMC:None    |
     +------------+--------------+----------------------+--------------------------------------------------+
 
-Boot up the login node, discover it (either by chosing its name in the PXE menu or automatically if switch-based detection is configured) and let Luna install it. It will pick up the MAC address automatically, then we can update the local DNS zone::
+Remember to update the local DNS zone after adding new nodes::
+
+    # luna cluster makedns
+
+Boot up the login node, discover it (either by chosing its name in the PXE menu or automatically if switch-based detection is configured) and let Luna install it::
 
     # luna node list
     +------------+--------------+----------------------+--------------------------------------------------+
@@ -451,8 +455,6 @@ Boot up the login node, discover it (either by chosing its name in the PXE menu 
     | login1     | [login]      | 08:00:27:9f:fe:a9    | enp0s3:192.168.124.222, enp0s8:None, BMC:None    |
     +------------+--------------+----------------------+--------------------------------------------------+
     
-    # luna cluster makedns
-
 Once the installation is done, we can SSH into the new login node and check that the interfaces are correct::
 
     # ssh login1
