@@ -15,14 +15,34 @@ Alongside a trinityX controller
 
 The Trinity X configuration script can install and configure all packages required for setting up a working OpenStack controller that includes the following services:
 
-- Keystone
-- Glance
-- Nova
-- Neutron
-- Cinder
-- Horizon
+- Identity (keystone)
+- Image (glance)
+- Compute (nova)
+- Network (neutron)
+- Volume (cinder)
+- Dashboard (horizon)
 
 .. note:: The OpenStack controller is a separate machine that is used solely for this purpose. The OpenStack compute nodes, however, are managed by the previously installed trinityX controller.
+
+
+Preconfiguration
+````````````````
+
+Before running the trinityX installer, it is required to do some initial network configuration.
+As described in the requirements document the OpenStack controller uses three NICs:
+
+- A first NIC used to route external traffic; it needs to be left unconfigured (except for being up on boot). This one will be managed by OpenStack Neutron
+- A second NIC called the management interface. This one is used fo communication between OpenStack services. It needs to have an IP from the provisionning subnet.
+- A third NIC used to isolate inter-VM traffic. It belongs to the same network as the compute nodes' second interface.
+
+.. note:: Internet access on the OpenStack controller needs to be through the management NIC or using a fourth one for this special purpose.
+
+
+.. note:: The OpenStack controller needs to use the trinityX controller as a DNS resolver.
+
+
+TrinityX installer
+``````````````````
 
 The configuration for a default OpenStack controller installation is described in the file called ``openstack.cfg``, located in the ``configuration`` subdirectory of the Trinity X tree.
 
@@ -40,6 +60,10 @@ For further details about the configuration files, please see `Configuration fil
 
 Standalone mode
 ~~~~~~~~~~~~~~~
+
+.. note:: The same preconfiguration described above applies to the standalone mode except for the DNS resolver part.
+
+
 
 In a standalone mode, the ``openstack.cfg`` configuration file needs to be altered a bit to account for the services that would otherwise be available on the trinityX controller.
 
@@ -91,16 +115,19 @@ The setup of the image is defined in these two configuration scripts:
 
 .. note:: You do not need to call the second script (``images-setup-openstack-compute.cfg``) by hand. This is done automatically by the creation script, which passes additional parameters to the setup script.
 
+
 Building the OpenStack compute image should be done on the node where the provisioning tool is installed:
 
 - The OpenStack controller when in standalone mode
-- The trinityX controller otherwise
+- The trinityX controller otherwise. Care must be taken in this case to append the content of the `trinity.shadow` file from the OpenStack controller to the same file on the trinityX controller (Otherwise compute nodes will fail to reach the controller since they will be using different passwords).
+
 
 After updating the configuration of the image creating it is done as simply as when setting up the controller::
 
     # ./configure.sh images-create-openstack-compute.cfg
 
 .. note:: The location of the new image is displayed as one of the last messages from the creation and setup process.
+
 
 After the configuration has completed, the node image is ready but not yet integrated into any provisioning system. The steps required for that operation are described in the documentation of the provisioning system installed on your site.
 
