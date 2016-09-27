@@ -10,6 +10,8 @@ Installation documentation
 
 - `Trinity X installation procedure`_
 
+- `Trinity X OpenStack installation procedure`_
+
 
 Configuration tool documentation
 --------------------------------
@@ -49,6 +51,7 @@ Docker documentation
 
 .. _Trinity X pre-installation requirements: requirements.rst
 .. _Trinity X installation procedure: installation.rst
+.. _Trinity X OpenStack installation procedure: installation_openstack.rst
 .. _Configuration tool usage: config_tool.rst
 .. _Configuration files: config_cfg_files.rst
 .. _Post scripts: config_post_scripts.rst
