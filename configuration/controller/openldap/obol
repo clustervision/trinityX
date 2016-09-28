@@ -20,6 +20,7 @@
 import os
 import sys
 import ldap
+import time
 import hashlib
 import argparse
 from retrying import retry
@@ -46,20 +47,10 @@ def make_secret(password):
     return tagged_digest
 
 
-def user_add(b, username, cn, sn, givenName, password, shell, groups):
-    """Add a user to the LDAP"""
+def user_add(b, username, cn, sn, givenName, password, shell, groups, expire):
+    """Add a user to the LDAP directory"""
 
     uidNumber = increment_uid(b)
-
-    # Add the group
-    dn = 'cn=%s,ou=Group,%s' % (username, b)
-    add_record = [
-     ('objectclass', ['top', 'posixGroup']),
-     ('cn', [username]),
-     ('memberuid', [uidNumber]),
-     ('gidNumber', [uidNumber])
-    ]
-    conn.add_s(dn, add_record)
 
     # Add the user
     dn = 'uid=%s,ou=People,%s' % (username, b)
@@ -74,6 +65,11 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups):
     else:
         home = '/home/' + username
 
+    if expire and expire != '-1':
+        expire = str(int(expire) + int(time.time() / 86400))
+    else:
+        expire = '-1'
+
     add_record = [
      ('objectclass', ['top', 'person', 'organizationalPerson',
                       'inetOrgPerson', 'posixAccount', 'shadowAccount']),
@@ -83,7 +79,13 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups):
      ('loginShell', [shell]),
      ('uidNumber', [uidNumber]),
      ('gidNumber', [uidNumber]),
-     ('homeDirectory', [home])
+     ('homeDirectory', [home]),
+     ('shadowMin', ['0']),
+     ('shadowMax', ['99999']),
+     ('shadowWarning', ['7']),
+     ('shadowExpire', [expire]),
+     ('shadowLastChange', ['%d' % (time.time() / 86400)])
+
     ]
 
     if givenName:
@@ -93,6 +95,16 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups):
         password = make_secret(password)
         add_record.append(('userPassword', [password]))
 
+    conn.add_s(dn, add_record)
+
+    # Add the group
+    dn = 'cn=%s,ou=Group,%s' % (username, b)
+    add_record = [
+     ('objectclass', ['top', 'posixGroup']),
+     ('cn', [username]),
+     ('memberuid', [uidNumber]),
+     ('gidNumber', [uidNumber])
+    ]
     conn.add_s(dn, add_record)
 
     if groups:
@@ -151,6 +163,12 @@ def user_modify(b, username, **kwargs):
     for key, value in kwargs.iteritems():
         if key == 'shell':
             key = 'loginShell'
+
+        elif key == 'expire':
+            key = 'shadowExpire'
+
+            if value and value != '-1':
+                value = str(int(value) + int(time.time() / 86400))
 
         if not value:
             continue
@@ -336,7 +354,10 @@ command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
 command.add_argument('--shell', default='/bin/bash')
 command.add_argument('--groups', type=csep,
-                     help="A comma separated list of group names")
+                     help='A comma separated list of group names')
+command.add_argument('--expire', metavar="DAYS",
+                     help=('Number of days after which the account expires. '
+                           'Set to -1 to disable'))
 
 command = user_commands.add_parser('delete', help='Delete a user')
 command.add_argument('username')
@@ -354,6 +375,9 @@ command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
 command.add_argument('--shell', default='/bin/bash')
+command.add_argument('--expire', metavar="DAYS",
+                     help=('Number of days after which the account expires. '
+                           'Set to -1 to disable'))
 
 command = user_commands.add_parser('list', help='List users')
 
