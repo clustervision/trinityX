@@ -38,15 +38,16 @@ while true ; do
 done
 
 ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
-ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/nis.ldif
+ldapadd -Y EXTERNAL -H ldapi:/// -f "${POST_FILEDIR}"/conf/rfc2307bis.ldif
 
 echo_info "Load configuration into slapd"
 ldapmodify -Y EXTERNAL -H ldapi:/// -f $TMP_DIR/config.ldif
 ldapmodify -Y EXTERNAL -H ldapi:/// -f $TMP_DIR/local.ldif
 ldapmodify -Y EXTERNAL -H ldapi:/// -f $TMP_DIR/proxy.ldif
+ldapmodify -Y EXTERNAL -H ldapi:/// -f "${POST_FILEDIR}"/conf/memberof.ldif
 
 echo_info "Setup initial local database"
-ldapadd -D cn=manager,dc=local -w $SLAPD_ROOT_PW -f "${POST_FILEDIR}"/conf/schema.ldif
+ldapadd -D cn=manager,dc=local -w $SLAPD_ROOT_PW -f "${POST_FILEDIR}"/conf/local_schema.ldif
 
 echo_info "Add obol to the system"
 cp "${POST_FILEDIR}"/obol /usr/local/bin
