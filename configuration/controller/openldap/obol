@@ -83,9 +83,9 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups, expire):
     # Add the group
     dn = 'cn=%s,ou=Group,%s' % (username, b)
     add_record = [
-     ('objectclass', ['top', 'posixGroup']),
+     ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
      ('cn', [username]),
-     ('memberuid', [uidNumber]),
+     ('member', ['uid=%s,ou=People,%s' % (username, b)]),
      ('gidNumber', [uidNumber])
     ]
     conn.add_s(dn, add_record)
@@ -106,14 +106,15 @@ def user_delete(b, username):
         print error
 
     base_dn = 'ou=Group,%s' % b
-    filter = '(memberuid=%s)' % username
+    filter = '(member=uid=%s,ou=People,%s)' % (username, b)
     attrs = ['']
     groups = conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter, attrs)
     dns = [dn for dn, attrs in groups]
 
     try:
         for dn in dns:
-            mod_attrs = [(ldap.MOD_DELETE, 'memberuid', username)]
+            mod_attrs = [(ldap.MOD_DELETE, 'member',
+                          'uid=%s,ou=People,%s' % (username, b))]
             conn.modify_s(dn, mod_attrs)
     except Exception, e:
         print e
@@ -217,7 +218,7 @@ def group_add(b, groupname):
 
     dn = 'cn=%s,ou=Group,%s' % (groupname, b)
     add_record = [
-     ('objectclass', ['top', 'posixGroup']),
+     ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
      ('cn', [groupname]),
      ('gidNumber', [gidNumber])
     ]
@@ -232,7 +233,7 @@ def group_addusers(b, groupname, username):
     for name in username:
         try:
             mod_attrs = []
-            mod_attrs.append((ldap.MOD_ADD, 'memberuid', name))
+            mod_attrs.append((ldap.MOD_ADD, 'member', 'uid=%s,ou=People,%s' % (name, b)))
             conn.modify_s(dn, mod_attrs)
         except Exception, error:
             print "Error adding %s to %s: %s" % (name, groupname, error)
@@ -245,7 +246,7 @@ def group_delusers(b, groupname, username):
     mod_attrs = []
 
     for name in username:
-        mod_attrs.append((ldap.MOD_DELETE, 'memberuid', name))
+        mod_attrs.append((ldap.MOD_DELETE, 'member', 'uid=%s,ou=People,%s' % (name, b)))
 
     conn.modify_s(dn, mod_attrs)
 
