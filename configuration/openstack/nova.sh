@@ -4,6 +4,7 @@ display_var TRIX_CTRL_{HOSTNAME,IP}
 
 function error {
     mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop nova || true
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop nova_api || true
     systemctl kill -s SIGKILL openstack-nova-api.service || true
     systemctl kill -s SIGKILL openstack-nova-consoleauth.service || true
     systemctl kill -s SIGKILL openstack-nova-scheduler.service || true
