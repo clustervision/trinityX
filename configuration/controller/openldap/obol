@@ -4,6 +4,7 @@ import os
 import sys
 import ldap
 import time
+import json
 import hashlib
 import argparse
 from retrying import retry
@@ -68,7 +69,6 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups, expire):
      ('shadowWarning', ['7']),
      ('shadowExpire', [expire]),
      ('shadowLastChange', ['%d' % (time.time() / 86400)])
-
     ]
 
     if givenName:
@@ -88,6 +88,7 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups, expire):
      ('member', ['uid=%s,ou=People,%s' % (username, b)]),
      ('gidNumber', [uidNumber])
     ]
+
     conn.add_s(dn, add_record)
 
     if groups:
@@ -175,9 +176,7 @@ def user_show(b, username):
     filter = '(uid=%s)' % username
 
     for dn, attrs in conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter):
-        output = str(attrs).replace("'", "").replace("[", "").replace("]", "")
-        output = output.replace("{", "").replace("}", "").replace(",", "\n")
-        print output
+        pretty_print(attrs, ['objectClass'])
 
 
 def user_uidNumber(b, username):
@@ -256,9 +255,25 @@ def group_show(b, groupname):
     filter = '(cn=%s)' % groupname
 
     for dn, attrs in conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter):
-        output = str(attrs).replace("'", "").replace("[", "").replace("]", "")
-        output = output.replace("{", "").replace("}", "").replace(",", "\n")
-        print output
+        pretty_print(attrs, ['objectClass'])
+
+
+def pretty_print(dictionary, exclude):
+    """Pretty print a dictionary into formatted json"""
+
+    output = {}
+
+    for key, value in dictionary.iteritems():
+
+        if key in exclude:
+            continue
+
+        if len(value) == 1:
+            value = value[0]
+
+        output[key] = value
+
+    print json.dumps(output, indent=4, sort_keys=True)
 
 
 @retry(stop_max_delay=10000)
