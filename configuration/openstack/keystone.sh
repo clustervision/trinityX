@@ -3,7 +3,7 @@
 display_var TRIX_CTRL_HOSTNAME
 
 function error {
-    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop keystone || true
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop keystone || true
     rm -f /etc/httpd/conf.d/wsgi-keystone.conf || true
     rm -f /root/.admin-openrc || true
     systemctl kill -s SIGKILL httpd.service || true

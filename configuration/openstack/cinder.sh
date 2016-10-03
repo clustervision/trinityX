@@ -3,7 +3,7 @@
 display_var TRIX_CTRL_{HOSTNAME,IP}
 
 function error {
-    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop cinder || true
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop cinder || true
     systemctl kill -s SIGKILL openstack-cinder-api.service || true
     systemctl kill -s SIGKILL openstack-cinder-scheduler.service || true
     exit 1
