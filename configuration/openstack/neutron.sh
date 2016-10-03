@@ -3,7 +3,7 @@
 display_var TRIX_CTRL_HOSTNAME NEUTRON_{EXT_NIC,TUN_IP,USE_OPENVSWITCH}
 
 function error {
-    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop neutron || true
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop neutron || true
     systemctl kill -s SIGKILL neutron-server.service || true
     systemctl kill -s SIGKILL neutron-dhcp-agent.service || true
     systemctl kill -s SIGKILL neutron-metadata-agent.service || true

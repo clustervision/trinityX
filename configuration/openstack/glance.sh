@@ -3,7 +3,7 @@
 display_var TRIX_CTRL_HOSTNAME
 
 function error {
-    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop glance || true
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop glance || true
     systemctl kill -s SIGKILL openstack-glance-api.service || true
     systemctl kill -s SIGKILL openstack-glance-registry.service || true
     exit 1
