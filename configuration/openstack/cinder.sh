@@ -3,6 +3,14 @@
 display_var TRIX_CTRL_{HOSTNAME,IP}
 
 function error {
+    openstack user delete cinder
+    openstack service delete cinder
+    openstack service delete cinderv2
+
+    for e in $(openstack endpoint list | grep 'volume\|volumev2' | cut -d '|' -f2); do
+        openstack endpoint delete $e;
+    done
+
     mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop cinder || true
     systemctl kill -s SIGKILL openstack-cinder-api.service || true
     systemctl kill -s SIGKILL openstack-cinder-scheduler.service || true

@@ -3,6 +3,13 @@
 display_var TRIX_CTRL_{HOSTNAME,IP}
 
 function error {
+    openstack user delete nova
+    openstack service delete nova
+
+    for e in $(openstack endpoint list | grep compute | cut -d '|' -f2); do
+        openstack endpoint delete $e;
+    done
+
     mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop nova || true
     mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop nova_api || true
     systemctl kill -s SIGKILL openstack-nova-api.service || true

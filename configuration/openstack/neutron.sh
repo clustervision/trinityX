@@ -3,6 +3,13 @@
 display_var TRIX_CTRL_HOSTNAME NEUTRON_{EXT_NIC,TUN_IP,USE_OPENVSWITCH}
 
 function error {
+    openstack user delete neutron
+    openstack service delete neutron
+
+    for e in $(openstack endpoint list | grep network | cut -d '|' -f2); do
+        openstack endpoint delete $e;
+    done
+
     mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop neutron || true
     systemctl kill -s SIGKILL neutron-server.service || true
     systemctl kill -s SIGKILL neutron-dhcp-agent.service || true

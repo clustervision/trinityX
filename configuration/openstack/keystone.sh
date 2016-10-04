@@ -39,7 +39,8 @@ keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
 # Configure httpd-wsgi
 echo_info "Setting up httpd and memcached"
 
-sed -i "1s,^,ServerName $TRIX_CTRL_HOSTNAME," /etc/httpd/conf/httpd.conf
+sed -i "s,^\(ServerName.*\),# \1," /etc/httpd/conf/httpd.conf
+sed -i "1s,^,ServerName $TRIX_CTRL_HOSTNAME\n," /etc/httpd/conf/httpd.conf
 cp -v ${POST_FILEDIR}/wsgi-keystone.conf /etc/httpd/conf.d/wsgi-keystone.conf
 
 # Start services

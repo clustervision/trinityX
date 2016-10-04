@@ -3,6 +3,13 @@
 display_var TRIX_CTRL_HOSTNAME
 
 function error {
+    openstack user delete glance
+    openstack service delete glance
+
+    for e in $(openstack endpoint list | grep image | cut -d '|' -f2); do
+        openstack endpoint delete $e;
+    done
+
     mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop glance || true
     systemctl kill -s SIGKILL openstack-glance-api.service || true
     systemctl kill -s SIGKILL openstack-glance-registry.service || true
@@ -30,11 +37,11 @@ echo_info "Creating the glance service and endpoints"
 openstack user create --domain default --password $GLANCE_PW glance
 openstack role add --project service --user glance admin
 
-openstack service create --name glance   --description "OpenStack Image" image
+openstack service create --name glance --description "OpenStack Image" image
 
-openstack endpoint create --region RegionOne  image public http://${TRIX_CTRL_HOSTNAME}:9292
-openstack endpoint create --region RegionOne  image internal http://${TRIX_CTRL_HOSTNAME}:9292
-openstack endpoint create --region RegionOne  image admin http://${TRIX_CTRL_HOSTNAME}:9292
+openstack endpoint create --region RegionOne image public http://${TRIX_CTRL_HOSTNAME}:9292
+openstack endpoint create --region RegionOne image internal http://${TRIX_CTRL_HOSTNAME}:9292
+openstack endpoint create --region RegionOne image admin http://${TRIX_CTRL_HOSTNAME}:9292
 
 echo_info "Setting up glance configuration files"
 openstack-config --set /etc/glance/glance-api.conf database connection "mysql+pymysql://glance:${GLANCE_DB_PW}@127.0.0.1/glance"
