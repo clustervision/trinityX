@@ -4,11 +4,12 @@
 # for the IPs of the controllers.
 
 display_var TRIX_CTRL{1,2,}_{HOSTNAME,IP}
+flag_is_set OS_CTRL_HOSTNAME && display_var OS_CTRL_{HOSTNAME,IP}
 
 
 append_line /etc/hosts '#  ----  Trinity machines  ----'
 
-for i in TRIX_CTRL{1,2,_} ; do
+for i in TRIX_CTRL{1,2,_} OS_CTRL; do
 
     ctrlname=${i}_HOSTNAME
 
