@@ -4,8 +4,10 @@ import os
 import sys
 import ldap
 import time
+import json
 import hashlib
 import argparse
+import ConfigParser
 from retrying import retry
 
 
@@ -43,10 +45,8 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups, expire):
     if not sn:
         sn = username
 
-    if config and hasattr(config, 'HOME'):
-        home = config.HOME + '/' + username
-    else:
-        home = '/home/' + username
+    home = load_param("users", "home") + '/' + username
+    shell = shell if shell else load_param("users", "shell")
 
     if expire and expire != '-1':
         expire = str(int(expire) + int(time.time() / 86400))
@@ -68,7 +68,6 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups, expire):
      ('shadowWarning', ['7']),
      ('shadowExpire', [expire]),
      ('shadowLastChange', ['%d' % (time.time() / 86400)])
-
     ]
 
     if givenName:
@@ -83,11 +82,12 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups, expire):
     # Add the group
     dn = 'cn=%s,ou=Group,%s' % (username, b)
     add_record = [
-     ('objectclass', ['top', 'posixGroup']),
-     ('cn', [username]),
-     ('memberuid', [uidNumber]),
-     ('gidNumber', [uidNumber])
+        ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
+        ('cn', [username]),
+        ('member', ['uid=%s,ou=People,%s' % (username, b)]),
+        ('gidNumber', [uidNumber])
     ]
+
     conn.add_s(dn, add_record)
 
     if groups:
@@ -106,14 +106,15 @@ def user_delete(b, username):
         print error
 
     base_dn = 'ou=Group,%s' % b
-    filter = '(memberuid=%s)' % username
+    filter = '(member=uid=%s,ou=People,%s)' % (username, b)
     attrs = ['']
     groups = conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter, attrs)
     dns = [dn for dn, attrs in groups]
 
     try:
         for dn in dns:
-            mod_attrs = [(ldap.MOD_DELETE, 'memberuid', username)]
+            mod_attrs = [(ldap.MOD_DELETE, 'member',
+                          'uid=%s,ou=People,%s' % (username, b))]
             conn.modify_s(dn, mod_attrs)
     except Exception, e:
         print e
@@ -146,6 +147,7 @@ def user_modify(b, username, **kwargs):
     for key, value in kwargs.iteritems():
         if key == 'shell':
             key = 'loginShell'
+            value = value if value else load_param("users", "shell")
 
         elif key == 'expire':
             key = 'shadowExpire'
@@ -174,9 +176,7 @@ def user_show(b, username):
     filter = '(uid=%s)' % username
 
     for dn, attrs in conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter):
-        output = str(attrs).replace("'", "").replace("[", "").replace("]", "")
-        output = output.replace("{", "").replace("}", "").replace(",", "\n")
-        print output
+        pretty_print(attrs, ['objectClass'])
 
 
 def user_uidNumber(b, username):
@@ -217,9 +217,9 @@ def group_add(b, groupname):
 
     dn = 'cn=%s,ou=Group,%s' % (groupname, b)
     add_record = [
-     ('objectclass', ['top', 'posixGroup']),
-     ('cn', [groupname]),
-     ('gidNumber', [gidNumber])
+        ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
+        ('cn', [groupname]),
+        ('gidNumber', [gidNumber])
     ]
     conn.add_s(dn, add_record)
 
@@ -232,7 +232,8 @@ def group_addusers(b, groupname, username):
     for name in username:
         try:
             mod_attrs = []
-            mod_attrs.append((ldap.MOD_ADD, 'memberuid', name))
+            mod_attrs.append((ldap.MOD_ADD, 'member',
+                              'uid=%s,ou=People,%s' % (name, b)))
             conn.modify_s(dn, mod_attrs)
         except Exception, error:
             print "Error adding %s to %s: %s" % (name, groupname, error)
@@ -245,7 +246,8 @@ def group_delusers(b, groupname, username):
     mod_attrs = []
 
     for name in username:
-        mod_attrs.append((ldap.MOD_DELETE, 'memberuid', name))
+        mod_attrs.append((ldap.MOD_DELETE, 'member',
+                          'uid=%s,ou=People,%s' % (name, b)))
 
     conn.modify_s(dn, mod_attrs)
 
@@ -255,9 +257,25 @@ def group_show(b, groupname):
     filter = '(cn=%s)' % groupname
 
     for dn, attrs in conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter):
-        output = str(attrs).replace("'", "").replace("[", "").replace("]", "")
-        output = output.replace("{", "").replace("}", "").replace(",", "\n")
-        print output
+        pretty_print(attrs, ['objectClass'])
+
+
+def pretty_print(dictionary, exclude):
+    """Pretty print a dictionary into formatted json"""
+
+    output = {}
+
+    for key, value in dictionary.iteritems():
+
+        if key in exclude:
+            continue
+
+        if len(value) == 1:
+            value = value[0]
+
+        output[key] = value
+
+    print json.dumps(output, indent=4, sort_keys=True)
 
 
 @retry(stop_max_delay=10000)
@@ -295,8 +313,7 @@ def increment_gid(b):
 
         conn.modify_s(dn, mod_attrs)
     except Exception, e:
-        print e
-        raise
+        sys.exit(e)
 
     return gidNumber
 
@@ -307,17 +324,17 @@ def csep(s):
     try:
         return s.split(',')
     except:
-        raise argparse.ArgumentTypeError("Illegal groups value")
+        sys.exit("[Error] Groups list should be a comma separated list")
 
 
 parser = argparse.ArgumentParser(prog='obol',
                                  description='Manage Cluster Users.')
 
 # LDAP bind parameters
-parser.add_argument('-D', metavar="BIND DN", default='cn=Manager,dc=local')
-parser.add_argument('-w', metavar="BIND PASSWORD", required=True)
-parser.add_argument('-H', metavar="HOST", default='ldap://localhost')
-parser.add_argument('-b', metavar="BASE_DN", default='dc=local')
+parser.add_argument('--bind-dn', '-D', metavar="BIND DN")
+parser.add_argument('--bind-pass', '-w', metavar="BIND PASSWORD")
+parser.add_argument('--host', '-H', metavar="HOST")
+parser.add_argument('--base-dn', '-b', metavar="BASE_DN")
 
 # Obol command categories
 subparsers = parser.add_subparsers(help='commands', dest='target')
@@ -335,7 +352,7 @@ command.add_argument('--password')
 command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
-command.add_argument('--shell', default='/bin/bash')
+command.add_argument('--shell')
 command.add_argument('--groups', type=csep,
                      help='A comma separated list of group names')
 command.add_argument('--expire', metavar="DAYS",
@@ -357,7 +374,7 @@ command.add_argument('username')
 command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
-command.add_argument('--shell', default='/bin/bash')
+command.add_argument('--shell')
 command.add_argument('--expire', metavar="DAYS",
                      help=('Number of days after which the account expires. '
                            'Set to -1 to disable'))
@@ -387,36 +404,57 @@ command = group_commands.add_parser('list', help='List groups')
 
 
 if __name__ == '__main__':
-    args = parser.parse_args()
-    target = args.target
-    command = args.command
-    dn = args.D
-    password = args.w
-    host = args.H
-    conn = ldap.initialize(host)
-    conn.simple_bind_s(dn, password)
 
-    # Load defaults from /etc/obol/config.py
+    args = vars(parser.parse_args())
+
+    # Load defaults from /etc/obol.conf
+    # Command line parameters have higher priority
+
+    config = ConfigParser.ConfigParser()
+
+    if not config.read("/etc/obol.conf"):
+        sys.exit("[Error] Configuration file missing. Aborting!")
+
+    def load_param(group, param):
+        try:
+
+            if param in args and bool(args[param]):
+                return args[param]
+            else:
+                return config.get(group, param)
+
+        except Exception as e:
+            sys.exit(("[Error] %s.%s is not supplied "
+                      "and is not in the config file!" % (group, param)))
+
+    host = load_param("ldap", "host")
+    bind_dn = load_param("ldap", "bind_dn")
+    bind_pass = load_param("ldap", "bind_pass")
+    args["b"] = load_param("ldap", "base_dn")
+
+    # Establish an ldap connection
+
     try:
-        sys.path.append('/etc/obol/')
-        import config
-    except:
-        config = None
-        pass
+        conn = ldap.initialize(host)
+        conn.simple_bind_s(bind_dn, bind_pass)
+
+    except ldap.LDAPError as e:
+        sys.exit("[Error] %s" % e)
+
+    # Run command
 
     try:
-        ldapuser = sys.modules[__name__]
-        cmd = getattr(ldapuser, '%s_%s' % (target, command))
-        args_d = vars(args)
+        obol = sys.modules[__name__]
+        cmd = getattr(obol, '%s_%s' % (args["target"], args["command"]))
 
-        del args_d['target']
-        del args_d['command']
-        del args_d['D']
-        del args_d['w']
-        del args_d['H']
+        del args['target']
+        del args['command']
+        del args['base_dn']
+        del args['bind_dn']
+        del args['bind_pass']
+        del args['host']
 
-        cmd(**args_d)
+        cmd(**args)
 
-    except Exception, e:
-        print e
-        raise
+    except Exception as e:
+        sys.exit("[Error] %s" % e)
