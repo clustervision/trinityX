@@ -103,13 +103,16 @@ store_password "SLAPD_ROOT_PW" "$SLAPD_ROOT_PW"
 echo_info "Add obol to the system"
 
 cp "${POST_FILEDIR}"/obol /usr/local/bin
+cp "${POST_FILEDIR}"/obol.conf /etc/
 chmod +x /usr/local/bin/obol
+chmod 600 /etc/obol.conf
+
+sed -i "s,{{ rootPW }},$SLAPD_ROOT_PW," /etc/obol.conf
 
 if flag_is_set NFS_HOME_OPTS ; then
-    echo_info 'Move the user homes to the shared folder'
+    echo_info 'Update the user homes location'
 
-    mkdir -p /etc/obol
-    store_system_variable /etc/obol/config.py HOME "\"$TRIX_HOME\""
+    sed -i "s,# \(home =\),\1 $TRIX_HOME," /etc/obol.conf
 fi
 
 # --------------------------------------
