@@ -67,13 +67,15 @@ if flag_is_set FWD_NAT_PUBLIC ; then
     # https://bugzilla.redhat.com/show_bug.cgi?id=1326130
 
     # Enable NAT using iptables rules
-    firewall-cmd --direct --add-rule ipv4 filter FWDO_public_allow 0 -j ACCEPT
-    firewall-cmd --direct --add-rule ipv4 nat POST_public_allow 0 ! -o lo -j MASQUERADE
-    firewall-cmd --permanent --direct --add-rule ipv4 filter FWDO_public_allow 0 -j ACCEPT
-    firewall-cmd --permanent --direct --add-rule ipv4 nat POST_public_allow 0 ! -o lo -j MASQUERADE
+    # This hacky solution is to circumvent some firewalld weirdness specific to 0.3.9-14
+    # Fix the masquerading rule criteria: it should be '! -o lo' instead of '! -i lo'
 
-    # firewall-cmd --zone=public --add-masquerade
-    # firewall-cmd --permanent --zone=public --add-masquerade
+    if [[ "x$(rpm -qa | grep firewalld)" == "xfirewalld-0.3.9-14.el7.noarch" ]]; then
+        sed -ie '1266 {/-i/s/-i/-o/}' /usr/lib/python2.7/site-packages/firewall/core/fw_zone.py
+    fi
+
+    firewall-cmd --zone=public --add-masquerade
+    firewall-cmd --permanent --zone=public --add-masquerade
 fi
 
 
