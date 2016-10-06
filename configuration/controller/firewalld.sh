@@ -70,7 +70,7 @@ if flag_is_set FWD_NAT_PUBLIC ; then
     # This hacky solution is to circumvent some firewalld weirdness specific to 0.3.9-14
     # Fix the masquerading rule criteria: it should be '! -o lo' instead of '! -i lo'
 
-    if [[ "x$(rpm -qa | grep firewalld)" == "xfirewalld-0.3.9-14.el7.noarch" ]]; then
+    if [[ $(rpm -qa | grep firewalld-0.3.9) ]]; then
         sed -ie '1266 {/-i/s/-i/-o/}' /usr/lib/python2.7/site-packages/firewall/core/fw_zone.py
     fi
 
