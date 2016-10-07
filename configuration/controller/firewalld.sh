@@ -10,6 +10,19 @@ display_var FWD_{PUBLIC_IF,TRUSTED_IF,NAT_PUBLIC,HTTPS_PUBLIC}
 
 echo_info 'Starting firewalld'
 
+# CENTOS 7: the version of firewalld included in the distribution has a bug that
+# blocks localhost traffic when using NAT set up with firewall-cmd.
+# https://bugzilla.redhat.com/show_bug.cgi?id=904098
+# https://bugzilla.redhat.com/show_bug.cgi?id=1326130
+#
+# This hacky solution is to circumvent this issue specific to 0.3.9+ (fixed in 4.0)
+# Fix the masquerading rule criteria: it should be '! -o lo' instead of '! -i lo'
+
+if [[ $(rpm -qa | grep firewalld-0.3) ]]; then
+    FILE="/usr/lib/python2.7/site-packages/firewall/core/fw_zone.py"
+    sed -i 's#\(rules.append((ipv, \[ "%s_allow" % (target), "!", "-\)i\(", "lo",\)#\1o\2#' $FILE
+fi
+
 systemctl enable firewalld
 systemctl restart firewalld
 
@@ -60,19 +73,6 @@ fi
 
 if flag_is_set FWD_NAT_PUBLIC ; then
     echo_info "Enabling NAT on the public zone"
-
-    # CENTOS 7: the version of firewalld included in the distribution has a bug that
-    # blocks localhost traffic when using NAT set up with firewall-cmd.
-    # https://bugzilla.redhat.com/show_bug.cgi?id=904098
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1326130
-
-    # Enable NAT using iptables rules
-    # This hacky solution is to circumvent some firewalld weirdness specific to 0.3.9-14
-    # Fix the masquerading rule criteria: it should be '! -o lo' instead of '! -i lo'
-
-    if [[ $(rpm -qa | grep firewalld-0.3.9) ]]; then
-        sed -ie '1266 {/-i/s/-i/-o/}' /usr/lib/python2.7/site-packages/firewall/core/fw_zone.py
-    fi
 
     firewall-cmd --zone=public --add-masquerade
     firewall-cmd --permanent --zone=public --add-masquerade
