@@ -1,0 +1,80 @@
+#!/bin/bash
+# TODO cache outputs of the commands
+usage() {
+echo "
+Usage: $0 -c 
+             <daemon.primary|
+              daemon.backup|
+              nodes.memfree|
+              nodes.memtotal|
+              cpus.allocated|
+              cpus.idle|
+              cpus.other|
+              cpus.total|
+              nodes.allocated|
+              nodes.idle|
+              nodes.other|
+              nodes.total>
+"
+}
+while getopts "c:" o; do
+    case "${o}" in
+        c)
+            CHECK=${OPTARG}
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+if [ -z "${CHECK}" ]; then
+    usage
+    exit 1
+fi
+
+case "${CHECK}" in
+    daemon.primary)
+        STATUS=$(/usr/bin/sudo /usr/bin/scontrol ping | /usr/bin/awk '{print $NF}')
+        echo ${STATUS%%/*}
+        ;;
+    daemon.backup)
+        STATUS=$(/usr/bin/sudo /usr/bin/scontrol ping | /usr/bin/awk '{print $NF}')
+        echo ${STATUS##*/}
+        ;;
+    nodes.memfree)
+        /usr/bin/sudo /usr/bin/sinfo -o %e -h -N| /usr/bin/awk '{s+=$1}END{print s}'
+        ;;
+    nodes.memtotal)
+        /usr/bin/sudo /usr/bin/sinfo -o %m -h -N| /usr/bin/awk '{s+=$1}END{print s}'
+        ;;
+    cpus.allocated)
+        /usr/bin/sudo /usr/bin/sinfo -o %C -h | /usr/bin/awk -F \/ '{print $1}'
+        ;;
+    cpus.idle)
+        /usr/bin/sudo /usr/bin/sinfo -o %C -h | /usr/bin/awk -F \/ '{print $2}'
+        ;;
+    cpus.other)
+        /usr/bin/sudo /usr/bin/sinfo -o %C -h | /usr/bin/awk -F \/ '{print $3}'
+        ;;
+    cpus.total)
+        /usr/bin/sudo /usr/bin/sinfo -o %C -h | /usr/bin/awk -F \/ '{print $4}'
+        ;;
+    nodes.allocated)
+        /usr/bin/sudo /usr/bin/sinfo -o %F -h | /usr/bin/awk -F \/ '{print $1}'
+        ;;
+    nodes.idle)
+        /usr/bin/sudo /usr/bin/sinfo -o %F -h | /usr/bin/awk -F \/ '{print $2}'
+        ;;
+    nodes.other)
+        /usr/bin/sudo /usr/bin/sinfo -o %F -h | /usr/bin/awk -F \/ '{print $3}'
+        ;;
+    nodes.total)
+        /usr/bin/sudo /usr/bin/sinfo -o %F -h | /usr/bin/awk -F \/ '{print $4}'
+        ;;
+    *)
+        usage
+        exit 1
+    
+esac
+exit 0
