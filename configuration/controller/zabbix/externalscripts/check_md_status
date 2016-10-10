@@ -1,0 +1,10 @@
+#!/bin/bash
+STORAGE=$1
+SMCLI="/opt/dell/mdstoragesoftware/mdstoragemanager/client/SMcli"
+STATUS=$(sudo ${SMCLI} -n ${STORAGE} -c 'show storageArray healthStatus;' | awk '/Storage array health status/{sub("\\.", "", $NF); print $NF}')
+if [ "x${STATUS}" = "xoptimal" ] ;then
+    echo optimal
+    exit 0
+fi
+echo fail
+exit 1
