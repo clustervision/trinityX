@@ -1,0 +1,72 @@
+#!/usr/bin/python
+
+import argparse
+import json
+import subprocess
+
+__author__ = 'Aleksey Chudov <aleksey.chudov@gmail.com>'
+__date__ = '4 Jun 2016'
+__version__ = '1.0.3'
+
+
+class Pacemaker(object):
+
+    CRM_RESOURCE = '/usr/sbin/crm_resource'
+
+    @classmethod
+    def discovery(cls, args):
+        discovery = {'data': []}
+        try:
+            data = []
+            command = [cls.CRM_RESOURCE, '-l']
+            output = subprocess.check_output(command, stderr=subprocess.STDOUT)
+            for line in output.splitlines():
+                item = {'{#CRM_RESOURCE}': line}
+                data.append(item)
+            discovery['data'] = data
+        except Exception as e:
+            if args.debug:
+                raise e
+        return json.dumps(discovery, separators=(',', ':'))
+
+    @classmethod
+    def location(cls, args):
+        location = 'UNKNOWN'
+        try:
+            command = [cls.CRM_RESOURCE, '-r', args.crm_resource, '-W']
+            output = subprocess.check_output(command, stderr=subprocess.STDOUT)
+            location = output.splitlines()[0]
+        except Exception as e:
+            if args.debug:
+                raise e
+        return location
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true')
+
+    subparsers = parser.add_subparsers()
+
+    subparser_a = subparsers.add_parser('discovery')
+    subparser_a.set_defaults(func=Pacemaker.discovery)
+
+    subparser_b = subparsers.add_parser('location')
+    subparser_b.add_argument('crm_resource')
+    subparser_b.set_defaults(func=Pacemaker.location)
+
+    return parser.parse_known_args()[0]
+
+
+def main():
+    args = parse_args()
+    try:
+        print(args.func(args))
+    except Exception as e:
+        if args.debug:
+            raise e
+        print(e)
+
+
+if __name__ == '__main__':
+    main()
