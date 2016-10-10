@@ -67,6 +67,18 @@ function zabbix_server_config_init () {
   sed -i -e "/^DBPassword=/{h;s/=.*/="${ZABBIX_MYSQL_PASSWORD}"/};\${x;/^$/{s//DBPassword=${ZABBIX_MYSQL_PASSWORD}/;H};x}"   /etc/zabbix/zabbix_server.conf
   sed -i -e "/php_value date.timezone/c\        php_value date.timezone "${TIMEZONE}""                                       /etc/httpd/conf.d/zabbix.conf
 
+cat >> /etc/zabbix/zabbix_server.conf <<EOF
+StartPollers=20
+StartIPMIPollers=20
+StartPollersUnreachable=10
+StartPingers=10
+StartSNMPTrapper=1
+CacheSize=1024M
+HistoryCacheSize=1024M
+TrendCacheSize=1024M
+Timeout=30
+EOF
+
   printf '%b\n' "<?php" \
                 "// Zabbix GUI configuration file." \
                 "global \$DB\n;" \
@@ -82,6 +94,27 @@ function zabbix_server_config_init () {
                 "\$ZBX_SERVER_PORT = '10051';" \
                 "\$ZBX_SERVER_NAME = 'local cluster';\n" \
                 "\$IMAGE_FORMAT_DEFAULT = IMAGE_FORMAT_PNG;" > /etc/zabbix/web/zabbix.conf.php
+}
+
+function setup_snmp_trapd () {
+  cp -f ${POST_FILEDIR}/snmptrapd.conf /etc/snmp/snmptrapd.conf
+  cp -f ${POST_FILEDIR}/snmptt.conf /etc/snmp/snmptt.conf
+  cp -f ${POST_FILEDIR}/snmptt.ini /etc/snmp/snmptt.ini
+  echo 'OPTIONS="-Lsd -On "' >> /etc/sysconfig/snmptrapd
+  mkdir -p /var/log/snmptrap/
+  systemctl enable snmptrapd.service
+  systemctl start snmptrapd.service
+  # how to check:
+  # snmptrap -v 1 -c public localhost .1.3.6.1.6.3 "" 0 0 coldStart.0
+  # file /var/log/snmptrap/snmptrap.log should be created and filled with some data
+}
+
+function copy_zabbix_scripts () {
+  cp -f ${POST_FILEDIR}/zabbix_agentd.d/*   /etc/zabbix/zabbix_agentd.d/
+  cp -f ${POST_FILEDIR}/externalscripts/*   /usr/lib/zabbix/externalscripts/
+  mkdir -p /var/lib/zabbix/userparameters
+  cp -f ${POST_FILEDIR}/userparameters/*    /var/lib/zabbix/userparameters/
+  cp -f ${POST_FILEDIR}/sudoers-zabbix      /etc/sudoers.d/zabbix
 }
 
 function zabbix_server_services () {
