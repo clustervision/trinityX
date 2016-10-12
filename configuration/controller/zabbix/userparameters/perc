@@ -1,0 +1,140 @@
+#!/usr/bin/python
+
+import argparse
+import json
+import subprocess
+import os
+import sys
+
+__author__ = 'Dmitry Chirikov <dmitry.chirikov@clustervision.com>'
+__date__ = 'Oct 2016'
+__version__ = '1.0.0'
+
+
+class PERC(object):
+
+    EXECUTABLE = '/opt/dell/toolkit/bin/raidcfg'
+
+    if not os.path.exists(EXECUTABLE):
+        print "No executable found '%s'. Please install Dell's 'raidcfg' rpm" % EXECUTABLE
+        sys.exit(1)
+
+    @classmethod
+    def discovery_pdisks(cls, args):
+        controllers = []
+        proc = subprocess.Popen([cls.EXECUTABLE, 'controller'], stdout=subprocess.PIPE, close_fds=True)
+        if proc.returncode:
+             sys.exit(1)
+        for line in proc.communicate()[0].split('\n'):
+            tmp_arr = [s.strip() for s in line.split(': ') if s.strip()]
+            if tmp_arr and tmp_arr[0] == 'Controller_ID/Slot_ID':
+                controllers.append(tmp_arr[1])
+        data = []
+        for controller in controllers:
+            proc = subprocess.Popen([cls.EXECUTABLE, '-c=' + controller, 'pdisk'], stdout=subprocess.PIPE, close_fds=True) 
+            for line in proc.communicate()[0].split('\n'):
+                tmp_arr = [s.strip() for s in line.split(': ') if s.strip()]
+                if tmp_arr and tmp_arr[0] == 'Location':
+                    #pdisks[controller].append(tmp_arr[1])
+                    pdisk = {'{#C_PDISK}': controller + "_" + tmp_arr[1]}
+                    data.append(pdisk)
+        return json.dumps({'data': data}, separators=(',', ':'))
+
+    @classmethod
+    def getstate(cls, args, parm):
+        controller = args.pdisk.split('_')[0]
+        pdisk = args.pdisk.split('_')[1]
+        proc = subprocess.Popen([cls.EXECUTABLE, '-c=' + controller, '-pd=' + pdisk, 'adisk'], stdout=subprocess.PIPE, close_fds=True)
+        if proc.returncode:
+            sys.exit(1)
+        for line in proc.communicate()[0].split('\n'):
+            tmp_arr = [s.strip() for s in line.split(': ') if s.strip()]
+            if tmp_arr and tmp_arr[0] == parm:
+                return tmp_arr[1]
+
+    @classmethod
+    def powerstate(cls, args):
+        return cls.getstate(args, "PowerState")
+
+    @classmethod
+    def diskstate(cls, args):
+        return cls.getstate(args, "DiskState")
+
+    @classmethod
+    def smartstate(cls, args):
+        return cls.getstate(args, "SMARTState")
+
+    @classmethod
+    def mediatype(cls, args):
+        return cls.getstate(args, "Media")
+
+    @classmethod
+    def size(cls, args):
+        return cls.getstate(args, "Size")
+
+    @classmethod
+    def info(cls, args):
+        controller = args.pdisk.split('_')[0]
+        pdisk = args.pdisk.split('_')[1]
+        proc = subprocess.Popen([cls.EXECUTABLE, '-c=' + controller, '-pd=' + pdisk, 'adisk'], stdout=subprocess.PIPE, close_fds=True)
+        if proc.returncode:
+            sys.exit(1)
+        info = {}
+        keys = ['Vendor', 'Model', 'Protocol', 'NegSpeed', 'CapSpeed']
+        for line in proc.communicate()[0].split('\n'):
+            tmp_arr = [s.strip() for s in line.split(': ') if s.strip()]
+            if not tmp_arr:
+                continue
+            for key in keys:
+                if tmp_arr[0] == key:
+                    info[key] = tmp_arr[1]
+        return '|'.join([k + '=' + info[k] for k in info])
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true')
+
+    subparsers = parser.add_subparsers()
+
+    subparser_discovery = subparsers.add_parser('discovery')
+    subparser_discovery.set_defaults(func=PERC.discovery_pdisks)
+
+    subparser_powerstate = subparsers.add_parser('powerstate')
+    subparser_powerstate.set_defaults(func=PERC.powerstate)
+    subparser_powerstate.add_argument('pdisk')
+
+    subparser_diskstate = subparsers.add_parser('diskstate')
+    subparser_diskstate.set_defaults(func=PERC.diskstate)
+    subparser_diskstate.add_argument('pdisk')
+
+    subparser_smartstate = subparsers.add_parser('smartstate')
+    subparser_smartstate.set_defaults(func=PERC.smartstate)
+    subparser_smartstate.add_argument('pdisk')
+
+    subparser_size = subparsers.add_parser('size')
+    subparser_size.set_defaults(func=PERC.size)
+    subparser_size.add_argument('pdisk')
+
+    subparser_mediatype = subparsers.add_parser('mediatype')
+    subparser_mediatype.set_defaults(func=PERC.mediatype)
+    subparser_mediatype.add_argument('pdisk')
+
+    subparser_info = subparsers.add_parser('info')
+    subparser_info.set_defaults(func=PERC.info)
+    subparser_info.add_argument('pdisk')
+
+    return parser.parse_known_args()[0]
+
+def main():
+    args = parse_args()
+    try:
+        print(args.func(args)) 
+    except Exception as e:
+        if args.debug:
+            raise e
+        print(e)
+
+
+if __name__ == '__main__':
+    main()
