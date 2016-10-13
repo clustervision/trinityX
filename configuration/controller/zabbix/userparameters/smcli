@@ -1,0 +1,113 @@
+#!/usr/bin/python
+
+import argparse
+import json
+import subprocess
+import os
+import sys
+import tempfile
+import time
+
+__author__ = 'Dmitry Chirikov <dmitry.chirikov@clustervision.com>'
+__date__ = 'Oct 2016'
+__version__ = '1.0.0'
+
+
+class SMCLI(object):
+
+    EXECUTABLE = '/usr/bin/SMcli'
+    CACHEFILE = '/tmp/smcli.cache'
+    CACHE_TIME = 30 # seconds
+
+    CUR_TIME = int(time.time())
+
+    CMD = [EXECUTABLE, '-d', '-w', '-v']
+
+    if not os.path.exists(EXECUTABLE):
+        print "No executable found '%s'. Please install SMcli" % EXECUTABLE
+        sys.exit(1)
+
+    @classmethod
+    def execute_cmd(cls):
+        proc = subprocess.Popen(cls.CMD, stdout=subprocess.PIPE, close_fds=True)
+        if proc.returncode:
+            sys.exit(1)
+        return proc.communicate()[0].split('\n')[:]
+
+    @classmethod
+    def write_to_cache(cls):
+        """
+        Execute command and write output to cache-file
+        """
+        fdi, tmpfpath = tempfile.mkstemp(prefix = 'smcli.')
+        fd = os.fdopen(fdi, 'a')
+        ret = cls.execute_cmd()
+        fd.write(str(cls.CUR_TIME) + '\n')
+        fd.write('\n'.join(ret))
+        fd.close()
+        os.rename(tmpfpath, cls.CACHEFILE)
+        return ret
+
+    @classmethod
+    def get_data(cls):
+        '''
+        Cache output to cls.CACHEFILE in order to reduce load to SMcli and arrays
+        '''
+        if not os.path.exists(cls.CACHEFILE):
+            return cls.write_to_cache()
+        fd = open(cls.CACHEFILE, 'r')
+        time = fd.readline().strip()
+        if time and int(time) + cls.CACHE_TIME > cls.CUR_TIME:
+            ret = [l for l in fd.readlines()]
+            fd.close()
+            return ret
+        fd.close()
+        return cls.write_to_cache()
+
+    @classmethod
+    def discovery_arrays(cls, args):
+        data = []
+        arrays = []
+        for line in cls.get_data():
+            tmp_arr = [s.strip() for s in line.split('600a098') if s.strip()]
+            if tmp_arr and len(tmp_arr)>1:
+                arrays.append(tmp_arr[0])
+        for array in set(arrays):
+            array_rec = {'{#MD_ARRAY}': array}
+            data.append(array_rec)
+        return json.dumps({'data': data}, separators=(',', ':'))
+
+    @classmethod
+    def gethealth(cls, args):
+        for line in cls.get_data():
+            tmp_arr = [s.strip() for s in line.split('600a098') if s.strip()]
+            if tmp_arr and tmp_arr[0] == args.mdarray:
+                return [s.strip() for s in tmp_arr[1].split(' ') if s.strip()][-1]
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true')
+
+    subparsers = parser.add_subparsers()
+
+    subparser_discovery = subparsers.add_parser('discovery')
+    subparser_discovery.set_defaults(func=SMCLI.discovery_arrays)
+
+    subparser_health = subparsers.add_parser('health')
+    subparser_health.set_defaults(func=SMCLI.gethealth)
+    subparser_health.add_argument('mdarray')
+
+    return parser.parse_known_args()[0]
+
+def main():
+    args = parse_args()
+    try:
+        print(args.func(args)) 
+    except Exception as e:
+        if args.debug:
+            raise e
+        print(e)
+
+
+if __name__ == '__main__':
+    main()
