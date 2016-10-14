@@ -48,6 +48,10 @@ USER_NAME=$(id -u $1 -n)
 GROUP_ID=$(id -g)
 GROUP_NAME=$(id -gn)
 
+# Get list of nodes allocated to the job
+
+NODE_LIST=$(scontrol show hostname $SLURM_JOB_NODELIST | paste -d, -s)
+
 # Save the image's entrypoint
 # Docker inspect provides values in the format: {[/path/to/cmd --params]}
 
@@ -73,6 +77,8 @@ SET_ENV="if [[ ! -e /opt/mpi-drun ]]; then
             chown -R $USER_NAME. /home/$USER_NAME/.ssh;
 
             tar xpf - -C /home/$USER_NAME;
+
+            usermod -a -G \$(stat -c '%G' $DOCKER_WORKDIR) $USER_NAME;
 
             touch /opt/mpi-drun;
          else
@@ -103,6 +109,7 @@ tar cpf - -C ~/ .ssh | docker run -i \
                                   $IB_DEVICES \
                                   $DOCKER_IMAGE \
                                   -c "$SET_ENV"
+
 docker start job-$SLURM_JOBID &>/dev/null
 
 # Exit at this point if DOCKER_INIT is set
@@ -114,13 +121,22 @@ docker start job-$SLURM_JOBID &>/dev/null
 # This will skip the HPN
 
 touch /tmp/hpn
-su -c "DOCKER_IMAGE=$DOCKER_IMAGE DOCKER_SHARES=\"$DOCKER_SHARES\" DOCKER_INIT=1 srun --jobid $SLURM_JOBID /bin/bash -c '[[ -e /tmp/hpn ]] || mpi-drun'" - $USER_NAME
+
+su -c "DOCKER_WORKDIR=$DOCKER_WORKDIR \
+       DOCKER_IMAGE=$DOCKER_IMAGE \
+       DOCKER_SHARES=\"$DOCKER_SHARES\" \
+       DOCKER_INIT=1 \
+       srun --jobid $SLURM_JOBID /bin/bash -c '[[ -e /tmp/hpn ]] || mpi-drun'\
+      " - $USER_NAME
+
 rm -f /tmp/hpn
 
 # Run the mpi application
 # APPLICATION is supplied in the job script
 
-docker exec -i job-$SLURM_JOBID /bin/bash -lc "su -c \"mpirun --mca orte_base_help_aggregate 0 --host $(scontrol show hostname $SLURM_JOB_NODELIST | paste -d, -s) $APPLICATION\" - $USER_NAME"
+docker exec -i job-$SLURM_JOBID /bin/bash -lc "su -c \"cd $DOCKER_WORKDIR; 
+                                                       mpirun $MPI_OPTS --host $NODE_LIST $APPLICATION
+                                                     \" $USER_NAME"
 
 # When done, delete the container from all the allocated nodes
 
