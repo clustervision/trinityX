@@ -32,7 +32,7 @@ if [[ ! -z $DOCKER_SHARES ]]; then
     for SHARE in $(echo "$DOCKER_SHARES" | tr ';' ' '); do
         DIR=$(echo "$SHARE" | cut -d':' -f1);
 
-        [[ ! -d "$DIR" ]] && echo "[ERR] $DIR not found on host. Aborting" 1>&2 && exit 1;
+        [[ ! -e "$DIR" ]] && echo "[ERR] $DIR not found on host. Aborting" 1>&2 && exit 1;
 
         VOLUMES="$VOLUMES -v $SHARE";
     done
