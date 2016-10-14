@@ -53,7 +53,7 @@ sed -i "s,{{ serverID }},$SLAPD_SERVER_ID," $TMP_DIR/config.ldif
 
 echo_info "Setup slapd to accept TLS requests"
 
-cp -r "${POST_FILEDIR}"/conf/ssl /etc/openldap/certs/
+cp -r "${POST_FILEDIR}"/conf/ssl/* /etc/openldap/certs/
 chown -R ldap. /etc/openldap/certs
 chmod 600 /etc/openldap/certs/key
 
