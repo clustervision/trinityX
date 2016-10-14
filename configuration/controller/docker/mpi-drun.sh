@@ -16,6 +16,13 @@
 # details.
 ######################################################################
 
+# Pull docker image if exists on registry; fail otherwise
+# DOCKER_IMAGE is set in the job script
+
+if ! docker pull $DOCKER_IMAGE &>/dev/null; then
+    echo "[ERR] Could not find the image $DOCKER_IMAGE in the registry" 1>&2;
+    exit 1;
+fi
 
 # If DOCKER_SHARES is defined, check if every host dir exists.
 # Fail early otherwise.
@@ -25,19 +32,11 @@ if [[ ! -z $DOCKER_SHARES ]]; then
     for SHARE in $(echo "$DOCKER_SHARES" | tr ';' ' '); do
         DIR=$(echo "$SHARE" | cut -d':' -f1);
 
-        [[ ! -d "$DIR" ]] && echo "$DIR not found on host. Aborting" && exit 1;
+        [[ ! -d "$DIR" ]] && echo "[ERR] $DIR not found on host. Aborting" 1>&2 && exit 1;
 
         VOLUMES="$VOLUMES -v $SHARE";
     done
 
-fi
-
-# Pull docker image if exists on registry; fail otherwise
-# DOCKER_IMAGE is set in the job script
-
-if ! docker pull $DOCKER_IMAGE &>/dev/null; then
-    echo "Could not find the image $DOCKER_IMAGE in the registry";
-    exit 1;
 fi
 
 # Fetch user/group info (real uid is supplied by mpi-drun)
@@ -51,6 +50,34 @@ GROUP_NAME=$(id -gn)
 # Get list of nodes allocated to the job
 
 NODE_LIST=$(scontrol show hostname $SLURM_JOB_NODELIST | paste -d, -s)
+
+# Checks to be run on the HPN only
+# (if DOCKER_INIT is not set)
+
+if [[ -z $DOCKER_INIT ]]; then
+
+    # Check if user has passwordless access to the nodes
+
+    NODE=$(echo $NODE_LIST | cut -d',' -f2)
+
+    su -c "ssh -oNumberOfPasswordPrompts=0 $NODE echo" $USER_NAME &>/dev/null
+    if [[ $? != 0 ]]; then
+        echo "[ERR] User $USER_NAME does not have passwordless access to $NODE_LIST" 1>&2
+        exit 1
+    fi
+
+    # Check if WORKDIR is supplied
+    
+    [[ -z $DOCKER_WORKDIR ]] && \
+    echo "[WARN] No DOCKER_WORKDIR has been supplied." \
+    "This may cause issues if $APPLICATION looks for data in the same directory." 1>&2;
+
+    # Check if extra MPI parameters are supplied
+
+    [[ -z $MPI_OPTS ]] && \
+    echo "[WARN] No MPI parameters are supplied. mpirun will be invoked without any." 1>&2;
+    
+fi
 
 # Save the image's entrypoint
 # Docker inspect provides values in the format: {[/path/to/cmd --params]}
