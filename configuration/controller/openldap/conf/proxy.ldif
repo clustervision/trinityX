@@ -1,0 +1,31 @@
+# ldap proxy config# load required modules
+dn: cn=module{0},cn=config
+changetype: modify
+add: olcModuleLoad
+olcModuleLoad: back_ldap.la
+-
+add: olcModuleLoad
+olcModuleLoad: back_meta.la
+
+dn: olcDatabase={2}meta,cn=config
+changetype: add
+objectClass: olcDatabaseConfig
+objectClass: olcMetaConfig
+olcDatabase: meta
+olcSuffix: dc=cluster
+olcAddContentAcl: FALSE
+olcRootDN: cn=manager,dc=cluster
+olcRootPW: {{ rootPW }}
+
+dn: olcMetaSub={0}uri,olcDatabase={2}meta,cn=config
+changetype: add
+objectClass: olcMetaTargetConfig
+olcMetaSub: {0}uri
+olcDbURI: "ldapi:///dc=local,dc=cluster" ldap://localhost
+olcDbIDAssertAuthzFrom: dn:cn=manager,dc=local
+olcDbIDAssertBind: mode=self
+  flags=non-prescriptive
+  bindmethod=simple
+  binddn="cn=manager,dc=local"
+  credentials={{ rootPW }}
+olcDbRewrite: {0}suffixmassage "dc=local,dc=cluster" "dc=local"

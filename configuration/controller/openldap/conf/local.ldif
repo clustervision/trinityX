@@ -1,0 +1,39 @@
+# local database configuration
+dn: cn=module{0},cn=config
+changetype: add
+objectClass: olcModuleList
+cn: module{0}
+olcModuleLoad: back_hdb.la
+
+dn: olcDatabase={1}hdb,cn=config
+changetype: add
+objectClass: olcDatabaseConfig
+objectClass: olcHdbConfig
+olcDatabase: {1}hdb
+olcSuffix: dc=local
+olcAccess: to attrs=userPassword,givenName,sn 
+ by self write 
+ by anonymous auth 
+ by dn.base="cn=manager,dc=local" write 
+ by * none
+olcAccess: to * 
+ by self read 
+ by dn.base="cn=manager,dc=local" write 
+ by * read
+olcAccess: to * 
+ by dn.base="cn=manager,dc=local" read 
+ by * none
+olcRootDN: cn=Manager,dc=local
+olcRootPW: {{ rootPW }}
+olcMonitoring: TRUE
+olcDbDirectory: /var/lib/ldap
+olcDbCacheSize: 10000
+olcDbCheckpoint: 128 15
+olcDbIndex: default eq,sub
+olcDbIndex: cn eq,sub
+olcDbIndex: uid eq
+olcDbIndex: mail eq,sub
+olcDbIndex: givenName eq,sub
+olcDbIndex: sn eq,sub
+olcDbIndex: ou eq
+
