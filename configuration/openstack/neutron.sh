@@ -1,8 +1,32 @@
 #!/bin/bash
 
+######################################################################
+# Trinity X
+# Copyright (c) 2016  ClusterVision B.V.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License (included with the sources) for more
+# details.
+######################################################################
+
+
 display_var TRIX_CTRL_HOSTNAME NEUTRON_{EXT_NIC,TUN_IP,USE_OPENVSWITCH}
 
 function error {
+    openstack user delete neutron
+    openstack service delete neutron
+
+    for e in $(openstack endpoint list | grep network | cut -d '|' -f2); do
+        openstack endpoint delete $e;
+    done
+
     mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop neutron || true
     systemctl kill -s SIGKILL neutron-server.service || true
     systemctl kill -s SIGKILL neutron-dhcp-agent.service || true
@@ -141,23 +165,23 @@ systemctl enable neutron-dhcp-agent.service
 systemctl enable neutron-metadata-agent.service
 systemctl enable neutron-l3-agent.service
 
-systemctl start neutron-server.service
-systemctl start neutron-dhcp-agent.service
-systemctl start neutron-metadata-agent.service
-systemctl start neutron-l3-agent.service
+systemctl restart neutron-server.service
+systemctl restart neutron-dhcp-agent.service
+systemctl restart neutron-metadata-agent.service
+systemctl restart neutron-l3-agent.service
 
 if flag_is_set NEUTRON_USE_OPENVSWITCH; then
     systemctl enable openvswitch.service
-    systemctl start openvswitch.service
+    systemctl restart openvswitch.service
 
     ovs-vsctl --may-exist add-br br-ex
     ovs-vsctl add-port br-ex $NEUTRON_EXT_NIC
 
     systemctl enable neutron-openvswitch-agent.service
-    systemctl start neutron-openvswitch-agent.service
+    systemctl restart neutron-openvswitch-agent.service
 else
     systemctl enable neutron-linuxbridge-agent.service
-    systemctl start neutron-linuxbridge-agent.service
+    systemctl restart neutron-linuxbridge-agent.service
 fi
 
 # Setup initial provider network

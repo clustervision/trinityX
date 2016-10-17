@@ -1,5 +1,22 @@
 #!/bin/bash
 
+######################################################################
+# Trinity X
+# Copyright (c) 2016  ClusterVision B.V.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License (included with the sources) for more
+# details.
+######################################################################
+
+
 # Basic configuration of firewalld, without TUI
 
 display_var FWD_{PUBLIC_IF,TRUSTED_IF,NAT_PUBLIC,HTTPS_PUBLIC}
@@ -9,6 +26,19 @@ display_var FWD_{PUBLIC_IF,TRUSTED_IF,NAT_PUBLIC,HTTPS_PUBLIC}
 # fail later.
 
 echo_info 'Starting firewalld'
+
+# CENTOS 7: the version of firewalld included in the distribution has a bug that
+# blocks localhost traffic when using NAT set up with firewall-cmd.
+# https://bugzilla.redhat.com/show_bug.cgi?id=904098
+# https://bugzilla.redhat.com/show_bug.cgi?id=1326130
+#
+# This hacky solution is to circumvent this issue specific to 0.3.9+ (fixed in 4.0)
+# Fix the masquerading rule criteria: it should be '! -o lo' instead of '! -i lo'
+
+if [[ $(rpm -qa | grep firewalld-0.3) ]]; then
+    FILE="/usr/lib/python2.7/site-packages/firewall/core/fw_zone.py"
+    sed -i 's#\(rules.append((ipv, \[ "%s_allow" % (target), "!", "-\)i\(", "lo",\)#\1o\2#' $FILE
+fi
 
 systemctl enable firewalld
 systemctl restart firewalld
@@ -61,19 +91,8 @@ fi
 if flag_is_set FWD_NAT_PUBLIC ; then
     echo_info "Enabling NAT on the public zone"
 
-    # CENTOS 7: the version of firewalld included in the distribution has a bug that
-    # blocks localhost traffic when using NAT set up with firewall-cmd.
-    # https://bugzilla.redhat.com/show_bug.cgi?id=904098
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1326130
-
-    # Enable NAT using iptables rules
-    firewall-cmd --direct --add-rule ipv4 filter FWDO_public_allow 0 -j ACCEPT
-    firewall-cmd --direct --add-rule ipv4 nat POST_public_allow 0 ! -o lo -j MASQUERADE
-    firewall-cmd --permanent --direct --add-rule ipv4 filter FWDO_public_allow 0 -j ACCEPT
-    firewall-cmd --permanent --direct --add-rule ipv4 nat POST_public_allow 0 ! -o lo -j MASQUERADE
-
-    # firewall-cmd --zone=public --add-masquerade
-    # firewall-cmd --permanent --zone=public --add-masquerade
+    firewall-cmd --zone=public --add-masquerade
+    firewall-cmd --permanent --zone=public --add-masquerade
 fi
 
 

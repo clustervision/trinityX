@@ -1,4 +1,22 @@
 #!/bin/bash
+
+######################################################################
+# Trinity X
+# Copyright (c) 2016  ClusterVision B.V.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License (included with the sources) for more
+# details.
+######################################################################
+
+
 set -e
 
 function replace_template {
@@ -60,9 +78,9 @@ echo_info "Add custom NFS agent."
 
 echo_info "Start pcsd"
 
-systemctl start pcsd.service
+systemctl restart pcsd.service
 systemctl enable pcsd.service
-/usr/bin/ssh ${PACEMAKER_SLAVE_HOST} "systemctl start pcsd.service"
+/usr/bin/ssh ${PACEMAKER_SLAVE_HOST} "systemctl restart pcsd.service"
 /usr/bin/ssh ${PACEMAKER_SLAVE_HOST} "systemctl enable pcsd.service"
 
 echo_info "Setup hacluster password."

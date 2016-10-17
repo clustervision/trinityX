@@ -1,8 +1,33 @@
 #!/bin/bash
 
+######################################################################
+# Trinity X
+# Copyright (c) 2016  ClusterVision B.V.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License (included with the sources) for more
+# details.
+######################################################################
+
+
 display_var TRIX_CTRL_{HOSTNAME,IP}
 
 function error {
+    openstack user delete cinder
+    openstack service delete cinder
+    openstack service delete cinderv2
+
+    for e in $(openstack endpoint list | grep 'volume\|volumev2' | cut -d '|' -f2); do
+        openstack endpoint delete $e;
+    done
+
     mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop cinder || true
     systemctl kill -s SIGKILL openstack-cinder-api.service || true
     systemctl kill -s SIGKILL openstack-cinder-scheduler.service || true
@@ -71,9 +96,9 @@ systemctl enable openstack-cinder-api.service
 systemctl enable openstack-cinder-scheduler.service
 systemctl enable target.service
 
-systemctl start openstack-cinder-api.service
-systemctl start openstack-cinder-scheduler.service
-systemctl start target.service
+systemctl restart openstack-cinder-api.service
+systemctl restart openstack-cinder-scheduler.service
+systemctl restart target.service
 
 echo_info "Saving passwords"
 store_password CINDER_DB_PW $CINDER_DB_PW
