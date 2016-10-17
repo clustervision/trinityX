@@ -132,7 +132,7 @@ do_sql_req "UNLOCK TABLES;"
 
 echo_info "Start remote MariaDB server"
 
-/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/systemctl start mariadb
+/usr/bin/ssh ${MARIADB_REP_SLAVE_HOST} /usr/bin/systemctl restart mariadb
 
 echo_info "Restore dump on slave."
 

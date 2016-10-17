@@ -67,7 +67,7 @@ fi
 
 echo_info "Start munge."
 
-systemctl start munge
+systemctl restart munge
 systemctl enable munge
 
 
@@ -138,7 +138,7 @@ EOF
 
 fi
 
-systemctl start slurmdbd
+systemctl restart slurmdbd
 systemctl enable slurmdbd
 
 
@@ -158,5 +158,5 @@ EOF
 fi 
 
 
-systemctl start slurm
+systemctl restart slurm
 systemctl enable slurm

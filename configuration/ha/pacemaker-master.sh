@@ -78,9 +78,9 @@ echo_info "Add custom NFS agent."
 
 echo_info "Start pcsd"
 
-systemctl start pcsd.service
+systemctl restart pcsd.service
 systemctl enable pcsd.service
-/usr/bin/ssh ${PACEMAKER_SLAVE_HOST} "systemctl start pcsd.service"
+/usr/bin/ssh ${PACEMAKER_SLAVE_HOST} "systemctl restart pcsd.service"
 /usr/bin/ssh ${PACEMAKER_SLAVE_HOST} "systemctl enable pcsd.service"
 
 echo_info "Setup hacluster password."

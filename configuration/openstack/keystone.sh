@@ -64,8 +64,8 @@ cp -v ${POST_FILEDIR}/wsgi-keystone.conf /etc/httpd/conf.d/wsgi-keystone.conf
 systemctl enable memcached.service
 systemctl enable httpd.service
 
-systemctl start memcached.service
-systemctl start httpd.service
+systemctl restart memcached.service
+systemctl restart httpd.service
 
 # Create service, endpoints, users and roles
 echo_info "Creating keystone service, endpoints, users and roles"

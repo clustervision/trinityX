@@ -125,7 +125,7 @@ fi
 
 echo_info "Start mongo."
 
-systemctl start mongod
+systemctl restart mongod
 systemctl enable mongod
 
 echo_info "Configure mongo auth."
@@ -181,5 +181,5 @@ echo_info "Start services."
 
 for service in  xinetd nginx dhcpd lweb ltorrent; do
     systemctl enable $service
-    systemctl start $service
+    systemctl restart $service
 done

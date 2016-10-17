@@ -96,9 +96,9 @@ systemctl enable openstack-cinder-api.service
 systemctl enable openstack-cinder-scheduler.service
 systemctl enable target.service
 
-systemctl start openstack-cinder-api.service
-systemctl start openstack-cinder-scheduler.service
-systemctl start target.service
+systemctl restart openstack-cinder-api.service
+systemctl restart openstack-cinder-scheduler.service
+systemctl restart target.service
 
 echo_info "Saving passwords"
 store_password CINDER_DB_PW $CINDER_DB_PW
