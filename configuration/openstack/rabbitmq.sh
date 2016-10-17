@@ -30,7 +30,7 @@ OS_RMQ_PW="$(get_password "$OS_RMQ_PW")"
 
 echo_info "Starting rabbitmq-server"
 systemctl enable rabbitmq-server.service
-systemctl start rabbitmq-server.service
+systemctl restart rabbitmq-server.service
 
 echo_info "Setting up a rabbitmq user for openstack"
 rabbitmqctl -n rabbit@${TRIX_CTRL_HOSTNAME} add_user openstack $OS_RMQ_PW

@@ -95,8 +95,8 @@ echo_info "Starting glance services"
 systemctl enable openstack-glance-api.service
 systemctl enable openstack-glance-registry.service
 
-systemctl start openstack-glance-api.service
-systemctl start openstack-glance-registry.service
+systemctl restart openstack-glance-api.service
+systemctl restart openstack-glance-registry.service
 
 echo_info "Saving passwords"
 store_password GLANCE_PW $GLANCE_PW

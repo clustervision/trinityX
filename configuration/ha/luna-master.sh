@@ -98,8 +98,8 @@ wait_master
 
 echo_info "Start luna services."
 
-/usr/bin/systemctl start ltorrent
-/usr/bin/systemctl start lweb
+/usr/bin/systemctl restart ltorrent
+/usr/bin/systemctl restart lweb
 
 
 echo_info "Configure slave node."
@@ -166,7 +166,7 @@ echo_info "Setup MongoDB arbiter."
 /usr/bin/chown mongodb:root /var/lib/mongodb-arbiter
 /usr/bin/chmod 750 /var/lib/mongodb-arbiter
 
-/usr/bin/systemctl start mongod-arbiter
+/usr/bin/systemctl restart mongod-arbiter
 
 
 echo_info "Configure firewalld."
@@ -229,8 +229,8 @@ echo_info "Configure luna to support cluster configuration."
 
 echo_info "Create named configs."
 
-/usr/bin/systemctl start named
-/usr/bin/ssh ${MONGODB_SLAVE_HOST} /usr/bin/systemctl start named
+/usr/bin/systemctl restart named
+/usr/bin/ssh ${MONGODB_SLAVE_HOST} /usr/bin/systemctl restart named
 /usr/sbin/luna cluster makedns
 
 

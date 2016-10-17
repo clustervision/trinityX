@@ -165,23 +165,23 @@ systemctl enable neutron-dhcp-agent.service
 systemctl enable neutron-metadata-agent.service
 systemctl enable neutron-l3-agent.service
 
-systemctl start neutron-server.service
-systemctl start neutron-dhcp-agent.service
-systemctl start neutron-metadata-agent.service
-systemctl start neutron-l3-agent.service
+systemctl restart neutron-server.service
+systemctl restart neutron-dhcp-agent.service
+systemctl restart neutron-metadata-agent.service
+systemctl restart neutron-l3-agent.service
 
 if flag_is_set NEUTRON_USE_OPENVSWITCH; then
     systemctl enable openvswitch.service
-    systemctl start openvswitch.service
+    systemctl restart openvswitch.service
 
     ovs-vsctl --may-exist add-br br-ex
     ovs-vsctl add-port br-ex $NEUTRON_EXT_NIC
 
     systemctl enable neutron-openvswitch-agent.service
-    systemctl start neutron-openvswitch-agent.service
+    systemctl restart neutron-openvswitch-agent.service
 else
     systemctl enable neutron-linuxbridge-agent.service
-    systemctl start neutron-linuxbridge-agent.service
+    systemctl restart neutron-linuxbridge-agent.service
 fi
 
 # Setup initial provider network

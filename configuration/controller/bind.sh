@@ -75,5 +75,5 @@ fi
 
 echo_info 'Enabling and starting the named service'
 systemctl enable named
-systemctl start named
+systemctl restart named
 

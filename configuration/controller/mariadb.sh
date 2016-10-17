@@ -21,7 +21,7 @@ set -e
 
 echo_info "Starting MariaDB server."
 
-systemctl start mariadb
+systemctl restart mariadb
 
 function do_sql_req {
     echo $@ | /usr/bin/mysql

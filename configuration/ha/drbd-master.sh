@@ -83,10 +83,10 @@ echo_info "Create device."
 
 echo_info "Start services."
 
-systemctl start drbd
+systemctl restart drbd
 systemctl enable drbd
 
-/usr/bin/ssh ${DRBD_PARTNER_IP} "systemctl start drbd; systemctl enable drbd"
+/usr/bin/ssh ${DRBD_PARTNER_IP} "systemctl restart drbd; systemctl enable drbd"
 
 #while [ "x$(/usr/sbin/drbdadm dstate trinity_disk)" != "xUpToDate/UpToDate" ]; do
 #    echo_info "Waiting for UpToDate/UpToDate"

@@ -87,7 +87,7 @@ fi
 
 echo_info "Start mongo."
 
-systemctl start mongod
+systemctl restart mongod
 systemctl enable mongod
 
 echo_info "Copy systemd unit files."
@@ -102,5 +102,5 @@ systemctl daemon-reload
 
 for service in  xinetd nginx; do
     systemctl enable $service
-    systemctl start $service
+    systemctl restart $service
 done

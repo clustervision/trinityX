@@ -106,11 +106,11 @@ systemctl enable openstack-nova-scheduler.service
 systemctl enable openstack-nova-conductor.service
 systemctl enable openstack-nova-novncproxy.service
 
-systemctl start openstack-nova-api.service
-systemctl start openstack-nova-consoleauth.service
-systemctl start openstack-nova-scheduler.service
-systemctl start openstack-nova-conductor.service
-systemctl start openstack-nova-novncproxy.service
+systemctl restart openstack-nova-api.service
+systemctl restart openstack-nova-consoleauth.service
+systemctl restart openstack-nova-scheduler.service
+systemctl restart openstack-nova-conductor.service
+systemctl restart openstack-nova-novncproxy.service
 
 echo_info "Saving passwords"
 store_password NOVA_DB_PW $NOVA_DB_PW
