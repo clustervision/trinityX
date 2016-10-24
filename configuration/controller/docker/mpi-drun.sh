@@ -93,17 +93,17 @@ SET_ENV="if [[ ! -e /opt/mpi-drun ]]; then
             groupadd -g $GROUP_ID $GROUP_NAME;
             useradd -u $USER_ID -g $GROUP_NAME -d /home/$USER_NAME -m -s /bin/bash $USER_NAME;
 
-            mkdir /home/$USER_NAME/.ssh/;
+            tar xpf - -C /home/$USER_NAME;
+
+            mkdir -p /home/$USER_NAME/.ssh/;
             chmod 700 /home/$USER_NAME/.ssh/;
 
-            echo 'Host *' > /home/$USER_NAME/.ssh/config;
+            echo 'Host *' >> /home/$USER_NAME/.ssh/config;
             echo '    StrictHostKeyChecking no' >> /home/$USER_NAME/.ssh/config;
             echo '    Port 2222' >> /home/$USER_NAME/.ssh/config;
 
             chmod 600 /home/$USER_NAME/.ssh/config;
             chown -R $USER_NAME. /home/$USER_NAME/.ssh;
-
-            tar xpf - -C /home/$USER_NAME;
 
             usermod -a -G \$(stat -c '%G' $DOCKER_WORKDIR) $USER_NAME;
 
