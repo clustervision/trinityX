@@ -124,6 +124,10 @@ if [[ -e /dev/ipath ]]; then
     IB_DEVICES=${IB_DEVICES}$(find /dev/ipath -printf " --device=%p")
 fi
 
+for DEV in $(ls /dev/hfi* 2>/dev/null); do
+    IB_DEVICES="${IB_DEVICES} --device=$DEV";
+done
+
 # Create and initialize a new container using image DOCKER_IMAGE
 # The container will need to run an ssh daemon on port 2222
 
