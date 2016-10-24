@@ -132,6 +132,7 @@ done
 # The container will need to run an ssh daemon on port 2222
 
 tar cpf - -C ~/ .ssh | docker run -i \
+                                  --ulimit memlock=819200000:819200000 \
                                   --name job-$SLURM_JOBID \
                                   -p 2222:2222 \
                                   --net host \
