@@ -23,6 +23,11 @@ echo_info "Configuring docker to use the controller's insecure registry"
 
 append_line /etc/sysconfig/docker "INSECURE_REGISTRY=\"--insecure-registry ${TRIX_CTRL_HOSTNAME}:5000\""
 
+if flag_is_set POST_CHROOT; then
+    echo_info "Disabling the default creation of the docker0 bridge on compute nodes"
+    append_line /etc/sysconfig/docker-network "DOCKER_NETWORK_OPTIONS=\"--bridge=none\""
+fi
+
 echo_info 'Enabling and starting docker daemeon'
 
 flag_is_unset POST_CHROOT && systemctl restart docker
