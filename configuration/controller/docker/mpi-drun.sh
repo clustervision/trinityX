@@ -24,8 +24,17 @@ if ! docker pull $DOCKER_IMAGE &>/dev/null; then
     exit 1;
 fi
 
+# Fetch user/group info (real uid is supplied by mpi-drun)
+# since this script is run as root by mpi-drun (setuid)
+
+USER_ID=$1
+USER_NAME=$(id -u $1 -n)
+GROUP_ID=$(id -g)
+GROUP_NAME=$(id -gn)
+
 # If DOCKER_SHARES is defined, check if every host dir exists.
 # Fail early otherwise.
+# ~/.ssh is excluded in case a user mounts their home dir
 
 if [[ ! -z $DOCKER_SHARES ]]; then
 
@@ -34,18 +43,14 @@ if [[ ! -z $DOCKER_SHARES ]]; then
 
         [[ ! -e "$DIR" ]] && echo "[ERR] $DIR not found on host. Aborting" 1>&2 && exit 1;
 
-        VOLUMES="$VOLUMES -v $SHARE";
+        if [[ "x$DIR" == "x$HOME" ]]; then
+            VOLUMES="$VOLUMES -v $SHARE -v /home/$USER_NAME/.ssh/";
+        else
+            VOLUMES="$VOLUMES -v $SHARE";
+        fi
     done
 
 fi
-
-# Fetch user/group info (real uid is supplied by mpi-drun)
-# since this script is run as root by mpi-drun (setuid)
-
-USER_ID=$1
-USER_NAME=$(id -u $1 -n)
-GROUP_ID=$(id -g)
-GROUP_NAME=$(id -gn)
 
 # Get list of nodes allocated to the job
 
@@ -91,21 +96,19 @@ SET_ENV="if [[ ! -e /opt/mpi-drun ]]; then
             ssh-keygen -A &>/dev/null;
 
             groupadd -g $GROUP_ID $GROUP_NAME;
-            useradd -u $USER_ID -g $GROUP_NAME -d /home/$USER_NAME -m -s /bin/bash $USER_NAME;
-
-            tar xpf - -C /home/$USER_NAME;
+            useradd -u $USER_ID -g $GROUP_NAME -d /home/$USER_NAME -m -s /bin/bash $USER_NAME 2>/dev/null;
+            usermod -a -G \$(stat -c '%G' $DOCKER_WORKDIR) $USER_NAME;
 
             mkdir -p /home/$USER_NAME/.ssh/;
-            chmod 700 /home/$USER_NAME/.ssh/;
+            tar xpf - -C /home/$USER_NAME;
 
-            echo 'Host *' >> /home/$USER_NAME/.ssh/config;
+            echo 'Host *' > /home/$USER_NAME/.ssh/config;
             echo '    StrictHostKeyChecking no' >> /home/$USER_NAME/.ssh/config;
             echo '    Port 2222' >> /home/$USER_NAME/.ssh/config;
 
+            chmod 700 /home/$USER_NAME/.ssh/;
             chmod 600 /home/$USER_NAME/.ssh/config;
             chown -R $USER_NAME. /home/$USER_NAME/.ssh;
-
-            usermod -a -G \$(stat -c '%G' $DOCKER_WORKDIR) $USER_NAME;
 
             touch /opt/mpi-drun;
          else
