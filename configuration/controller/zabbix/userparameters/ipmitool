@@ -103,7 +103,7 @@ class IPMITOOL(object):
             if len(tmp_arr) < 3:
                 continue
             if tmp_arr[2] in ( "RPM", "degrees C", "Watts"):
-                data.append({'{#SENSOR_NAME}':tmp_arr[0].replace(" ","_")})
+                data.append({'{#SENSOR_NAME}':tmp_arr[0].replace(" ","___")})
         return json.dumps({'data': data}, separators=(',', ':'))
 
     @classmethod
@@ -111,7 +111,7 @@ class IPMITOOL(object):
         sensor = args.sensor
         for line in cls.get_data()[0]:
             tmp_arr = [s.strip() for s in line.split('| ') if s.strip()]
-            if tmp_arr[0].strip(" ") == sensor.replace("_"," "):
+            if tmp_arr[0].strip(" ") == sensor.replace("___"," "):
                 return tmp_arr[parm]
         return "NA"
 
