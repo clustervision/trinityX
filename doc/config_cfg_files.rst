@@ -5,7 +5,7 @@
 Configuration files
 ===================
 
-At the highest level, a Trinity X installation is defined in one (or more) configuration file(s). Those are valid shell files, that are sourced by the configuration tool to obtain the list of post scripts to run, as well as the configuration options for those post scripts. By tradition those files have the ``.cfg`` extension, but there is no hard rule over their naming.
+At the highest level, a TrinityX installation is defined in one (or more) configuration file(s). Those are valid shell files, that are sourced by the configuration tool to obtain the list of post scripts to run, as well as the configuration options for those post scripts. By tradition those files have the ``.cfg`` extension, but there is no hard rule over their naming.
 
 
 

@@ -18,7 +18,7 @@ To be able to run the dockerized MPI job you need first to provide it to the clu
 Building on the controller
 ``````````````````````````
 
-A trinityX controller comes pre-installed with docker and docker-registry (assuming that the docker option was selected at install time).
+A TrinityX controller comes pre-installed with docker and docker-registry (assuming that the docker option was selected at install time).
 This makes it possible for an administrator to create a docker image that can subsequently be run on the cluster.
 
 It is worth repeating here, in other words, that regular users cannot issue docker commands and that it is up to the admins to do so.
@@ -49,7 +49,7 @@ With that cleared-up, let's build a docker image that we can then use to run an 
     ENTRYPOINT ["/usr/sbin/sshd", "-p", "2222", "-D"]
 
 
-As you can see, this Dockerfile satisfies the trinityX requirements as it sets up openssh-server correctly.
+As you can see, this Dockerfile satisfies the TrinityX requirements as it sets up openssh-server correctly.
 It also installs all the dependencies required to run the OSU benchmarks.
 
 3. We then can build our image using `docker build`::
@@ -66,7 +66,7 @@ Make sure to replace <controller-hostname> with the correct hostname.
 Using a remote docker registry
 ``````````````````````````````
 
-If you prefer to build your images elsewhere and store them on a docker registry other than the one provided by trinityX then you need to update your compute images.
+If you prefer to build your images elsewhere and store them on a docker registry other than the one provided by TrinityX then you need to update your compute images.
  
 Since compute nodes will need to query a remote docker registry for docker images, this one needs to be decalred in `/etc/sysconfig/docker` in your compute images.
 

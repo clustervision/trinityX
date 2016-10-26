@@ -6,9 +6,9 @@ Hints and tips for a Luna installation
 Setting up a compute node image
 -------------------------------
 
-.. note:: This chapter assumes that you are familiar with the Trinity X configuration tool and the configuration files that it uses. If not, please refer to the general `Documentation`_ first.
+.. note:: This chapter assumes that you are familiar with the TrinityX configuration tool and the configuration files that it uses. If not, please refer to the general `Documentation`_ first.
 
-Trinity X includes configuration files to create automatically a basic compute node images. When receiving a new cluster this task will have been done already by our engineers and the image will be integrated in your provisioning system, in that case Luna.
+TrinityX includes configuration files to create automatically a basic compute node images. When receiving a new cluster this task will have been done already by our engineers and the image will be integrated in your provisioning system, in that case Luna.
 
 
 Cloning an existing image
@@ -38,7 +38,7 @@ The easiest way to get a new image for modifications is to clone an existing one
 Creating a new image
 ~~~~~~~~~~~~~~~~~~~~
 
-In some other cases you may prefer to start from a fresh image. In that case use the Trinity X configuration tool and the provided configuration files::
+In some other cases you may prefer to start from a fresh image. In that case use the TrinityX configuration tool and the provided configuration files::
 
     # ./configure.sh images-create-compute.cfg
 
@@ -184,7 +184,7 @@ Some comments:
 
 - The ``partscript`` runs before the installation. The newly created root partition must be mounted in ``/sysroot``, and anything else mounted under that.
 
-- The ``postscript`` does the post-installation setup, including installing the boot loader and setting up ``/etc/fstab``. If you need to mount network filesystems that are not part of the default node image, this may be the place to do it. (The Trinity X standard NFS mounts are configured during image creation -- check ``etc/fstab`` in your image directory.)
+- The ``postscript`` does the post-installation setup, including installing the boot loader and setting up ``/etc/fstab``. If you need to mount network filesystems that are not part of the default node image, this may be the place to do it. (The TrinityX standard NFS mounts are configured during image creation -- check ``etc/fstab`` in your image directory.)
 
 - The bind mounts and unmounts in the ``postscript`` are required by the GRUB2 installer, to detect the hardware and partition table. Keep those in.
 
@@ -242,7 +242,7 @@ Regardless of the booting mode, we need to configure networking. This will inclu
 
 Luna offers other possibilities, those are only the three essential ones.
 
-A network called ``cluster`` is automatically created when Trinity X is configured. On a production-ready system you will find others, but for those examples we'll assume that it is the only one available.
+A network called ``cluster`` is automatically created when TrinityX is configured. On a production-ready system you will find others, but for those examples we'll assume that it is the only one available.
 
 The IP subnet and DHCP ranges are defined as part of the network. An interface inherits the configuration of the network it's connected to::
 
@@ -339,7 +339,7 @@ Setting up a login node image
 
 In most HPC clusters the configuration of a login node is very similar to that of a compute node. They authenticate their users the same way, they access the same remote filesystems, they rely on the same services provided by the controllers, and they are monitored through the same infrastructure. For that reason, the easiest way to build a login node is to start from a compute node image. Then we can deploy the node with the same provisioning tool, in that case Luna.
 
-You could start by cloning a compute node image and modifying it by hand, but there's an simpler way: Trinity X includes configuration files to do that for you::
+You could start by cloning a compute node image and modifying it by hand, but there's an simpler way: TrinityX includes configuration files to do that for you::
 
     # ./configure.sh images-create-login.cfg
 
@@ -508,9 +508,9 @@ And that's it! We now have a login node ready for use.
 Generating pdsh groups from Luna groups
 ---------------------------------------
 
-`pdsh <https://github.com/grondo/pdsh>`_ is a popular parallel shell tool, allowing to run the same command or set of commands on multiple machines at the same time. It is installed by default on Trinity X systems, and the sysadmins may chose to use it over other alternatives.
+`pdsh <https://github.com/grondo/pdsh>`_ is a popular parallel shell tool, allowing to run the same command or set of commands on multiple machines at the same time. It is installed by default on TrinityX systems, and the sysadmins may chose to use it over other alternatives.
 
-As of Trinity X release 1 there is no integration of Luna with ``pdsh``, and the configuration files required by ``pdsh`` have to be created by the sysadmins. Although it's possible to write a script around the output of ``luna node list``, the Trinity X source tree comes with a pre-written tool: ``scripts/luna2pdsh.sh``.
+As of TrinityX release 1 there is no integration of Luna with ``pdsh``, and the configuration files required by ``pdsh`` have to be created by the sysadmins. Although it's possible to write a script around the output of ``luna node list``, the TrinityX source tree comes with a pre-written tool: ``scripts/luna2pdsh.sh``.
 
 A typical output would be similar to this::
 

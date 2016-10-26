@@ -2,10 +2,10 @@
 .. vim: tw=0
 
 
-Trinity X configuration tool
+TrinityX configuration tool
 ============================
 
-The Trinity X configuration tool is used for the basic configuration of the controllers, as well as the creation and configuration of the node images.
+The TrinityX configuration tool is used for the basic configuration of the controllers, as well as the creation and configuration of the node images.
 
 The core idea behind that tool is to have a modular post-installation configuration system, so that various packages and configuration steps are optional and can be turned on and off depending on the required configuration. To that effect, the configuration tool runs a set of post-installation scripts and installs the packages required by those scripts. And that's about it.
 

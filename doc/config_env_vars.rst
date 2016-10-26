@@ -26,7 +26,7 @@ The configuration tool defines only a few dynamic variables:
 
 - ``POST_TOPDIR``
     
-    The top directory of the Trinity X installation scripts.
+    The top directory of the TrinityX installation scripts.
     
     The TOPDIR is used to access data that is not part of the configurationt tool's tree, or is too big to be stored there. For example, the repositories managed by the ``local-repos`` post script, which are optional and created outside of the configurationt tool itself, reside in ``${POST_TOPDIR}/packages``. The configuration tool itself lives in a subdirectory of the ``POST_TOPDIR``: ``${POST_TOPDIR}/configuration``.
 

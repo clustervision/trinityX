@@ -1,16 +1,16 @@
 
-Trinity X documentation
+TrinityX documentation
 =======================
 
 
 Installation documentation
 --------------------------
 
-- `Trinity X pre-installation requirements`_
+- `TrinityX pre-installation requirements`_
 
-- `Trinity X installation procedure`_
+- `TrinityX installation procedure`_
 
-- `Trinity X OpenStack installation procedure`_
+- `TrinityX OpenStack installation procedure`_
 
 
 Configuration tool documentation
@@ -36,7 +36,7 @@ Developer documentation
 Hints and tips
 --------------
 
-- `Hints and tips for a Trinity X installation`_
+- `Hints and tips for a TrinityX installation`_
 
 - `Hints and tips for a Luna installation`_
 
@@ -49,15 +49,15 @@ Docker documentation
 
 .. Relative file links
 
-.. _Trinity X pre-installation requirements: requirements.rst
-.. _Trinity X installation procedure: installation.rst
-.. _Trinity X OpenStack installation procedure: installation_openstack.rst
+.. _TrinityX pre-installation requirements: requirements.rst
+.. _TrinityX installation procedure: installation.rst
+.. _TrinityX OpenStack installation procedure: installation_openstack.rst
 .. _Configuration tool usage: config_tool.rst
 .. _Configuration files: config_cfg_files.rst
 .. _Post scripts: config_post_scripts.rst
 .. _Environment variables: config_env_vars.rst
 .. _Common functions: config_common_funcs.rst
-.. _Hints and tips for a Trinity X installation: hintsntips_trix.rst
+.. _Hints and tips for a TrinityX installation: hintsntips_trix.rst
 .. _Hints and tips for a Luna installation: hintsntips_luna.rst
 .. _Running dockerized MPI jobs: running_docker_jobs.rst
 

@@ -1,21 +1,21 @@
 
 .. vim: si:et:ts=4:sw=4:tw=80
 
-:Name:          trinityX local repository
+:Name:          TrinityX local repository
 :Post script:   local-repo.sh
 :Priority:      optional
 
 
-trinityX local repository
+TrinityX local repository
 =========================
 
-During the trinityX controller installation, the optional ``local-repo.sh``
+During the TrinityX controller installation, the optional ``local-repo.sh``
 script can create a local RPM repository to install custom-built packages or to
 work around the lack of connectivity.
 
 It does this by copying the contents of the ``packages`` directory (which
 contains this file) as-is. Therefore the directory must contain a ready-to-use
-repository in its top level. When preparing the installation media for trinityX,
+repository in its top level. When preparing the installation media for TrinityX,
 don't forget to run a command like this one::
 
     createrepo -v --update --compress-type bz2 /path/to/packages
@@ -59,7 +59,7 @@ easiest way to do it is with virtual machines:
 
 3. take a snapshot of the VM
 
-4. ``yum -y install git`` and ``git pull`` the trinityX repository
+4. ``yum -y install git`` and ``git pull`` the TrinityX repository
 
 5. configure the post scripts as needed for the next deployment
 

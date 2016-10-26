@@ -5,7 +5,7 @@
 Common functions
 ================
 
-The Trinity X configuration tool provides numerous functions to make writing post scripts easier. Those are pre-loaded in the shell environment of the Bash scripts, and are available for all to use.
+The TrinityX configuration tool provides numerous functions to make writing post scripts easier. Those are pre-loaded in the shell environment of the Bash scripts, and are available for all to use.
 
 Some of those functions were created to add or modify information contained in configuration files. When applicable, those functions should always be used instead of direct modifications, as they do various checks to avoid duplicate entries and incorrect outputs.
 
@@ -239,7 +239,7 @@ Example::
 ``store_password``
 ~~~~~~~~~~~~~~~~~~
 
-Save a password to the shadow file of a Trinity X installation. The path of the shadow file is stored in the ``TRIX_SHADOW`` variable. See `Environment variables`_ for more information about the shadow file.
+Save a password to the shadow file of a TrinityX installation. The path of the shadow file is stored in the ``TRIX_SHADOW`` variable. See `Environment variables`_ for more information about the shadow file.
 
 The shadow file is designed to be sourced by post scripts, to obtain the required passwords for their tasks. To avoid issues, all passwords are defined as read-only variables in the file. They cannot be changed by subsequent calls to the function.
 

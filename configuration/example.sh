@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -51,7 +51,7 @@ if [[ -r /etc/trinity.sh ]] ; then
 
 else
     echo_warn "The file \"/etc/trinity.sh\" does not exist (yet) on this system."
-    echo "\"/etc/trinity.sh\" is created during the Trinity X installation."
+    echo "\"/etc/trinity.sh\" is created during the TrinityX installation."
 fi
 
 

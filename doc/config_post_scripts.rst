@@ -144,7 +144,7 @@ Shell script error management
 Password management
 ~~~~~~~~~~~~~~~~~~~
 
-- Passwords are stored read-only in the shadow file, and the Trinity X functions will not overwrite them. For that reason, as well as basic logic, the passwords should only be stored at the very end of the post scripts, once everything else has been completed successfully.
+- Passwords are stored read-only in the shadow file, and the TrinityX functions will not overwrite them. For that reason, as well as basic logic, the passwords should only be stored at the very end of the post scripts, once everything else has been completed successfully.
 
 - When setting up software with password, it is critical to respect the `Shell script error management`_ rules and undo all configuration in case of an error. Passwords make reconfiguration pretty much impossible, so clean up behind yourselves.
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -42,7 +42,7 @@ if flag_is_unset POST_CHROOT ; then
     cp "${POST_FILEDIR}/cv-advanced" "${TRIX_SHARED_MODFILES}/modulegroups"
     
     
-    echo_info 'Adjusting the trinityX installation path'
+    echo_info 'Adjusting the TrinityX installation path'
     
     sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' "${TRIX_SHARED_MODFILES}/modulegroups/"*
 fi

@@ -1,4 +1,4 @@
-# trinityX - quick start for the impatients
+# TrinityX - quick start for the impatients
 
 Detailed documentation of the installer can be found in doc/README.rst
 
