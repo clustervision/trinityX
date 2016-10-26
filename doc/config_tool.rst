@@ -1,7 +1,4 @@
 
-.. vim: tw=0
-
-
 TrinityX configuration tool
 ============================
 
@@ -11,7 +8,7 @@ The core idea behind that tool is to have a modular post-installation configurat
 
 It is *not* a full-blown configuration manager. Amongst other things, as of the time of writing it can't undo a configuration. That limitation means that it is only suited to an initial configuration, and not to updating configurations later.
 
-This document will present the high-level use of the tool. For more details, including how to write new post scripts, please see the other chapters of the `Documentation`_.
+This document will present the high-level use of the tool. For more details, including how to write new post scripts, please see the other chapters of the :doc:`index`.
 
 
 
@@ -139,15 +136,4 @@ Running it is, again, very easy::
     ./configure.sh example.cfg
 
 This will give you an idea of what to expect from the running of the configuration tool.
-
-
-
-.. Relative file links
-
-.. _Documentation: README.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
-.. _Post scripts: config_post_scripts.rst
-.. _Environment variables: config_env_vars.rst
-.. _Common functions: config_common_funcs.rst
 

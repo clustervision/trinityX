@@ -6,7 +6,7 @@ Hints and tips for a Luna installation
 Setting up a compute node image
 -------------------------------
 
-.. note:: This chapter assumes that you are familiar with the TrinityX configuration tool and the configuration files that it uses. If not, please refer to the general `Documentation`_ first.
+.. note:: This chapter assumes that you are familiar with the TrinityX configuration tool and the configuration files that it uses. If not, please refer to the general :doc:`index` first.
 
 TrinityX includes configuration files to create automatically a basic compute node images. When receiving a new cluster this task will have been done already by our engineers and the image will be integrated in your provisioning system, in that case Luna.
 
@@ -658,10 +658,4 @@ In a few cases this may be more of a hindrance than anything. If you have good r
     # luna osimage pack -n compute -b
 
 For further details, see `Custom kernel version and parameters`_.
-
-
-
-.. Relative file links
-
-.. _Documentation: README.rst
 

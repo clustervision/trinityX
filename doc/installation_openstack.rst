@@ -4,7 +4,7 @@ TrinityX - OpenStack installation procedure
 
 This document describes the installation of an OpenStack controller either alongside a standard TrinityX controller or standalone, as well as the creation and configuration of an image for the openstack compute nodes of a TrinityX cluster.
 
-The requirements for the OpenStack controller, as well as for the OpenStack compute nodes, are decribed in the `TrinityX pre-installation requirements`_. It is assumed that the guidelines included in this document have been followed, and that the controller machine is ready for the TrinityX configuration.
+The requirements for the OpenStack controller, as well as for the OpenStack compute nodes, are decribed in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machine is ready for the TrinityX configuration.
 
 
 OpenStack controller installation
@@ -53,9 +53,9 @@ This file can be edited to reflect the user's own installation choices. All conf
     
     # ./configure.sh openstack.cfg
 
-For further details about the use of the configuration script, including its command line options, please see `Configuration tool usage`_.
+For further details about the use of the configuration script, including its command line options, please see :doc:`config_tool`.
 
-For further details about the configuration files, please see `Configuration files`_.
+For further details about the configuration files, please see :doc:`config_cfg_files`.
 
 
 Standalone mode
@@ -135,14 +135,5 @@ After the configuration has completed, the node image is ready but not yet integ
 Offline installation
 --------------------
 
-To do an offline installation, the same guidlines, as described in `TrinityX installation procedure`_, apply.
-
-
-
-.. Relative file links
-
-.. _TrinityX pre-installation requirements: requirements.rst
-.. _TrinityX installation procedure: installation.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
+To do an offline installation, the same guidlines, as described in :doc:`installation`, apply.
 

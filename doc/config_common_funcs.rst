@@ -1,7 +1,4 @@
 
-.. vim: tw=0
-
-
 Common functions
 ================
 
@@ -16,7 +13,7 @@ When the return codes are not specified, it is safe to assume that they respect 
 Message display functions
 -------------------------
 
-Display functions are wrappers to output messages with a special meaning in a consistent way from script to script. By default they are in color, except when redirected or when ``--nocolor`` is used. See the `Configuration tool usage`_ for more details.
+Display functions are wrappers to output messages with a special meaning in a consistent way from script to script. By default they are in color, except when redirected or when ``--nocolor`` is used. See the :doc:`config_tool` for more details.
 
 
 Syntax::
@@ -239,7 +236,7 @@ Example::
 ``store_password``
 ~~~~~~~~~~~~~~~~~~
 
-Save a password to the shadow file of a TrinityX installation. The path of the shadow file is stored in the ``TRIX_SHADOW`` variable. See `Environment variables`_ for more information about the shadow file.
+Save a password to the shadow file of a TrinityX installation. The path of the shadow file is stored in the ``TRIX_SHADOW`` variable. See :doc:`config_env_vars` for more information about the shadow file.
 
 The shadow file is designed to be sourced by post scripts, to obtain the required passwords for their tasks. To avoid issues, all passwords are defined as read-only variables in the file. They cannot be changed by subsequent calls to the function.
 
@@ -280,16 +277,5 @@ As shown in the example above, ``store_password`` will be used usually after a c
         store_password MYSCRIPT_PW "$mypass"
     fi
 
-For more information about password management, see `Post scripts`_.
-
-
-
-.. Relative file links
-
-.. _Documentation: README.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
-.. _Post scripts: config_post_scripts.rst
-.. _Environment variables: config_env_vars.rst
-.. _Common functions: config_common_funcs.rst
+For more information about password management, see :doc:`config_post_scripts`.
 

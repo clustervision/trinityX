@@ -4,7 +4,7 @@ TrinityX installation procedure
 
 This document describes the installation of a TrinityX controller, as well as the creation and configuration of an image for the compute nodes of a TrinityX cluster.
 
-Both procedures run on the machine that will be used as the controller. The requirements for this system, as well as for the compute nodes, are decribed in the `TrinityX pre-installation requirements`_. It is assumed that the guidelines included in this document have been followed, and that the controller machine is ready for the TrinityX configuration.
+Both procedures run on the machine that will be used as the controller. The requirements for this system, as well as for the compute nodes, are decribed in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machine is ready for the TrinityX configuration.
 
 
 Controller installation
@@ -33,9 +33,9 @@ This file can be edited to reflect the user's own installation choices. All conf
     
     # ./configure.sh controller.cfg
 
-For further details about the use of the configuration script, including its command line options, please see `Configuration tool usage`_.
+For further details about the use of the configuration script, including its command line options, please see :doc:`config_tool`.
 
-For further details about the configuration files, please see `Configuration files`_.
+For further details about the configuration files, please see :doc:`config_cfg_files`.
 
 
 Compute node image creation
@@ -173,12 +173,4 @@ When the local repository was created with the correct group files, the output o
         core
      Optional Groups:
        +debugging
-
-
-
-.. Relative file links
-
-.. _TrinityX pre-installation requirements: requirements.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
 
