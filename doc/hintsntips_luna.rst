@@ -157,7 +157,7 @@ Another option is to install the osimage to the disk. For that you will have to 
 
 - the ``postscript``, which does the final setup at the end of the installation process.
 
-.. warning:: Those are regular shell scripts. They are not interactive. Due to limitations of the initrd used during the installation process, few commands are available although they are enough in the majority of cases. If your hardware requires something else, please see `Adding a file or command to the installation initrd`_.
+.. warning:: Those are regular shell scripts. They are not interactive. Due to limitations of the initrd used during the installation process, few commands are available although they are enough in the majority of cases. If your hardware requires something else, you may need to add another script to the ``initrd`` used by Luna to boot the nodes. See the Luna documentation for more details.
 
 The following examples are the scripts that I use for my own test system. On those nodes the HDD appears as ``/dev/sda``::
 
