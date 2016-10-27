@@ -142,6 +142,9 @@ systemctl restart slurmdbd
 systemctl enable slurmdbd
 
 
+echo_info "Initialize accounting database for the default cluster"
+sacctmgr -i add cluster cluster
+
 echo_info "Start slurm."
 
 if [ !  -d /etc/systemd/system/slurm.service.d ]; then
