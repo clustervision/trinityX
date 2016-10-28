@@ -15,6 +15,11 @@ __date__ = 'Oct 2016'
 __version__ = '1.0.0'
 
 DEBUG = False
+try:
+	from subprocess import DEVNULL # py3k
+except ImportError:
+	import os
+	DEVNULL = open(os.devnull, 'wb')
 
 class IPMITOOL(object):
 
@@ -31,7 +36,7 @@ class IPMITOOL(object):
  
     @classmethod
     def execute_cmd(cls):
-        proc = subprocess.Popen(cls.CMD, stdout=subprocess.PIPE, close_fds=True)
+        proc = subprocess.Popen(cls.CMD, stdout=subprocess.PIPE, stderr=DEVNULL,  close_fds=True)
         if proc.returncode:
             sys.exit(1)
         return proc.communicate()[0].split('\n')[:]
