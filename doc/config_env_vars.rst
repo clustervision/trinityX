@@ -1,7 +1,4 @@
 
-.. vim: tw=0
-
-
 Post script environment variables
 =================================
 
@@ -26,14 +23,14 @@ The configuration tool defines only a few dynamic variables:
 
 - ``POST_TOPDIR``
     
-    The top directory of the Trinity X installation scripts.
+    The top directory of the TrinityX installation scripts.
     
     The TOPDIR is used to access data that is not part of the configurationt tool's tree, or is too big to be stored there. For example, the repositories managed by the ``local-repos`` post script, which are optional and created outside of the configurationt tool itself, reside in ``${POST_TOPDIR}/packages``. The configuration tool itself lives in a subdirectory of the ``POST_TOPDIR``: ``${POST_TOPDIR}/configuration``.
 
 
 - ``POST_CONFDIR``
 
-    The directory containing the configuration file being processed. This is only really useful when sourcing another config file -- see `Configuration files`_ for more details.
+    The directory containing the configuration file being processed. This is only really useful when sourcing another config file -- see :doc:`config_cfg_files` for more details.
 
 
 - ``POST_CONFIG``
@@ -49,7 +46,7 @@ The configuration tool defines only a few dynamic variables:
     
     Post scripts can contain a private subdirectory in which they can store the files that they require (configuration files, subscripts, etc). That directory is optional, and the variable is defined only if an actual directory exists in the filesystem.
     
-    The name of the directory itself is inferred from the name of the post script, see `Post scripts`_ for the naming rules.
+    The name of the directory itself is inferred from the name of the post script, see :doc:`config_post_scripts` for the naming rules.
 
 - ``POST_CHROOT``
 
@@ -68,7 +65,7 @@ Current configuration file
 
 The current configuration file is always loaded into the environment. Any configuration option defined in it is available as an environment variable.
 
-The exact contents of this file depend on the configuration created for installation. See the documentation for each post script and the contents of `controller.cfg`_ and other configuration files for more details.
+The exact contents of this file depend on the configuration created for installation. See the documentation for each post script and the contents of ``controller.cfg`` and other configuration files for more details.
 
 
 /etc/trinity.sh
@@ -158,24 +155,11 @@ Adding a variable or changing the state of a variable, both in ``trinity.sh`` an
 
 Always use those functions to manipulate the state of the variables in those files.
 
-See `Common functions`_ for the full syntaxes and descriptions.
+See :doc:`config_common_funcs` for the full syntaxes and descriptions.
 
 
 Visibility of new variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As all of those files a sourced each time a script is ran, all changes to either ``trinity.sh`` or the shadow file will be automatically visible by all subsequent post scripts.
-
-
-
-.. _controller.cfg: ../controller.cfg
-
-.. Relative file links
-
-.. _Documentation: README.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
-.. _Post scripts: config_post_scripts.rst
-.. _Environment variables: config_env_vars.rst
-.. _Common functions: config_common_funcs.rst
 

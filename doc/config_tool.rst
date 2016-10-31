@@ -1,17 +1,14 @@
 
-.. vim: tw=0
-
-
-Trinity X configuration tool
+TrinityX configuration tool
 ============================
 
-The Trinity X configuration tool is used for the basic configuration of the controllers, as well as the creation and configuration of the node images.
+The TrinityX configuration tool is used for the basic configuration of the controllers, as well as the creation and configuration of the node images.
 
 The core idea behind that tool is to have a modular post-installation configuration system, so that various packages and configuration steps are optional and can be turned on and off depending on the required configuration. To that effect, the configuration tool runs a set of post-installation scripts and installs the packages required by those scripts. And that's about it.
 
 It is *not* a full-blown configuration manager. Amongst other things, as of the time of writing it can't undo a configuration. That limitation means that it is only suited to an initial configuration, and not to updating configurations later.
 
-This document will present the high-level use of the tool. For more details, including how to write new post scripts, please see the other chapters of the `Documentation`_.
+This document will present the high-level use of the tool. For more details, including how to write new post scripts, please see the other chapters of the :doc:`index`.
 
 
 
@@ -139,15 +136,4 @@ Running it is, again, very easy::
     ./configure.sh example.cfg
 
 This will give you an idea of what to expect from the running of the configuration tool.
-
-
-
-.. Relative file links
-
-.. _Documentation: README.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
-.. _Post scripts: config_post_scripts.rst
-.. _Environment variables: config_env_vars.rst
-.. _Common functions: config_common_funcs.rst
 

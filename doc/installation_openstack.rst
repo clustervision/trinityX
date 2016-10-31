@@ -1,19 +1,19 @@
 
-Trinity X - OpenStack installation procedure
+TrinityX - OpenStack installation procedure
 ============================================
 
-This document describes the installation of an OpenStack controller either alongside a standard trinityX controller or standalone, as well as the creation and configuration of an image for the openstack compute nodes of a Trinity X cluster.
+This document describes the installation of an OpenStack controller either alongside a standard TrinityX controller or standalone, as well as the creation and configuration of an image for the openstack compute nodes of a TrinityX cluster.
 
-The requirements for the OpenStack controller, as well as for the OpenStack compute nodes, are decribed in the `Trinity X pre-installation requirements`_. It is assumed that the guidelines included in this document have been followed, and that the controller machine is ready for the Trinity X configuration.
+The requirements for the OpenStack controller, as well as for the OpenStack compute nodes, are decribed in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machine is ready for the TrinityX configuration.
 
 
 OpenStack controller installation
 ---------------------------------
 
-Alongside a trinityX controller
+Alongside a TrinityX controller
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Trinity X configuration script can install and configure all packages required for setting up a working OpenStack controller that includes the following services:
+The TrinityX configuration script can install and configure all packages required for setting up a working OpenStack controller that includes the following services:
 
 - Identity (keystone)
 - Image (glance)
@@ -22,13 +22,13 @@ The Trinity X configuration script can install and configure all packages requir
 - Volume (cinder)
 - Dashboard (horizon)
 
-.. note:: The OpenStack controller is a separate machine that is used solely for this purpose. The OpenStack compute nodes, however, are managed by the previously installed trinityX controller.
+.. note:: The OpenStack controller is a separate machine that is used solely for this purpose. The OpenStack compute nodes, however, are managed by the previously installed TrinityX controller.
 
 
 Preconfiguration
 ````````````````
 
-Before running the trinityX installer, it is required to do some initial network configuration.
+Before running the TrinityX installer, it is required to do some initial network configuration.
 As described in the requirements document the OpenStack controller uses three NICs:
 
 - A first NIC used to route external traffic; it needs to be left unconfigured (except for being up on boot). This one will be managed by OpenStack Neutron
@@ -38,13 +38,13 @@ As described in the requirements document the OpenStack controller uses three NI
 .. note:: Internet access on the OpenStack controller needs to be through the management NIC or using a fourth one for this special purpose.
 
 
-.. note:: The OpenStack controller needs to use the trinityX controller as a DNS resolver.
+.. note:: The OpenStack controller needs to use the TrinityX controller as a DNS resolver.
 
 
 TrinityX installer
 ``````````````````
 
-The configuration for a default OpenStack controller installation is described in the file called ``openstack.cfg``, located in the ``configuration`` subdirectory of the Trinity X tree.
+The configuration for a default OpenStack controller installation is described in the file called ``openstack.cfg``, located in the ``configuration`` subdirectory of the TrinityX tree.
 
 This file can be edited to reflect the user's own installation choices. All configuration parameters are included and described. Once the configuration file is ready, the script ``configure.sh`` will apply the configuration to the controller::
 
@@ -53,9 +53,9 @@ This file can be edited to reflect the user's own installation choices. All conf
     
     # ./configure.sh openstack.cfg
 
-For further details about the use of the configuration script, including its command line options, please see `Configuration tool usage`_.
+For further details about the use of the configuration script, including its command line options, please see :doc:`config_tool`.
 
-For further details about the configuration files, please see `Configuration files`_.
+For further details about the configuration files, please see :doc:`config_cfg_files`.
 
 
 Standalone mode
@@ -65,7 +65,7 @@ Standalone mode
 
 
 
-In a standalone mode, the ``openstack.cfg`` configuration file needs to be altered a bit to account for the services that would otherwise be available on the trinityX controller.
+In a standalone mode, the ``openstack.cfg`` configuration file needs to be altered a bit to account for the services that would otherwise be available on the TrinityX controller.
 
 The new default postscripts list should look something like this::
 
@@ -119,7 +119,7 @@ The setup of the image is defined in these two configuration scripts:
 Building the OpenStack compute image should be done on the node where the provisioning tool is installed:
 
 - The OpenStack controller when in standalone mode
-- The trinityX controller otherwise. Care must be taken in this case to append the content of the `trinity.shadow` file from the OpenStack controller to the same file on the trinityX controller (Otherwise compute nodes will fail to reach the controller since they will be using different passwords).
+- The TrinityX controller otherwise. Care must be taken in this case to append the content of the `trinity.shadow` file from the OpenStack controller to the same file on the TrinityX controller (Otherwise compute nodes will fail to reach the controller since they will be using different passwords).
 
 
 After updating the configuration of the image creating it is done as simply as when setting up the controller::
@@ -135,14 +135,5 @@ After the configuration has completed, the node image is ready but not yet integ
 Offline installation
 --------------------
 
-To do an offline installation, the same guidlines, as described in `Trinity X installation procedure`_, apply.
-
-
-
-.. Relative file links
-
-.. _Trinity X pre-installation requirements: requirements.rst
-.. _Trinity X installation procedure: installation.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
+To do an offline installation, the same guidlines, as described in :doc:`installation`, apply.
 

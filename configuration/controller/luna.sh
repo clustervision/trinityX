@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
