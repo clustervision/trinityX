@@ -1,9 +1,34 @@
 #!/bin/bash
 
+######################################################################
+# Trinity X
+# Copyright (c) 2016  ClusterVision B.V.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License (included with the sources) for more
+# details.
+######################################################################
+
+
 display_var TRIX_CTRL_{HOSTNAME,IP}
 
 function error {
-    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop nova || true
+    openstack user delete nova
+    openstack service delete nova
+
+    for e in $(openstack endpoint list | grep compute | cut -d '|' -f2); do
+        openstack endpoint delete $e;
+    done
+
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop nova || true
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop nova_api || true
     systemctl kill -s SIGKILL openstack-nova-api.service || true
     systemctl kill -s SIGKILL openstack-nova-consoleauth.service || true
     systemctl kill -s SIGKILL openstack-nova-scheduler.service || true
@@ -81,11 +106,11 @@ systemctl enable openstack-nova-scheduler.service
 systemctl enable openstack-nova-conductor.service
 systemctl enable openstack-nova-novncproxy.service
 
-systemctl start openstack-nova-api.service
-systemctl start openstack-nova-consoleauth.service
-systemctl start openstack-nova-scheduler.service
-systemctl start openstack-nova-conductor.service
-systemctl start openstack-nova-novncproxy.service
+systemctl restart openstack-nova-api.service
+systemctl restart openstack-nova-consoleauth.service
+systemctl restart openstack-nova-scheduler.service
+systemctl restart openstack-nova-conductor.service
+systemctl restart openstack-nova-novncproxy.service
 
 echo_info "Saving passwords"
 store_password NOVA_DB_PW $NOVA_DB_PW

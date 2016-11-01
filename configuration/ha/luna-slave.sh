@@ -1,4 +1,22 @@
 #!/bin/bash
+
+######################################################################
+# Trinity X
+# Copyright (c) 2016  ClusterVision B.V.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License (included with the sources) for more
+# details.
+######################################################################
+
+
 set -e
 
 echo_info "Disable SELinux."
@@ -69,7 +87,7 @@ fi
 
 echo_info "Start mongo."
 
-systemctl start mongod
+systemctl restart mongod
 systemctl enable mongod
 
 echo_info "Copy systemd unit files."
@@ -84,5 +102,5 @@ systemctl daemon-reload
 
 for service in  xinetd nginx; do
     systemctl enable $service
-    systemctl start $service
+    systemctl restart $service
 done

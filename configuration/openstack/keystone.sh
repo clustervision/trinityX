@@ -1,9 +1,26 @@
 #!/bin/bash
 
+######################################################################
+# Trinity X
+# Copyright (c) 2016  ClusterVision B.V.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License (included with the sources) for more
+# details.
+######################################################################
+
+
 display_var TRIX_CTRL_HOSTNAME
 
 function error {
-    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD drop keystone || true
+    mysqladmin -uroot -p$MYSQL_ROOT_PASSWORD -f drop keystone || true
     rm -f /etc/httpd/conf.d/wsgi-keystone.conf || true
     rm -f /root/.admin-openrc || true
     systemctl kill -s SIGKILL httpd.service || true
@@ -39,15 +56,16 @@ keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
 # Configure httpd-wsgi
 echo_info "Setting up httpd and memcached"
 
-sed -i "1s,^,ServerName $TRIX_CTRL_HOSTNAME," /etc/httpd/conf/httpd.conf
+sed -i "s,^\(ServerName.*\),# \1," /etc/httpd/conf/httpd.conf
+sed -i "1s,^,ServerName $TRIX_CTRL_HOSTNAME\n," /etc/httpd/conf/httpd.conf
 cp -v ${POST_FILEDIR}/wsgi-keystone.conf /etc/httpd/conf.d/wsgi-keystone.conf
 
 # Start services
 systemctl enable memcached.service
 systemctl enable httpd.service
 
-systemctl start memcached.service
-systemctl start httpd.service
+systemctl restart memcached.service
+systemctl restart httpd.service
 
 # Create service, endpoints, users and roles
 echo_info "Creating keystone service, endpoints, users and roles"

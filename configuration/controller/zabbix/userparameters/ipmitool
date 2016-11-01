@@ -1,0 +1,192 @@
+#!/usr/bin/python
+
+import argparse
+import json
+import subprocess
+import os
+import sys
+import time
+import tempfile
+import fcntl
+import logging
+
+__author__ = 'Vladimir Krumshtein <vladimir.krumstein@clustervision.com>'
+__date__ = 'Oct 2016'
+__version__ = '1.0.0'
+
+DEBUG = False
+try:
+	from subprocess import DEVNULL # py3k
+except ImportError:
+	import os
+	DEVNULL = open(os.devnull, 'wb')
+
+class IPMITOOL(object):
+
+    EXECUTABLE = '/usr/bin/ipmitool'
+    CACHEFILE = '/tmp/ipmitool.cache'
+    CACHE_TIME = 30 # seconds
+
+    CUR_TIME = int(time.time())
+    CMD = [EXECUTABLE, 'sensor']
+
+    if not os.path.exists(EXECUTABLE):
+        print "No executable found '%s'. Please install ipmitool " % EXECUTABLE
+        sys.exit(1)
+ 
+    @classmethod
+    def execute_cmd(cls):
+        proc = subprocess.Popen(cls.CMD, stdout=subprocess.PIPE, stderr=DEVNULL,  close_fds=True)
+        if proc.returncode:
+            sys.exit(1)
+        return proc.communicate()[0].split('\n')[:]
+
+    @classmethod
+    def write_to_cache(cls):
+        """
+        Execute command and write output to cache-file
+        """
+        lock_fd = open(cls.CACHEFILE, 'r')
+        lock_fd.readline()
+        cur_cache = [l for l in lock_fd.readlines() if len(l) > 0]
+        logging.debug("locking")
+        try:
+            fcntl.flock(lock_fd,fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            logging.debug("would lock, returning")
+            lock_fd.close()
+            return cls.get_cached()
+        logging.debug("locked")
+        #if DEBUG:
+        #    time.sleep(10)
+        fdi, tmpfpath = tempfile.mkstemp(prefix = 'ipmitool.')
+        fd = os.fdopen(fdi, 'a')
+
+        sensors = cls.execute_cmd()
+        fd.write(str(cls.CUR_TIME) + '\n')
+        fd.write('\n'.join(sensors))
+        
+        cls.CMD = [cls.EXECUTABLE, 'sel', 'list']
+        sel = cls.execute_cmd()
+        fd.write('\n'.join([ "##SEL##" + l for l in sel]))
+        fd.close()
+        lock_fd.close()
+        logging.debug("lock file closed")
+        os.rename(tmpfpath, cls.CACHEFILE)
+        return (sensors,sel)
+
+    @classmethod
+    def get_cached(cls):
+        fd = open(cls.CACHEFILE, 'r')
+        cache_ts = fd.readline().strip()
+        sensors = [l for l in fd.readlines() if len(l) > 0 and l[0:6] != "##SEL##"]
+        fd.seek(0,0)
+        sel =  [l for l in fd.readlines() if len(l) > 0 and l.startswith("##SEL##")]
+        fd.close()
+        return (sensors,sel)
+
+    @classmethod
+    def get_data(cls):
+        '''
+        Cache output to cls.CACHEFILE in order to reduce load to ipmitool and arrays
+        '''
+        if not os.path.exists(cls.CACHEFILE):
+            return cls.write_to_cache()
+        fd = open(cls.CACHEFILE, 'r')
+        cache_ts = fd.readline().strip()
+        if cache_ts and int(cache_ts) + cls.CACHE_TIME > cls.CUR_TIME:
+            fd.close()
+            return cls.get_cached()
+        fd.close()
+        return cls.write_to_cache()
+
+    @classmethod
+    def discovery_sensors(cls, args):
+        data = []
+        for line in cls.get_data()[0]:
+            tmp_arr = [s.strip() for s in line.split('| ') if s.strip()]
+            if len(tmp_arr) < 3:
+                continue
+            if tmp_arr[2] in ( "RPM", "degrees C", "Watts"):
+                data.append({'{#SENSOR_NAME}':tmp_arr[0].replace(" ","___")})
+        return json.dumps({'data': data}, separators=(',', ':'))
+
+    @classmethod
+    def getinfo(cls, args, parm):
+        sensor = args.sensor
+        for line in cls.get_data()[0]:
+            tmp_arr = [s.strip() for s in line.split('| ') if s.strip()]
+            if tmp_arr[0].strip(" ") == sensor.replace("___"," "):
+                return tmp_arr[parm]
+        return "NA"
+
+    @classmethod
+    def sel_cnt(cls, args):
+        return len(cls.get_data()[1])-1
+
+
+    @classmethod
+    def value(cls, args):
+        return cls.getinfo(args,1)
+
+    @classmethod
+    def unit(cls, args):
+        return cls.getinfo(args,2)
+
+    @classmethod
+    def low_crit(cls, args):
+        return cls.getinfo(args,6)
+
+    @classmethod
+    def up_crit(cls, args):
+        return cls.getinfo(args,7)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true')
+
+    subparsers = parser.add_subparsers()
+
+    subparser_discovery = subparsers.add_parser('discovery')
+    subparser_discovery.set_defaults(func=IPMITOOL.discovery_sensors)
+
+    subparser_powerstate = subparsers.add_parser('value')
+    subparser_powerstate.set_defaults(func=IPMITOOL.value)
+    subparser_powerstate.add_argument('sensor')
+
+    subparser_powerstate = subparsers.add_parser('unit')
+    subparser_powerstate.set_defaults(func=IPMITOOL.unit)
+    subparser_powerstate.add_argument('sensor')
+
+    subparser_powerstate = subparsers.add_parser('up_crit')
+    subparser_powerstate.set_defaults(func=IPMITOOL.up_crit)
+    subparser_powerstate.add_argument('sensor')
+
+    subparser_powerstate = subparsers.add_parser('low_crit')
+    subparser_powerstate.set_defaults(func=IPMITOOL.low_crit)
+    subparser_powerstate.add_argument('sensor')
+    
+    subparser_powerstate = subparsers.add_parser('sel_cnt')
+    subparser_powerstate.set_defaults(func=IPMITOOL.sel_cnt)
+
+    return parser.parse_known_args()[0]
+
+def main():
+    args = parse_args()
+    try:
+        if args.debug:
+            global DEBUG 
+            DEBUG = True
+            logging.basicConfig(format='%(process)d %(lineno)d %(message)s',stream=sys.stderr, level=logging.DEBUG)
+        print(args.func(args)) 
+    except Exception as e:
+        if args.debug:
+            raise e
+        print(e)
+
+
+if __name__ == '__main__':
+    main()
+
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -1,4 +1,22 @@
 #!/bin/bash
+
+######################################################################
+# Trinity X
+# Copyright (c) 2016  ClusterVision B.V.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License (included with the sources) for more
+# details.
+######################################################################
+
+
 set -e
 
 function wait_master {
@@ -80,8 +98,8 @@ wait_master
 
 echo_info "Start luna services."
 
-/usr/bin/systemctl start ltorrent
-/usr/bin/systemctl start lweb
+/usr/bin/systemctl restart ltorrent
+/usr/bin/systemctl restart lweb
 
 
 echo_info "Configure slave node."
@@ -148,7 +166,7 @@ echo_info "Setup MongoDB arbiter."
 /usr/bin/chown mongodb:root /var/lib/mongodb-arbiter
 /usr/bin/chmod 750 /var/lib/mongodb-arbiter
 
-/usr/bin/systemctl start mongod-arbiter
+/usr/bin/systemctl restart mongod-arbiter
 
 
 echo_info "Configure firewalld."
@@ -211,8 +229,8 @@ echo_info "Configure luna to support cluster configuration."
 
 echo_info "Create named configs."
 
-/usr/bin/systemctl start named
-/usr/bin/ssh ${MONGODB_SLAVE_HOST} /usr/bin/systemctl start named
+/usr/bin/systemctl restart named
+/usr/bin/ssh ${MONGODB_SLAVE_HOST} /usr/bin/systemctl restart named
 /usr/sbin/luna cluster makedns
 
 
