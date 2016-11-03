@@ -49,10 +49,12 @@ def make_secret(password):
     return tagged_digest
 
 
-def user_add(b, username, cn, sn, givenName, password, mail, shell, groups, expire):
+def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, shell,
+             groups, expire):
     """Add a user to the LDAP directory"""
 
-    uidNumber = increment_uid(b)
+    uidNumber = uid if uid else increment_uid(b)
+    gidNumber = gid if gid else uidNumber
 
     # Add the user
     dn = 'uid=%s,ou=People,%s' % (username, b)
@@ -78,7 +80,7 @@ def user_add(b, username, cn, sn, givenName, password, mail, shell, groups, expi
      ('sn', [sn]),
      ('loginShell', [shell]),
      ('uidNumber', [uidNumber]),
-     ('gidNumber', [uidNumber]),
+     ('gidNumber', [gidNumber]),
      ('homeDirectory', [home]),
      ('shadowMin', ['0']),
      ('shadowMax', ['99999']),
@@ -105,7 +107,7 @@ def user_add(b, username, cn, sn, givenName, password, mail, shell, groups, expi
         ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
         ('cn', [username]),
         ('member', ['uid=%s,ou=People,%s' % (username, b)]),
-        ('gidNumber', [uidNumber])
+        ('gidNumber', [gidNumber])
     ]
 
     conn.add_s(dn, add_record)
@@ -165,7 +167,13 @@ def user_modify(b, username, **kwargs):
     mod_attrs = []
 
     for key, value in kwargs.iteritems():
-        if key == 'shell':
+        if key == 'uid':
+            key = 'uidNumber'
+
+        elif key == 'gid':
+            key = 'gidNumber'
+
+        elif key == 'shell':
             key = 'loginShell'
             value = value if value else load_param("users", "shell")
 
@@ -230,10 +238,10 @@ def group_delete(b, groupname):
         pass
 
 
-def group_add(b, groupname):
+def group_add(b, groupname, gid):
     """Add a group to the LDAP"""
 
-    gidNumber = increment_gid(b)
+    gidNumber = gid if gid else increment_gid(b)
 
     dn = 'cn=%s,ou=Group,%s' % (groupname, b)
     add_record = [
@@ -372,6 +380,8 @@ command.add_argument('--password')
 command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
+command.add_argument('--uid', '-u', metavar='USER ID')
+command.add_argument('--gid', '-g', metavar='GROUP ID')
 command.add_argument('--mail', metavar="EMAIL ADDRESS")
 command.add_argument('--shell')
 command.add_argument('--groups', type=csep,
@@ -395,6 +405,8 @@ command.add_argument('username')
 command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
+command.add_argument('--uid', '-u', metavar='USER ID')
+command.add_argument('--gid', '-g', metavar='GROUP ID')
 command.add_argument('--shell')
 command.add_argument('--expire', metavar="DAYS",
                      help=('Number of days after which the account expires. '
@@ -405,6 +417,7 @@ command = user_commands.add_parser('list', help='List users')
 # Group commands
 command = group_commands.add_parser('add', help='Add a group')
 command.add_argument('groupname')
+command.add_argument('--gid', '-g', metavar='GROUP ID')
 
 command = group_commands.add_parser('show', help='Show group details')
 command.add_argument('groupname')
