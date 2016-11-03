@@ -49,7 +49,7 @@ def make_secret(password):
     return tagged_digest
 
 
-def user_add(b, username, cn, sn, givenName, password, shell, groups, expire):
+def user_add(b, username, cn, sn, givenName, password, mail, shell, groups, expire):
     """Add a user to the LDAP directory"""
 
     uidNumber = increment_uid(b)
@@ -89,6 +89,9 @@ def user_add(b, username, cn, sn, givenName, password, shell, groups, expire):
 
     if givenName:
         add_record.append(('givenName', [givenName]))
+
+    if mail:
+        add_record.append(('mail', [mail]))
 
     if password:
         password = make_secret(password)
@@ -369,6 +372,7 @@ command.add_argument('--password')
 command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
+command.add_argument('--mail', metavar="EMAIL ADDRESS")
 command.add_argument('--shell')
 command.add_argument('--groups', type=csep,
                      help='A comma separated list of group names')
