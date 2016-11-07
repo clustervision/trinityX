@@ -76,7 +76,7 @@ if [ ! -f ${TRIX_ROOT}/shared/etc/slurm/slurm.conf ]; then
     echo_info "Copy slurm config files"
 
     cp ${POST_FILEDIR}/slurm*.conf /etc/slurm/
-    cp ${POST_FILEDIR}/topology.conf /etc/slurm/
+    cp ${POST_FILEDIR}/{topology,cgroup}.conf /etc/slurm/
 
     echo_info "Changing variable placeholders."
 
