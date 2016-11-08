@@ -25,7 +25,6 @@ import json
 import hashlib
 import argparse
 import ConfigParser
-from retrying import retry
 
 
 def make_secret(password):
@@ -53,7 +52,23 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, shell,
              groups, expire):
     """Add a user to the LDAP directory"""
 
-    uidNumber = uid if uid else increment_uid(b)
+    if uid:
+
+        # Ensure uid's uniqueness
+        dn = 'ou=People,%s' % b
+        filter = 'uidNumber=%s' % uid
+        attrs = ['uidNumber']
+    
+        result = conn.search_s(dn, ldap.SCOPE_ONELEVEL, filter, attrs)
+    
+        if result:
+            raise Exception('UID %s already exists' % uid)
+    
+        uidNumber = uid
+
+    else:
+        uidNumber = increment_id(b, 'uid')
+
     gidNumber = gid if gid else uidNumber
 
     # Add the user
@@ -240,14 +255,31 @@ def group_delete(b, groupname):
 def group_add(b, groupname, gid):
     """Add a group to the LDAP"""
 
-    gidNumber = gid if gid else increment_gid(b)
+    if gid:
 
+        # Ensure gid's uniqueness
+        dn = 'ou=Group,%s' % b
+        filter = 'gidNumber=%s' % gid
+        attrs = ['gidNumber']
+
+        result = conn.search_s(dn, ldap.SCOPE_ONELEVEL, filter, attrs)
+
+        if result:
+            raise Exception('GID %s already exists' % gid)
+
+        gidNumber = gid
+
+    else:
+        gidNumber = increment_id(b, 'gid')
+
+    # Add group
     dn = 'cn=%s,ou=Group,%s' % (groupname, b)
     add_record = [
         ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
         ('cn', [groupname]),
         ('gidNumber', [gidNumber])
     ]
+
     conn.add_s(dn, add_record)
 
 
@@ -305,44 +337,38 @@ def pretty_print(dictionary, exclude):
     print json.dumps(output, indent=4, sort_keys=True)
 
 
-@retry(stop_max_delay=10000)
-def increment_uid(b):
-    """Generate a new userid"""
+def increment_id(b, id_type):
+    """Generate a new uidNumber/gidNumber"""
 
-    dn = 'cn=uid,%s' % b
+    dn = 'cn=%s,%s' % (id_type, b)
     filter = 'objectclass=*'
     attrs = ['uidNumber']
 
     result = conn.search_s(dn, ldap.SCOPE_SUBTREE, filter, attrs)
     uidNumber = result[0][1]['uidNumber'][0]
 
-    mod_attrs = [(ldap.MOD_DELETE, 'uidNumber', uidNumber),
-                 (ldap.MOD_ADD, 'uidNumber', str(int(uidNumber)+1))]
+    # Ensure uidNumber's uniqueness
 
+    if id_type == 'uid':
+        search_dn = 'ou=People,%s' % b
+
+    elif id_type == 'gid':
+        search_dn = 'ou=Group,%s' % b
+
+    attrs = ['%sNumber' % id_type]
+    filter = '%sNumber=%s' % (id_type, uidNumber)
+    result = conn.search_s(search_dn, ldap.SCOPE_ONELEVEL, filter, attrs)
+
+    while result:
+        uidNumber = str(int(uidNumber) + 1)
+        filter = '%sNumber=%s' % (id_type, uidNumber)
+        result = conn.search_s(search_dn, ldap.SCOPE_ONELEVEL, filter, attrs)
+
+    # Save the next uidNumber to use
+    mod_attrs = [(ldap.MOD_REPLACE, 'uidNumber', str(int(uidNumber) + 1))]
     conn.modify_s(dn, mod_attrs)
+
     return uidNumber
-
-
-@retry(stop_max_delay=10000)
-def increment_gid(b):
-    """Generate a new groupid"""
-
-    dn = 'cn=gid,%s' % b
-    filter = 'objectclass=*'
-    attrs = ['uidNumber']
-
-    try:
-        result = conn.search_s(dn, ldap.SCOPE_SUBTREE, filter, attrs)
-        gidNumber = result[0][1]['uidNumber'][0]
-
-        mod_attrs = [(ldap.MOD_DELETE, 'uidNumber', gidNumber),
-                     (ldap.MOD_ADD, 'uidNumber', str(int(gidNumber)+1))]
-
-        conn.modify_s(dn, mod_attrs)
-    except Exception, e:
-        sys.exit(e)
-
-    return gidNumber
 
 
 def csep(s):
