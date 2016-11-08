@@ -28,10 +28,9 @@ chmod 600 /etc/sssd/sssd.conf
 # -----------------------------------
 #
 # Generate an ldap access filter based on the *_ALLOWED_GROUPS options
-# and create those groups on the controllers.
 #
 
-echo_info 'Setting up access controle'
+echo_info 'Setting up access control'
 
 SLAPD_ROOT_PW="$(get_password "$SLAPD_ROOT_PW")"
 
@@ -48,8 +47,6 @@ fi
 FILTER="(|"
 
 for GRP in $ALLOWED_GROUPS; do
-
-    flag_is_unset POST_CHROOT && obol -w $SLAPD_ROOT_PW group add $GRP
 
     FILTER+="(memberOf=cn=$GRP,ou=group,dc=local)"
 
@@ -73,3 +70,21 @@ flag_is_unset POST_CHROOT && systemctl restart sssd
 echo_info 'Setting up the system to use sssd for authentication'
 authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
 
+
+# -----------------------------------
+#
+# Add access control groups to the system.
+#
+
+if flag_is_unset POST_CHROOT; then
+
+    if ! (flag_is_set HA && flag_is_unset PRIMARY_INSTALL) ; then
+
+        echo_info "Adding access controler groups to the system"
+
+        for GRP in $ALLOWED_GROUPS; do
+            obol group add $GRP || true
+        done
+
+    fi
+fi
