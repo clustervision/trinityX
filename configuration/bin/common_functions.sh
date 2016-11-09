@@ -400,3 +400,28 @@ function disable_remote_repos {
 
 typeset -fx disable_remote_repos
 
+
+#---------------------------------------
+
+# The simplest templating function in the west
+
+# Syntaxes: command | render_template
+#           render_template file
+
+# The output is written to the stdout. It consists of the stdin or the contents
+# of the file with all environment variables replaced by their values. If a
+# given variable mustn't be expanded, follow the Bash expansion rules and escape
+# the dollar sign:
+# 
+# echo '$USER' | render_template        -->     (your username)
+# echo '\$USER' | render_template       -->     $USER
+# echo '\\\$USER' | render_template     -->     \$USER
+
+function render_template {
+
+    eval "echo \"$(cat ${1})\""
+}
+
+
+typeset -fx render_template
+
