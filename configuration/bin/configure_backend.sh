@@ -112,7 +112,7 @@ function run_one_script {
         # redefine the trinity.sh variables in POST_CONFIG, re-source trinity.sh
         # afterwards... And because we have no guarantee that trinity.sh exists
         # already, those have to be conditional.
-        # Finally, load the password file if it exists already.
+        # Finally, load the local shfile and password file if they exist.
         # We cannot do all of that at a higher level because each script may
         # modify the .sh{,adow} files, and subsequent scripts will need the
         # updated versions in their environment.
@@ -122,6 +122,7 @@ function run_one_script {
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
             source \"$POST_CONFIG\"
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
+            [[ -r /etc/trinity.local.sh ]] && source /etc/trinity.local.sh
             [[ -r \"\$TRIX_SHADOW\" ]] && source \"\$TRIX_SHADOW\"
             source \"$POST_SCRIPT\" "
 

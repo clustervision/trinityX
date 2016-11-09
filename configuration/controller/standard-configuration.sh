@@ -27,24 +27,25 @@
 
 # Fallback values for configuration parameters
 
-TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trix}"
+TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trinity}"
 TRIX_VERSION="${STDCFG_TRIX_VERSION:-unknown}"
 SSHROOT="${STDCFG_SSHROOT:-0}"
 
 # All the paths and locations
 
-TRIX_HOME="${TRIX_ROOT}/home"
-TRIX_IMAGES="${TRIX_ROOT}/images"
-TRIX_LOCAL="${TRIX_ROOT}/local"
-TRIX_LOCAL_APPS="${TRIX_ROOT}/local/applications"
-TRIX_LOCAL_MODFILES="${TRIX_ROOT}/local/modulefiles"
-TRIX_SHARED="${TRIX_ROOT}/shared"
-TRIX_SHARED_TMP="${TRIX_ROOT}/shared/tmp"
-TRIX_SHARED_APPS="${TRIX_ROOT}/shared/applications"
-TRIX_SHARED_MODFILES="${TRIX_ROOT}/shared/modulefiles"
+TRIX_HOME="${TRIX_HOME:-${TRIX_ROOT}/home}"
+TRIX_IMAGES="${TRIX_IMAGES:-${TRIX_ROOT}/images}"
+TRIX_LOCAL="${TRIX_LOCAL:-${TRIX_ROOT}/local}"
+TRIX_LOCAL_APPS="${TRIX_LOCAL}/applications"
+TRIX_LOCAL_MODFILES="${TRIX_LOCAL}/modulefiles"
+TRIX_SHARED="${TRIX_SHARED:-${TRIX_ROOT}/shared}"
+TRIX_SHARED_TMP="${TRIX_SHARED}/tmp"
+TRIX_SHARED_APPS="${TRIX_SHARED}/applications"
+TRIX_SHARED_MODFILES="${TRIX_SHARED}/modulefiles"
 
 TRIX_SHADOW="${TRIX_ROOT}/trinity.shadow"
 TRIX_SHFILE="${TRIX_SHARED}/trinity.sh"
+TRIX_LOCAL_SHFILE="/etc/trinity.local.sh"
 
 
 #---------------------------------------
@@ -63,23 +64,24 @@ echo_info "Creating the Trinity shell environment file"
 
 cat > "$TRIX_SHFILE" << EOF
 # TrinityX environment file
-# Please do not modify!
+# Do not modify!
 
 TRIX_VERSION="$TRIX_VERSION"
 TRIX_ROOT="$TRIX_ROOT"
 
-TRIX_HOME="${TRIX_ROOT}/home"
-TRIX_IMAGES="${TRIX_ROOT}/images"
-TRIX_LOCAL="${TRIX_ROOT}/local"
-TRIX_LOCAL_APPS="${TRIX_ROOT}/local/applications"
-TRIX_LOCAL_MODFILES="${TRIX_ROOT}/local/modulefiles"
-TRIX_SHARED="${TRIX_ROOT}/shared"
-TRIX_SHARED_TMP="${TRIX_ROOT}/shared/tmp"
-TRIX_SHARED_APPS="${TRIX_ROOT}/shared/applications"
-TRIX_SHARED_MODFILES="${TRIX_ROOT}/shared/modulefiles"
+TRIX_HOME="${TRIX_HOME}"
+TRIX_IMAGES="${TRIX_IMAGES}"
+TRIX_LOCAL="${TRIX_LOCAL}"
+TRIX_LOCAL_APPS="${TRIX_LOCAL_APPS}"
+TRIX_LOCAL_MODFILES="${TRIX_LOCAL_MODFILES}"
+TRIX_SHARED="${TRIX_SHARED}"
+TRIX_SHARED_TMP="${TRIX_SHARED_TMP}"
+TRIX_SHARED_APPS="${TRIX_SHARED_APPS}"
+TRIX_SHARED_MODFILES="${TRIX_SHARED_MODFILES}"
 
-TRIX_SHADOW="${TRIX_ROOT}/trinity.shadow"
-TRIX_SHFILE="${TRIX_SHARED}/trinity.sh"
+TRIX_SHADOW="${TRIX_SHADOW}"
+TRIX_SHFILE="${TRIX_SHFILE}"
+TRIX_LOCAL_SHFILE="${TRIX_LOCAL_SHFILE}"
 
 EOF
 
@@ -90,8 +92,23 @@ fi
 
 EOF
 
-chmod 644 "$TRIX_SHFILE"
+chmod 600 "$TRIX_SHFILE"
 ln -f -s "$TRIX_SHFILE" /etc/trinity.sh
+
+
+#---------------------------------------
+
+echo_info "Creating the Trinity local shell environment file"
+
+# It may already contain stuff (PRIMARY_INSTALL for example), so we don't
+# overwrite it entirely.
+
+{
+    echo '# TrinityX local environment file'
+    cat "$TRIX_LOCAL_SHFILE"
+} | sponge "$TRIX_LOCAL_SHFILE"
+
+chmod 600 "$TRIX_LOCAL_SHFILE"
 
 
 #---------------------------------------
@@ -99,7 +116,7 @@ ln -f -s "$TRIX_SHFILE" /etc/trinity.sh
 echo_info "Creating the Trinity private file"
 
 cat > "$TRIX_SHADOW" << EOF
-# Trinity shadow file
+# TrinityX shadow file
 EOF
 
 chmod 600 "$TRIX_SHADOW"
