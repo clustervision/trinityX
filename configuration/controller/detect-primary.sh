@@ -41,13 +41,15 @@ unset detected
 # Loop over the interfaces and check if one IP matches either cfg values.
 # On the way, check that the corresponding hostname is correct...
 
+hname=$(hostname -s)
+
 for i in $(hostname -I) ; do
     
     case $i in
         
         $CTRL1_IP )
-            if [[ $(hostname -s) != $CTRL1_HOSTNAME ]] ; then
-                echo_error 'CTRL1_IP found on this system, but the hostname is not CTRL1_HOSTNAME'
+            if [[ $hname != $CTRL1_HOSTNAME ]] ; then
+                echo_error 'CTRL1_IP found on this system, but the hostname is not CTRL1_HOSTNAME.'
                 exit 1
             else
                 echo_info 'CTRL1 found, proceeding with primary installation.'
@@ -58,11 +60,12 @@ for i in $(hostname -I) ; do
             ;;
         
         $CTRL2_IP )
-            if [[ $(hostname -s) != $CTRL2_HOSTNAME ]] ; then
-                echo_error 'CTRL2_IP found on this system, but the hostname is not CTRL2_HOSTNAME'
+            if [[ $hname != $CTRL2_HOSTNAME ]] ; then
+                echo_error 'CTRL2_IP found on this system, but the hostname is not CTRL2_HOSTNAME.'
                 exit 1
             else
-                echo_info 'CTRL1 found, proceeding with primary installation.'
+                echo_info 'CTRL2 found, proceeding with secondary installation.'
+                store_system_variable /etc/trinity.local.sh PRIMARY_INSTALL 0
                 detected=1
                 break
             fi
