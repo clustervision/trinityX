@@ -41,6 +41,7 @@ function mkdir      { command mkdir ${VERBOSE+-v} "${@}" ; }
 function mount      { command mount ${VERBOSE+-v} "${@}" ; }
 function rsync      { command rsync ${VERBOSE+-v} "${@}" ; }
 function umount     { command umount ${VERBOSE+-v} "${@}" ; }
+function install    { command install ${VERBOSE+-v} "${@}" ; }
 function systemctl  { command systemctl ${QUIET+-q} "${@}" ; }
 
 typeset -fx cp
@@ -50,6 +51,7 @@ typeset -fx mkdir
 typeset -fx mount
 typeset -fx rsync
 typeset -fx umount
+typeset -fx install
 typeset -fx systemctl
 
 
