@@ -48,8 +48,8 @@ def make_secret(password):
     return tagged_digest
 
 
-def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, shell,
-             groups, expire):
+def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
+             shell, groups, expire):
     """Add a user to the LDAP directory"""
 
     if uid:
@@ -109,6 +109,9 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, shell,
 
     if mail:
         add_record.append(('mail', [mail]))
+
+    if phone:
+        add_record.append(('telephoneNumber', [phone]))
 
     if password:
         password = make_secret(password)
@@ -187,6 +190,9 @@ def user_modify(b, username, **kwargs):
 
         elif key == 'gid':
             key = 'gidNumber'
+
+        elif key == 'phone':
+            key = 'telephoneNumber'
 
         elif key == 'shell':
             key = 'loginShell'
@@ -408,6 +414,7 @@ command.add_argument('--givenName')
 command.add_argument('--uid', '-u', metavar='USER ID')
 command.add_argument('--gid', '-g', metavar='GROUP ID')
 command.add_argument('--mail', metavar="EMAIL ADDRESS")
+command.add_argument('--phone', '-p', metavar="PHONE NUMBER")
 command.add_argument('--shell')
 command.add_argument('--groups', type=csep,
                      help='A comma separated list of group names')
@@ -434,6 +441,7 @@ command.add_argument('--uid', '-u', metavar='USER ID')
 command.add_argument('--gid', '-g', metavar='GROUP ID')
 command.add_argument('--shell')
 command.add_argument('--mail', metavar="EMAIL ADDRESS")
+command.add_argument('--phone', '-p', metavar="PHONE NUMBER")
 command.add_argument('--expire', metavar="DAYS",
                      help=('Number of days after which the account expires. '
                            'Set to -1 to disable'))
@@ -518,3 +526,4 @@ if __name__ == '__main__':
 
     except Exception as e:
         sys.exit("[Error] %s" % e)
+
