@@ -29,7 +29,6 @@
 
 TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trinity}"
 TRIX_VERSION="${STDCFG_TRIX_VERSION:-unknown}"
-SSHROOT="${STDCFG_SSHROOT:-0}"
 
 # All the paths and locations
 
@@ -85,30 +84,8 @@ TRIX_LOCAL_SHFILE="${TRIX_LOCAL_SHFILE}"
 
 EOF
 
-cat >> "$TRIX_SHFILE" << 'EOF' 
-if [[ "$BASH_SOURCE" == "$0" ]] ; then
-	echo "$TRIX_VERSION"
-fi
-
-EOF
-
 chmod 600 "$TRIX_SHFILE"
 ln -f -s "$TRIX_SHFILE" /etc/trinity.sh
-
-
-#---------------------------------------
-
-echo_info "Creating the Trinity local shell environment file"
-
-# It may already contain stuff (PRIMARY_INSTALL for example), so we don't
-# overwrite it entirely.
-
-{
-    echo '# TrinityX local environment file'
-    cat "$TRIX_LOCAL_SHFILE"
-} | sponge "$TRIX_LOCAL_SHFILE"
-
-chmod 600 "$TRIX_LOCAL_SHFILE"
 
 
 #---------------------------------------
@@ -124,39 +101,20 @@ chmod 600 "$TRIX_SHADOW"
 
 #---------------------------------------
 
-if (( $SSHROOT )) ; then
-    echo_info "Allowing SSH login as root"
-    
-    sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
-    systemctl restart sshd
-else
-    echo_info "SSH login as root disabled"
-fi
+# And finally, write the controller host names and IP to trinity.sh
 
+echo_info 'Writing controller IP and hostnames to the environment file'
 
-#---------------------------------------
+for i in CTRL{,1}_{HOSTNAME,IP} ; do
+    store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
+done
 
-echo_info "Generating the root's private SSH keys"
-
-[[ -e /root/.ssh/id_rsa ]] || \
-    ssh-keygen -t rsa -b 4096 -N "" -f /root/.ssh/id_rsa
-[[ -e /root/.ssh/id_ecdsa ]] || \
-    ssh-keygen -t ecdsa -b 521 -N "" -f /root/.ssh/id_ecdsa
-[[ -e /root/.ssh/id_ed25519 ]] || \
-    ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519
-
-
-echo_info 'Copying the SSH info to the shared directory'
-
-mkdir -p "${TRIX_ROOT}/root"
-cp -a /root/.ssh "${TRIX_ROOT}/root"
-
-
-#---------------------------------------
-
-echo_info "Disabling SELinux"
-
-sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux /etc/selinux/config
-setenforce 0
-echo_warn "Please remember to reboot the node after completing the configuration!"
+for i in CTRL2_{HOSTNAME,IP} ; do
+    if flag_is_set HA ; then
+        store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
+    else
+        # make sure that we're not picking up background noise
+        append_line "${TRIX_SHFILE}" "unset $i TRIX_$i"
+    fi
+done
 
