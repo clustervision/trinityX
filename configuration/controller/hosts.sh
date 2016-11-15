@@ -22,12 +22,10 @@
 # because of multiple interfaces?). We have to do it ourselves or nothing will
 # resolve and lots o' stuff will break.
 
-# Display the variables that we will need
 
 display_var HA CTRL{1,2,}_{HOSTNAME,IP} HOSTNAME
 
 
-#---------------------------------------
 
 # Are we running in an HA pair?
 # Are all the values set?
@@ -114,9 +112,9 @@ esac
 # Did the user pass an IP address that doesn't match any of our interfaces?
 
 if ! grep -q " ${ctrlip}$" ; then
-    echo_warn "The IP defined in the configuration doesn't match any of this machine's IPs:"
+    echo_error "The IP defined in the configuration doesn't match any of this machine's IPs:"
     echo "$ifips"
-    echo
+    exit 234
 fi <<< "$ifips"
 
 
@@ -161,7 +159,7 @@ for i in CTRL{1,2} ; do
 
         else
 
-            # not our machine, just write the data from the env varibales
+            # not our machine, just write the data from the env variables
             append_line /etc/hosts "$tmpip  $tmpname"
         fi
     fi
@@ -170,26 +168,5 @@ done
 
 # And if we're HA, we need to add the floating IP too
 
-flag_is_set HA && append_line /etc/hosts "$CTRL_IP  $CTRL_HOSTNAME"
-
-
-#---------------------------------------
-
-# And finally, write the environment variables to the trinity.sh file
-
-# We may need to run that script before any form of configuration is done, to
-# set up /etc/hosts for the shared storage. In that case the .sh file won't
-# exist yet, so don't try to write to it.
-
-if [[ -r /etc/trinity.sh ]] ; then
-    source /etc/trinity.sh
-    for i in HA CTRL{1,2,}_{HOSTNAME,IP} ; do
-        if [[ -v $i ]] ; then
-            store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
-        else
-            # make sure that we're not picking up background noise
-            append_line "${TRIX_SHFILE}" "unset $i TRIX_$i"
-        fi
-    done
-fi
+flag_is_set HA && append_line /etc/hosts "$CTRL_IP  $CTRL_HOSTNAME" || true
 
