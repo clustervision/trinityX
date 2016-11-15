@@ -24,19 +24,30 @@
 display_var HA CTRL{1,2}_{HOSTNAME,IP}
 
 
-# If we're not in an HA setup, exit right now, there's nothing to do.
+#---------------------------------------
+# Non-HA
+#---------------------------------------
 
 if flag_is_unset HA ; then
     
-    echo_warn 'No HA support was requested, no primary or secondary installation.'
+    echo_warn 'No HA support was requested, exiting.'
     exit
 fi
+
+
+#---------------------------------------
+# HA, both
+#---------------------------------------
+
+# Create trinity.local.sh for local configuration
+
+install -m 600 /dev/null /etc/trinity.local.sh
+echo '# TrinityX local environment file' > /etc/trinity.local.sh
 
 
 # Don't pick up background noise
 
 unset detected
-
 
 # Loop over the interfaces and check if one IP matches either cfg values.
 # On the way, check that the corresponding hostname is correct...
@@ -80,6 +91,6 @@ if flag_is_unset detected ; then
 
 Please check the respective _IP and _HOSTNAME variables in the configuration
 file, as well as the network and hostname configuration of the system.'
-    exit 1
+    exit 234
 fi
 
