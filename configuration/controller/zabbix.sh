@@ -3,12 +3,12 @@
 ######################################################################
 # TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -68,6 +68,7 @@ function zabbix_server_config_init () {
   sed -i -e "/php_value date.timezone/c\        php_value date.timezone "${TIMEZONE}""                                       /etc/httpd/conf.d/zabbix.conf
 
 cat >> /etc/zabbix/zabbix_server.conf <<EOF
+SourceIP=${TRIX_CTRL_IP}
 StartPollers=20
 StartIPMIPollers=20
 StartPollersUnreachable=10
@@ -152,7 +153,7 @@ function zabbix_server_config () {
                 \"userid\": \"1\",
                 \"passwd\": \"$ZABBIX_ADMIN_PASSWORD\"
             }}"
-  
+
   # -------------------------------
 
   echo_info "Enable automatic registration of zabbix agents"
@@ -162,9 +163,9 @@ function zabbix_server_config () {
        -d "{\"jsonrpc\": \"2.0\",
             \"method\": \"action.create\",
             \"auth\": \"$TOKEN\",
-            \"id\": 3, 
+            \"id\": 3,
             \"params\": {
-                \"name\": \"Auto registration\", 
+                \"name\": \"Auto registration\",
                 \"eventsource\": 2,
                 \"evaltype\": 0,
                 \"def_shortdata\": \"Auto registration: {HOST.HOST}\",
