@@ -17,7 +17,7 @@
 ######################################################################
 
 
-set -ex
+set -e
 
 function replace_template() {
     [ $# -gt 3 -o $# -lt 2 ] && echo "Wrong numger of argument in replace_template." && exit 1
@@ -35,7 +35,7 @@ function replace_template() {
 }
 
 function get_partners_ip() {
-    if [ -z "${HA}" -o  "x${HA}" = "x0"  ]; then
+    if flag_is_unset HA; then
         echo ''
         return
     fi
@@ -67,7 +67,7 @@ echo_info "Creating $RSYSLOG_MESSAGES_PATH"
 mkdir -p $RSYSLOG_MESSAGES_PATH
 
 RSYSLOG_HA_LINE=''
-if [ -n "${HA}" -a "x${HA}" = "x1" ]; then
+if flag_is_set HA ; then
     echo_info "Running HA."
     RSYSLOG_HA_LINE="*.*   @@$(get_partners_ip):514"
 fi
