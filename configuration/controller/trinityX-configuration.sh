@@ -1,4 +1,3 @@
-#!/bin/bash
 
 ######################################################################
 # TrinityX
@@ -17,13 +16,12 @@
 ######################################################################
 
 
-# TrinityX
-# Standard controller post-installation script
-# This should include all the most common tasks that have to be performed after
-# a completely standard CentOS minimal installation.
+# TrinityX standard controller post-installation script
+# This sets up the Trinity tree, the shared Trinity files.
 
-# Configuration variables are sourced by the configuration script, and are made
-# available in the shell environment.
+
+display_var HA PRIMARY_INSTALL TRIX_{ROOT,VERSION,HOME,IMAGES,LOCAL,SHARED}
+
 
 # Fallback values for configuration parameters
 
@@ -47,9 +45,26 @@ TRIX_SHFILE="${TRIX_SHARED}/trinity.sh"
 TRIX_LOCAL_SHFILE="/etc/trinity.local.sh"
 
 
+
+#---------------------------------------
+# HA secondary
 #---------------------------------------
 
-echo_info "Creating Trinity directory tree"
+if ( flag_is_set HA && flag_is_unset PRIMARY_INSTALL ) ; then
+
+    echo_info "Creating the symlink to the Trinity shell environment file"
+    ln -f -s "$TRIX_SHFILE" /etc/trinity.sh
+
+    exit
+fi
+
+
+
+#---------------------------------------
+# Non-HA and HA primary
+#---------------------------------------
+
+echo_info "Creating the Trinity directory tree"
 
 for i in TRIX_{HOME,IMAGES,LOCAL,LOCAL_APPS,LOCAL_MODFILES} \
          TRIX_{SHARED,SHARED_TMP,SHARED_APPS,SHARED_MODFILES} ; do
@@ -83,19 +98,16 @@ TRIX_SHFILE="${TRIX_SHFILE}"
 TRIX_LOCAL_SHFILE="${TRIX_LOCAL_SHFILE}"
 
 EOF
-
+    
 chmod 600 "$TRIX_SHFILE"
 ln -f -s "$TRIX_SHFILE" /etc/trinity.sh
 
 
 #---------------------------------------
 
-echo_info "Creating the Trinity private file"
+echo_info "Creating the Trinity shadow file"
 
-cat > "$TRIX_SHADOW" << EOF
-# TrinityX shadow file
-EOF
-
+echo '# TrinityX shadow file' > "$TRIX_SHADOW"
 chmod 600 "$TRIX_SHADOW"
 
 
@@ -105,12 +117,14 @@ chmod 600 "$TRIX_SHADOW"
 
 echo_info 'Writing controller IP and hostnames to the environment file'
 
-for i in CTRL{,1}_{HOSTNAME,IP} ; do
-    store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
-done
+if flag_is_unset HA ; then
+    unset CTRL2_{HOSTNAME,IP}
+    CTRL_HOSTNAME=CTRL1_HOSTNAME
+    CTRL_IP=CTRL1_IP
+fi
 
-for i in CTRL2_{HOSTNAME,IP} ; do
-    if flag_is_set HA ; then
+for i in CTRL{,1,2}_{HOSTNAME,IP} ; do
+    if flag_is_set $i ; then
         store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
     else
         # make sure that we're not picking up background noise
