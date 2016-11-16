@@ -84,3 +84,8 @@ cp ${POST_FILEDIR}/rsyslog.conf /etc/rsyslog.conf
 replace_template RSYSLOG_MESSAGES_PATH /etc/rsyslog.conf
 replace_template NETWORK_START_WITH /etc/rsyslog.conf
 replace_template RSYSLOG_HA_LINE /etc/rsyslog.conf
+
+echo_info "Restart rsyslog."
+
+systemctl restart rsyslog.service
+systemctl enable rsyslog.service
