@@ -41,7 +41,6 @@ OPTIONS:
 --continue          don't wait for user input on error
 --stop              exit when a post script returns an error code
 --hardstop          exit on any error inside a post script (bash -e)
---yum-retry         retry once installing packages that failed to install
 --chroot <dir>      apply the configuration inside <dir>
 
 RULES:
@@ -157,10 +156,6 @@ while (( $# )) ; do
 
         --skip-pkg )
             declare -x SKIPPKG=
-            ;;
-
-        --yum-retry )
-            declare -x YUMRETRY=
             ;;
 
         --chroot )
