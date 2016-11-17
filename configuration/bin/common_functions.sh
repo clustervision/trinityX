@@ -116,22 +116,26 @@ function echo_error {
     echo -e "${NOCOLOR-$COL_RED}"
     echo "[ ERROR ]  $@"
     echo -e "${NOCOLOR-$COL_RESET}"
-    
-    if [[ "${SOFTSTOP+x}" == x ]] ; then
-        echo 'Stop requested, exiting now.'
-        exit 1
-    fi
 }
 
 # Same, and wait for user input
 
-function echo_error_wait {
+function echo_error_prompt {
     echo_error "$@"
     
-    if ! [[ -v NOSTOP ]] ; then
-        read -p "           Press Enter to continue."
-    fi
+    flag_is_set SOFTSTOP && return 2
+    flag_is_set NOSTOP && return 1
+
+    while true ; do
+        read -p "           [R]etry, [C]ontinue or [E]xit? [R] "
+        case "${REPLY,,}" in
+            "" | "r" )  return 0 ;;
+            "c" )       return 1 ;;
+            "e" )       return 2 ;;
+        esac
+    done
 }
+
 
 # Only export the functions that are available to the post scripts
 typeset -fx echo_info
