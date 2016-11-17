@@ -100,6 +100,17 @@ unset QUIET VERBOSE DEBUG NOCOLOR
 
 if [[ -p /dev/stdout ]] || [[ ! -t 1 && ! -p /dev/stdout ]] ; then
     declare -x NOCOLOR=
+else
+    echo_warn "The output of this script isn't being redirected to a log file.
+
+If this is the intended behaviour, press Enter to continue.
+
+If you want to keep a log of the installation, exit the script right now by
+typing Ctrl+C, and run the following command instead:
+
+$0 $@ |& tee -a trinityX_installation.log"
+
+    flag_is_unset NOSTOP && read
 fi
 
 
