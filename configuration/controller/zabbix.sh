@@ -16,6 +16,17 @@
 # details.
 ######################################################################
 
+function do_sql_req {
+    if [ -f ~/.my.cnf ]; then
+        echo $@ | /usr/bin/mysql
+        return 0
+    fi
+    if [ ${MYSQL_ROOT_PASSWORD} ]; then
+        echo $@ | /usr/bin/mysql -u root --password="${MYSQL_ROOT_PASSWORD}"
+        return 0
+    fi
+    echo $@ | /usr/bin/mysql -u root
+}
 
 function check_zabbix_installation () {
   echo_info "Check if a previous installation exists"
@@ -52,8 +63,9 @@ function setup_zabbix_database () {
     fi
   fi
   setup_zabbix_credentials
-  mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "create database zabbix character set utf8 collate utf8_bin;"
-  mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "grant all privileges on zabbix.* to zabbix@localhost identified by '$ZABBIX_MYSQL_PASSWORD';"
+  do_sql_req "CREATE DATABASE ${ZABBIX_MYSQL_DB} CHARACTER SET utf8 COLLATE utf8_bin;"
+  do_sql_req "CREATE USER '${ZABBIX_MYSQL_USER}'@'%' IDENTIFIED BY '${ZABBIX_MYSQL_PASSWORD}';"
+  do_sql_req "GRANT ALL PRIVILEGES ON ${ZABBIX_MYSQL_DB}.* TO '${ZABBIX_MYSQL_USER}'@'%';"
   zcat "$(rpm -ql zabbix-server-mysql | grep create.sql.gz)" | mysql -uroot zabbix
 }
 
@@ -84,7 +96,7 @@ EOF
                 "// Zabbix GUI configuration file." \
                 "global \$DB\n;" \
                 "\$DB['TYPE']     = 'MYSQL';" \
-                "\$DB['SERVER']   = 'localhost';" \
+                "\$DB['SERVER']   = '${TRIX_CTRL_IP}';" \
                 "\$DB['PORT']     = '0';" \
                 "\$DB['DATABASE'] = '"${ZABBIX_MYSQL_DB}"';" \
                 "\$DB['USER']     = '"${ZABBIX_MYSQL_USER}"';" \
@@ -110,12 +122,51 @@ function setup_snmp_trapd () {
   # file /var/log/snmptrap/snmptrap.log should be created and filled with some data
 }
 
-function copy_zabbix_scripts () {
+function copy_data_to_shared() {
+    FILES=" /etc/zabbix/zabbix_server.conf \
+            /etc/zabbix/web \
+            /etc/httpd/conf.d/zabbix.conf
+            /usr/lib/zabbix/alertscripts \
+            /usr/lib/zabbix/externalscripts \
+            "
+    for FILE in ${FILES}; do
+        if [ ! -e ${TRIX_ROOT}/shared/${FILE} ]; then
+            tar -cf - ${FILE} | (cd ${TRIX_ROOT}/shared/; tar -xf -)
+        fi
+    done
+}
+
+function copy_zabbix_scripts() {
   cp -f ${POST_FILEDIR}/zabbix_agentd.d/*   /etc/zabbix/zabbix_agentd.d/
   cp -f ${POST_FILEDIR}/externalscripts/*   /usr/lib/zabbix/externalscripts/
   mkdir -p /var/lib/zabbix/userparameters
   cp -f ${POST_FILEDIR}/userparameters/*    /var/lib/zabbix/userparameters/
   cp -f ${POST_FILEDIR}/sudoers-zabbix      /etc/sudoers.d/zabbix
+}
+
+function symlynks_to_config() {
+    FILES=" /etc/zabbix/zabbix_server.conf \
+            /usr/lib/zabbix/alertscripts \
+            /usr/lib/zabbix/externalscripts \
+            "
+    for FILE in FILES; do
+        if [ ! -h ${FILE} ];then
+            mv ${FILE}{,.orig}
+            ln -s ${TRIX_ROOT}/shared/${FILE} ${FILE}
+        fi
+    done
+}
+
+function slave_copy_files() {
+    FILES=" /etc/zabbix/web \
+            /etc/httpd/conf.d/zabbix.conf\
+            "
+    for FILE in ${FILES}; do
+        if [ ! -e ${FILE}.orig ];then
+            mv ${FILE}{,.orig}
+            cp -prf ${TRIX_ROOT}/shared/${FILE} ${FILE}
+        fi
+    done
 }
 
 function zabbix_server_services () {
