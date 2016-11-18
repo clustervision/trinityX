@@ -111,3 +111,11 @@ if flag_is_set STDCFG_CTRL_GATEWAY ; then
     append_line /etc/sysconfig/network "GATEWAY=$TRIX_CTRL_IP"
 fi
 
+
+#---------------------------------------
+
+echo_info 'Copying standard files'
+
+mkdir -p /etc/security/limits.d/
+cp "${POST_FILEDIR}"/91-hpc-limits.conf /etc/security/limits.d/
+
