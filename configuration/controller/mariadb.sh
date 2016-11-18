@@ -32,8 +32,13 @@ function pass_esc {
 
 function setup_root_pass {
     PASS=`pass_esc $1`
+
     do_sql_req "UPDATE mysql.user SET Password=PASSWORD('$PASS') WHERE User='root';"
     do_sql_req "FLUSH PRIVILEGES;"
+
+    # Save default mysql root credentials to avoid having to provide then in every cmd
+    # This here is heredocument that uses the "-EOF" operator to improve readability
+    # Leading TABS (not spaces) are ignored.
     cat <<-EOF > ~/.my.cnf
 		[mysql]
 		user=root
