@@ -33,7 +33,7 @@
 #   export by hand and rsync that subdirectory to the secondary FS root.
 
 
-display_var HA PRIMARY_INSTALL TRIX_{ROOT,SHADOW}
+display_var HA PRIMARY_INSTALL TRIX_{LOCAL,SHADOW}
 
 
 #---------------------------------------
@@ -50,7 +50,7 @@ flag_is_unset HA && exit
 
 if flag_is_set PRIMARY_INSTALL ; then
     # We need to move the secondary directory over to the NFS server:
-    mv /root/secondary "${TRIX_ROOT}"
+    mv /root/secondary "${TRIX_LOCAL}"
 
 
 #---------------------------------------

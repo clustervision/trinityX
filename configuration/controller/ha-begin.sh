@@ -34,7 +34,7 @@
 #   post script).
 
 
-display_var HA PRIMARY_INSTALL CTRL{,1}_IP STDCFG_TRIX_ROOT
+display_var HA PRIMARY_INSTALL CTRL{,1}_IP STDCFG_TRIX_LOCAL
 
 
 #---------------------------------------
@@ -87,8 +87,8 @@ mntdir=$(mktemp -d)
 
 echo_info 'Mounting the primary NFS export'
 
-if mount -v -t nfs ${CTRL_IP}:"${STDCFG_TRIX_ROOT:-/trinity}" "$mntdir" || \
-   mount -v -t nfs ${CTRL1_IP}:"${STDCFG_TRIX_ROOT:-/trinity}" "$mntdir" ; then
+if mount -v -t nfs ${CTRL_IP}:"${STDCFG_TRIX_LOCAL:-/trinity/local}" "$mntdir" || \
+   mount -v -t nfs ${CTRL1_IP}:"${STDCFG_TRIX_LOCAL:-/trinity/local}" "$mntdir" ; then
     
     echo_info 'Copying secondary data from primary mount'
     rsync -ra "${mntdir}/secondary/" /root/secondary/
