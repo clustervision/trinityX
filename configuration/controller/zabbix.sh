@@ -69,28 +69,13 @@ function setup_zabbix_database () {
   zcat "$(rpm -ql zabbix-server-mysql | grep create.sql.gz)" | mysql -uroot zabbix
 }
 
-function zabbix_server_config_init () {
-  echo_info "Initialize zabbix configuration"
+function zabbix_web_config_init () {
+
+  echo_info "Initialize zabbix-web configuration"
 
   local TIMEZONE=$(readlink /etc/localtime | sed "s/..\/usr\/share\/zoneinfo\///")
 
-  sed -i -e "/^DBName=/{h;s/=.*/="${ZABBIX_MYSQL_DB}"/};\${x;/^$/{s//DBName=${ZABBIX_MYSQL_DB}/;H};x}"                       /etc/zabbix/zabbix_server.conf
-  sed -i -e "/^DBUser=/{h;s/=.*/="${ZABBIX_MYSQL_USER}"/};\${x;/^$/{s//DBUser=${ZABBIX_MYSQL_USER}/;H};x}"                   /etc/zabbix/zabbix_server.conf
-  sed -i -e "/^DBPassword=/{h;s/=.*/="${ZABBIX_MYSQL_PASSWORD}"/};\${x;/^$/{s//DBPassword=${ZABBIX_MYSQL_PASSWORD}/;H};x}"   /etc/zabbix/zabbix_server.conf
   sed -i -e "/php_value date.timezone/c\        php_value date.timezone "${TIMEZONE}""                                       /etc/httpd/conf.d/zabbix.conf
-
-cat >> /etc/zabbix/zabbix_server.conf <<EOF
-SourceIP=${TRIX_CTRL_IP}
-StartPollers=20
-StartIPMIPollers=20
-StartPollersUnreachable=10
-StartPingers=10
-StartSNMPTrapper=1
-CacheSize=1024M
-HistoryCacheSize=1024M
-TrendCacheSize=1024M
-Timeout=30
-EOF
 
   printf '%b\n' "<?php" \
                 "// Zabbix GUI configuration file." \
@@ -107,6 +92,30 @@ EOF
                 "\$ZBX_SERVER_PORT = '10051';" \
                 "\$ZBX_SERVER_NAME = 'local cluster';\n" \
                 "\$IMAGE_FORMAT_DEFAULT = IMAGE_FORMAT_PNG;" > /etc/zabbix/web/zabbix.conf.php
+}
+
+function edit_zabbix_conf() {
+
+
+    sed -i -e "/^DBName=/{h;s/=.*/="${ZABBIX_MYSQL_DB}"/};\${x;/^$/{s//DBName=${ZABBIX_MYSQL_DB}/;H};x}"                       /etc/zabbix/zabbix_server.conf
+    sed -i -e "/^DBUser=/{h;s/=.*/="${ZABBIX_MYSQL_USER}"/};\${x;/^$/{s//DBUser=${ZABBIX_MYSQL_USER}/;H};x}"                   /etc/zabbix/zabbix_server.conf
+    sed -i -e "/^DBPassword=/{h;s/=.*/="${ZABBIX_MYSQL_PASSWORD}"/};\${x;/^$/{s//DBPassword=${ZABBIX_MYSQL_PASSWORD}/;H};x}"   /etc/zabbix/zabbix_server.conf
+    append_line /etc/zabbix/zabbix_server.conf SourceIP=${TRIX_CTRL_IP}
+    append_line /etc/zabbix/zabbix_server.conf StartPollers=20
+    append_line /etc/zabbix/zabbix_server.conf StartIPMIPollers=20
+    append_line /etc/zabbix/zabbix_server.conf StartPollersUnreachable=10
+    append_line /etc/zabbix/zabbix_server.conf StartPingers=10
+    append_line /etc/zabbix/zabbix_server.conf StartSNMPTrapper=1
+    append_line /etc/zabbix/zabbix_server.conf CacheSize=1024M
+    append_line /etc/zabbix/zabbix_server.conf HistoryCacheSize=1024M
+    append_line /etc/zabbix/zabbix_server.conf TrendCacheSize=1024M
+    append_line /etc/zabbix/zabbix_server.conf Timeout=30
+
+}
+
+function create_script_dirs() {
+    mkdir -p /usr/lib/zabbix/alertscripts
+    mkdir -p /usr/lib/zabbix/externalscripts
 }
 
 function setup_snmp_trapd () {
@@ -170,11 +179,18 @@ function slave_copy_files() {
 }
 
 function zabbix_server_services () {
-  echo_info "Enable and start zabbix service and dependencies"
-  systemctl restart zabbix-server
-  systemctl restart httpd
-  systemctl enable zabbix-server
-  systemctl enable httpd
+    if [ "x${1}" = "on" ]; then
+        echo_info "Enable and start zabbix service and dependencies"
+        systemctl restart zabbix-server
+        systemctl restart httpd
+        systemctl enable zabbix-server
+        systemctl enable httpd
+    fi
+    if [ "x${1}" = "off" ]; then
+        echo_info "Disable and stop zabbix service and dependencies"
+        systemctl stop zabbix-server
+        systemctl stop httpd
+    fi
 }
 
 function zabbix_server_config () {
@@ -255,7 +271,7 @@ function zabbix_server_config () {
             \"params\": {
                 \"description\": \"Local e-mail\",
                 \"type\": 0,
-                \"smtp_server\": \"$TRIX_CTRL_HOSTNAME\",
+                \"smtp_server\": \"localhost\",
                 \"smtp_helo\": \"$TRIX_CTRL_HOSTNAME\",
                 \"smtp_email\": \"zabbix@$TRIX_CTRL_HOSTNAME\"
             }}"
@@ -275,14 +291,35 @@ function zabbix_server_config () {
                 \"medias\": {\"mediatypeid\": \"4\", \"sendto\": \"root@$TRIX_CTRL_HOSTNAME\", \"active\": 0, \"severity\": 63, \"period\": \"1-7,00:00-24:00\"}
             }}"
 
+    if [ "x${ZABBIX_STORE_HISTORY}" != "x" ]; then
+        do_sql_req "UPDATE ${ZABBIX_MYSQL_DB}.config SET hk_history_global=1,hk_history=${ZABBIX_STORE_HISTORY};"
+    fi
+    if [ "x${ZABBIX_STORE_TRENDS}" != "x" ]; then
+        do_sql_req "UPDATE ${ZABBIX_MYSQL_DB}.config SET hk_trends_global=1,hk_trends=${ZABBIX_STORE_TRENDS};"
+    fi
+
 }
 
 function main () {
-  check_zabbix_installation
-  setup_zabbix_database
-  zabbix_server_config_init
-  zabbix_server_services
-  zabbix_server_config
+    check_zabbix_installation
+    create_script_dirs
+    setup_snmp_trapd
+    zabbix_web_config_init
+    if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
+        setup_zabbix_database
+        edit_zabbix_conf
+        copy_zabbix_scripts
+        copy_data_to_shared
+    fi
+    symlynks_to_config
+    zabbix_server_services on
+    if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
+        zabbix_server_config
+    fi
+    if flag_is_set HA; then
+        zabbix_server_services off
+    fi
+
 }
 
 echo_info 'Zabbix installation script' && main
