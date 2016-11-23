@@ -55,30 +55,32 @@ systemctl restart firewalld
 
 if flag_is_set FWD_PUBLIC_IF ; then
     for i in $FWD_PUBLIC_IF ; do
+        echo_info "Assigning interfaces: $i -> Public"
+        firewall-cmd --zone=public --change-interface=${i}
+        firewall-cmd --permanent --zone=public --change-interface=${i}
+
         ifcfg="/etc/sysconfig/network-scripts/ifcfg-${i}"
         if [[ -r "$ifcfg" ]] ; then
-            echo_info "Assigning interfaces: $i -> Public"
-            firewall-cmd --zone=public --change-interface=${i}
-            #firewall-cmd --permanent --zone=public --change-interface=${i}
             store_system_variable "$ifcfg" NM_CONTROLLED no
             store_system_variable "$ifcfg" ZONE public
         else
-            echo_warn "Interface $i doesn't have an ifcfg file, skipping..."
+            echo_warn "Interface $i doesn't have an ifcfg file, skipping file update..."
         fi
     done
 fi
 
 if flag_is_set FWD_TRUSTED_IF ; then
     for i in $FWD_TRUSTED_IF ; do
+        echo_info "Assigning interfaces: $i -> Trusted"
+        firewall-cmd --zone=trusted --change-interface=${i}
+        firewall-cmd --permanent --zone=trusted --change-interface=${i}
+
         ifcfg="/etc/sysconfig/network-scripts/ifcfg-${i}"
         if [[ -r "$ifcfg" ]] ; then
-            echo_info "Assigning interfaces: $i -> Trusted"
-            firewall-cmd --zone=trusted --change-interface=${i}
-            #firewall-cmd --permanent --zone=trusted --change-interface=${i}
             store_system_variable "$ifcfg" NM_CONTROLLED no
             store_system_variable "$ifcfg" ZONE trusted
         else
-            echo_warn "Interface $i doesn't have an ifcfg file, skipping..."
+            echo_warn "Interface $i doesn't have an ifcfg file, skipping file update..."
             fi
     done
 fi
