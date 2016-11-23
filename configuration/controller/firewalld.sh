@@ -19,7 +19,7 @@
 
 # Basic configuration of firewalld, without TUI
 
-display_var FWD_{PUBLIC_IF,TRUSTED_IF,NAT_PUBLIC,HTTPS_PUBLIC}
+display_var FWD_{PUBLIC_IF,TRUSTED_IF,NAT_PUBLIC,TCP_PUBLIC,UDP_PUBLIC}
 
 
 # So we want firewalld. Enable and start it now, otherwise lots of commands will
@@ -98,13 +98,19 @@ fi
 
 #---------------------------------------
 
-# Enable HTTPS on public zone
+# Enable required ports on the public zone
 
-if flag_is_set FWD_HTTPS_PUBLIC ; then
-    echo_info "Enabling HTTPS on the public zone"
-    firewall-cmd --zone=public --add-service=https
-    firewall-cmd --permanent --zone=public --add-service=https
-fi
+echo_info "Allowing TCP ports on the public zone"
+
+for range in ${FWD_TCP_PUBLIC[*]}; do
+    firewall-cmd --permanent --zone=public --add-port="$range"/tcp
+done
+
+echo_info "Allowing UDP ports on the public zone"
+
+for range in ${FWD_UDP_PUBLIC[*]}; do
+    firewall-cmd --permanent --zone=public --add-port="$range"/udp
+done
 
 
 #---------------------------------------
