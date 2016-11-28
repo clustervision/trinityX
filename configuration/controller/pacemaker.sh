@@ -159,13 +159,14 @@ if flag_is_set PRIMARY_INSTALL ; then
     pcs property set no-quorum-policy=ignore
     pcs resource defaults migration-threshold=1
     
-    echo_info 'Creating the top-level Trinity resource'
-    pcs resource create trinity ocf:heartbeat:Dummy
+    #echo_info 'Creating the top-level Trinity resource'
+    #pcs resource create Trinity ocf:heartbeat:Dummy
     
     echo_info 'Creating the floating IP address resource'
     pcs resource create ClusterIP ocf:heartbeat:IPaddr2 ip=${CTRL_IP} op monitor interval=30s
-    pcs constraint colocation add ClusterIP with trinity
-    pcs constraint order start trinity then start ClusterIP
+    #pcs constraint colocation add ClusterIP with trinity
+    #pcs constraint order start trinity then start ClusterIP
+    pcs resource group add Trinity ClusterIP
 
 
 #---------------------------------------
