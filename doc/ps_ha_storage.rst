@@ -1,6 +1,6 @@
 
-HA storage post-scripts engineering documentation
-=================================================
+Controller storage post-scripts engineering documentation
+=========================================================
 
 Overview
 --------
@@ -29,13 +29,6 @@ The choice of the configuration, as well as providing additional variables when 
 
 
 
-Note for non-HA setups
-----------------------
-
-Non-HA setups are not dealt with by those post-script. They will simply exit without doing anything if run for a non-HA configuration. In effect, the non-HA setup of the TrinityX root is similar to the ``export`` HA option.
-
-
-
 Use cases
 ---------
 
@@ -43,9 +36,11 @@ The use cases supported by the post-scripts are:
 
 - ``none``
 
-    No configuration is done on the controllers. On both controllers the path to ``STDCFG_TRIX_ROOT`` is expected to exist and be accessible RW. No configuration is done in the compute node images.
+    No configuration is done on the controllers. On both controllers the path to ``STDCFG_TRIX_ROOT`` is expected to exist and be accessible RW. No NFS export is set up. No configuration is done in the compute node images.
 
     Typical usage: external distributed filesystems (GPFS, Lustre, etc), exotic configurations that aren't covered by any other use case.
+
+    Available in: HA, non-HA.
 
 
 - ``export``
@@ -54,6 +49,8 @@ The use cases supported by the post-scripts are:
 
     Typical usage: remote shared block devices (iSCSI), ZFS shared arrays.
 
+    Available in: HA, non-HA.
+
 
 - ``dev``
 
@@ -61,12 +58,16 @@ The use cases supported by the post-scripts are:
 
     Typical usage: local shared block device (shared disk, JBOD with mdraid or LVM).
 
+    Available in: HA, non-HA.
+
 
 - ``drbd``
 
     Two block devices must exist, one on each controller. At installation time those block devices are set up as a DRBD replicated volume and formatted, and at runtime the DRBD volume is mounted at ``STDCFG_TRIX_ROOT`` on the active controller. The subfolders are exported via NFS from the active controller to the passive controller and the nodes.
 
     Typical usage: controllers without shared block device.
+
+    Available in: HA only.
 
 
 
@@ -83,6 +84,13 @@ For ``export``, ``dev`` and ``drbd``, a Pacemaker resource to manage the NFS ser
 
 
 
+Non-HA setups
+-------------
+
+All use cases outside of ``drbd`` are available for non-HA setups. The default when ``SHARED_FS_TYPE`` is not specified, is ``export``. For all supported cases, the same configuration options are available.
+
+
+
 Creation configuration options
 ------------------------------
 
@@ -94,10 +102,22 @@ The configuration options that are accepted by the HA storage post-scripts are t
     The top-level configuration. Its possible values are the `Use cases`_.
 
 
-``SHARED_FS_DEV_BACKEND``
+``SHARED_FS_DEVICE``
 
     For ``dev`` and ``drbd``, the name of the block device that is to be used. Note that the name must be identical on both controllers.
 
+
+``SHARED_FS_CTRL1_IP``
+``SHARED_FS_CTRL1_IP``
+
+    For ``drbd`` only, the IPs to use for replication and synchronization. This allows the DRBD traffic to use a separate network, preferably a direct cable between the two controllers. If not set, the main ``STDCFG_CTRL1_IP`` and ``STDCFG_CTRL2_IP`` will be used.
+
+.. warning:: Make sure that the interfaces set with those IPs are trusted interfaces in firewalld (i.e. wide open), or that at least port ``7789`` is open.
+
+
+``SHARED_FS_DRBD_WAIT_FOR_SYNC``
+
+    For ``drbd`` only: if set, wait for full synchronization of the secondary disk before continuing with the TrinityX setup. That will take a while.
 
 ``SHARED_FS_NO_FORMAT``
 
@@ -111,12 +131,6 @@ The configuration options that are accepted by the HA storage post-scripts are t
     For ``dev`` and ``drbd``, additional options to pass to the format command. This is especially useful when the backing device requires additional parameters for optimal performance: RAID arrays, SSD, etc.
 
 
-.. This may me useful, but the mount will be managed by a Pacemaker resource. Apart from hardcoding the options in the resource (or having a layer of indirection with the options in a separate file or something), I don't see how this can be done. And hardcoding isn't good practice, and a layer of indirection is a kludge.
-    
-    ``SHARED_FS_MOUNT_OPTIONS``
-    
-        For ``dev`` and ``drbd``, additional options to pass to the mount command. This is especially useful when the backing device requires additional parameters for optimal performance: RAID arrays, SSD, etc.
-
 
 
 NFS exports
@@ -126,22 +140,25 @@ In most cases, parts or the whole of the TrinityX root tree will be exported via
 
 All exports (and the matching mounts on the secondary controller and the compute nodes) are controlled by individual configuration flags, that enable or disable them. Using those flags together with non-standard paths for some of the subfolders of the TrinityX tree, allows for mixed models where part of the tree may be shared over NFS, while other parts can be on an external distributed FS, for example.
 
+In non-HA setups, only the homes are exported to the compute nodes by default.
+
 The floowing flags are currently supported:
 
-======================= =================== =================== =================== ====================
-Flag name               Default ``none``    Default ``export``  Default ``dev``     Default ``drbd``
-======================= =================== =================== =================== ====================
-``NFS_EXPORT_LOCAL``    0                   1                   1                   1
-``NFS_EXPORT_IMAGES``   0                   1                   1                   1
-``NFS_EXPORT_SHARED``   0                   1                   1                   1
-``NFS_EXPORT_HOME``     0                   1                   1                   1
-======================= =================== =================== =================== ====================
+======================= =================== =================== =================== =================== ===================
+Flag name               Default ``none``    Default ``export``  Default ``dev``     Default ``drbd``    Default non-HA
+======================= =================== =================== =================== =================== ===================
+``NFS_EXPORT_LOCAL``    0                   1                   1                   1                   0
+``NFS_EXPORT_IMAGES``   0                   1                   1                   1                   0
+``NFS_EXPORT_SHARED``   0                   1                   1                   1                   1
+``NFS_EXPORT_HOME``     0                   1                   1                   1                   1
+======================= =================== =================== =================== =================== ===================
 
 .. note:: Refer to the `Overview`_ for the scope of the export of each of those directories.
 
 .. note:: The installer will set those flags to the values above based on the shared FS use case selected in the configuration file. They only need to be redefined when the required setup differs from the defaults.
 
 .. warning:: ``NFS_EXPORT_LOCAL`` is expected to be enabled for installation of the secondary controller. If disabled, the directory must be available locally on the secondary controller before the TrinityX setup starts.
+
 
 
 
@@ -166,7 +183,7 @@ Let's assume that we have an external JBOD with a RAID array on it. The procedur
     # no change to the default paths
     
     SHARED_FS_TYPE=dev
-    SHARED_FS_DEV_BACKEND=/dev/<path to RAID block device>
+    SHARED_FS_DEVICE=/dev/<path to RAID block device>
     SHARED_FS_FORMAT_OPTIONS=<as required by the array>
     
     # only one change to the default exports, the rest is fine
