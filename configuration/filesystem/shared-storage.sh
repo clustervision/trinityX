@@ -330,6 +330,7 @@ else
 
         # The colocation rules
         pcs -f $tmpfile constraint colocation add FS-Trinity with ClusterIP
+        pcs -f $tmpfile resource group add Trinity FS-trinity --after ClusterIP
 
         # Apply the changes
         if ! pcs cluster cib-push $tmpfile ; then
