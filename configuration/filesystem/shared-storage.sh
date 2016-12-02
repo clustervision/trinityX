@@ -284,9 +284,9 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
 
     # The colocation rules
     pcs -f $tmpfile constraint colocation add FS-trinity with DRBD-controllers INFINITY with-rsc-role=Master
-    pcs -f $tmpfile constraint colocation add master DRBD-controllers with ClusterIP
+    #pcs -f $tmpfile constraint colocation add master DRBD-controllers with ClusterIP
     pcs -f $tmpfile constraint order promote DRBD-controllers then start FS-trinity
-    pcs -f $tmpfile resource group add Trinity DRBD-controllers FS-trinity --after ClusterIP
+    pcs -f $tmpfile resource group add Trinity FS-trinity --after ClusterIP
 
     # Apply the changes
     if ! pcs cluster cib-push $tmpfile ; then
@@ -343,7 +343,7 @@ else
             interval=67s OCF_CHECK_LEVEL=10
 
         # The colocation rules
-        pcs -f $tmpfile constraint colocation add FS-Trinity with ClusterIP
+        #pcs -f $tmpfile constraint colocation add FS-Trinity with ClusterIP
         pcs -f $tmpfile resource group add Trinity FS-trinity --after ClusterIP
 
         # Apply the changes
