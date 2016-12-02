@@ -273,7 +273,14 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
     pcs -f $tmpfile resource master DRBD-controllers DRBD master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
 
     # The filesystem on top
-    pcs -f $tmpfile resource create FS-trinity ocf:heartbeat:Filesystem device=/dev/drbd/by-res/trinity_disk directory="${TRIX_ROOT}" fstype=xfs op monitor interval=61s
+    pcs -f $tmpfile resource create FS-trinity ocf:heartbeat:Filesystem \
+        device=/dev/drbd/by-res/trinity_disk directory="$TRIX_ROOT" fstype=xfs \
+        options="nodiscard,inode64" run_fsck=force force_unmount=safe \
+        op monitor interval=31s
+
+    # More advanced check at a longer interval
+    pcs -f $tmpfile resource op add FS-trinity monitor \
+        interval=67s OCF_CHECK_LEVEL=10
 
     # The colocation rules
     pcs -f $tmpfile constraint colocation add FS-trinity with DRBD-controllers INFINITY with-rsc-role=Master
@@ -326,7 +333,14 @@ else
         pcs cluster cib $tmpfile
 
         # The filesystem
-        pcs -f $tmpfile resource create FS-trinity ocf:heartbeat:Filesystem device="$SHARED_FS_PART" directory="$TRIX_ROOT" fstype=xfs op monitor interval=61s
+        pcs -f $tmpfile resource create FS-trinity ocf:heartbeat:Filesystem \
+            device="$SHARED_FS_PART" directory="$TRIX_ROOT" fstype=xfs \
+            options="nodiscard,inode64" run_fsck=force force_unmount=safe \
+            op monitor interval=31s
+
+        # More advanced check at a longer interval
+        pcs -f $tmpfile resource op add FS-trinity monitor \
+            interval=67s OCF_CHECK_LEVEL=10
 
         # The colocation rules
         pcs -f $tmpfile constraint colocation add FS-Trinity with ClusterIP
