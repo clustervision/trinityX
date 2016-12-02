@@ -2,12 +2,12 @@
 ######################################################################
 # TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -29,7 +29,7 @@ display_var HA CTRL{1,2}_{HOSTNAME,IP}
 #---------------------------------------
 
 if flag_is_unset HA ; then
-    
+
     echo_warn 'No HA support was requested, exiting.'
     exit
 fi
@@ -38,12 +38,6 @@ fi
 #---------------------------------------
 # HA, both
 #---------------------------------------
-
-# Create trinity.local.sh for local configuration
-
-install -m 600 /dev/null /etc/trinity.local.sh
-echo '# TrinityX local environment file' > /etc/trinity.local.sh
-
 
 # Don't pick up background noise
 
@@ -55,9 +49,9 @@ unset detected
 hname=$(hostname -s)
 
 for i in $(hostname -I) ; do
-    
+
     case $i in
-        
+
         $CTRL1_IP )
             if [[ $hname != $CTRL1_HOSTNAME ]] ; then
                 echo_error 'CTRL1_IP found on this system, but the hostname is not CTRL1_HOSTNAME.'
@@ -69,7 +63,7 @@ for i in $(hostname -I) ; do
                 break
             fi
             ;;
-        
+
         $CTRL2_IP )
             if [[ $hname != $CTRL2_HOSTNAME ]] ; then
                 echo_error 'CTRL2_IP found on this system, but the hostname is not CTRL2_HOSTNAME.'

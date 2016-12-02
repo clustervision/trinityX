@@ -145,15 +145,13 @@ if flag_is_set PRIMARY_INSTALL ; then
     echo_info 'Setting the password for the "hacluster" user'
     PACEMAKER_HACLUSTER_PW="$(get_password "$PACEMAKER_HACLUSTER_PW")"
     
-    # We need to store that password in the local shadow file, as well as in a
-    # file for the secondary to pick up.
-    echo "$PACEMAKER_HACLUSTER_PW" > /root/secondary/hacluster.pw
-    ALT_SHADOW=/etc/trinity.local.shadow \
-         store_password PACEMAKER_HACLUSTER_PW "$PACEMAKER_HACLUSTER_PW"
-    
     pacemaker_hacluster_pw_auth
     pacemaker_start_and_check
     
+    # We need to store that password in the local shadow file, as well as in a
+    # file for the secondary to pick up.
+    store_password PACEMAKER_HACLUSTER_PW "$PACEMAKER_HACLUSTER_PW"
+
     echo_info 'Configuring the cluster'
     pcs property set stonith-enabled=false
     pcs property set no-quorum-policy=ignore
@@ -163,7 +161,7 @@ if flag_is_set PRIMARY_INSTALL ; then
     #pcs resource create Trinity ocf:heartbeat:Dummy
     
     echo_info 'Creating the floating IP address resource'
-    pcs resource create ClusterIP ocf:heartbeat:IPaddr2 ip=${CTRL_IP} op monitor interval=30s
+    pcs resource create ClusterIP ocf:heartbeat:IPaddr2 ip=${CTRL_IP} op monitor interval=29s
     #pcs constraint colocation add ClusterIP with trinity
     #pcs constraint order start trinity then start ClusterIP
     pcs resource group add Trinity ClusterIP
@@ -187,8 +185,7 @@ else
     # -- Pacemaker ---
     
     echo_info 'Setting the password for the "hacluster" user'
-    PACEMAKER_HACLUSTER_PW="$(cat /root/secondary/hacluster.pw)"
-    
+    # The password comes from the shadow file of the primary installation
     pacemaker_hacluster_pw_auth
     pacemaker_start_and_check
 fi

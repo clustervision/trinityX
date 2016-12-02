@@ -1,0 +1,28 @@
+# TrinityX environment file
+# Do not modify!
+
+TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trinity}"
+TRIX_VERSION="${STDCFG_TRIX_VERSION:-$(git describe --tags)}"
+
+TRIX_HOME="${STDCFG_TRIX_HOME:-${TRIX_ROOT}/home}"
+TRIX_IMAGES="${STDCFG_TRIX_IMAGES:-${TRIX_ROOT}/images}"
+TRIX_LOCAL="${TRIX_ROOT}/local"
+TRIX_LOCAL_APPS="${TRIX_LOCAL}/applications"
+TRIX_LOCAL_MODFILES="${TRIX_LOCAL}/modulefiles"
+TRIX_SHARED="${STDCFG_TRIX_SHARED:-${TRIX_ROOT}/shared}"
+TRIX_SHARED_TMP="${TRIX_SHARED}/tmp"
+TRIX_SHARED_APPS="${TRIX_SHARED}/applications"
+TRIX_SHARED_MODFILES="${TRIX_SHARED}/modulefiles"
+
+TRIX_SHADOW="/etc/trinity.shadow"
+TRIX_SHFILE="/etc/trinity.sh"
+TRIX_LOCAL_SHFILE="/etc/trinity.local.sh"
+
+TRIX_CTRL1_HOSTNAME="${CTRL1_HOSTNAME}"
+TRIX_CTRL1_IP="${CTRL1_IP}"
+${HA-unset }TRIX_CTRL2_HOSTNAME${HA+="${CTRL2_HOSTNAME}"}
+${HA-unset }TRIX_CTRL2_IP${HA+="${CTRL2_IP}"}
+TRIX_CTRL_HOSTNAME="${CTRL_HOSTNAME}"
+TRIX_CTRL_IP="${CTRL_IP}"
+
+
