@@ -56,6 +56,9 @@ function get_partners_ip() {
     echo "${CTRL1_IP}"
 }
 
+display_var RSYSLOG_CLIENT_NETWORK RSYSLOG_CLIENT_NETWORK_PREFIX RSYSLOG_MESSAGES_PATH
+
+
 echo_info "Check config variables available."
 
 echo "RSYSLOG_CLIENT_NETWORK=${RSYSLOG_CLIENT_NETWORK?"Should be defined"}"
