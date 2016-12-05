@@ -16,7 +16,7 @@ Configuration option    Description                         Default location    
 -                       Local files                         ``/trinity/local``      RW                      -
 ``STDCFG_TRIX_IMAGES``  Compute node images                 ``/trinity/images``     RW                      -
 ``STDCFG_TRIX_SHARED``  TrinityX global shared files        ``/trinity/shared``     RW                      RO
-``STDCFG_TRIX_HOME``    Home directories (if configured)    ``/trinity/home``       RW                      RW
+``STDCFG_TRIX_HOME``    Home directories                    ``/trinity/home``       RW                      RW
 ======================= =================================== ======================= ======================= ===============
 
 By default all of those directories exist under the same tree, and are exported from the active controller to the passive controller and the nodes. Their default locations are shown in the table above. Apart from the local files, all locations can be changed in the configuration file through the configuration options above.
@@ -140,24 +140,26 @@ In most cases, parts or the whole of the TrinityX root tree will be exported via
 
 All exports (and the matching mounts on the secondary controller and the compute nodes) are controlled by individual configuration flags, that enable or disable them. Using those flags together with non-standard paths for some of the subfolders of the TrinityX tree, allows for mixed models where part of the tree may be shared over NFS, while other parts can be on an external distributed FS, for example.
 
-In non-HA setups, only the homes are exported to the compute nodes by default.
+For non-HA setups, the flags for ``NFS_EXPORT_SHARED`` and ``NFS_EXPORT_HOME`` are used in the same way as for an HA setup. Both ``NFS_EXPORT_LOCAL`` and ``NFS_EXPORT_IMAGES`` are masked and reset to ``0``, as both of those exports exist for data shared between controllers in HA setups only.
 
 The floowing flags are currently supported:
 
 ======================= =================== =================== =================== =================== ===================
-Flag name               Default ``none``    Default ``export``  Default ``dev``     Default ``drbd``    Default non-HA
+Flag name               ``none``            Default ``export``  Default ``dev``     Default ``drbd``    Non-HA mask
 ======================= =================== =================== =================== =================== ===================
 ``NFS_EXPORT_LOCAL``    0                   1                   1                   1                   0
 ``NFS_EXPORT_IMAGES``   0                   1                   1                   1                   0
-``NFS_EXPORT_SHARED``   0                   1                   1                   1                   1
-``NFS_EXPORT_HOME``     0                   1                   1                   1                   1
+``NFS_EXPORT_SHARED``   0                   1                   1                   1                   -
+``NFS_EXPORT_HOME``     0                   1                   1                   1                   -
 ======================= =================== =================== =================== =================== ===================
 
 .. note:: Refer to the `Overview`_ for the scope of the export of each of those directories.
 
 .. note:: The installer will set those flags to the values above based on the shared FS use case selected in the configuration file. They only need to be redefined when the required setup differs from the defaults.
 
-.. warning:: ``NFS_EXPORT_LOCAL`` is expected to be enabled for installation of the secondary controller. If disabled, the directory must be available locally on the secondary controller before the TrinityX setup starts.
+.. note:: The ``none`` use case skips the NFS server setup entirely. The ``NFS_EXPORT_*`` variables have no effect, and will all be reset to ``0``.
+
+.. warning:: ``NFS_EXPORT_LOCAL`` is expected to be enabled for installation of the secondary controller. If disabled, the directory must be available locally on the secondary controller before the TrinityX secondary setup starts.
 
 
 
@@ -170,15 +172,13 @@ Home on an external distributed FS
 
 The most common modification will probably to have the users' home directories on an external distributed FS (Lustre / GPFS / BeeGFS), while everything else is exported from the controllers via NFS.
 
-Let's assume that we have an external JBOD with a RAID array on it. The procedure would be:
+Let's assume that we have an external JBOD for all the controller and shared data (everything but the homes). The procedure would be:
 
-1. *PRIMARY INSTALL*: assemble and configure the array;
-
-2. *PRIMARY AND SECONDARY*: ``mkdir -p /trinity/home``, and mount the distributed FS in ``/trinity/home`` (or any other path if you diverge from the standard tree);
+1. *PRIMARY INSTALL*: assemble and configure the RAID array on top of the JBOD;
 
 .. warning:: Remember that all failover configuration for the RAID array, and the mounts of the distributed FS, need to be done by the engineer!
 
-3. *PRIMARY AND SECONDARY*: set up the configuration file. In that case it would look like this::
+2. *PRIMARY AND SECONDARY*: set up the configuration file. In that case it would look like this::
 
     # no change to the default paths
     
@@ -191,5 +191,11 @@ Let's assume that we have an external JBOD with a RAID array on it. The procedur
 
 .. note:: Remember that the same configuration file must be used for both primary and secondary installations. So if the configuration file is modified on the primary controller before installation, make sure to copy it over to the secondary and use it for the secondary install.
 
-4. *COMPUTE IMAGES*: set up the mount of the distributed FS to ``/trinity/home``.
+3. *PRIMARY AND SECONDARY*: install the controllers. The home directory will be left unconfigured;
+
+4. *PRIMARY AND SECONDARY*: set up the mount of the distributed FS in ``/trinity/home`` (or any other path if you diverge from the standard tree);
+
+5. *PRIMARY INSTALL*: generate a compute image;
+
+6. *COMPUTE IMAGE*: set up the mount of the distributed FS in ``/trinity/home``.
 
