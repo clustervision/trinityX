@@ -153,9 +153,16 @@ function victor_nettoyeur {
         # just brute-forcing our way through all the cases
         pcs resource delete FS-trinity
         pcs resource delete DRBD-controllers
-        umount -f ${TRIX_ROOT}
+        umount -f "${TRIX_ROOT}"
         drbdadm down trinity_disk
         systemctl stop drbd
+
+    else
+        echo_info 'Storing configuration details'
+
+        for i in SHARED_FS_{TYPE,DEVICE,DRBD_DEVICE} ; do
+            store_variable /etc/trinity.sh $i "${!i}"
+        done
     fi
 }
 
@@ -353,15 +360,4 @@ else
         fi
     fi
 fi
-
-
-
-#---------------------------------------
-# Store configuration details
-#---------------------------------------
-
-# Those values will be required by subsequent post scripts
-#for i in SHARED_FS_{TYPE,DRBD_DEVICE,DEVICE} ; do
-#    store_variable /etc/trinity.local.sh $i "${!i}"
-#done
 
