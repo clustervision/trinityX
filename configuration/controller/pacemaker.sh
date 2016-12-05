@@ -18,8 +18,8 @@
 
 # Post script to set up Corosync and Pacemaker
 
-display_var HA PRIMARY_INSTALL CTRL{1,2}_{HOSTNAME,IP} COROSYNC_CTRL{1,2}_IP \
-            PACEMAKER_HACLUSTER_PW
+display_var HA PRIMARY_INSTALL TRIX_CTRL{1,2}_{HOSTNAME,IP} \
+            COROSYNC_CTRL{1,2}_IP PACEMAKER_HACLUSTER_PW
 
 
 
@@ -113,13 +113,13 @@ fi
 # We use the hostnames if possible, to make Pacemaker happy. If the user
 # specified alternative IPs, then we use IPs and they'll get warnings.
 
-COROSYNC_CTRL1=${COROSYNC_CTRL1_IP-$CTRL1_HOSTNAME}
-COROSYNC_CTRL2=${COROSYNC_CTRL2_IP-$CTRL2_HOSTNAME}
+COROSYNC_CTRL1=${COROSYNC_CTRL1_IP-$TRIX_CTRL1_HOSTNAME}
+COROSYNC_CTRL2=${COROSYNC_CTRL2_IP-$TRIX_CTRL2_HOSTNAME}
 
 if flag_is_set PRIMARY_INSTALL ; then
-    COROSYNC_TOTEM_NETWORK=${COROSYNC_CTRL1_IP-$CTRL1_IP}
+    COROSYNC_TOTEM_NETWORK=${COROSYNC_CTRL1_IP-$TRIX_CTRL1_IP}
 else
-    COROSYNC_TOTEM_NETWORK=${COROSYNC_CTRL2_IP-$CTRL2_IP}
+    COROSYNC_TOTEM_NETWORK=${COROSYNC_CTRL2_IP-$TRIX_CTRL2_IP}
 fi
 
 
@@ -161,10 +161,10 @@ if flag_is_set PRIMARY_INSTALL ; then
     #pcs resource create Trinity ocf:heartbeat:Dummy
     
     echo_info 'Creating the floating IP address resource'
-    pcs resource create ClusterIP ocf:heartbeat:IPaddr2 ip=${CTRL_IP} op monitor interval=29s
-    #pcs constraint colocation add ClusterIP with trinity
-    #pcs constraint order start trinity then start ClusterIP
-    pcs resource group add Trinity ClusterIP
+    pcs resource create trinity-ip ocf:heartbeat:IPaddr2 ip=${TRIX_CTRL_IP} op monitor interval=29s
+    #pcs constraint colocation add trinity-ip with trinity
+    #pcs constraint order start trinity then start trinity-ip
+    pcs resource group add Trinity trinity-ip
 
 
 #---------------------------------------

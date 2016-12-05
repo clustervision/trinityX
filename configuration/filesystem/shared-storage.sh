@@ -151,8 +151,8 @@ function victor_nettoyeur {
         echo_warn 'Victor, nettoyeur.'
 
         # just brute-forcing our way through all the cases
-        pcs resource delete FS-trinity
-        pcs resource delete DRBD-controllers
+        pcs resource delete trinity-fs
+        pcs resource delete trinity-drbd
         umount -f "${TRIX_ROOT}"
         drbdadm down trinity_disk
         systemctl stop drbd
@@ -277,23 +277,23 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
 
     # The pair of resources for the DRBD service
     pcs -f $tmpfile resource create DRBD ocf:linbit:drbd drbd_resource=trinity_disk op monitor interval=59s
-    pcs -f $tmpfile resource master DRBD-controllers DRBD master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
+    pcs -f $tmpfile resource master trinity-drbd DRBD master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
 
     # The filesystem on top
-    pcs -f $tmpfile resource create FS-trinity ocf:heartbeat:Filesystem \
+    pcs -f $tmpfile resource create trinity-fs ocf:heartbeat:Filesystem \
         device=/dev/drbd/by-res/trinity_disk directory="$TRIX_ROOT" fstype=xfs \
         options="nodiscard,inode64" run_fsck=force force_unmount=safe \
         op monitor interval=31s
 
     # More advanced check at a longer interval
-    pcs -f $tmpfile resource op add FS-trinity monitor \
+    pcs -f $tmpfile resource op add trinity-fs monitor \
         interval=67s OCF_CHECK_LEVEL=10
 
     # The colocation rules
-    pcs -f $tmpfile constraint colocation add FS-trinity with DRBD-controllers INFINITY with-rsc-role=Master
-    #pcs -f $tmpfile constraint colocation add master DRBD-controllers with ClusterIP
-    pcs -f $tmpfile constraint order promote DRBD-controllers then start FS-trinity
-    pcs -f $tmpfile resource group add Trinity FS-trinity --after ClusterIP
+    pcs -f $tmpfile constraint colocation add trinity-fs with trinity-drbd INFINITY with-rsc-role=Master
+    #pcs -f $tmpfile constraint colocation add master trinity-drbd with trinity-ip
+    pcs -f $tmpfile constraint order promote trinity-drbd then start trinity-fs
+    pcs -f $tmpfile resource group add Trinity trinity-fs --after trinity-ip
 
     # Apply the changes
     if ! pcs cluster cib-push $tmpfile ; then
@@ -340,18 +340,18 @@ else
         pcs cluster cib $tmpfile
 
         # The filesystem
-        pcs -f $tmpfile resource create FS-trinity ocf:heartbeat:Filesystem \
+        pcs -f $tmpfile resource create trinity-fs ocf:heartbeat:Filesystem \
             device="$SHARED_FS_PART" directory="$TRIX_ROOT" fstype=xfs \
             options="nodiscard,inode64" run_fsck=force force_unmount=safe \
             op monitor interval=31s
 
         # More advanced check at a longer interval
-        pcs -f $tmpfile resource op add FS-trinity monitor \
+        pcs -f $tmpfile resource op add trinity-fs monitor \
             interval=67s OCF_CHECK_LEVEL=10
 
         # The colocation rules
-        #pcs -f $tmpfile constraint colocation add FS-Trinity with ClusterIP
-        pcs -f $tmpfile resource group add Trinity FS-trinity --after ClusterIP
+        #pcs -f $tmpfile constraint colocation add FS-Trinity with trinity-ip
+        pcs -f $tmpfile resource group add Trinity trinity-fs --after trinity-ip
 
         # Apply the changes
         if ! pcs cluster cib-push $tmpfile ; then
