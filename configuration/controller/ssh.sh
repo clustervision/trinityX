@@ -73,19 +73,10 @@ if flag_is_set PRIMARY_INSTALL ; then
     
     generate_user_keys
     install_ctrl_config
-    
-    # Now the primary keys are set, but we need to be able to SSH into the
-    # secondary node, and vice-versa. Also, we need to be able to SSH into the
-    # same controller as we are logged in, using the floating name.
-    # The easiest way to set that up is to generate here and now the secondary
-    # root's SSH key pairs, use it to set up the authorized_keys file, and
-    # prepare everything for the secondary install.
-    
-    dest="/root/secondary/.ssh"
-    generate_user_keys "$dest" -C "root@${CTRL2_HOSTNAME}.$(hostname -d)"
+
+    # Prepare the keys for the secondary install
     append_line /root/.ssh/authorized_keys "$(cat /root/.ssh/id_ed25519.pub)"
-    append_line /root/.ssh/authorized_keys "$(cat "${dest}/id_ed25519.pub")"
-    cp /root/.ssh/authorized_keys "$dest"
+    rsync -raW /root/.ssh /root/secondary/
 
 
 #---------------------------------------
