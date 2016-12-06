@@ -119,6 +119,11 @@ trap victor_nettoyeur EXIT
 # Configuration checks
 #---------------------------------------
 
+# Make sure that we have the base directories, regardless of the FS type
+
+mkdir -p $TRIX_{HOME,IMAGES,LOCAL,SHARED}
+
+
 # We're assuming that the SHARED_FS_* checks have already been done in the
 # shared-storage PS, and that the values that we're picking up from trinity.sh
 # are sane...

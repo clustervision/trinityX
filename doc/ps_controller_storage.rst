@@ -108,7 +108,7 @@ The configuration options that are accepted by the HA storage post-scripts are t
 
 
 ``SHARED_FS_CTRL1_IP``
-``SHARED_FS_CTRL1_IP``
+``SHARED_FS_CTRL2_IP``
 
     For ``drbd`` only, the IPs to use for replication and synchronization. This allows the DRBD traffic to use a separate network, preferably a direct cable between the two controllers. If not set, the main ``STDCFG_CTRL1_IP`` and ``STDCFG_CTRL2_IP`` will be used.
 

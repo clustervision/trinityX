@@ -46,7 +46,7 @@ function partition_device {
     echo_info "Partitioning the block device: $1"
 
     # zap GPT + MBR
-    if ! sgdisk -Z $1 ; then
+    if ! sgdisk -Z $1 2>/dev/null ; then
         echo_error 'Failed to zap the partition tables of the device, exiting.'
         exit 1
     fi
@@ -70,7 +70,7 @@ function format_device {
 
     echo_info "Formatting the block device: $1"
 
-    if ! mkfs.xfs -f -b 4096 -s 4096 $SHARED_FS_FORMAT_OPTIONS $1 ; then
+    if ! mkfs.xfs -f -b size=4096 -s size=4096 $SHARED_FS_FORMAT_OPTIONS $1 ; then
         echo_error 'Failed to format the device, exiting.'
         exit 1
     fi
@@ -160,7 +160,7 @@ function victor_nettoyeur {
     else
         echo_info 'Storing configuration details'
 
-        for i in SHARED_FS_{TYPE,DEVICE,DRBD_DEVICE} ; do
+        for i in SHARED_FS_{TYPE,DEVICE,PART,DRBD_DEVICE} ; do
             store_variable /etc/trinity.sh $i "${!i}"
         done
     fi
@@ -174,6 +174,9 @@ trap victor_nettoyeur EXIT
 #---------------------------------------
 # Configuration checks
 #---------------------------------------
+
+# As we installed DRBD in all cases, we need to disable the usage count
+install -D -b "${POST_FILEDIR}"/global_common.conf.nocount /etc/drbd.d/global_common.conf
 
 
 if flag_is_unset SHARED_FS_TYPE ; then
@@ -248,6 +251,7 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
 
         # Alright now we can format the thing
         format_device /dev/drbd/by-res/trinity_disk
+        mkdir -p $TRIX_{HOME,IMAGES,LOCAL,SHARED}
 
 
     elif flag_is_set SHARED_FS_DRBD_WAIT_FOR_SYNC ; then
@@ -350,7 +354,6 @@ else
             interval=67s OCF_CHECK_LEVEL=10
 
         # The colocation rules
-        #pcs -f $tmpfile constraint colocation add FS-Trinity with trinity-ip
         pcs -f $tmpfile resource group add Trinity trinity-fs --after trinity-ip
 
         # Apply the changes

@@ -57,7 +57,7 @@ function pacemaker_hacluster_pw_auth {
     
     echo "$PACEMAKER_HACLUSTER_PW" | passwd --stdin hacluster
     
-    if ( ? ) ; then
+    if (( $? )) ; then
         echo_error 'Failed to set the password for the "hacluster" user, exiting.'
         exit 1
     fi
@@ -67,7 +67,7 @@ function pacemaker_hacluster_pw_auth {
     # code to check if it's done...
     
     echo_info 'Authenticating the "hacluster" user'
-    pcs cluster auth -u hacluster -p "$PACEMAKER_HACLUSTER_PW" --all
+    pcs cluster auth -u hacluster -p "${PACEMAKER_HACLUSTER_PW}" --all
 }
 
 
@@ -143,7 +143,10 @@ if flag_is_set PRIMARY_INSTALL ; then
     # -- Pacemaker ---
     
     echo_info 'Setting the password for the "hacluster" user'
-    PACEMAKER_HACLUSTER_PW="$(get_password "$PACEMAKER_HACLUSTER_PW")"
+    if ! declare PACEMAKER_HACLUSTER_PW="$(get_password "$PACEMAKER_HACLUSER_PW")" ; then
+        echo_warn 'Reusing a read-only password, probably from a previous installation.'
+        display_var PACEMAKER_HACLUSTER_PW
+    fi
     
     pacemaker_hacluster_pw_auth
     pacemaker_start_and_check
@@ -157,14 +160,11 @@ if flag_is_set PRIMARY_INSTALL ; then
     pcs property set no-quorum-policy=ignore
     pcs resource defaults migration-threshold=1
     
-    #echo_info 'Creating the top-level Trinity resource'
-    #pcs resource create Trinity ocf:heartbeat:Dummy
-    
     echo_info 'Creating the floating IP address resource'
-    pcs resource create trinity-ip ocf:heartbeat:IPaddr2 ip=${TRIX_CTRL_IP} op monitor interval=29s
-    #pcs constraint colocation add trinity-ip with trinity
-    #pcs constraint order start trinity then start trinity-ip
-    pcs resource group add Trinity trinity-ip
+    pcs resource show trinity-ip 2>/dev/null || \
+        pcs resource create trinity-ip ocf:heartbeat:IPaddr2 ip=${TRIX_CTRL_IP} op monitor interval=29s
+    pcs resource show Trinity 2>/dev/null || \
+        pcs resource group add Trinity trinity-ip
 
 
 #---------------------------------------

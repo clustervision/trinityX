@@ -16,7 +16,7 @@
 ######################################################################
 
 
-display_var HA PRIMARY_INSTALL CTRL2_HOSTNAME POST_FILEDIR
+display_var HA PRIMARY_INSTALL
 
 
 #---------------------------------------
