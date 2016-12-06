@@ -17,8 +17,8 @@
 
 
 
-display_var HA PRIMARY_INSTALL CTRL{,1,2}_IP \
-            TRIX_{ROOT,VERSION,HOME,IMAGES,LOCAL,SHARED}
+display_var HA PRIMARY_INSTALL STDCFG_TRIX_{VERSION,ROOT,HOME,IMAGES,SHARED} \
+            CTRL{1,2,}_{HOSTNAME,IP}
 
 
 #---------------------------------------
@@ -27,20 +27,12 @@ display_var HA PRIMARY_INSTALL CTRL{,1,2}_IP \
 
 function setup_trinity_files {
 
-    if flag_is_unset HA ; then
-        unset CTRL2_{HOSTNAME,IP}
-        CTRL_HOSTNAME=CTRL1_HOSTNAME
-        CTRL_IP=CTRL1_IP
-    fi
-
-
     echo_info 'Creating the Trinity shell environment file'
-    render_template "${POST_FILEDIR}"/trinity.sh > "$TRIX_SHFILE"
-    chmod 600 "$TRIX_SHFILE"
-
+    render_template "${POST_FILEDIR}"/trinity.sh > /etc/trinity.sh
+    chmod 600 /etc/trinity.sh
 
     echo_info 'Creating the Trinity shadow files'
-    install -m 600 "${POST_FILEDIR}"/trinity.shadow "$TRIX_SHADOW"
+    install -m 600 "${POST_FILEDIR}"/trinity.shadow /etc/trinity.shadow
 }
 
 
@@ -48,7 +40,7 @@ function setup_trinity_files {
 function setup_trinity_dirs {
 
     echo_info 'Creating the main Trinity directories'
-    mkdir -p TRIX_{HOME,IMAGES,LOCAL,SHARED}
+    mkdir -p $TRIX_{HOME,IMAGES,LOCAL,SHARED}
 }
 
 
@@ -56,8 +48,39 @@ function setup_trinity_dirs {
 function setup_local_shfile {
 
     echo_info 'Creating the Trinity controller-local environment file'
-    install -m 600 "${POST_FILEDIR}"/trinity.local.sh /etc/trinity.local.sh
+    cat "${POST_FILEDIR}"/trinity.local.sh /etc/trinity.local.sh | sponge /etc/trinity.local.sh
+    chmod 600 /etc/trinity.local.sh
 }
+
+
+
+#---------------------------------------
+# Environment variables
+#---------------------------------------
+
+TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trinity}"
+TRIX_VERSION="${STDCFG_TRIX_VERSION:-$(git describe --tags)}"
+
+TRIX_HOME="${STDCFG_TRIX_HOME:-${TRIX_ROOT}/home}"
+TRIX_IMAGES="${STDCFG_TRIX_IMAGES:-${TRIX_ROOT}/images}"
+TRIX_LOCAL="${TRIX_ROOT}/local"
+TRIX_LOCAL_APPS="${TRIX_LOCAL}/applications"
+TRIX_LOCAL_MODFILES="${TRIX_LOCAL}/modulefiles"
+TRIX_SHARED="${STDCFG_TRIX_SHARED:-${TRIX_ROOT}/shared}"
+TRIX_SHARED_TMP="${TRIX_SHARED}/tmp"
+TRIX_SHARED_APPS="${TRIX_SHARED}/applications"
+TRIX_SHARED_MODFILES="${TRIX_SHARED}/modulefiles"
+
+TRIX_SHADOW="/etc/trinity.shadow"
+TRIX_SHFILE="/etc/trinity.sh"
+TRIX_LOCAL_SHFILE="/etc/trinity.local.sh"
+
+TRIX_CTRL1_HOSTNAME="${CTRL1_HOSTNAME}"
+TRIX_CTRL1_IP="${CTRL1_IP}"
+TRIX_CTRL2_HOSTNAME="${CTRL2_HOSTNAME}"
+TRIX_CTRL2_IP="${CTRL2_IP}"
+TRIX_CTRL_HOSTNAME="${CTRL_HOSTNAME}"
+TRIX_CTRL_IP="${CTRL_IP}"
 
 
 
@@ -67,7 +90,15 @@ function setup_local_shfile {
 
 if flag_is_unset HA ; then
 
+    unset CTRL2_{HOSTNAME,IP}
+    CTRL_HOSTNAME=CTRL1_HOSTNAME
+    CTRL_IP=CTRL1_IP
+
     setup_trinity_files
+
+    # To make sure that we won't be picking up background noise
+    sed -i 's/^TRIX_CTRL2_/unset {TRIX_,}CTRL2_{HOSTNAME,IP}/g' /etc/trinity.sh
+
     setup_trinity_dirs
 
 
@@ -95,10 +126,6 @@ elif flag_is_set PRIMARY_INSTALL ; then
 #---------------------------------------
 
 else
-
-    setup_trinity_dirs
-    setup_local_shfile
-
 
     if ! ( [[ -r /root/secondary/trinity.sh ]] && \
            [[ -r /root/secondary/trinity.shadow ]] ) ; then
@@ -139,5 +166,12 @@ else
         echo_error 'Failed installing the files, exiting.'
         exit 1
     fi
+
+
+    # Make sure that the data we got from the primary isn't overloaded by the
+    # variable definitions earlier in this script
+    source /etc/trinity.sh
+    setup_trinity_dirs
+    setup_local_shfile
 fi
 
