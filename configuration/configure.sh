@@ -159,10 +159,6 @@ while (( $# )) ; do
             unset NOSTOP
             ;;
 
-        --skip-pkg )
-            declare -x SKIPPKG=
-            ;;
-
         --chroot )
             # Do we apply the config files inside a chroot?
             if (( $# < 2 )) ; then
