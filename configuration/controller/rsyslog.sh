@@ -16,9 +16,6 @@
 # details.
 ######################################################################
 
-
-set -e
-
 function replace_template() {
     [ $# -gt 3 -o $# -lt 2 ] && echo "Wrong numger of argument in replace_template." && exit 1
     if [ $# -eq 3 ]; then
@@ -57,13 +54,6 @@ function get_partners_ip() {
 }
 
 display_var RSYSLOG_CLIENT_NETWORK RSYSLOG_CLIENT_NETWORK_PREFIX RSYSLOG_MESSAGES_PATH
-
-
-echo_info "Check config variables available."
-
-echo "RSYSLOG_CLIENT_NETWORK=${RSYSLOG_CLIENT_NETWORK?"Should be defined"}"
-echo "RSYSLOG_CLIENT_NETWORK_PREFIX=${RSYSLOG_CLIENT_NETWORK_PREFIX?"Should be defined"}"
-echo "RSYSLOG_MESSAGES_PATH=${RSYSLOG_MESSAGES_PATH?"Should be defined"}"
 
 echo_info "Creating $RSYSLOG_MESSAGES_PATH"
 
