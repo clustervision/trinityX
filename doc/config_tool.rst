@@ -97,6 +97,9 @@ The following options are mainly useful for automated testing:
     Display all output messages without any color.
     Note that this only applies to the messages coming from the configuration tool itself; other commands called by post scripts may still use colors. Also, redirecting the tool's output (to a pipe or file) disables the colors automatically.
 
+- ``--step``
+    Pause after each post script, and wait for user input before continuing.
+
 - ``--continue``
     Do not stop for user input when an error occurs.
 
@@ -114,7 +117,7 @@ A few additional rules:
 
 - ``-v`` and ``-q`` are mutually exclusive;
 
-- ``--continue`` is mutually exclusive with ``--stop`` and ``--hardstop``;
+- ``--continue`` is mutually exclusive with ``--stop`` / ``--hardstop`` and ``--step``;
 
 - ``--hardstop`` selects ``--stop`` too.
 

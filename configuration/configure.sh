@@ -38,6 +38,7 @@ OPTIONS:
 -q                  be quieter
 -d                  run the post scripts in debug mode (bash -x)
 --nocolor           don't use color escape codes in the messages
+--step              pause and weait for input after every post script
 --continue          don't wait for user input on error
 --stop              exit when a post script returns an error code
 --hardstop          exit on any error inside a post script (bash -e)
@@ -45,7 +46,7 @@ OPTIONS:
 
 RULES:
 -v and -q are mutually exclusive.
---continue is mutually exclusive with --stop and --hardstop.
+--continue is mutually exclusive with --stop / --hardstop and --step.
 --hardstop selects --stop too.
 
 In the main syntax form, all options are positional: they apply only to the
@@ -91,7 +92,7 @@ source "${MYPATH}/bin/configure_backend.sh"
 
 echo "Beginning of script: $(date)"
 
-unset QUIET VERBOSE DEBUG NOCOLOR
+unset QUIET VERBOSE DEBUG NOCOLOR {NO,SOFT,HARD}STOP STEP
 
 
 # Check if stdout is being redirected or piped to something else.
@@ -139,10 +140,14 @@ while (( $# )) ; do
             declare -x NOCOLOR=
             ;;
 
+        --step )
+            declare -x STEP=
+            unset NOSTOP
+            ;;
+
         --dontstopmenow|--continue )
             declare -x NOSTOP=
-            unset HARDSTOP
-            unset SOFTSTOP
+            unset {HARD,SOFT}STOP STEP
             ;;
 
         --hitthewall|--hardstop )

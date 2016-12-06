@@ -120,20 +120,31 @@ function echo_error {
     echo -e "${NOCOLOR-$COL_RESET}"
 }
 
-# Same, and wait for user input
+# Retry/Continue/Exit prompt
 
-function echo_error_prompt {
-    echo_error "$@"
-    
-    flag_is_set SOFTSTOP && return 2
-    flag_is_set NOSTOP && return 1
+# $1: return value of the function in the RCE loop
+# This value sets the default behaviour: continue if successful, retry if not
+
+function rce_prompt {
+
+    flag_is_set SOFTSTOP && return 3
+    flag_is_set NOSTOP && return 2
+
+    if [[ "$1" == "0" ]] ; then
+        defchar='C'
+        defval=2
+    else
+        defchar='R'
+        defval=1
+    fi
 
     while true ; do
-        read -p "           [R]etry, [C]ontinue or [E]xit? [R] "
+        read -p "           [R]etry, [C]ontinue or [E]xit? [${defchar}] "
         case "${REPLY,,}" in
-            "" | "r" )  return 0 ;;
-            "c" )       return 1 ;;
-            "e" )       return 2 ;;
+            "" )    return $defval ;;
+            "r" )   return 1 ;;
+            "c" )   return 2 ;;
+            "e" )   return 3 ;;
         esac
     done
 }

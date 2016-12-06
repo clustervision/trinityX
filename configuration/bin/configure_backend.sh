@@ -285,19 +285,28 @@ function apply_config {
 
         while true ; do
 
-            if run_one_script "$post" ; then
-                break
+            run_one_script "$post"
+            ret=$?
+
+            if (( ret == 0 )) ; then
+                if flag_is_unset STEP ; then
+                    break
+                else
+                    echo_warn "Stepping mode: please select the next step."
+                fi
 
             else
-                echo_error_prompt "Error during post script: $post"
-                case $? in
-                    1 )     break       # continue
-                            ;;
-                    2 )     exit 1      # exit
-                            ;;
-                    * )     continue    # retry
-                esac
+                echo_error "Error during post script: $post"
             fi
+
+            rce_prompt $ret
+            case $? in
+                2 )     break       # continue
+                        ;;
+                3 )     exit 1      # exit
+                        ;;
+                * )     continue    # retry
+            esac
         done
     done
 
