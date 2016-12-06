@@ -35,7 +35,7 @@ function setup_sysconfig_nfs {
 
 
     if flag_is_set NFS_ENABLE_RDMA ; then
-        echo_info 'Configuring NFS to listen to the nfsrdma port too (20049)'
+        echo_info 'Configuring NFS to listen to the nfsrdma port (20049)'
         sed -i 's/[# ]*\(RPCNFSDARGS="\)\(.*\)/\1'"-r"' \2/g' /etc/sysconfig/nfs
     fi
 }
@@ -49,7 +49,7 @@ function setup_exports {
     echo_info 'Setting up the NFS exports'
 
     mkdir -p "$(dirname "$2")"
-    render_template "$1" | column -t -s '|' >> "$2"
+    render_template "$1" | column -t -s '|' > "$2"
 }
 
 

@@ -31,8 +31,8 @@ function create_trinity_tree {
 
     echo_info 'Creating the Trinity directory tree'
 
-    mkdir -p TRIX_{HOME,IMAGES,LOCAL,LOCAL_APPS,LOCAL_MODFILES} \
-             TRIX_{SHARED,SHARED_TMP,SHARED_APPS,SHARED_MODFILES}
+    mkdir -p $TRIX_{HOME,IMAGES,LOCAL,LOCAL_APPS,LOCAL_MODFILES} \
+             $TRIX_{SHARED,SHARED_TMP,SHARED_APPS,SHARED_MODFILES}
 }
 
 
@@ -44,7 +44,7 @@ function fix_trinity_files {
     mv /etc/trinity.sh "${TRIX_SHARED}/trinity.sh"
     mv /etc/trinity.shadow "${TRIX_LOCAL}/trinity.shadow"
 
-    ln -s "${TRIX_SHARED}/trinity.sh" /etc/trinity.sh
+    ln -f -s "${TRIX_SHARED}/trinity.sh" /etc/trinity.sh
 
     store_variable /etc/trinity.sh TRIX_SHFILE "${TRIX_SHARED}/trinity.sh"
     store_variable /etc/trinity.sh TRIX_SHADOW "${TRIX_LOCAL}/trinity.shadow"
@@ -88,7 +88,7 @@ else
     echo_info 'Fixing the environment and shadow files'
 
     rm -fr /etc/trinity.sh /etc/trinity.shadow
-    ln -s "${TRIX_SHARED}/trinity.sh" /etc/trinity.sh
+    ln -f -s "${TRIX_SHARED}/trinity.sh" /etc/trinity.sh
 
 
     echo_info 'Cleaning up the data from the primary installation'

@@ -90,14 +90,14 @@ TRIX_CTRL_IP="${CTRL_IP}"
 
 if flag_is_unset HA ; then
 
-    unset CTRL2_{HOSTNAME,IP}
-    CTRL_HOSTNAME=CTRL1_HOSTNAME
-    CTRL_IP=CTRL1_IP
+    unset {TRIX_,}CTRL2_{HOSTNAME,IP}
+    TRIX_CTRL_HOSTNAME="$CTRL1_HOSTNAME"
+    TRIX_CTRL_IP="$CTRL1_IP"
 
     setup_trinity_files
 
-    # To make sure that we won't be picking up background noise
-    sed -i 's/^TRIX_CTRL2_/unset {TRIX_,}CTRL2_{HOSTNAME,IP}/g' /etc/trinity.sh
+    # Make sure that we won't be picking up background noise
+    sed -i 's/^TRIX_CTRL2_.*/unset {TRIX_,}CTRL2_{HOSTNAME,IP}/g' /etc/trinity.sh
 
     setup_trinity_dirs
 
