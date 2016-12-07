@@ -31,6 +31,7 @@ display_var HA PRIMARY_INSTALL
 # Syntax: generate_user_keys [target_dir] [additional ssh-keygen params]
 
 function generate_user_keys {
+
     echo_info "Generating private SSH keys"
     
     dest="${1:-${HOME}/.ssh}"
@@ -44,6 +45,9 @@ function generate_user_keys {
 
 
 function install_ctrl_config {
+
+    echo_info 'Installing the SSH configuration'
+
     install -D -m 600 --backup "${POST_FILEDIR}/sshd_config" /etc/ssh/sshd_config
     install -D -m 644 --backup "${POST_FILEDIR}/ssh_config" /etc/ssh/ssh_config
 
@@ -88,6 +92,6 @@ else
     install_ctrl_config
 
     # All was prepared during the primary installation, copy it over
-    install -D -t /root -m 700 /root/secondary/.ssh
+    rsync -raW /root/secondary/.ssh /root/
 fi
 

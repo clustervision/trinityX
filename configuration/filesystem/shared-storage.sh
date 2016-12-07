@@ -112,29 +112,12 @@ function stop_drbd {
 
 
 
-function start_drbd_resource {
+function create_drbd_metadata {
 
-    echo_info 'Creating the DRBD metadata'
+    echo_info 'Creating the DRBD metadata on the device'
+
     if ! drbdadm -- --force create-md trinity_disk ; then
         echo_error 'Failed to create DRBD metadata, exiting.'
-        exit 1
-    fi
-
-    echo_info 'Starting the DRBD resource'
-    if ! drbdadm up trinity_disk ; then
-        echo_error 'Failed to start DRBD resource, exiting.'
-        exit 1
-    fi
-}
-
-
-
-function stop_drbd_resource {
-
-    echo_info 'Stopping the DRBD resource'
-
-    if ! drbdadm down trinity_disk ; then
-        echo_error 'Failed to stop DRBD resource, exiting.'
         exit 1
     fi
 }
@@ -151,8 +134,11 @@ function victor_nettoyeur {
         echo_warn 'Victor, nettoyeur.'
 
         # just brute-forcing our way through all the cases
-        pcs resource delete trinity-fs
-        pcs resource delete trinity-drbd
+        flag_is_set PRIMARY_INSTALL && {
+            pcs resource delete trinity-fs
+            pcs resource delete trinity-drbd
+        }
+        mv -b /etc/drbd.d/trinity_disk.res /etc/drbd.d/trinity_disk.res.bak
         umount -f "${TRIX_ROOT}"
         drbdadm down trinity_disk
         systemctl stop drbd
@@ -226,84 +212,116 @@ esac
 
 
 if [[ $SHARED_FS_TYPE == drbd ]] ; then
-
-    # Step 1: prepare the device and test it
-    # -------
+    
+    # Prepare the device
 
     SHARED_FS_DEVICE=$(check_block_device "$SHARED_FS_DEVICE")
     SHARED_FS_DRBD_DEVICE=/dev/drbd1
     display_var SHARED_FS_{,DRBD_}DEVICE
 
-    # Set up DRBD and check that it's good
-    install_drbd_config
-    start_drbd
-    start_drbd_resource
+    flag_is_unset SHARED_FS_NO_FORMAT && sgdisk -Z ${SHARED_FS_DEVICE} 2>/dev/null
 
+    # Set up DRBD and check that it's good
+
+    install_drbd_config
+    flag_is_unset SHARED_FS_NO_FORMAT && create_drbd_metadata
+
+
+    #---------------------------------------
+    # HA primary
+    #---------------------------------------
 
     if flag_is_set PRIMARY_INSTALL ; then
 
-        echo_info 'Setting DRBD resource as primary...'
-        if ! ( drbdadm -- --overwrite-data-of-peer primary trinity_disk && \
-               drbdadm invalidate-remote trinity_disk ) ; then
+        # Set up the local resource and filesystem
+
+        start_drbd
+
+        echo_info 'Setting DRBD resource as primary'
+        if ! drbdadm -- --overwrite-data-of-peer primary trinity_disk ; then
             echo_error 'Failed to set DRBD resource as primary, exiting.'
             exit 1
         fi
 
         # Alright now we can format the thing
-        format_device /dev/drbd/by-res/trinity_disk
-        mkdir -p $TRIX_{HOME,IMAGES,LOCAL,SHARED}
+        flag_is_unset SHARED_FS_NO_FORMAT && format_device /dev/drbd/by-res/trinity_disk
+
+        flag_is_unset QUIET && { echo ; cat /proc/drbd ; echo ; }
+
+        # It will be started again later by the pacemaker resource
+        stop_drbd
 
 
-    elif flag_is_set SHARED_FS_DRBD_WAIT_FOR_SYNC ; then
+        # Set up the Pacemaker resources
 
-        echo_info 'Waiting for the full synchronization of the secondary disk.'
-        echo_info 'Monitor the progress with: watch -n 5 cat /proc/drbd'
+        echo_info 'Setting up the Pacemaker resources'
 
-        if ! drbdsetup wait-sync trinity_disk ; then
-            echo_error 'Failed to wait for full synchronization, exiting.'
+        tmpfile=$(mktemp -p /root pacemaker_drbd.XXXX)
+        pcs cluster cib $tmpfile
+
+        # The pair of resources for the DRBD service
+        pcs -f $tmpfile resource create DRBD ocf:linbit:drbd drbd_resource=trinity_disk op monitor interval=59s
+        pcs -f $tmpfile resource master Trinity-drbd DRBD master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
+
+        # The filesystem on top
+        pcs -f $tmpfile resource create trinity-fs ocf:heartbeat:Filesystem \
+            device=/dev/drbd/by-res/trinity_disk directory="$TRIX_ROOT" fstype=xfs \
+            options="nodiscard,inode64" run_fsck=force force_unmount=safe \
+            op monitor interval=31s
+
+        # More advanced check at a longer interval
+        pcs -f $tmpfile resource op add trinity-fs monitor interval=67s OCF_CHECK_LEVEL=10
+
+        # The colocation rules
+        pcs -f $tmpfile constraint order set Trinity-drbd Trinity Trinity-secondary
+        pcs -f $tmpfile constraint colocation add Trinity with Trinity-drbd score=INFINITY with-rsc-role=Master
+        pcs -f $tmpfile resource group add Trinity trinity-fs --after trinity-ip
+
+        # Apply the changes
+        if ! pcs cluster cib-push $tmpfile ; then
+            echo_error 'Failed to push the new resource configuration to Pacemaker, exiting.'
             exit 1
+        fi
+
+        # Give it time to digest the new info
+        sleep 5s
+
+
+    #---------------------------------------
+    # HA secondary
+    #---------------------------------------
+
+    else
+
+        # Because Pacemaker will have tried to start the slave resource before
+        # the config is ready, it failed. So let's clear up and wait for it to
+        # start again.
+
+        echo_info 'Restarting the slave DRBD resource'
+
+        if ! pcs resource cleanup DRBD ; then
+            echo_error 'Failed to cleanup the status of the DRBD resource, exiting.'
+            exit 1
+        fi
+
+        # Aaaaand let it breathe.
+        sleep 5s
+
+
+        if flag_is_set SHARED_FS_DRBD_WAIT_FOR_SYNC ; then
+
+            echo_info 'Waiting for the full synchronization of the secondary disk.
+           Monitor the progress with: watch -n 5 cat /proc/drbd'
+
+            minor=$(drbdsetup show trinity_disk | awk -F '[ \t;]+' '/device.*minor/ {print $4}')
+
+            if ! drbdsetup wait-sync $minor ; then
+                echo_error 'Failed to wait for full synchronization, exiting.'
+                exit 1
+            fi
         fi
     fi
 
-
-    flag_is_unset QUIET && { echo ; cat /proc/drbd ; echo ; }
-
-    # Finally, take down the device -- we will bring it up later via Pacemaker
-    stop_drbd_resource
-    stop_drbd
-
-
-    # Step 2: set up the Pacemaker resources
-    # -------
-
-    tmpfile=$(mktemp -p /root pacemaker_drbd.XXXX)
-    pcs cluster cib $tmpfile
-
-    # The pair of resources for the DRBD service
-    pcs -f $tmpfile resource create DRBD ocf:linbit:drbd drbd_resource=trinity_disk op monitor interval=59s
-    pcs -f $tmpfile resource master trinity-drbd DRBD master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
-
-    # The filesystem on top
-    pcs -f $tmpfile resource create trinity-fs ocf:heartbeat:Filesystem \
-        device=/dev/drbd/by-res/trinity_disk directory="$TRIX_ROOT" fstype=xfs \
-        options="nodiscard,inode64" run_fsck=force force_unmount=safe \
-        op monitor interval=31s
-
-    # More advanced check at a longer interval
-    pcs -f $tmpfile resource op add trinity-fs monitor \
-        interval=67s OCF_CHECK_LEVEL=10
-
-    # The colocation rules
-    pcs -f $tmpfile constraint colocation add trinity-fs with trinity-drbd INFINITY with-rsc-role=Master
-    #pcs -f $tmpfile constraint colocation add master trinity-drbd with trinity-ip
-    pcs -f $tmpfile constraint order promote trinity-drbd then start trinity-fs
-    pcs -f $tmpfile resource group add Trinity trinity-fs --after trinity-ip
-
-    # Apply the changes
-    if ! pcs cluster cib-push $tmpfile ; then
-        echo_error 'Failed to push the new resource configuration to Pacemaker, exiting.'
-        exit 1
-    fi
 
 
 
@@ -332,13 +350,17 @@ else
 
     if flag_is_unset HA ; then
 
+        echo_info 'Setting up the mount'
+
         render_template "${POST_FILEDIR}"/nonHA_fstab >> /etc/fstab
         if ! mount "${TRIX_ROOT}" ; then
             echo_error 'Failed to mount the device, exiting.'
             exit 1
         fi
 
-    else
+    elif flag_is_set PRIMARY_INSTALL ; then
+
+        echo_info 'Setting up the Pacemaker resource'
 
         tmpfile=$(mktemp -p /root pacemaker_dev.XXXX)
         pcs cluster cib $tmpfile
@@ -350,8 +372,7 @@ else
             op monitor interval=31s
 
         # More advanced check at a longer interval
-        pcs -f $tmpfile resource op add trinity-fs monitor \
-            interval=67s OCF_CHECK_LEVEL=10
+        pcs -f $tmpfile resource op add trinity-fs monitor interval=67s OCF_CHECK_LEVEL=10
 
         # The colocation rules
         pcs -f $tmpfile resource group add Trinity trinity-fs --after trinity-ip

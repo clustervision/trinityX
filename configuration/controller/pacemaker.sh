@@ -55,6 +55,9 @@ function corosync_start_and_check {
 
 function pacemaker_hacluster_pw_auth {
     
+    echo_info 'Starting the Pacemaker daemon'
+    systemctl start pcsd
+
     echo "$PACEMAKER_HACLUSTER_PW" | passwd --stdin hacluster
     
     if (( $? )) ; then
@@ -72,9 +75,6 @@ function pacemaker_hacluster_pw_auth {
 
 
 function pacemaker_start_and_check {
-    
-    echo_info 'Starting the Pacemaker daemon'
-    systemctl start pcsd
     
     echo_info 'Starting the cluster'
     pcs cluster start
@@ -129,7 +129,13 @@ fi
 #---------------------------------------
 
 if flag_is_set PRIMARY_INSTALL ; then
-    
+
+    if flag_is_unset PACEMAKER_KEEP_CLUSTER ; then
+        echo_info 'Destroying pre-existing cluster configuration'
+        pcs cluster destroy
+    fi
+
+
     # --- Corosync ---
     
     corosync_config_file
@@ -140,6 +146,7 @@ if flag_is_set PRIMARY_INSTALL ; then
     
     corosync_start_and_check
     
+
     # -- Pacemaker ---
     
     echo_info 'Setting the password for the "hacluster" user'
@@ -155,16 +162,34 @@ if flag_is_set PRIMARY_INSTALL ; then
     # file for the secondary to pick up.
     store_password PACEMAKER_HACLUSTER_PW "$PACEMAKER_HACLUSTER_PW"
 
+
     echo_info 'Configuring the cluster'
     pcs property set stonith-enabled=false
     pcs property set no-quorum-policy=ignore
     pcs resource defaults migration-threshold=1
-    
-    echo_info 'Creating the floating IP address resource'
-    pcs resource show trinity-ip 2>/dev/null || \
-        pcs resource create trinity-ip ocf:heartbeat:IPaddr2 ip=${TRIX_CTRL_IP} op monitor interval=29s
-    pcs resource show Trinity 2>/dev/null || \
-        pcs resource group add Trinity trinity-ip
+
+
+    echo_info 'Creating the Trinity groups and floating IP address resource'
+
+    tmpfile=$(mktemp -p /root pacemaker.XXXX)
+    pcs cluster cib $tmpfile
+
+    pcs -f $tmpfile resource create trinity-ip ocf:heartbeat:IPaddr2 ip=${TRIX_CTRL_IP} op monitor interval=29s
+    pcs -f $tmpfile resource group add Trinity trinity-ip
+
+    pcs -f $tmpfile resource create trinity-secondary ocf:heartbeat:Dummy op monitor interval=181
+    pcs -f $tmpfile resource group add Trinity-secondary trinity-secondary
+
+    # Trinity group first, then Trinity-secondary
+    pcs -f $tmpfile constraint order set Trinity Trinity-secondary
+    # Decide where to run Trinity first, then look for another machine for Trinity-secondary
+    pcs -f $tmpfile constraint colocation add Trinity-secondary with Trinity score=-INFINITY
+
+    if ! pcs cluster cib-push $tmpfile ; then
+        echo_error 'Failed to push the new resource configuration to Pacemaker, exiting.'
+        exit 1
+    fi
+
 
 
 #---------------------------------------

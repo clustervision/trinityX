@@ -223,34 +223,37 @@ else
             device="$TRIX_CTRL_HOSTNAME:$TRIX_LOCAL" directory="$TRIX_LOCAL" \
             fast_stop=no force_unmount=safe op monitor interval=83s
 
-        pcs -f $tmpfile resource group add Trinity-NFS-clients trinity-nfs-client-local
+        pcs -f $tmpfile resource group add Trinity-secondary trinity-nfs-client-local
+    fi
 
-    elif flag_is_set NFS_EXPORT_IMAGES ; then
+    if flag_is_set NFS_EXPORT_IMAGES ; then
 
         pcs -f $tmpfile resource create trinity-nfs-client-images \
             ocf:heartbeat:Filesystem fstype=nfs \
             device="$TRIX_CTRL_HOSTNAME:$TRIX_IMAGES" directory="$TRIX_IMAGES" \
             fast_stop=no force_unmount=safe op monitor interval=89s
 
-        pcs -f $tmpfile resource group add Trinity-NFS-clients trinity-nfs-client-images
+        pcs -f $tmpfile resource group add Trinity-secondary trinity-nfs-client-images
+    fi
 
-    elif flag_is_set NFS_EXPORT_SHARED ; then
+    if flag_is_set NFS_EXPORT_SHARED ; then
 
         pcs -f $tmpfile resource create trinity-nfs-client-shared \
             ocf:heartbeat:Filesystem fstype=nfs \
             device="$TRIX_CTRL_HOSTNAME:$TRIX_SHARED" directory="$TRIX_SHARED" \
             fast_stop=no force_unmount=safe op monitor interval=79s
 
-        pcs -f $tmpfile resource group add Trinity-NFS-clients trinity-nfs-client-shared
+        pcs -f $tmpfile resource group add Trinity-secondary trinity-nfs-client-shared
+    fi
 
-    elif flag_is_set NFS_EXPORT_HOME ; then
+    if flag_is_set NFS_EXPORT_HOME ; then
 
         pcs -f $tmpfile resource create trinity-nfs-client-home \
             ocf:heartbeat:Filesystem fstype=nfs \
             device="$TRIX_CTRL_HOSTNAME:$TRIX_HOME" directory="$TRIX_HOME" \
             fast_stop=no force_unmount=safe op monitor interval=71s
 
-        pcs -f $tmpfile resource group add Trinity-NFS-clients trinity-nfs-client-home
+        pcs -f $tmpfile resource group add Trinity-secondary trinity-nfs-client-home
     fi
 
     # Apply the changes
