@@ -44,36 +44,25 @@ fi
 unset detected
 
 # Loop over the interfaces and check if one IP matches either cfg values.
-# On the way, check that the corresponding hostname is correct...
-
-hname=$(hostname -s)
+# Checking that the specified hostname matches the specified IP was done in the
+# hosts PS.
 
 for i in $(hostname -I) ; do
 
     case $i in
 
         $CTRL1_IP )
-            if [[ $hname != $CTRL1_HOSTNAME ]] ; then
-                echo_error 'CTRL1_IP found on this system, but the hostname is not CTRL1_HOSTNAME.'
-                exit 1
-            else
                 echo_info 'CTRL1 found, proceeding with primary installation.'
                 store_system_variable /etc/trinity.local.sh PRIMARY_INSTALL 1
                 detected=1
                 break
-            fi
             ;;
 
         $CTRL2_IP )
-            if [[ $hname != $CTRL2_HOSTNAME ]] ; then
-                echo_error 'CTRL2_IP found on this system, but the hostname is not CTRL2_HOSTNAME.'
-                exit 1
-            else
                 echo_info 'CTRL2 found, proceeding with secondary installation.'
                 store_system_variable /etc/trinity.local.sh PRIMARY_INSTALL 0
                 detected=1
                 break
-            fi
     esac
 done
 
@@ -85,6 +74,6 @@ if flag_is_unset detected ; then
 
 Please check the respective _IP and _HOSTNAME variables in the configuration
 file, as well as the network and hostname configuration of the system.'
-    exit 234
+    exit 1
 fi
 

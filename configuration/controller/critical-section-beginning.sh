@@ -75,11 +75,15 @@ TRIX_SHADOW="/etc/trinity.shadow"
 TRIX_SHFILE="/etc/trinity.sh"
 TRIX_LOCAL_SHFILE="/etc/trinity.local.sh"
 
-TRIX_CTRL1_HOSTNAME="${CTRL1_HOSTNAME}"
+# The hosts PS checked the hostname and domain name. They are assumed to be set
+# correctly.
+
+TRIX_DOMAIN="$(hostname -d)"
+TRIX_CTRL1_HOSTNAME="$(basename ${CTRL1_HOSTNAME} ${TRIX_DOMAIN})"
 TRIX_CTRL1_IP="${CTRL1_IP}"
-TRIX_CTRL2_HOSTNAME="${CTRL2_HOSTNAME}"
+TRIX_CTRL2_HOSTNAME="$(basename ${CTRL2_HOSTNAME} ${TRIX_DOMAIN})"
 TRIX_CTRL2_IP="${CTRL2_IP}"
-TRIX_CTRL_HOSTNAME="${CTRL_HOSTNAME}"
+TRIX_CTRL_HOSTNAME="$(basename ${CTRL_HOSTNAME} ${TRIX_DOMAIN})"
 TRIX_CTRL_IP="${CTRL_IP}"
 
 
