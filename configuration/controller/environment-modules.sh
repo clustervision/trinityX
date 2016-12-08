@@ -19,7 +19,8 @@
 
 # Environment modules setup
 
-if flag_is_unset POST_CHROOT ; then
+if flag_is_unset POST_CHROOT && \
+   ! ( flag_is_set HA && flag_is_unset PRIMARY_INSTALL ) ; then
     
     echo_info 'Creating the shared modules directories'
     
