@@ -283,6 +283,28 @@ function apply_config {
 
     for post in "${POSTLIST[@]}" ; do
 
+        # Tweak the environment variables on the fly
+
+        # Defining a new variable
+        if [[ "$post" =~ ^\+.* ]] ; then
+            tmpvar=${post#+}
+            echo_progress "Setting the environment variable: $tmpvar"
+            if flag_is_unset $tmpvar ; then
+                declare -x -- ${tmpvar}=1
+            fi
+            continue
+
+        # Unsetting an existing variable, if not set on the command line
+        elif [[ "$post" =~ ^-.* ]] ; then
+            tmpvar=${post#-}
+            echo_progress "Unsetting the environment variable: $tmpvar"
+            if flag_is_set $tmpvar && [[ "${!tmpvar}" != "keep" ]] ; then
+                unset -- $tmpvar
+            fi
+            continue
+        fi
+
+
         while true ; do
 
             run_one_script "$post"

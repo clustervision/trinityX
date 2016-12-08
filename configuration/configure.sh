@@ -99,7 +99,7 @@ unset QUIET VERBOSE DEBUG NOCOLOR {NO,SOFT,HARD}STOP STEP
 # In both cases, disable the color codes to avoid polluting the output.
 
 if [[ -p /dev/stdout ]] || [[ ! -t 1 && ! -p /dev/stdout ]] ; then
-    declare -x NOCOLOR=
+    declare -x NOCOLOR="keep"
 else
     echo_warn "The output of this script isn't being redirected to a log file.
 
@@ -123,39 +123,39 @@ while (( $# )) ; do
     case "$1" in
 
         -q )
-            declare -x QUIET=
+            declare -x QUIET="keep"
             unset VERBOSE
             ;;
 
         -v )
-            declare -x VERBOSE=
+            declare -x VERBOSE="keep"
             unset QUIET
             ;;
 
         -d )
-            declare -x DEBUG=
+            declare -x DEBUG="keep"
             ;;
 
         --nocolor )
-            declare -x NOCOLOR=
+            declare -x NOCOLOR="keep"
             ;;
 
         --step )
-            declare -x STEP=
+            declare -x STEP="keep"
             unset NOSTOP
             ;;
 
         --dontstopmenow|--continue )
-            declare -x NOSTOP=
+            declare -x NOSTOP="keep"
             unset {HARD,SOFT}STOP STEP
             ;;
 
         --hitthewall|--hardstop )
-            declare -x HARDSTOP=
+            declare -x HARDSTOP="keep"
             ;&
 
         --bailout|--stop )
-            declare -x SOFTSTOP=
+            declare -x SOFTSTOP="keep"
             unset NOSTOP
             ;;
 
