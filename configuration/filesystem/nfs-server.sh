@@ -26,6 +26,20 @@ display_var HA PRIMARY_INSTALL TRIX_{ROOT,LOCAL,IMAGES,SHARED,HOME} \
 # Shared functions
 #---------------------------------------
 
+function disable_nfs_services {
+
+    echo_info 'Disabling the default NFS services'
+
+    if ! ( systemctl disable rpcbind.socket nfs-client.target && \
+           systemctl stop rpcbind.socket nfs-client.target ) ; then
+
+        echo_error 'Failed to disable NFS services, exiting.'
+        exit 1
+    fi
+}
+
+
+
 function setup_sysconfig_nfs {
 
     if flag_is_set NFS_RPCCOUNT ; then
@@ -66,7 +80,8 @@ function start_nfs_server {
 
     echo_info 'Starting the NFS server'
 
-    if ! ( systemctl restart nfs-server && \
+    if ! ( systemctl restart rpcbind.socket && \
+           systemctl restart nfs-server && \
            systemctl enable nfs-server ) ; then
         echo_error 'Failed to start the NFS server, exiting'
         exit 1
@@ -80,6 +95,7 @@ function stop_nfs_server {
     echo_info 'Stopping the NFS server'
 
     if ! ( systemctl stop nfs-server && \
+           systemctl stop rpcbind.socket && \
            systemctl disable nfs-server ) ; then
         echo_error 'Failed to stop the NFS server, exiting'
         exit 1
@@ -98,6 +114,11 @@ function victor_nettoyeur {
         echo_warn 'Victor, nettoyeur.'
 
         # just brute-forcing our way through all the cases
+        flag_is_set PRIMARY_INSTALL && pcs resource delete trinity-nfs-server
+        pcs resource delete trinity-nfs-client-local
+        pcs resource delete trinity-nfs-client-images
+        pcs resource delete trinity-nfs-client-shared
+        pcs resource delete trinity-nfs-client-home
         systemctl stop nfs-server
         systemctl disable nfs-server
 
@@ -175,9 +196,16 @@ if flag_is_unset HA ; then
 
 elif flag_is_set PRIMARY_INSTALL ; then
 
+    disable_nfs_services
     setup_sysconfig_nfs
     setup_exports "${POST_FILEDIR}"/HA_exports "${TRIX_LOCAL}"/etc/exports.d/trinity.exports
     symlink_exports
+
+    # Information that should survive a failover
+    mkdir -p "${TRIX_LOCAL}"/var/lib/nfs
+    # rpc_pipefs kept local for performance reasons
+    mkdir -p /var/lib/nfs.local/rpc_pipefs
+
 
     # Let's see if the config flies
     start_nfs_server
@@ -190,7 +218,10 @@ elif flag_is_set PRIMARY_INSTALL ; then
     tmpfile=$(mktemp -p /root pacemaker_nfs.XXXX)
     pcs cluster cib $tmpfile
 
-    pcs -f $tmpfile resource create trinity-nfs-server systemd:nfs-server op monitor interval=47s
+    pcs -f $tmpfile resource create trinity-nfs-server ocf:heartbeat:nfsserver \
+        nfs_shared_infodir="${TRIX_LOCAL}"/var/lib/nfs rpcpipefs_dir=/var/lib/nfs.local/rpc_pipefs \
+        op monitor interval=47s
+
     pcs -f $tmpfile resource group add Trinity trinity-nfs-server --after trinity-fs
 
     # Apply the changes
@@ -207,8 +238,12 @@ elif flag_is_set PRIMARY_INSTALL ; then
 
 else
 
+    disable_nfs_services
     setup_sysconfig_nfs
     symlink_exports
+
+    # rpc_pipefs kept local for performance reasons
+    mkdir -p /var/lib/nfs.local/rpc_pipefs
 
 
     echo_info 'Setting up the NFS Pacemaker mounts'
