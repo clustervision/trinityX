@@ -176,6 +176,9 @@ case $SHARED_FS_TYPE in
 esac
 
 
+flag_is_set NFS_ENABLE_RDMA && proto=rdma || proto=tcp
+
+
 
 #---------------------------------------
 # Non-HA
@@ -200,6 +203,7 @@ elif flag_is_set PRIMARY_INSTALL ; then
     setup_sysconfig_nfs
     setup_exports "${POST_FILEDIR}"/HA_exports "${TRIX_LOCAL}"/etc/exports.d/trinity.exports
     symlink_exports
+    render_template "${POST_FILEDIR}"/nfsmount.conf > /etc/nfsmount.conf
 
     # Information that should survive a failover
     mkdir -p "${TRIX_LOCAL}"/var/lib/nfs
@@ -241,6 +245,7 @@ else
     disable_nfs_services
     setup_sysconfig_nfs
     symlink_exports
+    render_template "${POST_FILEDIR}"/nfsmount.conf > /etc/nfsmount.conf
 
     # rpc_pipefs kept local for performance reasons
     mkdir -p /var/lib/nfs.local/rpc_pipefs
