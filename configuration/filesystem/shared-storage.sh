@@ -271,7 +271,7 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
         pcs cluster cib $tmpfile
 
         # The pair of resources for the DRBD service
-        pcs -f $tmpfile resource create DRBD ocf:linbit:drbd drbd_resource=trinity_disk op monitor interval=59s
+        pcs -f $tmpfile resource create DRBD ocf:linbit:drbd drbd_resource=trinity_disk op monitor interval=59s promote interval=67s
         pcs -f $tmpfile resource master Trinity-drbd DRBD master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
 
         # The filesystem on top
