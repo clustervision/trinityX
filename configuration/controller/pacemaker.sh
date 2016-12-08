@@ -42,14 +42,9 @@ function corosync_start_and_check {
     read -t 5 -p 'Waiting for Corosync to come up...'
     echo
     
-    if corosync-cfgtool -s ; then
-        echo All good
-        # We don't need to enable the corosync unit as it will be started
-        # automatically by Pacemaker.
-    else
-        echo_error 'Corosync failed to start, exiting.'
-        exit 1
-    fi
+    while ! corosync-cfgtool -s ; do
+        sleep 3s
+    done
 }
 
 
@@ -82,13 +77,11 @@ function pacemaker_start_and_check {
     read -t 5 -p 'Waiting for the cluster to come up...'
     echo
     
-    if pcs cluster status ; then
-        echo All good
-        systemctl enable pcsd
-    else
-        echo_error 'The Pacemaker cluster failed to start, exiting.'
-        exit 1
-    fi
+    while ! pcs status ; do
+        sleep 3s
+    done
+
+    systemctl enable pcsd
 }
 
 
