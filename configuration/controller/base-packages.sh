@@ -31,5 +31,5 @@ store_system_variable /etc/yum.conf exclude 'NetworkManager* plymouth*'
 echo_info "Disabling SELinux"
 
 sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux /etc/selinux/config
-setenforce 0
+sestatus | grep -q '^SELinux status.*disabled$' || setenforce 0
 
