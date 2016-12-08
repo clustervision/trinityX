@@ -16,170 +16,136 @@
 # details.
 ######################################################################
 
-
 set -e
 
-function replace_template {
-    [ $# -gt 3 -o $# -lt 2 ] && echo "Wrong numger of argument in replace_template." && exit 1
-    if [ $# -eq 3 ]; then
-        FROM=${1}
-        TO=${2}
-        FILE=${3}
-    fi
-    if [ $# -eq 2 ]; then
-        FROM=${1}
-        TO=${!FROM}
-        FILE=${2}
-    fi
-    sed -i -e "s/{{ ${FROM} }}/${TO}/g" $FILE
-}
-
-echo_info "Check config variables available."
-
-echo "LUNA_FRONTEND=${LUNA_FRONTEND?"Should be defined"}"
-echo "LUNA_NETWORK=${LUNA_NETWORK?"Should be defined"}"
-LUNA_NETWORK_NAME=${LUNA_NETWORK_NAME:-cluster}
-echo "LUNA_NETWORK_NAME=${LUNA_NETWORK_NAME}"
-echo "LUNA_PREFIX=${LUNA_PREFIX?"Should be defined"}"
-
-LUNA_NETMASK=`ipcalc -s -m ${LUNA_NETWORK}/${LUNA_PREFIX} | sed 's/.*=//'`
-echo "LUNA_NETMASK=${LUNA_NETMASK?"Cannot compute netmask"}"
-echo "LUNA_DHCP_RANGE_START=${LUNA_DHCP_RANGE_START?"Should be defined"}"
-echo "LUNA_DHCP_RANGE_END=${LUNA_DHCP_RANGE_END?"Should be defined"}"
-
-_LUNA_MONGO_ROOT_PASS=`get_password $LUNA_MONGO_ROOT_PASS`
-store_password LUNA_MONGO_ROOT_PASS $_LUNA_MONGO_ROOT_PASS
-_LUNA_MONGO_PASS=`get_password $LUNA_MONGO_PASS`
-store_password LUNA_MONGO_PASS $_LUNA_MONGO_PASS
-
-
-echo_info "Disable SELinux."
-
-sed -i -e 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
-setenforce 0
-
-echo_info "Unpack luna."
-
-pushd /
-[ -d /luna ] || git clone https://github.com/clustervision/luna
-popd
-
-
-echo_info "Add users and create folders."
-
-id luna >/dev/null 2>&1 || useradd -d /opt/luna luna
-chown luna: /opt/luna
-chmod ag+rx /opt/luna
-mkdir -p /var/log/luna
-chown luna: /var/log/luna
-mkdir -p /opt/luna/{boot,torrents}
-chown luna: /opt/luna/{boot,torrents}
-
-echo_info "Create symlinks."
-
-pushd /usr/lib64/python2.7
-ln -fs ../../../luna/src/module luna
-popd
-pushd /usr/sbin
-ln -fs ../../luna/src/exec/luna
-ln -fs ../../luna/src/exec/lpower
-ln -fs ../../luna/src/exec/lweb
-ln -fs ../../luna/src/exec/ltorrent
-ln -fs ../../luna/src/exec/lchroot
-popd
-pushd /opt/luna
-ln -fs ../../luna/src/templates/
-popd
-
-echo_info "Copy dracut module"
-
-mkdir -p ${TRIX_ROOT}/luna/dracut/
-cp -pr /luna/src/dracut/95luna ${TRIX_ROOT}/luna/dracut/
-
-echo_info "Setup tftp."
-
-mkdir -p /tftpboot
-sed -e 's/^\(\W\+disable\W\+\=\W\)yes/\1no/g' -i /etc/xinetd.d/tftp
-sed -e 's|^\(\W\+server_args\W\+\=\W-s\W\)/var/lib/tftpboot|\1/tftpboot|g' -i /etc/xinetd.d/tftp
-[ -f /tftpboot/luna_undionly.kpxe ] || cp /usr/share/ipxe/undionly.kpxe /tftpboot/luna_undionly.kpxe
-
-echo_info "Setup DNS."
-
-/usr/bin/cat >>/etc/named.conf <<EOF
-include "/etc/named.luna.zones"; 
-EOF
-
-echo_info "Create ssh keys."
-
-[ -f /root/.ssh/id_rsa ] || ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
-
-echo_info "Setup nginx."
-
-if [ ! -f /etc/nginx/conf.d/nginx-luna.conf ]; then
-    # copy config files
-    mv /etc/nginx/nginx.conf{,.bkp_luna}
-    cp ${POST_FILEDIR}/nginx.conf /etc/nginx/
-    mkdir -p /etc/nginx/conf.d/
-    cp ${POST_FILEDIR}/nginx-luna.conf /etc/nginx/conf.d/
+if [ "x${LUNA_MONGO_PASS}" = "x" ]; then
+    LUNA_MONGO_PASS=`get_password $LUNA_MONGO_PASS`
+    store_password LUNA_MONGO_PASS $LUNA_MONGO_PASS
 fi
 
-echo_info "Start mongo."
+function install_luna() {
+    echo_info "Download Luna"
+    pushd /
+    [ -d /luna ] || /usr/bin/git clone https://github.com/clustervision/luna
+    popd
 
-systemctl restart mongod
-systemctl enable mongod
+    echo_info "Add users and create folders."
 
-echo_info "Configure mongo auth."
+    /usr/bin/id luna >/dev/null 2>&1 || /usr/sbin/useradd -d /opt/luna luna
+    /usr/bin/chown luna: /opt/luna
+    /usr/bin/chmod ag+rx /opt/luna
+    /usr/bin/mkdir -p /var/log/luna
+    /usr/bin/chown luna: /var/log/luna
+    /usr/bin/mkdir -p /opt/luna/{boot,torrents}
+    /usr/bin/chown luna: /opt/luna/{boot,torrents}
 
-#sed -i -e "s/^[# \t]\+replSet.*/replSet = luna/" /etc/mongod.conf
-#systemctl restart mongod
-#do_mongo_req "rs.initiate();"
-systemctl restart mongod
-/usr/bin/mongo << EOF
-use admin
-db.createUser({user: 'root', pwd: '${_LUNA_MONGO_ROOT_PASS}', roles: [ { role: 'root', db: 'admin' } ]})
-EOF
-cat > ~/.mongorc.js <<EOF
-db.getSiblingDB("admin").auth("root", "${_LUNA_MONGO_ROOT_PASS}")
-EOF
-sed -i -e "s/^[# \t]\+auth.*/auth = true/" /etc/mongod.conf
-systemctl restart mongod
-/usr/bin/mongo << EOF
+    echo_info "Create symlinks."
+
+    pushd /usr/lib64/python2.7
+    /usr/bin/ln -fs ../../../luna/src/module luna
+    popd
+    pushd /usr/sbin
+    /usr/bin/ln -fs ../../luna/src/exec/luna
+    /usr/bin/ln -fs ../../luna/src/exec/lpower
+    /usr/bin/ln -fs ../../luna/src/exec/lweb
+    /usr/bin/ln -fs ../../luna/src/exec/ltorrent
+    /usr/bin/ln -fs ../../luna/src/exec/lchroot
+    popd
+    pushd /opt/luna
+    /usr/bin/ln -fs ../../luna/src/templates/
+    popd
+
+    echo_info "Copy systemd unit files."
+
+    /usr/bin/cp -pr ${POST_FILEDIR}/lweb.service /etc/systemd/system/lweb.service
+    /usr/bin/cp -pr ${POST_FILEDIR}/ltorrent.service /etc/systemd/system/ltorrent.service
+
+    echo_info "Reload systemd config."
+
+    /usr/bin/systemctl daemon-reload
+}
+
+function copy_dracut() {
+    echo_info "Copy dracut module"
+
+    /usr/bin/mkdir -p ${TRIX_ROOT}/luna/dracut/
+    /usr/bin/cp -pr /luna/src/dracut/95luna ${TRIX_ROOT}/luna/dracut/
+}
+
+function setup_tftp() {
+    echo_info "Setup tftp."
+
+    /usr/bin/mkdir -p /tftpboot
+    /usr/bin/sed -e 's/^\(\W\+disable\W\+\=\W\)yes/\1no/g' -i /etc/xinetd.d/tftp
+    /usr/bin/sed -e 's|^\(\W\+server_args\W\+\=\W-s\W\)/var/lib/tftpboot|\1/tftpboot|g' -i /etc/xinetd.d/tftp
+    [ -f /tftpboot/luna_undionly.kpxe ] || cp /usr/share/ipxe/undionly.kpxe /tftpboot/luna_undionly.kpxe
+}
+
+function setup_dns() {
+    echo_info "Setup DNS."
+    append_line "include \"/etc/named.luna.zones\";" /etc/named.conf
+}
+
+function setup_nginx() {
+    echo_info "Setup nginx."
+
+    if [ ! -f /etc/nginx/conf.d/nginx-luna.conf ]; then
+        # copy config files
+        /usr/bin/mv /etc/nginx/nginx.conf{,.bkp_luna}
+        /usr/bin/cp ${POST_FILEDIR}/nginx.conf /etc/nginx/
+        /usr/bin/mkdir -p /etc/nginx/conf.d/
+        /usr/bin/cp ${POST_FILEDIR}/nginx-luna.conf /etc/nginx/conf.d/
+    fi
+}
+
+function configure_mongo_credentials() {
+    echo_info "Configure credentials for MongoDB access."
+
+    /usr/bin/mongo --host luna/localhost -u "root" -p${MONGODB_ROOT_PASS} --authenticationDatabase admin << EOF
 use luna
-db.createUser({user: "luna", pwd: "${_LUNA_MONGO_PASS}", roles: [{role: "dbOwner", db: "luna"}]})
+db.createUser({user: "luna", pwd: "${LUNA_MONGO_PASS}", roles: [{role: "dbOwner", db: "luna"}]})
 EOF
-cat << EOF > /etc/luna.conf
+    /usr/bin/cat > /etc/luna.conf <<EOF
 [MongoDB]
 server=localhost
 authdb=luna
 user=luna
-password=${_LUNA_MONGO_PASS}
+password=${LUNA_MONGO_PASS}
 EOF
-chown luna:luna /etc/luna.conf
-chmod 600 /etc/luna.conf
+    /usr/bin/chown luna:luna /etc/luna.conf
+    /usr/bin/chmod 600 /etc/luna.conf
+}
 
-echo_info "Copy systemd unit files."
+function configure_luna() {
+    echo_info "Initialize Luna." 
+     
+    /usr/sbin/luna cluster init 
+    /usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND} 
+    /usr/sbin/luna network add -n ${LUNA_NETWORK_NAME} -N ${LUNA_NETWORK} -P ${LUNA_PREFIX} 
+    /usr/sbin/luna network change -n ${LUNA_NETWORK_NAME} --ns_ip ${LUNA_FRONTEND} --ns_hostname ${CTRL_HOSTNAME}
+}
 
-[ -f /etc/systemd/system/lweb.service ]  || cp -pr ${POST_FILEDIR}/lweb.service /etc/systemd/system/lweb.service
-[ -f /etc/systemd/system/ltorrent.service ]  || cp -pr ${POST_FILEDIR}/ltorrent.service /etc/systemd/system/ltorrent.service
+function configure_luna_ha() {
+    echo_info "Configure HA in Luna."
+    /usr/sbin/luna cluster change --cluster_ips "${CTRL1_IP},${CTRL2_IP}"
+}
 
-echo_info "Reload systemd config."
+function configure_dns_dhcp() {
+     
+    echo_info "Configure DNS and DHCP." 
+     
+    /usr/sbin/luna cluster makedhcp -N ${LUNA_NETWORK_NAME} -s ${LUNA_DHCP_RANGE_START} -e ${LUNA_DHCP_RANGE_END} --no_ha
+    /usr/sbin/luna cluster makedns 
+}
 
-systemctl daemon-reload
-
-echo_info "Initialize luna."
-
-/usr/sbin/luna cluster init
-/usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND}
-/usr/sbin/luna network add -n ${LUNA_NETWORK_NAME} -N ${LUNA_NETWORK} -P ${LUNA_PREFIX}
-
-echo_info "Configure DNS and DHCP."
-
-/usr/sbin/luna cluster makedhcp -N ${LUNA_NETWORK_NAME} -s ${LUNA_DHCP_RANGE_START} -e ${LUNA_DHCP_RANGE_END}
-/usr/sbin/luna cluster makedns
-
-echo_info "Start services."
-
-for service in  xinetd nginx dhcpd lweb ltorrent; do
-    systemctl enable $service
-    systemctl restart $service
-done
+function copy_configs_to_shared() {
+    /usr/bin/mkdir -p /trinity/shared/etc
+    /usr/bin/cp -pr /etc/luna.conf /trinity/shared/etc/
+    /usr/bin/cp -pr /etc/named.luna.zones /trinity/shared/etc/
+    /usr/bin/mkdir /trinity/shared/etc/xinetd.d
+    /usr/bin/cp -pr /etc/xinetd.d/tftp /trinity/shared/etc/xinetd.d/
+    /usr/bin/mkdir /trinity/shared/etc/dhcp
+    /usr/bin/cp -pr /etc/dhcp/dhcpd.conf /trinity/shared/etc/
+    /usr/bin/mkdir -p /trinity/shared/named
+    /usr/bin/cp -pr /var/named/*luna* /trinity/shared/named
+}
