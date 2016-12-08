@@ -28,15 +28,22 @@ display_var HA PRIMARY_INSTALL TRIX_CTRL{1,2}_{IP,HOSTNAME} TRIX_ROOT \
 function check_block_device {
 
     if [[ -b "$1" ]] ; then
-        echo $1
+        dev=$1
 
     elif [[ -b "/dev/$1" ]] ; then
-        echo /dev/$1
+        dev=/dev/$1
 
     else
         echo_error "Invalid backend block device: ${1:-(empty)}"
         exit 1
     fi
+
+    if grep "^${dev}[0-9]* " /proc/mounts ; then
+        echo_error 'THE BLOCK DEVICE (OR ONE OF ITS PARTITIONS) IS MOUNTED! Exiting now.'
+        exit 1
+    fi
+
+    echo $dev
 }
 
 
