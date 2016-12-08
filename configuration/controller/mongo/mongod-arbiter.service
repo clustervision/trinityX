@@ -1,0 +1,20 @@
+[Unit]
+Description=Arbiter for MongoDB
+After=syslog.target network.target
+
+[Service]
+Type=forking
+User=mongodb
+PermissionsStartOnly=true
+EnvironmentFile=/etc/sysconfig/mongod-arbiter
+ExecStartPre=-/usr/bin/mkdir /var/run/mongodb-arbiter
+ExecStartPre=/usr/bin/chown -R mongodb:root /var/run/mongodb-arbiter
+ExecStartPre=-/usr/bin/rm -f /var/lib/mongodb-arbiter/mongod.lock
+ExecStart=/usr/bin/mongod $OPTIONS run
+ExecStopPost=-/usr/bin/rm -rf /var/run/mongodb-arbiter
+PrivateTmp=true
+LimitNOFILE=64000
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target
