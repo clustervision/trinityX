@@ -26,20 +26,6 @@ display_var HA PRIMARY_INSTALL TRIX_{ROOT,LOCAL,IMAGES,SHARED,HOME} \
 # Shared functions
 #---------------------------------------
 
-function disable_nfs_services {
-
-    echo_info 'Disabling the default NFS services'
-
-    if ! ( systemctl disable rpcbind.socket nfs-client.target && \
-           systemctl stop rpcbind.socket nfs-client.target ) ; then
-
-        echo_error 'Failed to disable NFS services, exiting.'
-        exit 1
-    fi
-}
-
-
-
 function setup_sysconfig_nfs {
 
     if flag_is_set NFS_RPCCOUNT ; then
@@ -80,8 +66,7 @@ function start_nfs_server {
 
     echo_info 'Starting the NFS server'
 
-    if ! ( systemctl restart rpcbind.socket && \
-           systemctl restart nfs-server && \
+    if ! ( systemctl restart nfs-server && \
            systemctl enable nfs-server ) ; then
         echo_error 'Failed to start the NFS server, exiting'
         exit 1
@@ -95,7 +80,6 @@ function stop_nfs_server {
     echo_info 'Stopping the NFS server'
 
     if ! ( systemctl stop nfs-server && \
-           systemctl stop rpcbind.socket && \
            systemctl disable nfs-server ) ; then
         echo_error 'Failed to stop the NFS server, exiting'
         exit 1
@@ -126,7 +110,7 @@ function victor_nettoyeur {
         echo_info 'Storing configuration details'
 
         for i in NFS_EXPORT_{LOCAL,IMAGES,SHARED,HOME} NFS_ENABLE_RDMA ; do
-            store_variable /etc/trinity.sh "$i" "${!i}"
+            store_variable /etc/trinity.sh "$i" "${!i:-0}"
         done
     fi
 }
@@ -199,7 +183,6 @@ if flag_is_unset HA ; then
 
 elif flag_is_set PRIMARY_INSTALL ; then
 
-    disable_nfs_services
     setup_sysconfig_nfs
     setup_exports "${POST_FILEDIR}"/HA_exports "${TRIX_LOCAL}"/etc/exports.d/trinity.exports
     symlink_exports
@@ -207,8 +190,6 @@ elif flag_is_set PRIMARY_INSTALL ; then
 
     # Information that should survive a failover
     mkdir -p "${TRIX_LOCAL}"/var/lib/nfs
-    # rpc_pipefs kept local for performance reasons
-    mkdir -p /var/lib/nfs.local/rpc_pipefs
 
 
     # Let's see if the config flies
@@ -241,13 +222,9 @@ elif flag_is_set PRIMARY_INSTALL ; then
 
 else
 
-    disable_nfs_services
     setup_sysconfig_nfs
     symlink_exports
     render_template "${POST_FILEDIR}"/nfsmount.conf > /etc/nfsmount.conf
-
-    # rpc_pipefs kept local for performance reasons
-    mkdir -p /var/lib/nfs.local/rpc_pipefs
 
 
     echo_info 'Setting up the NFS Pacemaker mounts'
