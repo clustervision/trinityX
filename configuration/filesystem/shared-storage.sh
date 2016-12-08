@@ -219,7 +219,11 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
     SHARED_FS_DRBD_DEVICE=/dev/drbd1
     display_var SHARED_FS_{,DRBD_}DEVICE
 
-    flag_is_unset SHARED_FS_NO_FORMAT && sgdisk -Z ${SHARED_FS_DEVICE} 2>/dev/null
+    if flag_is_unset SHARED_FS_NO_FORMAT ; then
+        sgdisk -Z ${SHARED_FS_DEVICE} 2>/dev/null
+        # some strange timing issues now and then, so:
+        sleep 2 ; sync
+    fi
 
     # Set up DRBD and check that it's good
 
@@ -285,6 +289,10 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
 
         # Give it time to digest the new info
         sleep 5s
+
+        # And then DRBD might start a tiny bit too slow for Pacemaker's taste,
+        # and the trinity-fs resource fails. So clean it up and start again.
+        pcs resource cleanup trinity-fs
 
 
     #---------------------------------------
