@@ -156,6 +156,7 @@ if flag_is_unset HA ; then
 
     render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
     setup_exports "${POST_FILEDIR}"/nonHA_exports /etc/exports.d/trinity.exports
+    sync
     start_nfs_server
     showmount -e
 
@@ -171,6 +172,7 @@ elif flag_is_set PRIMARY_INSTALL ; then
     setup_exports "${POST_FILEDIR}"/HA_exports "${TRIX_LOCAL}"/etc/exports.d/trinity.exports
     symlink_exports
     render_template "${POST_FILEDIR}"/nfsmount.conf > /etc/nfsmount.conf
+    sync
 
     # Information that should survive a failover
     mkdir -p "${TRIX_LOCAL}"/var/lib/nfs
@@ -209,6 +211,7 @@ else
     render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
     symlink_exports
     render_template "${POST_FILEDIR}"/nfsmount.conf > /etc/nfsmount.conf
+    sync
 
 
     echo_info 'Setting up the NFS Pacemaker mounts'
