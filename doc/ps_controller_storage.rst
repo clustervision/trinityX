@@ -1,6 +1,6 @@
 
-Controller storage post-scripts engineering documentation
-=========================================================
+Controller storage post-scripts documentation
+=============================================
 
 Overview
 --------
@@ -117,7 +117,8 @@ The configuration options that are accepted by the HA storage post-scripts are t
 
 ``SHARED_FS_DRBD_WAIT_FOR_SYNC``
 
-    For ``drbd`` only: if set, wait for full synchronization of the secondary disk before continuing with the TrinityX setup. That will take a while.
+    For ``drbd`` only: if set, wait for full synchronization of the secondary disk before continuing with the TrinityX setup. That will take some time, but is enabled by default and it recommended.
+
 
 ``SHARED_FS_NO_FORMAT``
 
@@ -162,6 +163,22 @@ Flag name               ``none``            Default ``export``  Default ``dev`` 
 .. warning:: ``NFS_EXPORT_LOCAL`` is expected to be enabled for installation of the secondary controller. If disabled, the directory must be available locally on the secondary controller before the TrinityX secondary setup starts.
 
 
+Additional configuration options for the NFS server are:
+
+``NFS_RPCCOUNT``
+
+    Number of NFS server threads to start. Default is 8 if unset. The best number depends on the amount of nodes and traffic.
+
+``NFS_ENABLE_RDMA``
+
+    Make the NFS server listen to the nfsrdma port (20049) for NFS-over-RDMA. This does not remove the ability to use the regular TCP proto, and is safe to enable on RDMA-supporting hardware.
+
+.. note:: To make use of that feature, you need hardware that support RDMA in a way or another: iWARP, InfiniBand, RoCE for example. It will not work on regular Ethernet cards without HW support.
+
+.. note:: Enabling this feature will automatically configure the compute images to use RDMA instead of TCP. This can be changed in the images by setting ``Proto=tcp`` in ``/etc/nfsmount.conf``.
+
+.. warning:: This applies to the controllers too. As the secondary installer will try to fetch the required information from the primary via NFS, NFS must be working over RDMA if that option is selected. This implies that all drivers and support software must be installed on the systems before beginning the TrinityX configuration.
+
 
 
 Examples
@@ -172,15 +189,16 @@ Home on an external distributed FS
 
 The most common modification will probably to have the users' home directories on an external distributed FS (Lustre / GPFS / BeeGFS), while everything else is exported from the controllers via NFS.
 
-Let's assume that we have an external JBOD for all the controller and shared data (everything but the homes). The procedure would be:
+Let's assume that this is an HA setup, and we have an external JBOD for all the controllers' shared data (everything but the homes). The configuration file would include::
 
-1. *PRIMARY INSTALL*: assemble and configure the RAID array on top of the JBOD;
+    # Change the default path of the homes. That's required because:
+    #   - /trinity will be the mount point of the RAID array
+    #   - the RAID array will be managed by Pacemaker
+    #   - having the distributed FS mounted in a subdir of the RAID array would
+    #     force it to be managed by Pacemaker too
+    # And well, we don't want that. It's independant from HA. So:
 
-.. warning:: Remember that all failover configuration for the RAID array, and the mounts of the distributed FS, need to be done by the engineer!
-
-2. *PRIMARY AND SECONDARY*: set up the configuration file. In that case it would look like this::
-
-    # no change to the default paths
+    STDCFG_TRIX_HOME=/my/new/path/outside/slash/trinity
     
     SHARED_FS_TYPE=dev
     SHARED_FS_DEVICE=/dev/<path to RAID block device>
@@ -191,11 +209,47 @@ Let's assume that we have an external JBOD for all the controller and shared dat
 
 .. note:: Remember that the same configuration file must be used for both primary and secondary installations. So if the configuration file is modified on the primary controller before installation, make sure to copy it over to the secondary and use it for the secondary install.
 
-3. *PRIMARY AND SECONDARY*: install the controllers. The home directory will be left unconfigured;
 
-4. *PRIMARY AND SECONDARY*: set up the mount of the distributed FS in ``/trinity/home`` (or any other path if you diverge from the standard tree);
+The installation procedures would be as follows:
 
-5. *PRIMARY INSTALL*: generate a compute image;
 
-6. *COMPUTE IMAGE*: set up the mount of the distributed FS in ``/trinity/home``.
+**PRIMARY INSTALLATION**
+
+#. Install CentOS 7 Minimal, the networking drivers (especially if using RDMA) and the distributed FS drivers.
+
+#. Set up the mount of the distributed FS to the path that you specified in ``STDCFG_TRIX_HOME``. As this is independant from all failover roles, it's better to leave that out of Pacemaker.
+
+#. Assemble and configure the RAID array on top of the JBOD.
+
+#. Configure the controllers with the TrinityX configuration tool. The home directory will be left unexported.
+
+#. Now that Pacemaker is configured, add the resource to assemble the RAID array in the ``Trinity`` group just before the ``wait-for-dev`` delay. You will need to stop all resources after the point of insertion, as well as the array itself beforehand, as Pacemaker will be in charge of it. With the standard out-of-the-box configuration, this would look like::
+
+    pcs cluster disable wait-for-device
+    
+    # stop and take apart your array
+    
+    pcs resource create trinity-dev <standard:provider:type> [resource_options] [op monitor interval=123s] --group Trinity --after trinity-ip
+    
+    # the resource will start automatically, check that the RAID array is fine and assembled
+    
+    pcs resource enable wait-for-device
+
+
+**SECONDARY INSTALLATION**
+
+#. Install CentOS 7 Minimal, the networking drivers (especially if using RDMA) and the distributed FS drivers.
+
+#. Set up the mount of the distributed FS to the path that you specified in ``STDCFG_TRIX_HOME``.
+
+#. Configure the controllers with the TrinityX configuration tool. The home directory will not be imported via NFS.
+
+
+**COMPUTE IMAGES**
+
+#. Create a compute image.
+
+#. Inside a chroot, add the networking drivers and the distributed FS drivers.
+
+#. Set up the mount of the distributed FS to the path that you specified in ``STDCFG_TRIX_HOME``.
 
