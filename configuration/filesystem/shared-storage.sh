@@ -27,23 +27,17 @@ display_var HA PRIMARY_INSTALL TRIX_CTRL{1,2}_{IP,HOSTNAME} TRIX_ROOT \
 
 function check_block_device {
 
-    if [[ -b "$1" ]] ; then
-        dev=$1
+    echo_info 'Checking the block device: $SHARED_FS_DEVICE'
 
-    elif [[ -b "/dev/$1" ]] ; then
-        dev=/dev/$1
-
-    else
-        echo_error "Invalid backend block device: ${1:-(empty)}"
+    if ! [[ -b "$SHARED_FS_DEVICE" ]] ; then
+        echo_error 'Not a block device, exiting now.'
         exit 1
     fi
 
-    if grep "^${dev}[0-9]* " /proc/mounts ; then
+    if grep '^'"${SHARED_FS_DEVICE}"'[0-9]* ' /proc/mounts ; then
         echo_error 'THE BLOCK DEVICE (OR ONE OF ITS PARTITIONS) IS MOUNTED! Exiting now.'
         exit 1
     fi
-
-    echo $dev
 }
 
 
@@ -222,7 +216,7 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
     
     # Prepare the device
 
-    SHARED_FS_DEVICE=$(check_block_device "$SHARED_FS_DEVICE")
+    check_block_device
     SHARED_FS_DRBD_DEVICE=/dev/drbd1
     display_var SHARED_FS_{,DRBD_}DEVICE
 
@@ -304,8 +298,8 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
             exit 1
         fi
 
-        # Give it time to digest the new info
-        sleep 5s
+        echo_info 'Waiting 30s to let the delay resource pass'
+        sleep 30s
 
         # And then DRBD might start a tiny bit too slow for Pacemaker's taste,
         # and the trinity-fs resource fails. So clean it up and start again.
@@ -360,7 +354,7 @@ else
     # -------
 
     # Shared device, visible on both controllers
-    SHARED_FS_DEVICE=$(check_block_device "$SHARED_FS_DEVICE")
+    check_block_device
     SHARED_FS_PART=${SHARED_FS_DEVICE}1
     display_var SHARED_FS_{DEVICE,PART}
 
@@ -411,6 +405,10 @@ else
             echo_error 'Failed to push the new resource configuration to Pacemaker, exiting.'
             exit 1
         fi
+
+        echo_info 'Waiting 30s to let the delay resource pass'
+        sleep 30s
+
     fi
 fi
 
