@@ -26,22 +26,6 @@ display_var HA PRIMARY_INSTALL TRIX_{ROOT,LOCAL,IMAGES,SHARED,HOME} \
 # Shared functions
 #---------------------------------------
 
-function setup_sysconfig_nfs {
-
-    if flag_is_set NFS_RPCCOUNT ; then
-        echo_info 'Adjusting the number of threads for the NFS server'
-        sed -i 's/[# ]*\(RPCNFSDCOUNT=\).*/\1'"${NFS_RPCCOUNT}"'/g' /etc/sysconfig/nfs
-    fi
-
-
-    if flag_is_set NFS_ENABLE_RDMA ; then
-        echo_info 'Configuring NFS to listen to the nfsrdma port (20049)'
-        sed -i 's/[# ]*\(RPCNFSDARGS="\)\(.*\)/\1'"-r"' \2/g' /etc/sysconfig/nfs
-    fi
-}
-
-
-
 # Syntax: exports_setup <template> <destination>
 
 function setup_exports {
@@ -170,7 +154,7 @@ flag_is_set NFS_ENABLE_RDMA && proto=rdma || proto=tcp
 
 if flag_is_unset HA ; then
 
-    setup_sysconfig_nfs
+    render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
     setup_exports "${POST_FILEDIR}"/nonHA_exports /etc/exports.d/trinity.exports
     start_nfs_server
     showmount -e
@@ -183,7 +167,7 @@ if flag_is_unset HA ; then
 
 elif flag_is_set PRIMARY_INSTALL ; then
 
-    setup_sysconfig_nfs
+    render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
     setup_exports "${POST_FILEDIR}"/HA_exports "${TRIX_LOCAL}"/etc/exports.d/trinity.exports
     symlink_exports
     render_template "${POST_FILEDIR}"/nfsmount.conf > /etc/nfsmount.conf
@@ -222,7 +206,7 @@ elif flag_is_set PRIMARY_INSTALL ; then
 
 else
 
-    setup_sysconfig_nfs
+    render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
     symlink_exports
     render_template "${POST_FILEDIR}"/nfsmount.conf > /etc/nfsmount.conf
 
