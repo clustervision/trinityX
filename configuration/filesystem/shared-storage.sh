@@ -434,7 +434,7 @@ else
             exit 1
         fi
 
-        check_cluster wait-for-device
+        check_cluster trinity-fs
     fi
 fi
 
