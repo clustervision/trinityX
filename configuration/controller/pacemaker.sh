@@ -167,10 +167,13 @@ if flag_is_set PRIMARY_INSTALL ; then
     tmpfile=$(mktemp -p /root pacemaker.XXXX)
     pcs cluster cib $tmpfile
 
+    # Primary core resources
+    pcs -f $tmpfile resource create trinity-primary ocf:heartbeat:Dummy op monitor interval=179s
     pcs -f $tmpfile resource create trinity-ip ocf:heartbeat:IPaddr2 ip=${TRIX_CTRL_IP} op monitor interval=29s
-    pcs -f $tmpfile resource group add Trinity trinity-ip
+    pcs -f $tmpfile resource group add Trinity trinity-primary trinity-ip
 
-    pcs -f $tmpfile resource create trinity-secondary ocf:heartbeat:Dummy op monitor interval=181
+    # Secondary core resources
+    pcs -f $tmpfile resource create trinity-secondary ocf:heartbeat:Dummy op monitor interval=181s
     pcs -f $tmpfile resource group add Trinity-secondary trinity-secondary
 
     # Trinity group first, then Trinity-secondary
