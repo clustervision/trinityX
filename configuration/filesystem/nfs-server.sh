@@ -38,6 +38,26 @@ function setup_exports {
 
 
 
+function setup_sysconfig {
+
+    # RH7 uses a weird configuration system for NFS. At boot the
+    # nfs-config.service unit file processes /etc/sysconfig/nfs and writes the
+    # results in /run/sysconfig/nfs-utils, which what is actually used by the
+    # NFS server.
+    # I'm not really sure about the logic behind it. What is means for us though
+    # is that we have to restart that service after updating the config file.
+
+    render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
+    sync
+
+    if ! systemctl restart nfs-config ; then
+        echo_error 'Failed to restart the nfs-config service, exiting.'
+        exit 1
+    fi
+}
+
+
+
 function symlink_exports {
 
     mkdir -p /etc/exports.d
@@ -154,9 +174,8 @@ flag_is_set NFS_ENABLE_RDMA && proto=rdma || proto=tcp
 
 if flag_is_unset HA ; then
 
-    render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
     setup_exports "${POST_FILEDIR}"/nonHA_exports /etc/exports.d/trinity.exports
-    sync
+    setup_sysconfig
     start_nfs_server
     showmount -e
 
@@ -168,11 +187,10 @@ if flag_is_unset HA ; then
 
 elif flag_is_set PRIMARY_INSTALL ; then
 
-    render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
     setup_exports "${POST_FILEDIR}"/HA_exports "${TRIX_LOCAL}"/etc/exports.d/trinity.exports
     symlink_exports
     render_template "${POST_FILEDIR}"/nfsmount.conf > /etc/nfsmount.conf
-    sync
+    setup_sysconfig
 
     # Information that should survive a failover
     mkdir -p "${TRIX_LOCAL}"/var/lib/nfs
@@ -208,10 +226,9 @@ elif flag_is_set PRIMARY_INSTALL ; then
 
 else
 
-    render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
     symlink_exports
     render_template "${POST_FILEDIR}"/nfsmount.conf > /etc/nfsmount.conf
-    sync
+    setup_sysconfig
 
 
     echo_info 'Setting up the NFS Pacemaker mounts'
