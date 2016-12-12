@@ -436,3 +436,66 @@ function render_template {
 
 typeset -fx render_template
 
+
+#---------------------------------------
+
+# Check wether the Pacemaker cluster has brought up the required resources
+
+# Syntax: resources_are_started <resource name> [<resource name> ...]
+
+# Pacemaker is a real pain. There is no easy way of getting a return value
+# matching the state of a resource through pcs or crm*. So one has to grep...
+# Note that the resource name must not contain weird characters, only alphanum
+# and dash and underscore.
+
+function resources_are_started {
+
+    (( $# )) || return 1
+
+    status="$(crm_resource -L)"
+
+    # Check first that the resources actually exist
+    for res in "$@" ; do
+        if ! echo "$status" | grep -q -w "$res" ; then
+            echo_error "Error: the resource \"$res\" doesn't exist."
+            return 1
+        fi
+    done
+
+    ret=0
+
+    for res in "$@" ; do
+        echo "$status" | grep -w "$res" | grep -q -w Started
+        (( ret+=$? ))
+    done
+
+    return $ret
+}
+
+
+typeset -fx resources_are_started
+
+
+#---------------------------------------
+
+
+# Syntax: check_cluster <resource name> [<resource name> ...]
+
+function check_cluster {
+
+    echo_info 'Checking the state of the cluster'
+    (( $# )) || return 1
+
+    sleep 5s
+
+    until resources_are_started "$@" ; do
+        echo 'Waiting for the resources to start...'
+        sleep 5s
+    done
+
+    return 0
+}
+
+
+typeset -fx check_cluster
+

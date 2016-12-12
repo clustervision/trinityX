@@ -38,12 +38,11 @@ function corosync_start_and_check {
     
     echo_info 'Starting Corosync'
     systemctl restart corosync
-    
-    read -t 5 -p 'Waiting for Corosync to come up...'
-    echo
-    
-    while ! corosync-cfgtool -s ; do
-        sleep 3s
+    sleep 5s
+
+    until corosync-cfgtool -s ; do
+        echo 'Waiting for Corosync to come up...'
+        sleep 5s
     done
 }
 
@@ -73,12 +72,11 @@ function pacemaker_start_and_check {
     
     echo_info 'Starting the cluster'
     pcs cluster start
-    
-    read -t 5 -p 'Waiting for the cluster to come up...'
-    echo
-    
-    while ! pcs status ; do
-        sleep 3s
+    sleep 5s
+
+    until pcs status ; do
+        echo 'Waiting for the cluster to come up...'
+        sleep 5s
     done
 
     systemctl enable pcsd
@@ -186,6 +184,8 @@ if flag_is_set PRIMARY_INSTALL ; then
         exit 1
     fi
 
+    check_cluster trinity-ip
+
 
 
 #---------------------------------------
@@ -209,5 +209,7 @@ else
     # The password comes from the shadow file of the primary installation
     pacemaker_hacluster_pw_auth
     pacemaker_start_and_check
+
+    check_cluster trinity-secondary
 fi
 

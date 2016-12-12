@@ -298,12 +298,14 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
             exit 1
         fi
 
-        echo_info 'Waiting 30s to let the delay resource pass'
-        sleep 30s
+        check_cluster wait-for-device
 
         # And then DRBD might start a tiny bit too slow for Pacemaker's taste,
         # and the trinity-fs resource fails. So clean it up and start again.
         pcs resource cleanup trinity-fs
+
+        check_cluster trinity-fs
+
 
 
     #---------------------------------------
@@ -406,9 +408,7 @@ else
             exit 1
         fi
 
-        echo_info 'Waiting 30s to let the delay resource pass'
-        sleep 30s
-
+        check_cluster wait-for-device
     fi
 fi
 

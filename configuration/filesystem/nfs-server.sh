@@ -218,6 +218,8 @@ elif flag_is_set PRIMARY_INSTALL ; then
         exit 1
     fi
 
+    check_cluster trinity-nfs-server trinity-ip
+
 
 
 #---------------------------------------
