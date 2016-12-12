@@ -229,7 +229,7 @@ The installation procedures would be as follows:
     
     # stop and take apart your array
     
-    pcs resource create trinity-dev <standard:provider:type> [resource_options] [op monitor interval=123s] --group Trinity --after trinity-ip
+    pcs resource create trinity-dev <standard:provider:type> [resource_options] [op monitor interval=123s] --group Trinity --after trinity-primary
     
     # the resource will start automatically, check that the RAID array is fine and assembled
     
@@ -252,4 +252,120 @@ The installation procedures would be as follows:
 #. Inside a chroot, add the networking drivers and the distributed FS drivers.
 
 #. Set up the mount of the distributed FS to the path that you specified in ``STDCFG_TRIX_HOME``.
+
+
+
+Adding a block device later
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Another possibility is that for a number of reasons, the RAID array that will back ``/trinity`` may not yet be ready for use when installing TrinityX. That's not much of a problem, as it will be easy to add it later on. One method is by simply reusing the exiting post scripts, which has the advantage of setting up a perfectly standard TrinityX configuration, identical to a normal, non-delayed setup.
+
+Let's assume that you are using the standard paths, and are doing an HA setup. Let's also assume that for now, ``/trinity`` will live on the local hard drive.
+
+#. Edit your configuration file to select the ``export`` use case, which will do everything but set up a filesystem::
+
+    SHARED_FS_TYPE=export
+
+#. If you know it already, provide the name of the block device that will be used later on. It won't be used right now, the only interest in setting it early is that it will be copied over to ``trinity.sh``. That can be skipped for now if you don't know it yet. Example::
+
+    SHARED_FS_DEVICE=/dev/md0
+
+#. Proceed with the installation. At the end, the files and directories and the cluster resources will look like this::
+
+    # crm_resource -L
+     Resource Group: Trinity
+         trinity-primary    (ocf::heartbeat:Dummy): Started
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Started
+         trinity-ip (ocf::heartbeat:IPaddr2):   Started
+     Resource Group: Trinity-secondary
+         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+    
+    # ls -ahlpd /trinity /etc/trinity.*
+    -rw-------. 1 root root   52 Dec 12 15:16 /etc/trinity.local.sh
+    lrwxrwxrwx. 1 root root   26 Dec 12 15:18 /etc/trinity.sh -> /trinity/shared/trinity.sh
+    drwxr-xr-x. 6 root root 4.0K Dec 12 15:16 /trinity/
+
+   Note that other services may have been added by later post-scripts.
+
+#. The primary controller is now operational, and you can start using it.
+
+#. When the backing block device is finally ready, plan for a downtime of the controller and stop all activity on the cluster.
+
+#. Edit **``/etc/trinity.sh``** (which has precedence over the configuration file) to make sure that it includes the correct device name, and change the ``SHARED_FS_TYPE`` to select the ``dev`` resource. If necessary, add formatting options for the XFS filesystem::
+
+    SHARED_FS_TYPE=dev
+    SHARED_FS_DEVICE=/dev/md0
+    SHARED_FS_FORMAT_OPTIONS=...
+
+#. Stop all resources after ``trinity-primary``, as they depend on the ``/trinity`` directory. With the resources listed above, this will be::
+
+    # pcs resource disable trinity-nfs-server
+    
+    # crm_resource -L
+     Resource Group: Trinity
+         trinity-primary    (ocf::heartbeat:Dummy): Started
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped (disabled)
+         trinity-ip (ocf::heartbeat:IPaddr2):   Stopped
+     Resource Group: Trinity-secondary
+         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+
+#. Move the existing ``/trinity`` directory to another location, and fix the symlink for ``trinity.sh``::
+
+    # mv /trinity /trinity.orig
+    
+    # ln -fs /trinity.orig/shared/trinity.sh /etc/trinity.sh 
+    
+    # ls -ahlpd /etc/trinity.sh 
+    lrwxrwxrwx. 1 root root 31 Dec 12 15:50 /etc/trinity.sh -> /trinity.orig/shared/trinity.sh
+
+#. Run the configuration script again, but only for the ``shared-storage`` post script. Make sure that you specify the correct name of the configuration file that you were using for the original installation::
+
+    # ./configure.sh --config controller-HA.cfg filesystem/shared-storage
+
+#. Check that the device has been formatted, is mounted and the cluster resources are up::
+
+    # mount | grep trinity
+    /dev/sda1 on /trinity type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
+    
+    # crm_resource -L
+     Resource Group: Trinity
+         trinity-primary    (ocf::heartbeat:Dummy): Started
+         wait-for-device    (ocf::heartbeat:Delay): Started
+         trinity-fs (ocf::heartbeat:Filesystem):    Started
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped (disabled)
+         trinity-ip (ocf::heartbeat:IPaddr2):   Stopped
+     Resource Group: Trinity-secondary
+         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+
+#. Move all the contents of the original ``/trinity`` to the new one, and adjust the ``/etc/trinity.sh`` symlink again::
+
+    # rsync -ravW /trinity.orig/ /trinity/
+    
+    # ln -fs /trinity/shared/trinity.sh /etc/trinity.sh
+
+#. Re-enable the NFS server and the subsequent resources::
+
+    # pcs resource enable trinity-nfs-server
+    
+    # crm_resource -L
+     Resource Group: Trinity
+         trinity-primary    (ocf::heartbeat:Dummy): Started
+         wait-for-device    (ocf::heartbeat:Delay): Started
+         trinity-fs (ocf::heartbeat:Filesystem):    Started
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Started
+         trinity-ip (ocf::heartbeat:IPaddr2):   Started
+     Resource Group: Trinity-secondary
+         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+    
+    # showmount -e
+    Export list for hactrl1.cluster:
+    /trinity/home   *
+    /trinity/shared (everyone)
+    /trinity/images hactrl.cluster,hactrl2.cluster,hactrl1.cluster
+    /trinity/local  hactrl.cluster,hactrl2.cluster,hactrl1.cluster
+
+#. Resume normal cluster operations. When ready, delete the outdated ``/trinity.orig`` directory.
+
+
+.. warning:: Remember that you will have to add a resource for the RAID array assembly, and insert it in the ``Trinity`` group before the ``wait-for-device`` resource. This is highly hardware-specific, and therefore not managed by TrinityX.
 
