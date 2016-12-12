@@ -357,13 +357,39 @@ else
 
     # Shared device, visible on both controllers
     check_block_device
-    SHARED_FS_PART=${SHARED_FS_DEVICE}1
-    display_var SHARED_FS_{DEVICE,PART}
+
 
     if flag_is_unset HA || flag_is_set PRIMARY_INSTALL ; then
-        partition_device $SHARED_FS_DEVICE
-        format_device $SHARED_FS_PART
+
+        flag_is_unset SHARED_FS_NO_FORMAT && partition_device $SHARED_FS_DEVICE
+
+        # We need to figure out which partition name we have, as this changes
+        # depending on the device: /dev/sda1, but /dev/md0p1
+        # Let's pick only the first one
+
+        SHARED_FS_PART=$(lsblk -lp "$SHARED_FS_DEVICE" | awk '$6 == "part" {print $1; exit}')
+
+        if ! [[ "$SHARED_FS_PART" ]] ; then
+            echo_error 'Could not identify the partition name for the new partition, exiting.'
+            exit 1
+        fi
+
+        flag_is_unset SHARED_FS_NO_FORMAT && format_device $SHARED_FS_PART
     fi
+
+
+    # If requested, use UUIDs
+    if flag_is_set SHARED_FS_DEV_UUID ; then
+        eval $(blkid -o udev $SHARED_FS_PART)
+        if flag_is_set HA ; then
+            SHARED_FS_PART="-U $ID_FS_UUID"
+        else
+            SHARED_FS_PART="UUID=$ID_FS_UUID"
+        fi
+    fi
+
+    echo
+    display_var SHARED_FS_{DEVICE,PART}
 
 
     # Step 2: set up the mount / Pacemaker resource
