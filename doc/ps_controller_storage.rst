@@ -402,6 +402,8 @@ The core assumptions for the ``dev`` use case of the ``shared-storage`` post scr
 
 Let's assume that the shared block device is ``/dev/sda``, and that we want 2 partitions: one for ``/trinity``, and another one for the homes, which we'll mount on ``/trinity-homes``. Our partition for ``/trinity`` must be the first one on the drive, then we'll have the one for ``/trinity-homes``. Let's see how we can get that to work.
 
+.. note:: We're using a shared disk instead of a shared RAID array, which saves us the trouble of having to create a Pacemaker resource to assemble the array. Remember that you will have to insert one before the ``wait-for-device`` resource if you're setting up an array!
+
 #. Partition the block device::
 
     # sgdisk -Z /dev/sda
