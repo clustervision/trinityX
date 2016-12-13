@@ -358,14 +358,185 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
          trinity-secondary  (ocf::heartbeat:Dummy): Stopped
     
     # showmount -e
-    Export list for hactrl1.cluster:
+    Export list for controller1.cluster:
     /trinity/home   *
     /trinity/shared (everyone)
-    /trinity/images hactrl.cluster,hactrl2.cluster,hactrl1.cluster
-    /trinity/local  hactrl.cluster,hactrl2.cluster,hactrl1.cluster
+    /trinity/images controller.cluster,controller2.cluster,controller1.cluster
+    /trinity/local  controller.cluster,controller2.cluster,controller1.cluster
 
 #. Resume normal cluster operations. When ready, delete the outdated ``/trinity.orig`` directory.
 
 
 .. warning:: Remember that you will have to add a resource for the RAID array assembly, and insert it in the ``Trinity`` group before the ``wait-for-device`` resource. This is highly hardware-specific, and therefore not managed by TrinityX.
+
+
+
+Multiple partitions on a shared device
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In some setups it might be desirable to separate the base TrinityX tree from the homes, for example, while keeping both on the same large RAID array that will be failed over between the controllers.
+
+.. note:: We'll use partitions here as they require disabling device formatting, which is essentially what this example is about. The procedure for another block device for the homes, instead of another partition, is almost the same. The major difference is that it's not necessary to use ``SHARED_FS_NO_FORMAT``, as the whole first disk would then be allocated to ``/trinity``. It would be a standard ``dev`` setup, and then you'd jump to the point where you format the new device and disable the NFS server, and follow from there.
+
+The ``dev`` use case will zap the drive and create only one partition by default, which is not what is desired there. We have two possibilites:
+
+- set up the filesystems by hand, use the ``export`` use case and add the Pacemaker resources later;
+
+- or bend the ``dev`` use case to do half of the work for us. We'll still have to do the other half by hand, though.
+
+The first option is pretty straightforward. As long as both filesystems are mounted before setup, the various directory configuration options are set to the right values and the Pacemaker resources added after installation, it will just work. If you've read that far down you should be able to do that on your own, so I'll leave it as an exercise.
+
+The second options is a bit more interesting as it shows the use of some of the configuration options available for the shared storage.
+
+
+The essential idea is that we can tell the post script to neither partition nor format the block device, while still letting it do its thing for the Pacemaker resource (or the mount for non-HA setups). But it will do it only for one partition, the one that will be the standard TrinityX partition, not for any other. That means that we will have to do the rest by hand.
+
+The core assumptions for the ``dev`` use case of the ``shared-storage`` post script are:
+
+- the standard TrinityX partition is the first partition of the block device;
+
+- it will be mounted as an XFS partition, whether is was formatted by the post script or not;
+
+- partitioning and formatting are controlled by the same option, so in effect if you don't want the post script to zap your partitions, you'll have to do the formatting by hand.
+
+
+Let's assume that the shared block device is ``/dev/sda``, and that we want 2 partitions: one for ``/trinity``, and another one for the homes, which we'll mount on ``/trinity-homes``. Our partition for ``/trinity`` must be the first one on the drive, then we'll have the one for ``/trinity-homes``. Let's see how we can get that to work.
+
+#. Partition the block device::
+
+    # sgdisk -Z /dev/sda
+    # sgdisk -n 1:0:+8G -c 1:TrinityX_shared /dev/sda
+    # sgdisk -n 2:0:0 -c 2:TrinityX_homes /dev/sda
+    
+    # sgdisk -p /dev/sda
+    Disk /dev/sda: 67108864 sectors, 32.0 GiB
+    Logical sector size: 512 bytes
+    Disk identifier (GUID): 22AD5D24-A545-4042-9B8B-657CE160BB94
+    Partition table holds up to 128 entries
+    First usable sector is 34, last usable sector is 67108830
+    Partitions will be aligned on 2048-sector boundaries
+    Total free space is 2014 sectors (1007.0 KiB)
+    
+    Number  Start (sector)    End (sector)  Size       Code  Name
+       1            2048        16779263   8.0 GiB     8300  TrinityX_shared
+       2        16779264        67108830   24.0 GiB    8300  TrinityX_homes
+
+#. Format the first partition, which is the only one required for now::
+
+    # mkfs.xfs -f -b size=4096 -s size=4096 -d swidth=2048 -l sunit=2048 /dev/sda1
+
+#. Edit the configuration file to set the correct options. Remember to disable formatting, and don't forget to set the correct path for the separate home directory. It is recommended to use UUIDs too::
+
+    SHARED_FS_TYPE=dev
+    SHARED_FS_DEVICE=/dev/sda
+    SHARED_FS_NO_FORMAT=1
+    SHARED_FS_DEV_UUID=1
+    
+    STDCFG_TRIX_HOME=/trinity-homes
+
+#. Run the configuration script for that configuration, then check that everything is as expected::
+
+    # crm_resource -L
+     Resource Group: Trinity
+         trinity-primary    (ocf::heartbeat:Dummy): Started
+         wait-for-device    (ocf::heartbeat:Delay): Started
+         trinity-fs (ocf::heartbeat:Filesystem):    Started
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Started
+         trinity-ip (ocf::heartbeat:IPaddr2):   Started
+     Resource Group: Trinity-secondary
+         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+    
+    # pcs resource show trinity-fs
+     Resource: trinity-fs (class=ocf provider=heartbeat type=Filesystem)
+      Attributes: device="-U 2aed0b31-899f-4680-a0ed-41ae5f39da61" directory=/trinity fstype=xfs options=nodiscard,inode64 run_fsck=force force_unmount=safe
+      Operations: start interval=0s timeout=60 (trinity-fs-start-interval-0s)
+                  stop interval=0s timeout=60 (trinity-fs-stop-interval-0s)
+                  monitor interval=31s (trinity-fs-monitor-interval-31s)
+                  monitor interval=67s OCF_CHECK_LEVEL=10 (trinity-fs-monitor-interval-67s)
+    
+    # mount | grep trinity
+    /dev/sda1 on /trinity type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
+    
+    # sgdisk -p /dev/sda
+    ...
+    Number  Start (sector)    End (sector)  Size       Code  Name
+       1            2048        16779263   8.0 GiB     8300  TrinityX_shared
+       2        16779264        67108830   24.0 GiB    8300  TrinityX_homes
+
+   So our standard partition has been mounted via the ``trinity-fs`` resource, and the second partition has been left untouched.
+
+   .. note:: As some later post scripts may need the home tree to exist, it is recommended to pause the installation after either the ``shared-storage`` or the ``nfs-server`` post scripts (just letting it wait on the Retry-Continue-Exit prompt is enough), and set up the homes then. In this example, the installation was paused after the ``nfs-server`` PS.
+
+#. Format the home partition. Just to be different, we'll format it as ext4::
+
+    # mkfs.ext4 -v -b 4096 -E stripe_width=2048 /dev/sda2
+
+#. If it is started, stop the NFS server (which depends on the filesystems)::
+
+    # pcs resource disable trinity-nfs-server
+
+#. If for some reason there is already some data in the new home directory, rename it to something else so that you can copy that data to the new partition when it will be mounted.
+
+#. Add a new Pacemaker resource for that filesystem. Again we'll use UUIDs to identify the partition::
+
+    # eval $(blkid -o export /dev/sda2 | grep ^UUID)
+    
+    # echo $UUID 
+    09f3539d-7b47-4363-9a3c-663871994788
+
+    # pcs resource create trinity-fs-homes ocf:heartbeat:Filesystem \
+        device="-U $UUID" directory="/trinity-homes" \
+        fstype=ext4 options="nodiscard" run_fsck=force force_unmount=safe \
+        op monitor interval=33s \
+        op monitor interval=65s OCF_CHECK_LEVEL=10 \
+        --group Trinity --after trinity-fs
+
+   The syntax is a bit brutal...
+
+#. Check that the resource has started, and that everything is mounted as we expected::
+
+    # crm_resource -L
+     Resource Group: Trinity
+         trinity-primary    (ocf::heartbeat:Dummy): Started
+         wait-for-device    (ocf::heartbeat:Delay): Started
+         trinity-fs (ocf::heartbeat:Filesystem):    Started
+         trinity-fs-homes   (ocf::heartbeat:Filesystem):    Started
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped (disabled)
+         trinity-ip (ocf::heartbeat:IPaddr2):   Stopped
+     Resource Group: Trinity-secondary
+         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+    
+    # mount | grep trinity
+    /dev/sda1 on /trinity type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
+    /dev/sda2 on /trinity-homes type ext4 (rw,relatime,seclabel,stripe=2048,data=ordered)
+    
+    # pcs resource show trinity-fs-homes
+     Resource: trinity-fs-homes (class=ocf provider=heartbeat type=Filesystem)
+      Attributes: device="-U 09f3539d-7b47-4363-9a3c-663871994788" directory=/trinity-homes fstype=ext4 options=nodiscard run_fsck=force force_unmount=safe
+      Operations: start interval=0s timeout=60 (trinity-fs-homes-start-interval-0s)
+                  stop interval=0s timeout=60 (trinity-fs-homes-stop-interval-0s)
+                  monitor interval=33s (trinity-fs-homes-monitor-interval-33s)
+                  monitor interval=65s OCF_CHECK_LEVEL=10 (trinity-fs-homes-monitor-interval-65s)
+
+#. If you have data to rsync back onto the new home partition, do it now. Then restart the NFS server and check again that all is well::
+
+    # crm_resource -L
+     Resource Group: Trinity
+         trinity-primary    (ocf::heartbeat:Dummy): Started
+         wait-for-device    (ocf::heartbeat:Delay): Started
+         trinity-fs (ocf::heartbeat:Filesystem):    Started
+         trinity-fs-homes   (ocf::heartbeat:Filesystem):    Started
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Started
+         trinity-ip (ocf::heartbeat:IPaddr2):   Started
+     Resource Group: Trinity-secondary
+         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+    
+    # showmount -e
+    Export list for controller1.cluster:
+    /trinity-homes  *
+    /trinity/shared (everyone)
+    /trinity/images controller.cluster,controller2.cluster,controller1.cluster
+    /trinity/local  controller.cluster,controller2.cluster,controller1.cluster
+
+#. Finally, proceed with the rest of the setup.
 
