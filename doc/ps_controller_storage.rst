@@ -325,7 +325,7 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
 #. Check that the device has been formatted, is mounted and the cluster resources are up::
 
     # mount | grep trinity
-    /dev/sda1 on /trinity type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
+    /dev/md0p1 on /trinity type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
     
     # crm_resource -L
      Resource Group: Trinity

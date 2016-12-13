@@ -42,9 +42,8 @@ function setup_sysconfig {
 
     # RH7 uses a weird configuration system for NFS. At boot the
     # nfs-config.service unit file processes /etc/sysconfig/nfs and writes the
-    # results in /run/sysconfig/nfs-utils, which what is actually used by the
-    # NFS server.
-    # I'm not really sure about the logic behind it. What is means for us though
+    # results in /run/sysconfig/nfs-utils, which is used by the NFS server.
+    # I'm not really sure about the logic behind it. What it means for us though
     # is that we have to restart that service after updating the config file.
 
     render_template "${POST_FILEDIR}"/sysconfig_nfs > /etc/sysconfig/nfs
