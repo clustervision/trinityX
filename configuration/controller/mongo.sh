@@ -124,8 +124,8 @@ function create_mongo_key() {
 
     /usr/bin/openssl rand -base64 741 > /etc/mongo.key
     /usr/bin/chmod 400 /etc/mongo.key
-    mkdir -p /trinity/shared/etc
-    /usr/bin/cp -pr /etc/mongo.key /trinity/shared/etc/
+    mkdir -p /trinity/local/etc
+    /usr/bin/cp -pr /etc/mongo.key /trinity/local/etc/
     /usr/bin/chown mongodb: /etc/mongo.key
     if [ ! -f /etc/mongo.key ]; then
         echo_err "Unable to create /etc/mongo.key file."
@@ -135,11 +135,11 @@ function create_mongo_key() {
 
 function copy_mongo_key() {
     echo_info "Copy MongoDB key file."
-    if [ ! -f /trinity/shared/etc/mongo.key ]; then
-        echo_error "Unable to find MongoDB key file in /trinity/shared/etc/mongo.key"
+    if [ ! -f /trinity/local/etc/mongo.key ]; then
+        echo_error "Unable to find MongoDB key file in /trinity/local/etc/mongo.key"
         exit 1
     fi
-    /usr/bin/cp -pr /trinity/shared/etc/mongo.key /etc/
+    /usr/bin/cp -pr /trinity/local/etc/mongo.key /etc/
     /usr/bin/chmod 400 /etc/mongo.key
     /usr/bin/chown mongodb: /etc/mongo.key
     if [ ! -f /etc/mongo.key ]; then
@@ -275,6 +275,10 @@ function add_secondary_to_rs() {
 
 }
 
+function configure_pacemaker() {
+    echo_info "Configure pacemaker's resources."
+}
+
 function install_standalone() {
     /usr/bin/systemctl stop mongod
     create_mongo_key
@@ -302,6 +306,7 @@ function install_primary() {
     add_secondary_to_rs ${CTRL2_IP}
     wait_master "root" "${MONGODB_ROOT_PASS}"
     check_rs_status
+    configure_pacemaker
 }
 
 function install_secondary() {
