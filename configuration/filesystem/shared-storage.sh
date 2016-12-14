@@ -283,7 +283,7 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
         # The colocation rules
         pcs -f $tmpfile constraint order set Trinity-drbd Trinity Trinity-secondary
         pcs -f $tmpfile constraint colocation add Trinity with Trinity-drbd score=INFINITY with-rsc-role=Master
-        pcs -f $tmpfile resource group add Trinity wait-for-device trinity-fs --after trinity-primary
+        pcs -f $tmpfile resource group add Trinity wait-for-device trinity-fs --after primary
 
         # That one shouldn't be needed with the constraints above, but DRBD
         # takes forever to promote a clone after Pacemaker decided that it
@@ -421,7 +421,7 @@ else
         pcs -f $tmpfile resource op add trinity-fs monitor interval=67s OCF_CHECK_LEVEL=10
 
         # The colocation rules
-        pcs -f $tmpfile resource group add Trinity wait-for-device trinity-fs --after trinity-primary
+        pcs -f $tmpfile resource group add Trinity wait-for-device trinity-fs --after primary
 
         # Apply the changes
         if ! pcs cluster cib-push $tmpfile ; then

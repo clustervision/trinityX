@@ -59,8 +59,8 @@ This is not a very good configuration in itself, as it is not complete. It's dif
 
 
 
-Pacemaker resources and constraints
------------------------------------
+Pacemaker
+---------
 
 The management of computing resources is done by `Pacemaker <http://wiki.clusterlabs.org/wiki/Pacemaker>`_. Pacemaker relies on Corosync to determine the availability of nodes within an HA cluster (same definition as for Corosync), and follows a set of rules and constraints to determine where to run sets of resources.
 
@@ -95,32 +95,36 @@ Resources
 The full list of resources that may be created for the TrinityX base HA configuration is the following::
 
     01  Resource Group: Trinity
-    02      trinity-primary     (ocf::heartbeat:Dummy)
+    02      primary             (ocf::heartbeat:Dummy)
     03      wait-for-device     (ocf::heartbeat:Delay)              # only with dev and drbd
     04      trinity-fs          (ocf::heartbeat:Filesystem)         # only with dev and drbd
-    05      trinity-nfs-server  (ocf::heartbeat:nfsserver)          # only with export, dev and drbd
-    06      trinity-ip          (ocf::heartbeat:IPaddr2)
+    05      fs-ready            (ocf::heartbeat:Dummy)
+    06      trinity-nfs-server  (ocf::heartbeat:nfsserver)          # only with export, dev and drbd
+    07      trinity-ip          (ocf::heartbeat:IPaddr2)
     
-    07  Resource Group: Trinity-secondary
-    08      trinity-secondary           (ocf::heartbeat:Dummy)
-    09      trinity-nfs-client-local    (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
-    10      trinity-nfs-client-images   (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
-    11      trinity-nfs-client-shared   (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
-    12      trinity-nfs-client-home     (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
+    08  Resource Group: Trinity-secondary
+    09      secondary                   (ocf::heartbeat:Dummy)
+    10      trinity-nfs-client-local    (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
+    11      trinity-nfs-client-images   (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
+    12      trinity-nfs-client-shared   (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
+    13      trinity-nfs-client-home     (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
     
-    13  Master/Slave Set: Trinity-drbd [DRBD]       # only with drbd
+    14  Master/Slave Set: Trinity-drbd [DRBD]       # only with drbd
 
 
 Notes:
 
-- The NFS resources (server #05, clients #09-12) are not created when the ``none`` storage use case is selected.
+- The resources which names start with ``trinity-`` are part of the actual configuration and setup of a TrinityX system. The ones without are there for practical reasons, but have no impact on the system.
+
+- The NFS resources (server #06, clients #10-13) are not created when the ``none`` storage use case is selected.
 
 - The filesystem resources (#03, which is only a delay to make sure that the kernel has caught up with the new device, and #04, which mounts the underlying filesystem) only exist for use cases where a separate filesystem is created for the TrinityX directory tree: ``dev`` and ``drbd``.
 
-- The DRBD master-slave set (#13) is only created when the ``drbd`` use case is selected. Due to its architecture, DRBD can only be managed through a master-slave resource. That resource include two instances, the Master which will always run on a node, and a slave which will run if another node is available.
+- The DRBD master-slave set (#14) is only created when the ``drbd`` use case is selected. Due to its architecture, DRBD can only be managed through a master-slave resource. That resource include two instances, the master which will always run on a node, and a slave which will run if another node is available.
 
-- The dummy resources (#02 and #08) are there for practical reasons. It's not possible to insert a new resource at the very beginning of a group, only at the end or after an existing resource in that group. The dummy resources (which do nothing at all) are there so that other resources can be inserted just after them, which is as good as being the first one in the group.
+- The dummy resources #02 and #09 are there for practical reasons. It's not possible to insert a new resource at the very beginning of a group, only at the end or after an existing resource in that group. The dummy resources (which do nothing at all) are there so that other resources can be inserted just after them, which is as good as being the first one in the group.
 
+- The dummy resource #05 serves as an anchor for resources that require the TrinityX directory tree. With the ``dev`` and ``drbd`` use cases, the corresponding shared filesystem resources will be inserted before that one. All resources inserted after this anchor will be able to use the directory tree, regardless of the storage use case.
 
 
 Constraints
