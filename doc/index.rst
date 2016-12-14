@@ -38,6 +38,7 @@ Installation
    
    requirements.rst
    ps_controller_storage.rst
+   ha_design.rst
    installation.rst
    installation_openstack.rst
 

@@ -1,3 +1,4 @@
+.. _ps_controller_storage:
 
 Controller storage post-scripts documentation
 =============================================
