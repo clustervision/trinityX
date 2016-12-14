@@ -27,7 +27,7 @@ display_var HA PRIMARY_INSTALL TRIX_CTRL{1,2}_{IP,HOSTNAME} TRIX_ROOT \
 
 function check_block_device {
 
-    echo_info 'Checking the block device: $SHARED_FS_DEVICE'
+    echo_info "Checking the block device: $SHARED_FS_DEVICE"
 
     if ! [[ -b "$SHARED_FS_DEVICE" ]] ; then
         echo_error 'Not a block device, exiting now.'
