@@ -426,7 +426,7 @@ Let's assume that the shared block device is ``/dev/sda``, and that we want 2 pa
 
 #. Format the first partition, which is the only one required for now::
 
-    # mkfs.xfs -f -b size=4096 -s size=4096 -d swidth=2048 -l sunit=2048 /dev/sda1
+    # mkfs.xfs -f -b size=4096 -s size=4096 -d sunit=2048,swidth=2048 -l sunit=512 /dev/sda1
 
 #. Edit the configuration file to set the correct options. Remember to disable formatting, and don't forget to set the correct path for the separate home directory. It is recommended to use UUIDs too::
 
