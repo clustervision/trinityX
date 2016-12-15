@@ -220,6 +220,66 @@ elif flag_is_set PRIMARY_INSTALL ; then
     check_cluster trinity-nfs-server trinity-ip
 
 
+    # The resources for the NFS mounts are disabled for now, as we need the
+    # default configuration on the secondary controller before starting them.
+    # Then they will be enabled.
+
+    echo_info 'Setting up the Pacemaker NFS mounts'
+
+    tmpfile=$(mktemp -p /root pacemaker_nfs-clients.XXXX)
+    pcs cluster cib $tmpfile
+
+    if flag_is_set NFS_EXPORT_LOCAL ; then
+
+        pcs -f $tmpfile resource create trinity-nfs-client-local \
+            ocf:heartbeat:Filesystem fstype=nfs \
+            device="$TRIX_CTRL_HOSTNAME:$TRIX_LOCAL" directory="$TRIX_LOCAL" \
+            fast_stop=no force_unmount=safe op monitor interval=83s \
+            --group Trinity-secondary
+
+        pcs -f $tmpfile resource disable trinity-nfs-client-local
+    fi
+
+    if flag_is_set NFS_EXPORT_IMAGES ; then
+
+        pcs -f $tmpfile resource create trinity-nfs-client-images \
+            ocf:heartbeat:Filesystem fstype=nfs \
+            device="$TRIX_CTRL_HOSTNAME:$TRIX_IMAGES" directory="$TRIX_IMAGES" \
+            fast_stop=no force_unmount=safe op monitor interval=89s
+            --group Trinity-secondary
+
+        pcs -f $tmpfile resource disable trinity-nfs-client-images
+    fi
+
+    if flag_is_set NFS_EXPORT_SHARED ; then
+
+        pcs -f $tmpfile resource create trinity-nfs-client-shared \
+            ocf:heartbeat:Filesystem fstype=nfs \
+            device="$TRIX_CTRL_HOSTNAME:$TRIX_SHARED" directory="$TRIX_SHARED" \
+            fast_stop=no force_unmount=safe op monitor interval=79s
+            --group Trinity-secondary
+
+        pcs -f $tmpfile resource disable trinity-nfs-client-shared
+    fi
+
+    if flag_is_set NFS_EXPORT_HOME ; then
+
+        pcs -f $tmpfile resource create trinity-nfs-client-home \
+            ocf:heartbeat:Filesystem fstype=nfs \
+            device="$TRIX_CTRL_HOSTNAME:$TRIX_HOME" directory="$TRIX_HOME" \
+            fast_stop=no force_unmount=safe op monitor interval=71s
+            --group Trinity-secondary
+
+        pcs -f $tmpfile resource disable trinity-nfs-client-home
+    fi
+
+    # Apply the changes
+    if ! pcs cluster cib-push $tmpfile ; then
+        echo_error 'Failed to push the new resource configuration to Pacemaker, exiting.'
+        exit 1
+    fi
+
+
 
 #---------------------------------------
 # HA secondary
@@ -232,49 +292,25 @@ else
     setup_sysconfig
 
 
-    echo_info 'Setting up the NFS Pacemaker mounts'
+    echo_info 'Enabling the Pacemaker NFS mounts'
 
     tmpfile=$(mktemp -p /root pacemaker_nfs-clients.XXXX)
     pcs cluster cib $tmpfile
 
     if flag_is_set NFS_EXPORT_LOCAL ; then
-
-        pcs -f $tmpfile resource create trinity-nfs-client-local \
-            ocf:heartbeat:Filesystem fstype=nfs \
-            device="$TRIX_CTRL_HOSTNAME:$TRIX_LOCAL" directory="$TRIX_LOCAL" \
-            fast_stop=no force_unmount=safe op monitor interval=83s
-
-        pcs -f $tmpfile resource group add Trinity-secondary trinity-nfs-client-local
+        pcs -f $tmpfile resource enable trinity-nfs-client-local
     fi
 
     if flag_is_set NFS_EXPORT_IMAGES ; then
-
-        pcs -f $tmpfile resource create trinity-nfs-client-images \
-            ocf:heartbeat:Filesystem fstype=nfs \
-            device="$TRIX_CTRL_HOSTNAME:$TRIX_IMAGES" directory="$TRIX_IMAGES" \
-            fast_stop=no force_unmount=safe op monitor interval=89s
-
-        pcs -f $tmpfile resource group add Trinity-secondary trinity-nfs-client-images
+        pcs -f $tmpfile resource enable trinity-nfs-client-images
     fi
 
     if flag_is_set NFS_EXPORT_SHARED ; then
-
-        pcs -f $tmpfile resource create trinity-nfs-client-shared \
-            ocf:heartbeat:Filesystem fstype=nfs \
-            device="$TRIX_CTRL_HOSTNAME:$TRIX_SHARED" directory="$TRIX_SHARED" \
-            fast_stop=no force_unmount=safe op monitor interval=79s
-
-        pcs -f $tmpfile resource group add Trinity-secondary trinity-nfs-client-shared
+        pcs -f $tmpfile resource enable trinity-nfs-client-shared
     fi
 
     if flag_is_set NFS_EXPORT_HOME ; then
-
-        pcs -f $tmpfile resource create trinity-nfs-client-home \
-            ocf:heartbeat:Filesystem fstype=nfs \
-            device="$TRIX_CTRL_HOSTNAME:$TRIX_HOME" directory="$TRIX_HOME" \
-            fast_stop=no force_unmount=safe op monitor interval=71s
-
-        pcs -f $tmpfile resource group add Trinity-secondary trinity-nfs-client-home
+        pcs -f $tmpfile resource enable trinity-nfs-client-home
     fi
 
     # Apply the changes
