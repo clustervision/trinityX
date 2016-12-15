@@ -765,7 +765,10 @@ galera_promote()
             if is_bootstrap; then
                 galera_start_local_node
                 rc=$?
-                return $rc
+
+                if [[ $rc -ne $OCF_SUCCESS ]]; then
+                    return $rc
+                fi
             fi
         else
             ocf_log info "no master exists and galera is already up; forcing primary partition"
