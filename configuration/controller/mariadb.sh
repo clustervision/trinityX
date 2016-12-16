@@ -59,6 +59,11 @@ function remove_anonymous_users {
     do_sql_req "DELETE FROM mysql.user WHERE User='';"
 }
 
+function setup_galera_creds {
+    echo "MYSQL_USER=root" > /etc/sysconfig/clustercheck
+    echo "MYSQL_PASSWORD=$MYSQL_ROOT_PASSWORD" >> /etc/sysconfig/clustercheck
+    chmod 700 /etc/sysconfig/clustercheck
+}
 
 # -------------------------------------
 
@@ -105,6 +110,8 @@ else
         sed -i "s,{{ node.addr }},$TRIX_CTRL1_IP," /etc/my.cnf.d/galera.cnf
         sed -i "s,{{ node.name }},$TRIX_CTRL1_HOSTNAME," /etc/my.cnf.d/galera.cnf
 
+        setup_galera_creds
+
         # --------------------------------------------------------
 
         # Create pacemaker resource
@@ -116,18 +123,23 @@ else
         pcs constraint colocation add Master Trinity-galera with Trinity INFINITY
 
         echo_info "Bootstrapping the galera cluster"
-
         crm_attribute -l reboot --name "Galera-bootstrap" -v "true"
+
+        echo_info "Waiting for the galera cluster to start"
+        crm_resource -r Trinity-galera --wait
+
+        if ! do_sql_req "SHOW GLOBAL STATUS LIKE 'wsrep_cluster_status';" | grep -q -w Primary; then
+            echo_error "Configuration completed but failed to start the galera cluster. \ 
+                        Please fix the issue before proceeding with the installation";
+            exit 1;
+        fi
 
     else
         sed -i "s,{{ node.addr }},$TRIX_CTRL2_IP," /etc/my.cnf.d/galera.cnf
         sed -i "s,{{ node.name }},$TRIX_CTRL2_HOSTNAME," /etc/my.cnf.d/galera.cnf
 
+        setup_galera_creds
         pcs resource cleanup Trinity-galera
     fi
-
-    echo "MYSQL_USER=root" > /etc/sysconfig/clustercheck
-    echo "MYSQL_PASSWORD=$MYSQL_ROOT_PASSWORD" >> /etc/sysconfig/clustercheck
-    chmod 700 /etc/sysconfig/clustercheck
 
 fi
