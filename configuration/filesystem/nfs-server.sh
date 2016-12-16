@@ -245,7 +245,7 @@ elif flag_is_set PRIMARY_INSTALL ; then
         pcs -f $tmpfile resource create trinity-nfs-client-images \
             ocf:heartbeat:Filesystem fstype=nfs \
             device="$TRIX_CTRL_HOSTNAME:$TRIX_IMAGES" directory="$TRIX_IMAGES" \
-            fast_stop=no force_unmount=safe op monitor interval=89s
+            fast_stop=no force_unmount=safe op monitor interval=89s \
             --group Trinity-secondary
 
         pcs -f $tmpfile resource disable trinity-nfs-client-images
@@ -256,7 +256,7 @@ elif flag_is_set PRIMARY_INSTALL ; then
         pcs -f $tmpfile resource create trinity-nfs-client-shared \
             ocf:heartbeat:Filesystem fstype=nfs \
             device="$TRIX_CTRL_HOSTNAME:$TRIX_SHARED" directory="$TRIX_SHARED" \
-            fast_stop=no force_unmount=safe op monitor interval=79s
+            fast_stop=no force_unmount=safe op monitor interval=79s \
             --group Trinity-secondary
 
         pcs -f $tmpfile resource disable trinity-nfs-client-shared
@@ -267,7 +267,7 @@ elif flag_is_set PRIMARY_INSTALL ; then
         pcs -f $tmpfile resource create trinity-nfs-client-home \
             ocf:heartbeat:Filesystem fstype=nfs \
             device="$TRIX_CTRL_HOSTNAME:$TRIX_HOME" directory="$TRIX_HOME" \
-            fast_stop=no force_unmount=safe op monitor interval=71s
+            fast_stop=no force_unmount=safe op monitor interval=71s \
             --group Trinity-secondary
 
         pcs -f $tmpfile resource disable trinity-nfs-client-home
