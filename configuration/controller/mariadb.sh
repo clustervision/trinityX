@@ -70,9 +70,9 @@ if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
     systemctl restart mariadb
 
     echo_info "Setting up mariadb's root user credentials"
-    MYSQL_PASS=`get_password $MYSQL_ROOT_PASSWORD`
-    setup_root_pass $MYSQL_PASS
-    store_password MYSQL_ROOT_PASSWORD $MYSQL_PASS
+    MYSQL_ROOT_PASSWORD="$(get_password "$MYSQL_ROOT_PASSWORD")"
+    setup_root_pass $MYSQL_ROOT_PASSWORD
+    store_password MYSQL_ROOT_PASSWORD $MYSQL_ROOT_PASSWORD
 
     echo_info "Cleaning up test db and anonymous users"
     remove_test_db
