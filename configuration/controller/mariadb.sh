@@ -109,20 +109,21 @@ else
 
         # Create pacemaker resource
 
-        echo_info "Creating and configuring a mariadb resource in pacemaker"
+        echo_info "Creating and configuring a galera resource in pacemaker"
 
-        pcs resource create mariadb galera wsrep_cluster_address="$CLUSTER_ADDR" meta master-max=1 --master
-        pcs constraint colocation add Started ClusterIP with Master mariadb-master INFINITY
+        pcs resource create Galera ocf:heartbeat:galera wsrep_cluster_address="$CLUSTER_ADDR"
+        pcs resource master Trinity-galera Galera master-max=1
+        pcs constraint colocation add Master Trinity-galera with Trinity INFINITY
 
         echo_info "Bootstrapping the galera cluster"
 
-        crm_attribute -l reboot --name "mariadb-bootstrap" -v "true"
+        crm_attribute -l reboot --name "Galera-bootstrap" -v "true"
 
     else
         sed -i "s,{{ node.addr }},$TRIX_CTRL2_IP," /etc/my.cnf.d/galera.cnf
         sed -i "s,{{ node.name }},$TRIX_CTRL2_HOSTNAME," /etc/my.cnf.d/galera.cnf
 
-        pcs resource cleanup mariadb
+        pcs resource cleanup Trinity-galera
     fi
 
     echo "MYSQL_USER=root" > /etc/sysconfig/clustercheck
