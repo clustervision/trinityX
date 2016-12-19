@@ -16,8 +16,13 @@
 # details.
 ######################################################################
 
+if flag_is_set HA && flag_is_unset PRIMARY_INSTALL; then
+    SLAPD_SERVER_ID=2
+else
+    SLAPD_SERVER_ID=1
+fi
 
-display_var SLAPD_SERVER_ID TRIX_CTRL_HOSTNAME
+display_var HA PRIMARY_INSTALL SLAPD_SERVER_ID TRIX_CTRL{,1,2}_HOSTNAME
 
 TMP_DIR=$(mktemp -d)
 
@@ -68,6 +73,18 @@ sed -e "s,{{ rootPW }},$HASH," "${POST_FILEDIR}"/conf/local.ldif > $TMP_DIR/loca
 sed -e "s,{{ rootPW }},$HASH," "${POST_FILEDIR}"/conf/proxy.ldif > $TMP_DIR/proxy.ldif
 sed -i "s,{{ serverID }},$SLAPD_SERVER_ID," $TMP_DIR/config.ldif
 
+if flag_is_set HA; then
+
+    sed -e "s,{{ rootPW }},$SLAPD_ROOT_PW," "${POST_FILEDIR}"/conf/syncrepl.ldif > $TMP_DIR/syncrepl.ldif
+
+    if [[ "x$SLAPD_SERVER_ID" == "x1" ]]; then
+        sed -i "s,{{ syncProvider }},$TRIX_CTRL2_HOSTNAME," $TMP_DIR/syncrepl.ldif
+    else
+        sed -i "s,{{ syncProvider }},$TRIX_CTRL1_HOSTNAME," $TMP_DIR/syncrepl.ldif
+    fi
+
+fi
+
 echo_info "Setup slapd to accept TLS requests"
 
 cp -r "${POST_FILEDIR}"/conf/ssl/* /etc/openldap/certs/
@@ -104,6 +121,7 @@ ldapmodify -Y EXTERNAL -H ldapi:/// -Q -f $TMP_DIR/config.ldif
 ldapmodify -Y EXTERNAL -H ldapi:/// -Q -f $TMP_DIR/local.ldif
 ldapmodify -Y EXTERNAL -H ldapi:/// -Q -f $TMP_DIR/proxy.ldif
 ldapmodify -Y EXTERNAL -H ldapi:/// -Q -f "${POST_FILEDIR}"/conf/memberof.ldif
+flag_is_set HA && ldapmodify -Y EXTERNAL -H ldapi:/// -Q -f $TMP_DIR/syncrepl.ldif
 
 echo_info "Setup the local directory's schema"
 
