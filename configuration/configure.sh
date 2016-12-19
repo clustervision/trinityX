@@ -38,6 +38,7 @@ OPTIONS:
 -q                  be quieter
 -d                  run the post scripts in debug mode (bash -x)
 --nocolor           don't use color escape codes in the messages
+--step              pause and weait for input after every post script
 --continue          don't wait for user input on error
 --stop              exit when a post script returns an error code
 --hardstop          exit on any error inside a post script (bash -e)
@@ -45,7 +46,7 @@ OPTIONS:
 
 RULES:
 -v and -q are mutually exclusive.
---continue is mutually exclusive with --stop and --hardstop.
+--continue is mutually exclusive with --stop / --hardstop and --step.
 --hardstop selects --stop too.
 
 In the main syntax form, all options are positional: they apply only to the
@@ -91,14 +92,14 @@ source "${MYPATH}/bin/configure_backend.sh"
 
 echo "Beginning of script: $(date)"
 
-unset QUIET VERBOSE DEBUG NOCOLOR
+unset QUIET VERBOSE DEBUG NOCOLOR {NO,SOFT,HARD}STOP STEP
 
 
 # Check if stdout is being redirected or piped to something else.
 # In both cases, disable the color codes to avoid polluting the output.
 
 if [[ -p /dev/stdout ]] || [[ ! -t 1 && ! -p /dev/stdout ]] ; then
-    declare -x NOCOLOR=
+    declare -x NOCOLOR="keep"
 else
     echo_warn "The output of this script isn't being redirected to a log file.
 
@@ -122,40 +123,40 @@ while (( $# )) ; do
     case "$1" in
 
         -q )
-            declare -x QUIET=
+            declare -x QUIET="keep"
             unset VERBOSE
             ;;
 
         -v )
-            declare -x VERBOSE=
+            declare -x VERBOSE="keep"
             unset QUIET
             ;;
 
         -d )
-            declare -x DEBUG=
+            declare -x DEBUG="keep"
             ;;
 
         --nocolor )
-            declare -x NOCOLOR=
+            declare -x NOCOLOR="keep"
             ;;
 
-        --dontstopmenow|--continue )
-            declare -x NOSTOP=
-            unset HARDSTOP
-            unset SOFTSTOP
-            ;;
-
-        --hitthewall|--hardstop )
-            declare -x HARDSTOP=
-            ;&
-
-        --bailout|--stop )
-            declare -x SOFTSTOP=
+        --step )
+            declare -x STEP="keep"
             unset NOSTOP
             ;;
 
-        --skip-pkg )
-            declare -x SKIPPKG=
+        --dontstopmenow|--continue )
+            declare -x NOSTOP="keep"
+            unset {HARD,SOFT}STOP STEP
+            ;;
+
+        --hitthewall|--hardstop )
+            declare -x HARDSTOP="keep"
+            ;&
+
+        --bailout|--stop )
+            declare -x SOFTSTOP="keep"
+            unset NOSTOP
             ;;
 
         --chroot )

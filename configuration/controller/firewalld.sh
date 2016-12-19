@@ -22,6 +22,17 @@
 display_var FWD_{PUBLIC_IF,TRUSTED_IF,NAT_PUBLIC,TCP_PUBLIC,UDP_PUBLIC}
 
 
+# This is a patch for some errors of the type:
+# ERROR: Exception DBusException: org.freedesktop.DBus.Error.AccessDenied
+
+if flag_is_unset POST_CHROOT ; then
+    echo_info 'Restarting some services, strange messages are normal'
+
+    systemctl daemon-reexec
+    systemctl restart dbus polkit sshd systemd-logind
+fi
+
+
 # So we want firewalld. Enable and start it now, otherwise lots of commands will
 # fail later.
 

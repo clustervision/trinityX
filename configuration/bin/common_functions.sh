@@ -120,20 +120,31 @@ function echo_error {
     echo -e "${NOCOLOR-$COL_RESET}"
 }
 
-# Same, and wait for user input
+# Retry/Continue/Exit prompt
 
-function echo_error_prompt {
-    echo_error "$@"
-    
-    flag_is_set SOFTSTOP && return 2
-    flag_is_set NOSTOP && return 1
+# $1: return value of the function in the RCE loop
+# This value sets the default behaviour: continue if successful, retry if not
+
+function rce_prompt {
+
+    flag_is_set SOFTSTOP && return 3
+    flag_is_set NOSTOP && return 2
+
+    if [[ "$1" == "0" ]] ; then
+        defchar='C'
+        defval=2
+    else
+        defchar='R'
+        defval=1
+    fi
 
     while true ; do
-        read -p "           [R]etry, [C]ontinue or [E]xit? [R] "
+        read -p "           [R]etry, [C]ontinue or [E]xit? [${defchar}] "
         case "${REPLY,,}" in
-            "" | "r" )  return 0 ;;
-            "c" )       return 1 ;;
-            "e" )       return 2 ;;
+            "" )    return $defval ;;
+            "r" )   return 1 ;;
+            "c" )   return 2 ;;
+            "e" )   return 3 ;;
         esac
     done
 }
@@ -399,4 +410,100 @@ function disable_remote_repos {
 
 
 typeset -fx disable_remote_repos
+
+
+#---------------------------------------
+
+# The simplest templating function in the west
+
+# Syntaxes: command | render_template
+#           render_template file
+
+# The output is written to the stdout. It consists of the stdin or the contents
+# of the file with all environment variables replaced by their values. If a
+# given variable mustn't be expanded, follow the Bash expansion rules and escape
+# the dollar sign:
+# 
+# echo '$USER' | render_template        -->     (your username)
+# echo '\$USER' | render_template       -->     $USER
+# echo '\\\$USER' | render_template     -->     \$USER
+
+function render_template {
+
+    eval "echo \"$(cat ${1})\""
+}
+
+
+typeset -fx render_template
+
+
+#---------------------------------------
+
+# Check wether the Pacemaker cluster has brought up the required resources
+
+# Syntax: resources_are_started <resource name> [<resource name> ...]
+
+# Pacemaker is a real pain. There is no easy way of getting a return value
+# matching the state of a resource through pcs or crm*. So one has to grep...
+# Note that the resource name must not contain weird characters, only alphanum
+# and dash and underscore.
+
+function resources_are_started {
+
+    (( $# )) || return 1
+
+    status="$(crm_resource -L)"
+
+    # Check first that the resources actually exist
+    for res in "$@" ; do
+        if ! echo "$status" | grep -q -w "$res" ; then
+            echo_error "Error: the resource \"$res\" doesn't exist."
+            return 1
+        fi
+    done
+
+    ret=0
+
+    for res in "$@" ; do
+        echo "$status" | grep -w "$res" | grep -q -w Started
+        (( ret+=$? ))
+    done
+
+    return $ret
+}
+
+
+typeset -fx resources_are_started
+
+
+#---------------------------------------
+
+# Wait for the cluster to settle, and if required, check for the state of
+# resources.
+
+# Syntax: check_cluster [<resource name> ...]
+
+# Without parameters, this function will just wait until Pacemaker reaches a
+# stable state. When that happens, all resources that can run should have been
+# started. Just to make sure one can pass additional resource names, and the
+# function will check that those resources are really started.
+
+function check_cluster {
+
+    echo_info 'Waiting for the cluster to settle...'
+    crm_resource --wait
+
+    if (( $# )) ; then
+        echo_info "Checking the state of resources: $@"
+        until resources_are_started "$@" ; do
+            echo 'Waiting for the resources to start...'
+            sleep 5s
+        done
+    fi
+
+    return 0
+}
+
+
+typeset -fx check_cluster
 

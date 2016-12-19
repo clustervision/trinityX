@@ -16,22 +16,19 @@
 ######################################################################
 
 
-# Setup the /etc/hosts file
+# Check basic name configuration and setup the /etc/hosts file
 
 # The CentOS installer doesn't update the hosts file for some reason (maybe
 # because of multiple interfaces?). We have to do it ourselves or nothing will
 # resolve and lots o' stuff will break.
 
-# Display the variables that we will need
 
 display_var HA CTRL{1,2,}_{HOSTNAME,IP} HOSTNAME
 
 
-#---------------------------------------
 
 # Are we running in an HA pair?
 # Are all the values set?
-# And on the way, sanitize the value of HA as it will end up in the .sh file
 
 if flag_is_unset HA ; then
 
@@ -40,7 +37,7 @@ if flag_is_unset HA ; then
 
     if flag_is_unset CTRL1_HOSTNAME || flag_is_unset CTRL1_IP; then
         echo_error 'Fatal error: missing hostname or IP value!'
-        exit 234
+        exit 1
     fi
 
     CTRL_HOSTNAME=$CTRL1_HOSTNAME
@@ -51,14 +48,13 @@ if flag_is_unset HA ; then
 else
 
     echo_info 'HA setup selected'
-    HA=1
 
     if flag_is_unset CTRL_HOSTNAME  || flag_is_unset CTRL_IP  || \
        flag_is_unset CTRL1_HOSTNAME || flag_is_unset CTRL1_IP || \
        flag_is_unset CTRL2_HOSTNAME || flag_is_unset CTRL2_IP ; then
         
         echo_error 'Fatal error: missing hostname or IP value(s)!'
-        exit 234
+        exit 1
     fi
 
     if [[ "$CTRL_HOSTNAME"  == "$CTRL1_HOSTNAME" || \
@@ -69,7 +65,7 @@ else
           "$CTRL1_IP"       == "$CTRL2_IP" ]] ; then
           
         echo_error 'Fatal error: some of the hostnames or IPs are identical!'
-        exit 234
+        exit 1
     fi
 fi
 
@@ -78,9 +74,22 @@ fi
 
 # Get some information about the current host
 
-hname=$(hostname -s)
-fname=$(hostname)
-[[ "$hname" == "$fname" ]] && unset fname
+myhname="$(hostname -s)"
+mydomain="$(hostname -d)"
+
+if ! ( [[ "$myhname" ]] && [[ "$mydomain" ]] ) ; then
+    echo_error 'Host or domain name not defined! Please reconfigure your system.'
+    exit 1
+fi
+
+
+# Strip the hostname of the domain, if set
+
+CTRL_HOSTNAME="$(basename ${CTRL_HOSTNAME} ${mydomain})"
+CTRL1_HOSTNAME="$(basename ${CTRL1_HOSTNAME} ${mydomain})"
+flag_is_set CTRL2_HOSTNAME && \
+    CTRL2_HOSTNAME="$(basename ${CTRL2_HOSTNAME} ${mydomain})"
+
 
 # List of active interface / IP pairs
 
@@ -91,21 +100,15 @@ ifips="$(ip -o -4 addr show | awk -F '[ :/]+' '/scope global/ {print $2, $4}')"
 
 # Next thing to check: are we really one of the controllers?
 
-case $hname in
+case $myhname in
 
-    "${CTRL1_HOSTNAME%.*}" )
-        ctrlname="$CTRL1_HOSTNAME"
-        ctrlip="$CTRL1_IP"
-        ;;
+    "$CTRL1_HOSTNAME" )     myip="$CTRL1_IP" ;;
 
-    "${CTRL2_HOSTNAME%.*}" )
-        ctrlname="$CTRL2_HOSTNAME"
-        ctrlip="$CTRL2_IP"
-        ;;
+    "$CTRL2_HOSTNAME" )     myip="$CTRL2_IP" ;;
 
     * )
-        echo_error "Fatal error: the current hostname doesn't match any of the controller hostnames!"
-        exit 234
+        echo_error "Fatal error: the current hostname doesn't match any of the controller hostnames."
+        exit 1
 esac
 
 
@@ -113,10 +116,10 @@ esac
 
 # Did the user pass an IP address that doesn't match any of our interfaces?
 
-if ! grep -q " ${ctrlip}$" ; then
-    echo_warn "The IP defined in the configuration doesn't match any of this machine's IPs:"
+if ! grep -q " ${myip}$" ; then
+    echo_error "The IP defined in the configuration doesn't match any of this machine's IPs:"
     echo "$ifips"
-    echo
+    exit 1
 fi <<< "$ifips"
 
 
@@ -140,29 +143,30 @@ append_line /etc/hosts '#  ----  Trinity machines  ----'
 
 for i in CTRL{1,2} ; do
 
-    # in non-HA setups we must skip CTRL2 entirely
+    # The CTRL2_* were unset earlier for non-HA setups
     if flag_is_set ${i}_HOSTNAME ; then
 
         # The joys of indirection in Bash
+        # The controller names have already been stripped of their domain
         tmpname=${i}_HOSTNAME ; tmpname=${!tmpname}
         tmpip=${i}_IP ; tmpip=${!tmpip}
 
-        if [[ "$ctrlname" == "$tmpname" ]] ; then
+        if [[ "$myhname" == "$tmpname" ]] ; then
 
             # that's the current machine, so better put in all the interfaces
             while read -a ifip ; do
 
-                if [[ "$ctrlip" == "${ifip[1]}" ]] ; then
-                    append_line /etc/hosts "${ifip[1]}  ${fname:+$fname }$hname ${hname}-${ifip[0]}"
+                if [[ "$myip" == "${ifip[1]}" ]] ; then
+                    append_line /etc/hosts "${ifip[1]}  ${myhname}.${mydomain} ${myhname} ${myhname}-${ifip[0]}"
                 else
-                    append_line /etc/hosts "${ifip[1]}  ${hname}-${ifip[0]}"
+                    append_line /etc/hosts "${ifip[1]}  ${myhname}-${ifip[0]}"
                 fi
             done <<< "$ifips"
 
         else
 
-            # not our machine, just write the data from the env varibales
-            append_line /etc/hosts "$tmpip  $tmpname"
+            # not our machine, just write the data from the env variables
+            append_line /etc/hosts "$tmpip  ${tmpname}.${mydomain} ${tmpname}"
         fi
     fi
 done
@@ -170,26 +174,9 @@ done
 
 # And if we're HA, we need to add the floating IP too
 
-flag_is_set HA && append_line /etc/hosts "$CTRL_IP  $CTRL_HOSTNAME"
-
-
-#---------------------------------------
-
-# And finally, write the environment variables to the trinity.sh file
-
-# We may need to run that script before any form of configuration is done, to
-# set up /etc/hosts for the shared storage. In that case the .sh file won't
-# exist yet, so don't try to write to it.
-
-if [[ -r /etc/trinity.sh ]] ; then
-    source /etc/trinity.sh
-    for i in HA CTRL{1,2,}_{HOSTNAME,IP} ; do
-        if [[ -v $i ]] ; then
-            store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
-        else
-            # make sure that we're not picking up background noise
-            append_line "${TRIX_SHFILE}" "unset $i TRIX_$i"
-        fi
-    done
+if flag_is_set HA ; then
+    append_line /etc/hosts "$CTRL_IP  ${CTRL_HOSTNAME}.${mydomain} ${CTRL_HOSTNAME}"
+else
+    true    # otherwise it picks up the non-zero return of the if...
 fi
 

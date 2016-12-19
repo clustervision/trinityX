@@ -55,6 +55,18 @@ else
 fi
 
 
+if [[ -r /etc/trinity.local.sh ]] ; then
+    
+    echo_info "The following parameters come from \"/etc/trinity.local.sh\":"
+    
+    display_var PRIMARY_INSTALL
+    
+else
+    echo_warn "The file \"/etc/trinity.local.sh\" does not exist (yet) on this system."
+    echo "\"/etc/trinity.local.sh\" is created during the TrinityX installation."
+fi
+
+
 echo -n -e ${QUIET+"\nIf you read this, then the silent option (-q) is enabled.\n"}
 echo -n -e ${VERBOSE+"\nIf you read this, then the verbose option (-v) is enabled.\n"}
 

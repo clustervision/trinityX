@@ -112,7 +112,7 @@ function run_one_script {
         # redefine the trinity.sh variables in POST_CONFIG, re-source trinity.sh
         # afterwards... And because we have no guarantee that trinity.sh exists
         # already, those have to be conditional.
-        # Finally, load the password file if it exists already.
+        # Finally, load the local shfile and password file if they exist.
         # We cannot do all of that at a higher level because each script may
         # modify the .sh{,adow} files, and subsequent scripts will need the
         # updated versions in their environment.
@@ -122,6 +122,7 @@ function run_one_script {
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
             source \"$POST_CONFIG\"
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
+            [[ -r /etc/trinity.local.sh ]] && source /etc/trinity.local.sh
             [[ -r \"\$TRIX_SHADOW\" ]] && source \"\$TRIX_SHADOW\"
             source \"$POST_SCRIPT\" "
 
@@ -282,21 +283,52 @@ function apply_config {
 
     for post in "${POSTLIST[@]}" ; do
 
+        # Tweak the environment variables on the fly
+
+        # Defining a new variable
+        if [[ "$post" =~ ^\+.* ]] ; then
+            tmpvar=${post#+}
+            echo_progress "Setting the environment variable: $tmpvar"
+            if flag_is_unset $tmpvar ; then
+                declare -x -- ${tmpvar}=1
+            fi
+            continue
+
+        # Unsetting an existing variable, if not set on the command line
+        elif [[ "$post" =~ ^-.* ]] ; then
+            tmpvar=${post#-}
+            echo_progress "Unsetting the environment variable: $tmpvar"
+            if flag_is_set $tmpvar && [[ "${!tmpvar}" != "keep" ]] ; then
+                unset -- $tmpvar
+            fi
+            continue
+        fi
+
+
         while true ; do
 
-            if run_one_script "$post" ; then
-                break
+            run_one_script "$post"
+            ret=$?
+
+            if (( ret == 0 )) ; then
+                if flag_is_unset STEP ; then
+                    break
+                else
+                    echo_warn "Stepping mode: please select the next step."
+                fi
 
             else
-                echo_error_prompt "Error during post script: $post"
-                case $? in
-                    1 )     break       # continue
-                            ;;
-                    2 )     exit 1      # exit
-                            ;;
-                    * )     continue    # retry
-                esac
+                echo_error "Error during post script: $post"
             fi
+
+            rce_prompt $ret
+            case $? in
+                2 )     break       # continue
+                        ;;
+                3 )     exit 1      # exit
+                        ;;
+                * )     continue    # retry
+            esac
         done
     done
 

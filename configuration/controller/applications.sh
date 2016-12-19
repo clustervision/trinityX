@@ -31,6 +31,14 @@
 # This script will replace {{ prefix }} with the correct value
 #
 
+
+if flag_is_set HA && flag_is_unset PRIMARY_INSTALL ; then
+
+    echo_info 'Secondary installation, nothing to do.'
+    exit 0
+fi
+
+
 for GROUP in 'cv-standard' 'cv-advanced' 'site-local'; do
 
     echo_info "Adding $GROUP module files to the system"
