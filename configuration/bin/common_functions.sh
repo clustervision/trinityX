@@ -493,6 +493,9 @@ function check_cluster {
         sleep 5s
     done
 
+    echo_info 'Waiting for the cluster to settle...'
+    crm_resource --wait
+
     return 0
 }
 

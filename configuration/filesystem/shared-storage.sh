@@ -320,8 +320,8 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
             exit 1
         fi
 
-        # Aaaaand let it breathe.
-        sleep 5s
+        echo_info 'Waiting for the cluster to settle...'
+        crm_resource --wait
 
 
         if flag_is_set SHARED_FS_DRBD_WAIT_FOR_SYNC ; then
