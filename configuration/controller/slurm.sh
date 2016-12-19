@@ -209,6 +209,19 @@ function create_cluster_in_acc_db() {
     done
 }
 
+function configure_pacemaker() {
+    echo_info "Configure pacemaker's resources."
+    TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_drbd.XXXX)
+    /usr/sbin/pcs cluster cib ${TMPFILE}
+    /usr/sbin/pcs -f ${TMPFILE} resource create slurmdbd systemd:slurmdbd --force
+    /usr/sbin/pcs -f ${TMPFILE} resource create slurmctld systemd:slurmctld --force
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add slurmdbd with Trinity
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add slurmctld with Trinity
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start slurmdbd
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start slurmctld
+    /usr/sbin/pcs cluster cib-push ${TMPFILE}
+}
+
 function install_basic() {
     move_etc_slurm
     create_munge_key
@@ -251,6 +264,7 @@ function install_primary() {
         exit 1
     fi
     create_cluster_in_acc_db
+    configure_pacemaker
 }
 
 function install_secondary() {
