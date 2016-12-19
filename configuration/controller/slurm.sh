@@ -70,8 +70,9 @@ function move_etc_slurm() {
     fi
     echo_info "Copy slurm config files"
 
-    cp ${POST_FILEDIR}/slurm*.conf /etc/slurm/
-    cp ${POST_FILEDIR}/{topology,cgroup}.conf /etc/slurm/
+    /usr/bin/cp ${POST_FILEDIR}/slurm*.conf /etc/slurm/
+    /usr/bin/cp ${POST_FILEDIR}/{topology,cgroup}.conf /etc/slurm/
+    /usr/bin/chmod 640 /etc/slurm/slurmdbd.conf
 }
 
 function create_spool_dir() {
@@ -191,9 +192,21 @@ function create_slurmdbd_user() {
     do_sql_req "FLUSH PRIVILEGES;"
 }
 
-function create_cluster_in_acc_db(){
+function create_cluster_in_acc_db() {
     echo_info "Initialize accounting database for the default cluster"
-    sacctmgr -i add cluster cluster
+    TRIES=$1
+    if [ "x${TRIES}" = "x" ]; then
+        TRIES=5
+    fi
+    while ! /usr/bin/sacctmgr -i add cluster cluster; do
+        "Trying again in 5 sec. (${TRIES})"
+        TRIES=$(( ${TRIES}-1 ))
+        if [ ${TRIES} -le 0 ]; then
+             echo_error "Timeout waiting initialization slurm accounting."
+             exit 1
+        fi
+        sleep 5
+    done
 }
 
 function install_basic() {
@@ -213,7 +226,6 @@ function install_standalone() {
         echo_error "Unable to start slurmdbd"
         exit 1
     fi
-    sleep 3 # TODO fix it!
     if ! /usr/bin/systemctl start munge slurmctld; then
         echo_error "Unable to start services"
         exit 1
@@ -230,12 +242,24 @@ function install_primary() {
     /usr/bin/systemctl stop slurmctld slurmdbd
     /usr/bin/systemctl disable slurmctld slurmdbd
     move_spool
-    if ! /usr/bin/systemctl start munge slurmctld slurmdbd; then
+    if ! /usr/bin/systemctl start slurmdbd; then
+        echo_error "Unable to start slurmdbd"
+        exit 1
+    fi
+    if ! /usr/bin/systemctl start munge slurmctld; then
         echo_error "Unable to start services"
         exit 1
     fi
-    sleep 3 # TODO fix it!
     create_cluster_in_acc_db
 }
 
-install_standalone
+function install_secondary() {
+    if [ -h /etc/slurm ]; then
+        /usr/bin/rm -rf /etc/slurm
+    else
+        /usr/bin/mv /etc/slurm{,.orig}
+    fi
+    /usr/bin/ln -s ${TRIX_ROOT}/shared/etc/slurm /etc/slurm
+}
+
+install_primary
