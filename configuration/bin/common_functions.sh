@@ -478,23 +478,28 @@ typeset -fx resources_are_started
 
 #---------------------------------------
 
+# Wait for the cluster to settle, and if required, check for the state of
+# resources.
 
-# Syntax: check_cluster <resource name> [<resource name> ...]
+# Syntax: check_cluster [<resource name> ...]
+
+# Without parameters, this function will just wait until Pacemaker reaches a
+# stable state. When that happens, all resources that can run should have been
+# started. Just to make sure one can pass additional resource names, and the
+# function will check that those resources are really started.
 
 function check_cluster {
 
-    echo_info 'Checking the state of the cluster'
-    (( $# )) || return 1
-
-    sleep 5s
-
-    until resources_are_started "$@" ; do
-        echo 'Waiting for the resources to start...'
-        sleep 5s
-    done
-
     echo_info 'Waiting for the cluster to settle...'
     crm_resource --wait
+
+    if (( $# )) ; then
+        echo_info "Checking the state of resources: $@"
+        until resources_are_started "$@" ; do
+            echo 'Waiting for the resources to start...'
+            sleep 5s
+        done
+    fi
 
     return 0
 }
