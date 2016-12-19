@@ -36,21 +36,18 @@ function get_partners_ip() {
         echo ''
         return
     fi
-    if [ "x${CTRL1_IP}" = "x" -o "x${CTRL2_IP}" = "x" ]; then
+    if [ "x${TRIX_CTRL1_IP}" = "x" -o "x${TRIX_CTRL2_IP}" = "x" ]; then
         echo_error "Unable to determine IP of the partner in HA config. Exiting."
         exit 1
     fi
     # Tend to leave it as is for now, and fix after merge JF's code.
     # ( Use PRIMARY_INSTALL instead.)
     # As I unable to test it otherwize.
-    IPS=$(hostname -I)
-    for IP in ${IPS}; do
-        if [ "x$IP" = "x${CTRL1_IP}" ]; then
-            echo "${CTRL2_IP}"
-            return
-        fi
-    done
-    echo "${CTRL1_IP}"
+    if flag_is_set PRIMARY_INSTALL; then
+        echo "${TRIX_CTRL2_IP}"
+    else
+        echo "${TRIX_CTRL1_IP}"
+    fi
 }
 
 display_var RSYSLOG_CLIENT_NETWORK RSYSLOG_CLIENT_NETWORK_PREFIX RSYSLOG_MESSAGES_PATH
