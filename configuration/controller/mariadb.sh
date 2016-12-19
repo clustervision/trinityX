@@ -16,12 +16,11 @@
 # details.
 ######################################################################
 
+display_var HA PRIMARY_INSTALL TRIX_CTRL{1,2}_HOSTNAME
 
-set -e
+# -------------------------------------
 
-echo_info "Starting MariaDB server."
-
-systemctl restart mariadb
+# Utility functions
 
 function do_sql_req {
     echo $@ | /usr/bin/mysql
@@ -33,18 +32,22 @@ function pass_esc {
 
 function setup_root_pass {
     PASS=`pass_esc $1`
+
     do_sql_req "UPDATE mysql.user SET Password=PASSWORD('$PASS') WHERE User='root';"
     do_sql_req "FLUSH PRIVILEGES;"
-    cat << EOF > ~/.my.cnf
-[mysql]
-user=root
-password=$PASS
-[mysqldump]
-user=root
-password=$PASS
-EOF
-    chmod 600 ~/.my.cnf
 
+    # Save default mysql root credentials to avoid having to provide then in every cmd
+    # This here is heredocument that uses the "-EOF" operator to improve readability
+    # Leading TABS (not spaces) are ignored.
+    cat <<-EOF > ~/.my.cnf
+		[mysql]
+		user=root
+		password=$PASS
+		[mysqldump]
+		user=root
+		password=$PASS
+		EOF
+    chmod 600 ~/.my.cnf
 }
 
 function remove_test_db {
@@ -53,13 +56,90 @@ function remove_test_db {
 }
 
 function remove_anonymous_users {
-        do_sql_req "DELETE FROM mysql.user WHERE User='';"
+    do_sql_req "DELETE FROM mysql.user WHERE User='';"
 }
 
-MYSQL_PASS=`get_password $MYSQL_ROOT_PASSWORD`
-store_password MYSQL_ROOT_PASSWORD $MYSQL_PASS
-setup_root_pass $MYSQL_PASS
-remove_test_db
-remove_anonymous_users
+function setup_galera_creds {
+    echo "MYSQL_USER=root" > /etc/sysconfig/clustercheck
+    echo "MYSQL_PASSWORD=$MYSQL_ROOT_PASSWORD" >> /etc/sysconfig/clustercheck
+    chmod 700 /etc/sysconfig/clustercheck
+}
 
-systemctl enable mariadb
+# -------------------------------------
+
+# Setup mariadb server
+
+if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
+
+    echo_info "Starting MariaDB server"
+    systemctl restart mariadb
+
+    echo_info "Setting up mariadb's root user credentials"
+    MYSQL_ROOT_PASSWORD="$(get_password "$MYSQL_ROOT_PASSWORD")"
+    setup_root_pass $MYSQL_ROOT_PASSWORD
+    store_password MYSQL_ROOT_PASSWORD $MYSQL_ROOT_PASSWORD
+
+    echo_info "Cleaning up test db and anonymous users"
+    remove_test_db
+    remove_anonymous_users
+
+fi
+
+if flag_is_unset HA; then
+    systemctl enable mariadb
+else
+
+    echo_info "Stopping MariaDB server; Will be managed via pacemaker"
+    systemctl stop mariadb
+
+    # --------------------------------------------------------
+
+    # Update configuration files and the galera resource agent
+
+    echo_info "Updating galera resource-agent and configuration file"
+
+    cp "${POST_FILEDIR}"/galera_agent /usr/lib/ocf/resource.d/heartbeat/galera
+    cp "${POST_FILEDIR}"/galera.cnf /etc/my.cnf.d/
+    chmod +x /usr/lib/ocf/resource.d/heartbeat/galera
+
+    CLUSTER_ADDR="gcomm://$TRIX_CTRL1_HOSTNAME,$TRIX_CTRL2_HOSTNAME"
+    sed -i "s|{{ cluster.addr }}|$CLUSTER_ADDR|" /etc/my.cnf.d/galera.cnf
+
+    if flag_is_set PRIMARY_INSTALL; then
+
+        sed -i "s,{{ node.addr }},$TRIX_CTRL1_IP," /etc/my.cnf.d/galera.cnf
+        sed -i "s,{{ node.name }},$TRIX_CTRL1_HOSTNAME," /etc/my.cnf.d/galera.cnf
+
+        setup_galera_creds
+
+        # --------------------------------------------------------
+
+        # Create pacemaker resource
+
+        echo_info "Creating and configuring a galera resource in pacemaker"
+
+        pcs resource create Galera ocf:heartbeat:galera wsrep_cluster_address="$CLUSTER_ADDR"
+        pcs resource master Trinity-galera Galera master-max=1
+        pcs constraint colocation add Master Trinity-galera with Trinity INFINITY
+
+        echo_info "Bootstrapping the galera cluster"
+        crm_attribute -l reboot --name "Galera-bootstrap" -v "true"
+
+        echo_info "Waiting for the galera cluster to start"
+        crm_resource -r Trinity-galera --wait
+
+        if ! do_sql_req "SHOW GLOBAL STATUS LIKE 'wsrep_cluster_status';" | grep -q -w Primary; then
+            echo_error "Configuration completed but failed to start the galera cluster. \ 
+                        Please fix the issue before proceeding with the installation";
+            exit 1;
+        fi
+
+    else
+        sed -i "s,{{ node.addr }},$TRIX_CTRL2_IP," /etc/my.cnf.d/galera.cnf
+        sed -i "s,{{ node.name }},$TRIX_CTRL2_HOSTNAME," /etc/my.cnf.d/galera.cnf
+
+        setup_galera_creds
+        pcs resource cleanup Trinity-galera
+    fi
+
+fi
