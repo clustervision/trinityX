@@ -205,7 +205,17 @@ function create_symlinks() {
     /usr/bin/ln -fs /trinity/local/var/named /var/named
 }
 function configure_pacemaker() {
-        echo_info "Configure pacemaker's resources."
+    echo_info "Configure pacemaker's resources."
+    TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_drbd.XXXX)
+    /usr/sbin/pcs cluster cib ${TMPFILE}
+    /usr/sbin/pcs -f ${TMPFILE} resource create dhcpd systemd:dhcpd --force
+    /usr/sbin/pcs -f ${TMPFILE} resource create named systemd:named --force
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add dhcpd with Trinity
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add named with Trinity
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start dhcpd
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start named
+    /usr/sbin/pcs cluster cib-push ${TMPFILE}
+
 }
 
 function install_standalone() {
