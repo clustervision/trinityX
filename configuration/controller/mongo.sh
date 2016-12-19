@@ -277,6 +277,12 @@ function add_secondary_to_rs() {
 
 function configure_pacemaker() {
     echo_info "Configure pacemaker's resources."
+    TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_drbd.XXXX)
+    /usr/sbin/pcs cluster cib ${TMPFILE}
+    /usr/sbin/pcs -f ${TMPFILE} resource create mongod-arbiter systemd:mongod-arbiter --force
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add mongod-arbiter with Trinity
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start mongod-arbiter
+    /usr/sbin/pcs cluster cib-push ${TMPFILE}
 }
 
 function install_standalone() {
@@ -298,7 +304,6 @@ function install_standalone() {
 function install_primary() {
     install_standalone
     setup_mongod_arbiter ${CTRL_IP}
-    /usr/bin/systemctl disable mongod
     /usr/bin/systemctl disable mongod-arbiter.service
     /usr/bin/systemctl restart mongod-arbiter.service
     add_arbiter_to_rs ${CTRL_IP}
@@ -319,7 +324,6 @@ function install_secondary() {
     /usr/bin/systemctl restart mongod
     wait_secondary_sync "root" "${MONGODB_ROOT_PASS}"
     check_rs_status
-
 }
 
 if flag_is_unset HA; then
@@ -331,4 +335,3 @@ else
         install_secondary
     fi
 fi
-
