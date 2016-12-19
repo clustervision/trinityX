@@ -219,8 +219,8 @@ function configure_pacemaker() {
 }
 
 function install_standalone() {
-    /usr/bin/systemctl stop named dhcpd xinetd nginx
-    /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || true
+    /usr/bin/systemctl stop named dhcpd xinetd nginx || /usr/bin/true
+    /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
     create_luna_folders
     copy_dracut
@@ -244,15 +244,15 @@ function install_standalone() {
 function install_primary() {
     install_standalone
     /usr/bin/systemctl disable named dhcpd xinetd nginx lweb ltorrent
-    /usr/bin/systemctl stop named dhcpd xinetd nginx lweb ltorrent
+    /usr/bin/systemctl stop named dhcpd xinetd nginx lweb ltorrent || /usr/bin/true
     copy_configs_to_trix_local
     create_symlinks
     configure_pacemaker
 }
 
 function install_secondary() {
-    /usr/bin/systemctl stop named dhcpd xinetd nginx
-    /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || true
+    /usr/bin/systemctl stop named dhcpd xinetd nginx || /usr/bin/true
+    /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
     create_luna_folders
     setup_tftp
