@@ -337,4 +337,7 @@ function main () {
 
 }
 
+
+display_var ZABBIX_{MYSQL_USER,MYSQL_DB,DATABASE_OVERWRITE,STORE_HISTORY,STORE_TRENDS}
+
 echo_info 'Zabbix installation script' && main
