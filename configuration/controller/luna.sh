@@ -16,8 +16,6 @@
 # details.
 ######################################################################
 
-set -e
-
 if [ "x${LUNA_MONGO_PASS}" = "x" ]; then
     LUNA_MONGO_PASS=`get_password $LUNA_MONGO_PASS`
     store_password LUNA_MONGO_PASS $LUNA_MONGO_PASS
