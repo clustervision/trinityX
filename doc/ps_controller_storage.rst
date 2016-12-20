@@ -161,7 +161,7 @@ Flag name               ``none``            Default ``export``  Default ``dev`` 
 
 .. note:: The ``none`` use case skips the NFS server setup entirely. The ``NFS_EXPORT_*`` variables have no effect, and will all be reset to ``0``.
 
-.. warning:: ``NFS_EXPORT_LOCAL`` is expected to be enabled for installation of the secondary controller. If disabled, the directory must be available locally on the secondary controller before the TrinityX secondary setup starts.
+.. warning:: ``NFS_EXPORT_LOCAL`` and ``NFS_EXPORT_SHARED`` are expected to be enabled for installation of the secondary controller, together with the matching mount resources in the secondary group. The only situation where those would be disabled is if the whole TrinityX tree is set up on (a) shared filesystem volume(s), that is/are available on both the primary and the secondary controllers during installation. Note that the secondary NFS mount resource can be deleted after installation, if no service running on the secondary controller requires access to the data.
 
 
 Additional configuration options for the NFS server are:
@@ -230,7 +230,7 @@ The installation procedures would be as follows:
     
     # stop and take apart your array
     
-    pcs resource create trinity-dev <standard:provider:type> [resource_options] [op monitor interval=123s] --group Trinity --after trinity-primary
+    pcs resource create trinity-dev <standard:provider:type> [resource_options] [op monitor interval=123s] --group Trinity --after primary
     
     # the resource will start automatically, check that the RAID array is fine and assembled
     
@@ -275,11 +275,11 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
 
     # crm_resource -L
      Resource Group: Trinity
-         trinity-primary    (ocf::heartbeat:Dummy): Started
+         primary    (ocf::heartbeat:Dummy): Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Started
          trinity-ip (ocf::heartbeat:IPaddr2):   Started
      Resource Group: Trinity-secondary
-         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+         secondary  (ocf::heartbeat:Dummy): Stopped
     
     # ls -ahlpd /trinity /etc/trinity.*
     -rw-------. 1 root root   52 Dec 12 15:16 /etc/trinity.local.sh
@@ -292,23 +292,23 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
 
 #. When the backing block device is finally ready, plan for a downtime of the controller and stop all activity on the cluster.
 
-#. Edit **``/etc/trinity.sh``** (which has precedence over the configuration file) to make sure that it includes the correct device name, and change the ``SHARED_FS_TYPE`` to select the ``dev`` resource. If necessary, add formatting options for the XFS filesystem::
+#. Edit **/etc/trinity.sh** (which has precedence over the configuration file) to make sure that it includes the correct device name, and change the ``SHARED_FS_TYPE`` to select the ``dev`` resource. If necessary, add formatting options for the XFS filesystem::
 
     SHARED_FS_TYPE=dev
     SHARED_FS_DEVICE=/dev/md0
     SHARED_FS_FORMAT_OPTIONS=...
 
-#. Stop all resources after ``trinity-primary``, as they depend on the ``/trinity`` directory. With the resources listed above, this will be::
+#. Stop all resources after ``primary``, as they depend on the ``/trinity`` directory. With the resources listed above, this will be::
 
     # pcs resource disable trinity-nfs-server
     
     # crm_resource -L
      Resource Group: Trinity
-         trinity-primary    (ocf::heartbeat:Dummy): Started
+         primary    (ocf::heartbeat:Dummy): Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped (disabled)
          trinity-ip (ocf::heartbeat:IPaddr2):   Stopped
      Resource Group: Trinity-secondary
-         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+         secondary  (ocf::heartbeat:Dummy): Stopped
 
 #. Move the existing ``/trinity`` directory to another location, and fix the symlink for ``trinity.sh``::
 
@@ -330,13 +330,13 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
     
     # crm_resource -L
      Resource Group: Trinity
-         trinity-primary    (ocf::heartbeat:Dummy): Started
+         primary    (ocf::heartbeat:Dummy): Started
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped (disabled)
          trinity-ip (ocf::heartbeat:IPaddr2):   Stopped
      Resource Group: Trinity-secondary
-         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+         secondary  (ocf::heartbeat:Dummy): Stopped
 
 #. Move all the contents of the original ``/trinity`` to the new one, and adjust the ``/etc/trinity.sh`` symlink again::
 
@@ -350,13 +350,13 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
     
     # crm_resource -L
      Resource Group: Trinity
-         trinity-primary    (ocf::heartbeat:Dummy): Started
+         primary    (ocf::heartbeat:Dummy): Started
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Started
          trinity-ip (ocf::heartbeat:IPaddr2):   Started
      Resource Group: Trinity-secondary
-         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+         secondary  (ocf::heartbeat:Dummy): Stopped
     
     # showmount -e
     Export list for controller1.cluster:
@@ -441,13 +441,13 @@ Let's assume that the shared block device is ``/dev/sda``, and that we want 2 pa
 
     # crm_resource -L
      Resource Group: Trinity
-         trinity-primary    (ocf::heartbeat:Dummy): Started
+         primary    (ocf::heartbeat:Dummy): Started
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Started
          trinity-ip (ocf::heartbeat:IPaddr2):   Started
      Resource Group: Trinity-secondary
-         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+         secondary  (ocf::heartbeat:Dummy): Stopped
     
     # pcs resource show trinity-fs
      Resource: trinity-fs (class=ocf provider=heartbeat type=Filesystem)
@@ -500,14 +500,14 @@ Let's assume that the shared block device is ``/dev/sda``, and that we want 2 pa
 
     # crm_resource -L
      Resource Group: Trinity
-         trinity-primary    (ocf::heartbeat:Dummy): Started
+         primary    (ocf::heartbeat:Dummy): Started
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
          trinity-fs-homes   (ocf::heartbeat:Filesystem):    Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped (disabled)
          trinity-ip (ocf::heartbeat:IPaddr2):   Stopped
      Resource Group: Trinity-secondary
-         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+         secondary  (ocf::heartbeat:Dummy): Stopped
     
     # mount | grep trinity
     /dev/sda1 on /trinity type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
@@ -525,14 +525,14 @@ Let's assume that the shared block device is ``/dev/sda``, and that we want 2 pa
 
     # crm_resource -L
      Resource Group: Trinity
-         trinity-primary    (ocf::heartbeat:Dummy): Started
+         primary    (ocf::heartbeat:Dummy): Started
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
          trinity-fs-homes   (ocf::heartbeat:Filesystem):    Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Started
          trinity-ip (ocf::heartbeat:IPaddr2):   Started
      Resource Group: Trinity-secondary
-         trinity-secondary  (ocf::heartbeat:Dummy): Stopped
+         secondary  (ocf::heartbeat:Dummy): Stopped
     
     # showmount -e
     Export list for controller1.cluster:
