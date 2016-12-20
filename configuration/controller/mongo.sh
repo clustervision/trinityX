@@ -16,8 +16,6 @@
 # details.
 ######################################################################
 
-set -e
-
 if [ "x${MONGODB_ROOT_PASS}" = "x" ]; then
     MONGODB_ROOT_PASS=`get_password $MONGODB_ROOT_PASS`
     store_password MONGODB_ROOT_PASS $MONGODB_ROOT_PASS
