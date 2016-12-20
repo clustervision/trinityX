@@ -299,6 +299,17 @@ function zabbix_server_config () {
     fi
 
 }
+function configure_pacemaker() {
+    echo_info "Configure pacemaker's resources."
+    TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_zabbix.XXXX)
+    /usr/sbin/pcs cluster cib ${TMPFILE}
+    /usr/sbin/pcs -f ${TMPFILE} resource delete zabbix-server || true
+    /usr/sbin/pcs -f ${TMPFILE} resource create zabbix-server systemd:zabbix-server --force
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add zabbix-server with Trinity
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start zabbix-server
+#    /usr/sbin/pcs -f ${TMPFILE} resource group add Trinity zabbix-server --after trinity-ip
+    /usr/sbin/pcs cluster cib-push ${TMPFILE}
+}
 
 function main () {
     check_zabbix_installation
@@ -310,6 +321,7 @@ function main () {
         edit_zabbix_conf
         copy_zabbix_scripts
         copy_data_to_shared
+
     fi
     symlynks_to_config
     zabbix_server_services on
@@ -318,6 +330,9 @@ function main () {
     fi
     if flag_is_set HA; then
         zabbix_server_services off
+    fi
+    if flag_is_set HA && flag_is_set PRIMARY_INSTALL; then
+        configure_pacemaker
     fi
 
 }
