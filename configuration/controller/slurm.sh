@@ -276,4 +276,13 @@ function install_secondary() {
     /usr/bin/ln -s ${TRIX_ROOT}/shared/etc/slurm /etc/slurm
 }
 
-install_primary
+
+if flag_is_unset HA; then
+    install_standalone
+else
+    if flag_is_set PRIMARY_INSTALL; then
+        install_primary
+    else
+        install_secondary
+    fi
+fi
