@@ -17,12 +17,13 @@
 ######################################################################
 
 
-set -e
 
 if [ "x${SLURMDBD_MYSQL_PASS}" = "x" ]; then
     SLURMDBD_MYSQL_PASS=`get_password $SLURMDBD_MYSQL_PASS`
     store_password SLURMDBD_MYSQL_PASS $SLURMDBD_MYSQL_PASS
 fi
+
+
 
 function replace_template() {
     [ $# -gt 3 -o $# -lt 2 ] && echo "Wrong numger of argument in replace_template." && exit 1
@@ -139,10 +140,10 @@ function configure_slurm() {
 
     echo_info "Changing variable placeholders."
 
-    replace_template CTRL_IP                /etc/slurm/slurm.conf
-    replace_template CTRL_IP                /etc/slurm/slurmdbd.conf
-    replace_template CTRL1_HOSTNAME         /etc/slurm/slurmdbd.conf
-    replace_template CTRL2_HOSTNAME         /etc/slurm/slurmdbd.conf
+    replace_template TRIX_CTRL_IP                /etc/slurm/slurm.conf
+    replace_template TRIX_CTRL_IP                /etc/slurm/slurmdbd.conf
+    replace_template TRIX_CTRL1_HOSTNAME         /etc/slurm/slurmdbd.conf
+    replace_template TRIX_CTRL2_HOSTNAME         /etc/slurm/slurmdbd.conf
     replace_template SLURMDBD_MYSQL_PASS    /etc/slurm/slurmdbd.conf
     replace_template SLURMDBD_MYSQL_USER    /etc/slurm/slurmdbd.conf
     replace_template SLURMDBD_MYSQL_DB      /etc/slurm/slurmdbd.conf
@@ -213,12 +214,15 @@ function configure_pacemaker() {
     echo_info "Configure pacemaker's resources."
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_drbd.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
+    /usr/sbin/pcs -f ${TMPFILE} resource delete slurmctld || true
+    /usr/sbin/pcs -f ${TMPFILE} resource delete slurmdbd || true
     /usr/sbin/pcs -f ${TMPFILE} resource create slurmdbd systemd:slurmdbd --force
     /usr/sbin/pcs -f ${TMPFILE} resource create slurmctld systemd:slurmctld --force
     /usr/sbin/pcs -f ${TMPFILE} constraint colocation add slurmdbd with Trinity
     /usr/sbin/pcs -f ${TMPFILE} constraint colocation add slurmctld with Trinity
     /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start slurmdbd
     /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start slurmctld
+#    /usr/sbin/pcs -f ${TMPFILE} resource group add Trinity slurmdbd slurmctld  --after trinity-ip
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 }
 
@@ -233,7 +237,7 @@ function install_basic() {
 
 function install_standalone() {
     install_basic
-    replace_template HEADNODE "${CTRL1_HOSTNAME}" /etc/slurm/slurm.conf
+    replace_template HEADNODE "${TRIX_CTRL1_HOSTNAME}" /etc/slurm/slurm.conf
     echo_info "Start services"
     if ! /usr/bin/systemctl start slurmdbd; then
         echo_error "Unable to start slurmdbd"
@@ -249,7 +253,7 @@ function install_standalone() {
 
 function install_primary() {
     install_basic
-    replace_template HEADNODE "${CTRL1_HOSTNAME},${CTRL2_HOSTNAME}" /etc/slurm/slurm.conf
+    replace_template HEADNODE "${TRIX_CTRL1_HOSTNAME},${TRIX_CTRL2_HOSTNAME}" /etc/slurm/slurm.conf
     /usr/bin/sed -i -e 's/^#\(ControlAddr=.*\)$/\1/' /etc/slurm/slurm.conf
     /usr/bin/sed -i -e 's/^#\(DbdBackupHost=.*\)$/\1/' /etc/slurm/slurmdbd.conf
     /usr/bin/systemctl stop slurmctld slurmdbd
@@ -276,6 +280,7 @@ function install_secondary() {
     /usr/bin/ln -s ${TRIX_ROOT}/shared/etc/slurm /etc/slurm
 }
 
+display_var SLURMDBD_MYSQL_DB SLURMDBD_MYSQL_USER
 
 if flag_is_unset HA; then
     install_standalone
