@@ -189,6 +189,7 @@ function configure_dns_dhcp() {
         echo_error "Luna is unable to create dhcpd config."
         exit 1
     fi
+    /usr/bin/systemctl start named
     if ! /usr/sbin/luna cluster makedns; then
         echo_error "Luna is unable to create DNS config."
         exit 1
@@ -238,6 +239,7 @@ function install_standalone() {
     create_mongo_user
     configure_mongo_credentials
     configure_luna
+    configure_dns_dhcp
     if ! /usr/bin/systemctl start lweb ltorrent; then
         echo_error "Unable to start Luna services."
         exit 1
