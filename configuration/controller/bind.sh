@@ -21,6 +21,26 @@ display_var TRIX_CTRL{1,2}_IP BIND_{FORWARDERS,DISABLE_DNSSEC}
 
 # BIND (DNS server) configuration
 
+if flag_is_set HA && flag_is_unset PRIMARY_INSTALL; then
+    /usr/bin/rm -rf /var/named
+    /usr/bin/rm -rf /etc/named.conf
+    /usr/bin/rm -rf /etc/named.forwarders.conf
+    /usr/bin/ln -fs /trinity/local/var/named /var/named
+    /usr/bin/ln -fs /trinity/local/etc/named.conf /etc/named.conf
+    /usr/bin/ln -fs /trinity/local/etc/named.forwarders.conf /etc/named.forwarders.conf
+    exit 0
+fi
+
+if flag_is_set HA && flag_is_set PRIMARY_INSTALL; then
+    /usr/bin/mkdir -p /trinity/local/etc
+    /usr/bin/mkdir -p /trinity/local/var
+    /usr/bin/mv /etc/named.conf /trinity/local/etc/
+    /usr/bin/mv /var/named /trinity/local/var/
+    /usr/bin/ln -fs /trinity/local/etc/named.conf /etc/named.conf
+    /usr/bin/ln -fs /trinity/local/etc/named.forwarders.conf /etc/named.forwarders.conf
+    /usr/bin/ln -fs /trinity/local/var/named /var/named
+fi
+
 echo_info 'Make named listen for requests on all interfaces'
 sed -i -e 's/\(.*listen-on port 53 { \).*\( };\)/\1any;\2/' /etc/named.conf
 
@@ -77,3 +97,13 @@ echo_info 'Enabling and starting the named service'
 systemctl enable named
 systemctl restart named
 
+if flag_is_set HA && flag_is_set PRIMARY_INSTALL; then
+    /usr/bin/systemctl disable named
+    TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_named.XXXX)
+    /usr/sbin/pcs cluster cib ${TMPFILE}
+    /usr/sbin/pcs -f ${TMPFILE} resource delete named || true
+    /usr/sbin/pcs -f ${TMPFILE} resource create named systemd:named --force
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add named with Trinity
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start named
+    /usr/sbin/pcs cluster cib-push ${TMPFILE}
+fi

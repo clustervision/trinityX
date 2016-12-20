@@ -200,26 +200,22 @@ function copy_configs_to_trix_local() {
 
     /usr/bin/mkdir -p /trinity/shared/etc/dhcp
     /usr/bin/mv /etc/dhcp/dhcpd.conf /trinity/shared/etc/
-
-    /usr/bin/mkdir -p /trinity/local/var
-    /usr/bin/mv /var/named /trinity/local/var/
 }
 
 function create_symlinks() {
     /usr/bin/ln -fs /trinity/local/etc/named.luna.zones /etc/named.luna.zones
     /usr/bin/ln -fs /trinity/shared/etc/dhcpd.conf /etc/dhcp/dhcpd.conf
-    /usr/bin/ln -fs /trinity/local/var/named /var/named
 }
 function configure_pacemaker() {
     echo_info "Configure pacemaker's resources."
-    TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_drbd.XXXX)
+    TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_luna.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
-    /usr/sbin/pcs -f ${TMPFILE} resource create dhcpd systemd:dhcpd --force
-    /usr/sbin/pcs -f ${TMPFILE} resource create named systemd:named --force
-    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add dhcpd with Trinity
-    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add named with Trinity
-    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start dhcpd
-    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start named
+    for SERVICE in dhcpd lweb ltorrent; do
+        /usr/sbin/pcs -f ${TMPFILE} resource delete ${SERVICE} || true
+        /usr/sbin/pcs -f ${TMPFILE} resource create ${SERVICE} systemd:dhcpd --force
+        /usr/sbin/pcs -f ${TMPFILE} constraint colocation add ${SERVICE} with Trinity
+        /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start ${SERVICE}
+    done
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 
 }
