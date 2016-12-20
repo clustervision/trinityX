@@ -45,6 +45,10 @@ function add_luna_user() {
 }
 
 function create_luna_folders() {
+    LPATH=$1
+    if [ "x${LPATH}" = "x" ]; then
+        LPATH="/opt"
+    fi
     echo_info "Create dirs for Luna."
 
     /usr/bin/mkdir -p ${LPATH}/luna
@@ -225,7 +229,7 @@ function install_standalone() {
     /usr/bin/systemctl stop named dhcpd xinetd nginx || /usr/bin/true
     /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
-    add_luna_user
+    add_luna_user $1
     create_luna_folders $1
     copy_dracut
     setup_tftp
@@ -258,7 +262,7 @@ function install_secondary() {
     /usr/bin/systemctl stop named dhcpd xinetd nginx || /usr/bin/true
     /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
-    add_luna_user
+    add_luna_user $1
     setup_tftp
     setup_dns
     setup_nginx
@@ -274,7 +278,7 @@ else
     if flag_is_set PRIMARY_INSTALL; then
         install_primary "/trinity/local/luna"
     else
-        install_secondary
+        install_secondary "/trinity/local/luna"
     fi
 fi
 
