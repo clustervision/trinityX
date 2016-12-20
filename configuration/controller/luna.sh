@@ -22,8 +22,7 @@ if [ "x${LUNA_MONGO_PASS}" = "x" ]; then
     LUNA_MONGO_PASS=`get_password $LUNA_MONGO_PASS`
     store_password LUNA_MONGO_PASS $LUNA_MONGO_PASS
 fi
-
-function create_luna_folders() {
+function add_luna_user() {
     LPATH=$1
     if [ "x${LPATH}" = "x" ]; then
         LPATH="/opt"
@@ -43,8 +42,12 @@ function create_luna_folders() {
 
     /usr/sbin/useradd -r ${LUNA_USER_ID:+"-u $LUNA_USER_ID"} -g luna -d ${LPATH}/luna luna
     store_variable "${TRIX_SHFILE}" LUNA_USER_ID $(/usr/bin/id -u luna)
+}
 
-    /usr/bin/id luna >/dev/null 2>&1 || /usr/sbin/useradd -d ${LPATH}/luna luna
+function create_luna_folders() {
+    echo_info "Create dirs for Luna."
+
+    /usr/bin/mkdir -p ${LPATH}/luna
     /usr/bin/chown -R luna: ${LPATH}/luna
     /usr/bin/chmod ag+rx ${LPATH}/luna
     /usr/bin/mkdir -p /var/log/luna
@@ -222,7 +225,8 @@ function install_standalone() {
     /usr/bin/systemctl stop named dhcpd xinetd nginx || /usr/bin/true
     /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
-    create_luna_folders
+    add_luna_user
+    create_luna_folders $1
     copy_dracut
     setup_tftp
     setup_dns
@@ -242,7 +246,7 @@ function install_standalone() {
 }
 
 function install_primary() {
-    install_standalone
+    install_standalone $1
     /usr/bin/systemctl disable named dhcpd xinetd nginx lweb ltorrent
     /usr/bin/systemctl stop named dhcpd xinetd nginx lweb ltorrent || /usr/bin/true
     copy_configs_to_trix_local
@@ -254,7 +258,7 @@ function install_secondary() {
     /usr/bin/systemctl stop named dhcpd xinetd nginx || /usr/bin/true
     /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
-    create_luna_folders
+    add_luna_user
     setup_tftp
     setup_dns
     setup_nginx
@@ -265,10 +269,10 @@ function install_secondary() {
 }
 
 if flag_is_unset HA; then
-    install_standalone
+    install_standalone "/opt/luna"
 else
     if flag_is_set PRIMARY_INSTALL; then
-        install_primary
+        install_primary "/trinity/local/luna"
     else
         install_secondary
     fi
