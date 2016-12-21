@@ -216,13 +216,11 @@ function configure_pacemaker() {
     /usr/sbin/pcs cluster cib ${TMPFILE}
     /usr/sbin/pcs -f ${TMPFILE} resource delete slurmctld || true
     /usr/sbin/pcs -f ${TMPFILE} resource delete slurmdbd || true
-    /usr/sbin/pcs -f ${TMPFILE} resource create slurmdbd systemd:slurmdbd --force
-    /usr/sbin/pcs -f ${TMPFILE} resource create slurmctld systemd:slurmctld --force
-    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add slurmdbd with Trinity
-    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add slurmctld with Trinity
-    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start slurmdbd
-    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start slurmctld
-#    /usr/sbin/pcs -f ${TMPFILE} resource group add Trinity slurmdbd slurmctld  --after trinity-ip
+    /usr/sbin/pcs -f ${TMPFILE} resource create slurmdbd systemd:slurmdbd --force --group=Slurm
+    /usr/sbin/pcs -f ${TMPFILE} resource create slurmctld systemd:slurmctld --force --group=Slurm
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add Slurm with Trinity
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start trinity-fs then start Slurm
+    /usr/sbin/pcs -f ${TMPFILE} constraint order promote Trinity-galera then start Slurm
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 }
 
