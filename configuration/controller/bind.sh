@@ -3,12 +3,12 @@
 ######################################################################
 # TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -103,7 +103,7 @@ if flag_is_set HA && flag_is_set PRIMARY_INSTALL; then
     /usr/sbin/pcs cluster cib ${TMPFILE}
     /usr/sbin/pcs -f ${TMPFILE} resource delete named || true
     /usr/sbin/pcs -f ${TMPFILE} resource create named systemd:named --force
-    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add named with Trinity
-    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start named
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add named with trinity-fs
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start trinity-fs then start named
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 fi

@@ -212,9 +212,8 @@ function configure_pacemaker() {
     /usr/sbin/pcs cluster cib ${TMPFILE}
     for SERVICE in dhcpd lweb ltorrent; do
         /usr/sbin/pcs -f ${TMPFILE} resource delete ${SERVICE} || true
-        /usr/sbin/pcs -f ${TMPFILE} resource create ${SERVICE} systemd:dhcpd --force
-        /usr/sbin/pcs -f ${TMPFILE} constraint colocation add ${SERVICE} with Trinity
-        /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start ${SERVICE}
+        /usr/sbin/pcs -f ${TMPFILE} \
+            resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna --before mongod-arbiter
     done
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 
