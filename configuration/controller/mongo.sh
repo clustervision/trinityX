@@ -279,7 +279,7 @@ function configure_pacemaker() {
     /usr/sbin/pcs cluster cib ${TMPFILE}
     /usr/sbin/pcs -f ${TMPFILE} resource create mongod-arbiter systemd:mongod-arbiter --force
     /usr/sbin/pcs -f ${TMPFILE} resource group add Luna mongod-arbiter
-    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add Luna with trinity-fs
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add Luna with Trinity
     /usr/sbin/pcs -f ${TMPFILE} constraint order start trinity-fs then start Luna
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 }

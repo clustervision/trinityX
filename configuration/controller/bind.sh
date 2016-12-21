@@ -103,7 +103,7 @@ if flag_is_set HA && flag_is_set PRIMARY_INSTALL; then
     /usr/sbin/pcs cluster cib ${TMPFILE}
     /usr/sbin/pcs -f ${TMPFILE} resource delete named || true
     /usr/sbin/pcs -f ${TMPFILE} resource create named systemd:named --force
-    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add named with trinity-fs
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add named with Trinity
     /usr/sbin/pcs -f ${TMPFILE} constraint order start trinity-fs then start named
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 fi
