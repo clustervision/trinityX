@@ -278,6 +278,7 @@ function configure_pacemaker() {
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_drbd.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
     /usr/sbin/pcs -f ${TMPFILE} resource create mongod-arbiter systemd:mongod-arbiter --force
+    /usr/sbin/pcs -f ${TMPFILE} resource update mongod-arbiter op monitor interval=0 # disable fail actions
     /usr/sbin/pcs -f ${TMPFILE} resource group add Luna mongod-arbiter
     /usr/sbin/pcs -f ${TMPFILE} constraint colocation add Luna with Trinity
     /usr/sbin/pcs -f ${TMPFILE} constraint order start trinity-fs then start Luna

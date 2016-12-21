@@ -214,6 +214,7 @@ function configure_pacemaker() {
         /usr/sbin/pcs -f ${TMPFILE} resource delete ${SERVICE} || true
         /usr/sbin/pcs -f ${TMPFILE} \
             resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna --before mongod-arbiter
+        /usr/sbin/pcs -f ${TMPFILE} resource update ${SERVICE} op monitor interval=0 # disable fail actions
     done
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 
