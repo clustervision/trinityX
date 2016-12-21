@@ -306,7 +306,8 @@ function configure_pacemaker() {
     /usr/sbin/pcs -f ${TMPFILE} resource delete zabbix-server || true
     /usr/sbin/pcs -f ${TMPFILE} resource create zabbix-server systemd:zabbix-server --force
     /usr/sbin/pcs -f ${TMPFILE} constraint colocation add zabbix-server with Trinity
-    /usr/sbin/pcs -f ${TMPFILE} constraint order start Trinity then start zabbix-server
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start trinity-fs then start zabbix-server
+    /usr/sbin/pcs -f ${TMPFILE} constraint order promote Trinity-galera then start zabbix-server
 #    /usr/sbin/pcs -f ${TMPFILE} resource group add Trinity zabbix-server --after trinity-ip
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 }
