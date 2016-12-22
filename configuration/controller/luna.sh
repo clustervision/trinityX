@@ -59,7 +59,7 @@ function create_luna_folders() {
     /usr/bin/mkdir -p ${LPATH}/luna/{boot,torrents}
     /usr/bin/chown -R luna: ${LPATH}/luna/{boot,torrents}
     pushd ${LPATH}/luna
-        /usr/bin/ln -fs ../../luna/src/templates/
+        /usr/bin/ln -fs /luna/src/templates/
     popd
 }
 
@@ -73,14 +73,14 @@ function install_luna() {
     echo_info "Create symlinks."
 
     pushd /usr/lib64/python2.7
-        /usr/bin/ln -fs ../../../luna/src/module luna
+        /usr/bin/ln -fs /luna/src/module luna
     popd
     pushd /usr/sbin
-        /usr/bin/ln -fs ../../luna/src/exec/luna
-        /usr/bin/ln -fs ../../luna/src/exec/lpower
-        /usr/bin/ln -fs ../../luna/src/exec/lweb
-        /usr/bin/ln -fs ../../luna/src/exec/ltorrent
-        /usr/bin/ln -fs ../../luna/src/exec/lchroot
+        /usr/bin/ln -fs /luna/src/exec/luna
+        /usr/bin/ln -fs /luna/src/exec/lpower
+        /usr/bin/ln -fs /luna/src/exec/lweb
+        /usr/bin/ln -fs /luna/src/exec/ltorrent
+        /usr/bin/ln -fs /luna/src/exec/lchroot
     popd
 
     echo_info "Copy systemd unit files."
@@ -232,7 +232,7 @@ function install_standalone() {
     setup_nginx
     create_mongo_user
     configure_mongo_credentials
-    configure_luna
+    configure_luna $1
     configure_dns_dhcp
     if ! /usr/bin/systemctl start lweb ltorrent; then
         echo_error "Unable to start Luna services."
@@ -269,12 +269,12 @@ function install_secondary() {
 }
 
 if flag_is_unset HA; then
-    install_standalone "/opt/luna"
+    install_standalone "/opt"
 else
     if flag_is_set PRIMARY_INSTALL; then
-        install_primary "/trinity/local/luna"
+        install_primary "/trinity/local"
     else
-        install_secondary "/trinity/local/luna"
+        install_secondary "/trinity/local"
     fi
 fi
 
