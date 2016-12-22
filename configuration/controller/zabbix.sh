@@ -194,22 +194,6 @@ function slave_copy_files() {
     done
 }
 
-function zabbix_server_services () {
-    echo_info $FUNCNAME $@
-    if [ "x${1}" = "on" ]; then
-        echo_info "Enable and start zabbix service and dependencies"
-        systemctl restart zabbix-server
-        systemctl restart httpd
-        systemctl enable zabbix-server
-        systemctl enable httpd
-    fi
-    if [ "x${1}" = "off" ]; then
-        echo_info "Disable and stop zabbix service and dependencies"
-        systemctl stop zabbix-server
-        systemctl stop httpd
-    fi
-}
-
 function zabbix_server_config () {
   echo_info $FUNCNAME $@
   TOKEN=$(curl -s localhost/zabbix/api_jsonrpc.php \
@@ -330,30 +314,6 @@ function configure_pacemaker() {
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 }
 
-function main () {
-    check_zabbix_installation
-    create_script_dirs
-    setup_snmp_trapd
-    zabbix_web_config_init
-    if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
-        setup_zabbix_database
-        edit_zabbix_conf
-        copy_data_to_shared
-        symlynks_to_config
-    fi
-    zabbix_server_services on
-    if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
-        zabbix_server_config
-    fi
-    if flag_is_set HA; then
-        zabbix_server_services off
-    fi
-    if flag_is_set HA && flag_is_set PRIMARY_INSTALL; then
-        configure_pacemaker
-    fi
-
-}
-
 function install_standalone() {
     check_zabbix_installation
     create_script_dirs
@@ -363,7 +323,6 @@ function install_standalone() {
     edit_zabbix_conf
     /usr/bin/systemctl restart httpd zabbix-server
     /usr/bin/systemctl enable httpd zabbix-server
-    zabbix_server_services on
     zabbix_server_config
 }
 
