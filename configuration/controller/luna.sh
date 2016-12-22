@@ -43,24 +43,30 @@ function add_luna_user() {
 }
 
 function create_luna_folders() {
+
     LPATH=$1
     if [ "x${LPATH}" = "x" ]; then
         LPATH="/opt"
     fi
-    echo_info "Create dirs for Luna."
+    echo_info "Create dirs for Luna in ${LPATH}."
 
     /usr/bin/mkdir -p ${LPATH}/luna
     /usr/bin/chown -R luna: ${LPATH}/luna
     /usr/bin/chmod ag+rx ${LPATH}/luna
-    /usr/bin/mkdir -p /var/log/luna
-    /usr/bin/chown -R luna: /var/log/luna
-    /usr/bin/mkdir -p /var/run/luna
-    /usr/bin/chown -R luna: /var/run/luna
     /usr/bin/mkdir -p ${LPATH}/luna/{boot,torrents}
     /usr/bin/chown -R luna: ${LPATH}/luna/{boot,torrents}
     pushd ${LPATH}/luna
         /usr/bin/ln -fs /luna/src/templates/
     popd
+}
+
+function create_system_local_dirs() {
+    echo_info "Create pid and log folders."
+    /usr/bin/mkdir -p /var/log/luna
+    /usr/bin/chown -R luna: /var/log/luna
+    /usr/bin/mkdir -p /var/run/luna
+    /usr/bin/chown -R luna: /var/run/luna
+
 }
 
 function install_luna() {
@@ -226,6 +232,7 @@ function install_standalone() {
     install_luna
     add_luna_user $1
     create_luna_folders $1
+    create_system_local_dirs
     copy_dracut
     setup_tftp
     setup_dns
@@ -247,24 +254,25 @@ function install_standalone() {
 
 function install_primary() {
     install_standalone $1
-    /usr/bin/systemctl disable named dhcpd xinetd nginx lweb ltorrent
-    /usr/bin/systemctl stop named dhcpd xinetd nginx lweb ltorrent || /usr/bin/true
+    /usr/bin/systemctl disable named dhcpd lweb ltorrent
+    /usr/bin/systemctl stop named dhcpd lweb ltorrent || /usr/bin/true
     copy_configs_to_trix_local
     create_symlinks
     configure_pacemaker
 }
 
 function install_secondary() {
-    /usr/bin/systemctl stop named dhcpd xinetd nginx || /usr/bin/true
-    /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
+    /usr/bin/systemctl stop named dhcpd lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
     add_luna_user $1
     setup_tftp
     setup_dns
     setup_nginx
+    create_system_local_dirs
     configure_mongo_credentials
-    /usr/bin/systemctl disable named dhcpd xinetd nginx lweb ltorrent
-    #/usr/bin/systemctl restart named dhcpd xinetd nginx lweb ltorrent
+    /usr/bin/systemctl start xinetd nginx
+    /usr/bin/systemctl enable xinetd nginx
+    /usr/bin/systemctl disable named dhcpd lweb ltorrent
     create_symlinks
 }
 
