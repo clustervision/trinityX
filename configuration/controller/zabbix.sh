@@ -16,19 +16,28 @@
 # details.
 ######################################################################
 
+
 function do_sql_req {
     if [ -f ~/.my.cnf ]; then
-        echo $@ | /usr/bin/mysql
+        if ! echo $@ | /usr/bin/mysql; then
+            return 1
+        fi
         return 0
     fi
     if [ ${MYSQL_ROOT_PASSWORD} ]; then
-        echo $@ | /usr/bin/mysql -u root --password="${MYSQL_ROOT_PASSWORD}"
+        if ! echo $@ | /usr/bin/mysql -u root --password="${MYSQL_ROOT_PASSWORD}"; then
+            return 1
+        fi
         return 0
     fi
-    echo $@ | /usr/bin/mysql -u root
+    if ! echo $@ | /usr/bin/mysql -u root; then
+        return 1
+    fi
+    return 0
 }
 
 function check_zabbix_installation () {
+  echo_info $FUNCNAME $@
   echo_info "Check if a previous installation exists"
   local RPM_PKG_MISSING=""
   for package in {zabbix-server-mysql,zabbix-web-mysql,mariadb-server}; do
@@ -42,21 +51,27 @@ function check_zabbix_installation () {
 
 function setup_zabbix_credentials () {
   echo_info $FUNCNAME $@
-  ZABBIX_MYSQL_PASSWORD=`get_password $ZABBIX_MYSQL_PASSWORD`
-  ZABBIX_ADMIN_PASSWORD=`get_password $ZABBIX_ADMIN_PASSWORD`
-  store_password ZABBIX_MYSQL_PASSWORD "${ZABBIX_MYSQL_PASSWORD}"
-  store_password ZABBIX_ADMIN_PASSWORD "${ZABBIX_ADMIN_PASSWORD}"
+  if [ "x${ZABBIX_MYSQL_PASSWORD}" = "x" ]; then
+      ZABBIX_MYSQL_PASSWORD=`get_password $ZABBIX_MYSQL_PASSWORD`
+      store_password ZABBIX_MYSQL_PASSWORD "${ZABBIX_MYSQL_PASSWORD}"
+  fi
+  if [ "x${ZABBIX_ADMIN_PASSWORD}" = "x" ]; then
+      ZABBIX_ADMIN_PASSWORD=`get_password $ZABBIX_ADMIN_PASSWORD`
+      store_password ZABBIX_ADMIN_PASSWORD "${ZABBIX_ADMIN_PASSWORD}"
+  fi
 }
 
 function setup_zabbix_database () {
-  echo_info "Setup zabbix database"
-  if ! systemctl status mariadb &>/dev/null; then
+  echo_info $FUNCNAME $@
+  if ! do_sql_req "SELECT 1;"; then
     echo_error "MariaDB seems to not have started: exiting."
+    echo 1
   fi
-  if mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e 'use zabbix' &>/dev/null; then
+  if do_sql_req 'use zabbix' &>/dev/null; then
     echo_warn "Zabbix database detected, you need to erase it to continue."
     if [[ $ZABBIX_DATABASE_OVERWRITE =~ ^([yY][eE][sS]|[yY])$ ]]; then
-      mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "drop database zabbix;"
+      do_sql_req "DROP DATABASE IF EXISTS zabbix;"
+      do_sql_req "DROP USER IF EXISTS '${ZABBIX_MYSQL_USER}'@'%';"
     else
       echo_error "Will not continue: zabbix database present and ZABBIX_DATABASE_OVERWRITE is set to no."
       exit 1
@@ -70,8 +85,7 @@ function setup_zabbix_database () {
 }
 
 function zabbix_web_config_init () {
-
-  echo_info "Initialize zabbix-web configuration"
+  echo_info $FUNCNAME $@
 
   local TIMEZONE=$(readlink /etc/localtime | sed "s/..\/usr\/share\/zoneinfo\///")
 
@@ -95,30 +109,33 @@ function zabbix_web_config_init () {
 }
 
 function edit_zabbix_conf() {
-
-
+    echo_info $FUNCNAME $@
     sed -i -e "/^DBName=/{h;s/=.*/="${ZABBIX_MYSQL_DB}"/};\${x;/^$/{s//DBName=${ZABBIX_MYSQL_DB}/;H};x}"                       /etc/zabbix/zabbix_server.conf
     sed -i -e "/^DBUser=/{h;s/=.*/="${ZABBIX_MYSQL_USER}"/};\${x;/^$/{s//DBUser=${ZABBIX_MYSQL_USER}/;H};x}"                   /etc/zabbix/zabbix_server.conf
-    sed -i -e "/^DBPassword=/{h;s/=.*/="${ZABBIX_MYSQL_PASSWORD}"/};\${x;/^$/{s//DBPassword=${ZABBIX_MYSQL_PASSWORD}/;H};x}"   /etc/zabbix/zabbix_server.conf
+    append_line /etc/zabbix/zabbix_server.conf DBHost=${TRIX_CTRL_IP}
+    append_line /etc/zabbix/zabbix_server.conf DBPassword=${ZABBIX_MYSQL_PASSWORD}
     append_line /etc/zabbix/zabbix_server.conf SourceIP=${TRIX_CTRL_IP}
     append_line /etc/zabbix/zabbix_server.conf StartPollers=20
     append_line /etc/zabbix/zabbix_server.conf StartIPMIPollers=20
     append_line /etc/zabbix/zabbix_server.conf StartPollersUnreachable=10
     append_line /etc/zabbix/zabbix_server.conf StartPingers=10
     append_line /etc/zabbix/zabbix_server.conf StartSNMPTrapper=1
-    append_line /etc/zabbix/zabbix_server.conf CacheSize=1024M
-    append_line /etc/zabbix/zabbix_server.conf HistoryCacheSize=1024M
-    append_line /etc/zabbix/zabbix_server.conf TrendCacheSize=1024M
+    append_line /etc/zabbix/zabbix_server.conf CacheSize=128M
+    append_line /etc/zabbix/zabbix_server.conf HistoryCacheSize=128M
+    append_line /etc/zabbix/zabbix_server.conf TrendCacheSize=128M
     append_line /etc/zabbix/zabbix_server.conf Timeout=30
 
 }
 
 function create_script_dirs() {
+    echo_info $FUNCNAME $@
     mkdir -p /usr/lib/zabbix/alertscripts
     mkdir -p /usr/lib/zabbix/externalscripts
+    mkdir -p /var/lib/zabbix/userparameters
 }
 
 function setup_snmp_trapd () {
+  echo_info $FUNCNAME $@
   cp -f ${POST_FILEDIR}/snmptrapd.conf /etc/snmp/snmptrapd.conf
   cp -f ${POST_FILEDIR}/snmptt.conf /etc/snmp/snmptt.conf
   cp -f ${POST_FILEDIR}/snmptt.ini /etc/snmp/snmptt.ini
@@ -131,7 +148,8 @@ function setup_snmp_trapd () {
   # file /var/log/snmptrap/snmptrap.log should be created and filled with some data
 }
 
-function copy_data_to_shared() {
+function copy_data_to_trix_local() {
+    echo_info $FUNCNAME $@
     FILES=" /etc/zabbix/zabbix_server.conf \
             /etc/zabbix/web \
             /etc/httpd/conf.d/zabbix.conf
@@ -139,46 +157,45 @@ function copy_data_to_shared() {
             /usr/lib/zabbix/externalscripts \
             "
     for FILE in ${FILES}; do
-        if [ ! -e ${TRIX_ROOT}/shared/${FILE} ]; then
-            tar -cf - ${FILE} | (cd ${TRIX_ROOT}/shared/; tar -xf -)
+        if [ ! -e ${TRIX_ROOT}/local/${FILE} ]; then
+            tar -cf - ${FILE} | (cd ${TRIX_ROOT}/local/; tar -xf -)
         fi
     done
 }
 
-function copy_zabbix_scripts() {
-  cp -f ${POST_FILEDIR}/zabbix_agentd.d/*   /etc/zabbix/zabbix_agentd.d/
-  cp -f ${POST_FILEDIR}/externalscripts/*   /usr/lib/zabbix/externalscripts/
-  mkdir -p /var/lib/zabbix/userparameters
-  cp -f ${POST_FILEDIR}/userparameters/*    /var/lib/zabbix/userparameters/
-  cp -f ${POST_FILEDIR}/sudoers-zabbix      /etc/sudoers.d/zabbix
+function mkdir_userparamanters() {
+  echo_info $FUNCNAME $@
 }
 
 function symlynks_to_config() {
+    echo_info $FUNCNAME $@
     FILES=" /etc/zabbix/zabbix_server.conf \
             /usr/lib/zabbix/alertscripts \
             /usr/lib/zabbix/externalscripts \
             "
-    for FILE in FILES; do
+    for FILE in $FILES; do
         if [ ! -h ${FILE} ];then
             mv ${FILE}{,.orig}
-            ln -s ${TRIX_ROOT}/shared/${FILE} ${FILE}
+            ln -s ${TRIX_ROOT}/local/${FILE} ${FILE}
         fi
     done
 }
 
 function slave_copy_files() {
+    echo_info $FUNCNAME $@
     FILES=" /etc/zabbix/web \
             /etc/httpd/conf.d/zabbix.conf\
             "
     for FILE in ${FILES}; do
         if [ ! -e ${FILE}.orig ];then
             mv ${FILE}{,.orig}
-            cp -prf ${TRIX_ROOT}/shared/${FILE} ${FILE}
+            cp -prf ${TRIX_ROOT}/local/${FILE} ${FILE}
         fi
     done
 }
 
 function zabbix_server_services () {
+    echo_info $FUNCNAME $@
     if [ "x${1}" = "on" ]; then
         echo_info "Enable and start zabbix service and dependencies"
         systemctl restart zabbix-server
@@ -194,6 +211,7 @@ function zabbix_server_services () {
 }
 
 function zabbix_server_config () {
+  echo_info $FUNCNAME $@
   TOKEN=$(curl -s localhost/zabbix/api_jsonrpc.php \
               -H 'Content-Type: application/json-rpc' \
               -d '{"jsonrpc": "2.0",
@@ -320,11 +338,9 @@ function main () {
     if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
         setup_zabbix_database
         edit_zabbix_conf
-        copy_zabbix_scripts
         copy_data_to_shared
-
+        symlynks_to_config
     fi
-    symlynks_to_config
     zabbix_server_services on
     if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
         zabbix_server_config
@@ -338,7 +354,49 @@ function main () {
 
 }
 
+function install_standalone() {
+    check_zabbix_installation
+    create_script_dirs
+    setup_snmp_trapd
+    zabbix_web_config_init
+    setup_zabbix_database
+    edit_zabbix_conf
+    /usr/bin/systemctl restart httpd zabbix-server
+    /usr/bin/systemctl enable httpd zabbix-server
+    zabbix_server_services on
+    zabbix_server_config
+}
+
+function install_primary() {
+    install_standalone
+    /usr/bin/systemctl disable zabbix-server
+    copy_data_to_trix_local
+    symlynks_to_config
+    /usr/bin/systemctl restart zabbix-server 
+    configure_pacemaker
+}
+
+function install_secondary() {
+    check_zabbix_installation
+    create_script_dirs
+    setup_snmp_trapd
+    zabbix_web_config_init
+    slave_copy_files
+    symlynks_to_config
+    /usr/bin/systemctl restart httpd 
+    /usr/bin/systemctl enable httpd 
+    /usr/bin/systemctl disable zabbix-server
+}
+
 
 display_var ZABBIX_{MYSQL_USER,MYSQL_DB,DATABASE_OVERWRITE,STORE_HISTORY,STORE_TRENDS}
 
-echo_info 'Zabbix installation script' && main
+if flag_is_unset HA; then
+    install_standalone
+else
+    if flag_is_set PRIMARY_INSTALL; then
+        install_primary
+    else
+        install_secondary
+    fi
+fi
