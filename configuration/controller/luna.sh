@@ -20,6 +20,12 @@ if [ "x${LUNA_MONGO_PASS}" = "x" ]; then
     LUNA_MONGO_PASS=`get_password $LUNA_MONGO_PASS`
     store_password LUNA_MONGO_PASS $LUNA_MONGO_PASS
 fi
+
+MONGO_HOST=localhost
+if flag_is_set HA; then
+    MONGO_HOST=luna/localhost
+fi
+
 function add_luna_user() {
     LPATH=$1
     if [ "x${LPATH}" = "x" ]; then
@@ -31,7 +37,7 @@ function add_luna_user() {
         /usr/sbin/userdel luna
 
     fi
-    if grep -q -E "^luna:" /etc/group ; then
+    if /usr/bin/grep -q -E "^luna:" /etc/group ; then
         /usr/sbin/groupdel luna
     fi
 
@@ -56,7 +62,7 @@ function create_luna_folders() {
     /usr/bin/mkdir -p ${LPATH}/luna/{boot,torrents}
     /usr/bin/chown -R luna: ${LPATH}/luna/{boot,torrents}
     pushd ${LPATH}/luna
-        /usr/bin/ln -fs /luna/src/templates/
+        /usr/bin/cp -pr /luna/src/templates ./
     popd
 }
 
@@ -138,8 +144,7 @@ function setup_nginx() {
 
 function create_mongo_user() {
     echo_info "Configure credentials for MongoDB access."
-
-    /usr/bin/mongo --host luna/localhost -u "root" -p${MONGODB_ROOT_PASS} --authenticationDatabase admin << EOF
+    /usr/bin/mongo --host ${MONGO_HOST} -u "root" -p${MONGODB_ROOT_PASS} --authenticationDatabase admin << EOF
 use luna
 db.createUser({user: "luna", pwd: "${LUNA_MONGO_PASS}", roles: [{role: "dbOwner", db: "luna"}]})
 EOF
@@ -147,7 +152,8 @@ EOF
 
 function configure_mongo_credentials() {
     echo_info "Create /etc/luna.conf"
-    /usr/bin/cat > /etc/luna.conf <<EOF
+    if flag_is_set HA; then
+        /usr/bin/cat > /etc/luna.conf <<EOF
 [MongoDB]
 replicaset=luna
 server=localhost
@@ -155,6 +161,15 @@ authdb=luna
 user=luna
 password=${LUNA_MONGO_PASS}
 EOF
+    else
+        /usr/bin/cat > /etc/luna.conf <<EOF
+[MongoDB]
+server=localhost
+authdb=luna
+user=luna
+password=${LUNA_MONGO_PASS}
+EOF
+    fi
     /usr/bin/chown luna:luna /etc/luna.conf
     /usr/bin/chmod 600 /etc/luna.conf
 }
@@ -166,12 +181,11 @@ function configure_luna() {
         LPATH="/opt"
     fi
     create_luna_db_backup
-    echo -e "use luna\ndb.dropDatabase()" | /usr/bin/mongo -u "root" -p${MONGODB_ROOT_PASS} --authenticationDatabase admin --host luna/localhost
-    if ! /usr/sbin/luna cluster init; then
-        echo_error "Luna is unale to initialize cluster"
+    echo -e "use luna\ndb.dropDatabase()" | /usr/bin/mongo -u "root" -p${MONGODB_ROOT_PASS} --authenticationDatabase admin --host ${MONGO_HOST}
+    if ! /usr/sbin/luna cluster init --path $LPATH/luna; then
+        echo_error "Luna is unable to initialize cluster"
         exit 1
     fi
-    /usr/sbin/luna cluster change --path "${LPATH}/luna"
     /usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND}
     /usr/sbin/luna network add -n ${LUNA_NETWORK_NAME} -N ${LUNA_NETWORK} -P ${LUNA_PREFIX}
     /usr/sbin/luna network change -n ${LUNA_NETWORK_NAME} --ns_ip ${LUNA_FRONTEND} --ns_hostname ${CTRL_HOSTNAME}
@@ -181,7 +195,7 @@ function create_luna_db_backup() {
     SUFFIX="trixbkp.$(/usr/bin/date +%Y-%m-%d_%H-%M-%S)"
     BKPPATH=/root/mongo.luna.${SUFFIX}
     echo_info "Create Luna DB backup to ${BKPPATH}."
-    /usr/bin/mongodump -u "root" -p${MONGODB_ROOT_PASS} --authenticationDatabase admin --host luna/localhost -d luna -o ${BKPPATH}
+    /usr/bin/mongodump -u "root" -p${MONGODB_ROOT_PASS} --authenticationDatabase admin --host ${MONGO_HOST} -d luna -o ${BKPPATH}
 
 }
 
@@ -219,7 +233,7 @@ function configure_pacemaker() {
     for SERVICE in dhcpd lweb ltorrent; do
         /usr/sbin/pcs -f ${TMPFILE} resource delete ${SERVICE} || true
         /usr/sbin/pcs -f ${TMPFILE} \
-            resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna --before mongod-arbiter
+            resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna mongod-arbiter
         /usr/sbin/pcs -f ${TMPFILE} resource update ${SERVICE} op monitor interval=0 # disable fail actions
     done
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
@@ -269,7 +283,7 @@ function install_secondary() {
     setup_dns
     setup_nginx
     create_system_local_dirs
-    configure_mongo_credentials
+    configure_mongo_credentials 1
     /usr/bin/systemctl start xinetd nginx
     /usr/bin/systemctl enable xinetd nginx
     /usr/bin/systemctl disable named dhcpd lweb ltorrent

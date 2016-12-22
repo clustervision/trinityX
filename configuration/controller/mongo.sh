@@ -131,6 +131,49 @@ function create_mongo_key() {
     fi
 }
 
+function setup_standalone_mongo() {
+    echo_info "MongoDB replica set configuration"
+    MONGODB_HOST=$1
+    MONGODB_PATH="/var/lib/mongodb"
+    if ! make_bkp ${MONGODB_PATH} ; then
+        echo_error "Unable to make backup of ${MONGODB_PATH}"
+        exit 1
+    fi
+    rm -rf ${MONGODB_PATH}/*
+    if [ ! -f /etc/mongod.conf ]; then
+        echo_err "Unable to find /etc/mongod.conf file."
+        exit 1
+    fi
+    /usr/bin/sed -i \
+        -e "s/^[#\t ]*bind_ip = .*/bind_ip = 127.0.0.1/" \
+        -e "s/^[#\t ]*smallfiles = .*/smallfiles = true/" \
+    /etc/mongod.conf
+
+}
+
+function setup_rs_mongo() {
+    echo_info "MongoDB replica set configuration"
+    MONGODB_HOST=$1
+    MONGODB_PATH="/var/lib/mongodb"
+    if ! make_bkp ${MONGODB_PATH} ; then
+        echo_error "Unable to make backup of ${MONGODB_PATH}"
+        exit 1
+    fi
+    rm -rf ${MONGODB_PATH}/*
+    if [ ! -f /etc/mongod.conf ]; then
+        echo_err "Unable to find /etc/mongod.conf file."
+        exit 1
+    fi
+    /usr/bin/sed -i \
+        -e "s/^[#\t ]*bind_ip = .*/bind_ip = 127.0.0.1,${MONGODB_HOST}/" \
+        -e "s/^[#\t ]*keyFile = .*/keyFile = \/etc\/mongo.key/" \
+        -e "s/^[#\t ]*replSet = .*/replSet = luna/" \
+        -e "s/^[#\t ]*smallfiles = .*/smallfiles = true/" \
+    /etc/mongod.conf
+
+}
+
+
 function copy_mongo_key() {
     echo_info "Copy MongoDB key file."
     if [ ! -f /trinity/local/etc/mongo.key ]; then
@@ -147,8 +190,8 @@ function copy_mongo_key() {
 
 }
 
-function setup_standalone_mongo() {
-    echo_info "MongoDB basic configuration"
+function setup_rs_mongo() {
+    echo_info "MongoDB replica set configuration"
     MONGODB_HOST=$1
     MONGODB_PATH="/var/lib/mongodb"
     if ! make_bkp ${MONGODB_PATH} ; then
@@ -287,8 +330,18 @@ function configure_pacemaker() {
 
 function install_standalone() {
     /usr/bin/systemctl stop mongod
-    create_mongo_key
     setup_standalone_mongo ${CTRL1_IP}
+    /usr/bin/systemctl restart mongod
+    mongo_setup_auth
+    create_auth_file
+    /usr/bin/systemctl enable mongod
+    /usr/bin/systemctl restart mongod
+}
+
+function install_primary() {
+    /usr/bin/systemctl stop mongod
+    create_mongo_key
+    setup_rs_mongo ${CTRL1_IP}
     /usr/bin/systemctl restart mongod
     initiate_rs
     wait_master
@@ -298,11 +351,6 @@ function install_standalone() {
     /usr/bin/systemctl restart mongod
     wait_master "root" "${MONGODB_ROOT_PASS}"
     check_rs_status
-
-}
-
-function install_primary() {
-    install_standalone
     setup_mongod_arbiter ${CTRL_IP}
     /usr/bin/systemctl disable mongod-arbiter.service
     /usr/bin/systemctl restart mongod-arbiter.service
@@ -317,7 +365,7 @@ function install_primary() {
 function install_secondary() {
     /usr/bin/systemctl stop mongod
     copy_mongo_key
-    setup_standalone_mongo ${CTRL2_IP}
+    setup_rs_mongo ${CTRL2_IP}
     setup_mongod_arbiter
     create_auth_file
     /usr/bin/systemctl disable mongod
