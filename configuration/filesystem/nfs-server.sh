@@ -209,7 +209,7 @@ elif flag_is_set PRIMARY_INSTALL ; then
     pcs -f $tmpfile resource create trinity-nfs-server ocf:heartbeat:nfsserver \
         nfs_shared_infodir="${TRIX_LOCAL}"/var/lib/nfs op monitor interval=47s
 
-    pcs -f $tmpfile resource group add Trinity trinity-nfs-server --after fs-ready
+    pcs -f $tmpfile resource group add Trinity-fs trinity-nfs-server --after fs-ready
 
     # Apply the changes
     if ! pcs cluster cib-push $tmpfile ; then
