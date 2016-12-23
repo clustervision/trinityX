@@ -276,6 +276,7 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
     # crm_resource -L
      Resource Group: Trinity
          primary    (ocf::heartbeat:Dummy): Started
+         fs-ready   (ocf::heartbeat:Dummy): Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Started
          trinity-ip (ocf::heartbeat:IPaddr2):   Started
      Resource Group: Trinity-secondary
@@ -300,12 +301,13 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
 
 #. Stop all resources after ``primary``, as they depend on the ``/trinity`` directory. With the resources listed above, this will be::
 
-    # pcs resource disable trinity-nfs-server
+    # pcs resource disable fs-ready
     
     # crm_resource -L
      Resource Group: Trinity
          primary    (ocf::heartbeat:Dummy): Started
-         trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped (disabled)
+         fs-ready   (ocf::heartbeat:Dummy): Stopped (disabled)
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped
          trinity-ip (ocf::heartbeat:IPaddr2):   Stopped
      Resource Group: Trinity-secondary
          secondary  (ocf::heartbeat:Dummy): Stopped
@@ -333,7 +335,8 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
          primary    (ocf::heartbeat:Dummy): Started
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
-         trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped (disabled)
+         fs-ready   (ocf::heartbeat:Dummy): Stopped (disabled)
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped
          trinity-ip (ocf::heartbeat:IPaddr2):   Stopped
      Resource Group: Trinity-secondary
          secondary  (ocf::heartbeat:Dummy): Stopped
@@ -344,15 +347,16 @@ Let's assume that you are using the standard paths, and are doing an HA setup. L
     
     # ln -fs /trinity/shared/trinity.sh /etc/trinity.sh
 
-#. Re-enable the NFS server and the subsequent resources::
+#. Re-enable ``fs-ready`` and the subsequent resources::
 
-    # pcs resource enable trinity-nfs-server
+    # pcs resource enable fs-ready
     
     # crm_resource -L
      Resource Group: Trinity
          primary    (ocf::heartbeat:Dummy): Started
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
+         fs-ready   (ocf::heartbeat:Dummy): Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Started
          trinity-ip (ocf::heartbeat:IPaddr2):   Started
      Resource Group: Trinity-secondary
@@ -444,6 +448,7 @@ Let's assume that the shared block device is ``/dev/sda``, and that we want 2 pa
          primary    (ocf::heartbeat:Dummy): Started
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
+         fs-ready   (ocf::heartbeat:Dummy): Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Started
          trinity-ip (ocf::heartbeat:IPaddr2):   Started
      Resource Group: Trinity-secondary
@@ -474,9 +479,9 @@ Let's assume that the shared block device is ``/dev/sda``, and that we want 2 pa
 
     # mkfs.ext4 -v -b 4096 -E stripe_width=2048 /dev/sda2
 
-#. If it is started, stop the NFS server (which depends on the filesystems)::
+#. Stop ``fs-ready``, which will stop everything that depends on the filesystems::
 
-    # pcs resource disable trinity-nfs-server
+    # pcs resource disable fs-ready
 
 #. If for some reason there is already some data in the new home directory, rename it to something else so that you can copy that data to the new partition when it will be mounted.
 
@@ -504,7 +509,8 @@ Let's assume that the shared block device is ``/dev/sda``, and that we want 2 pa
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
          trinity-fs-homes   (ocf::heartbeat:Filesystem):    Started
-         trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped (disabled)
+         fs-ready   (ocf::heartbeat:Dummy): Stopped (disabled)
+         trinity-nfs-server (ocf::heartbeat:nfsserver): Stopped
          trinity-ip (ocf::heartbeat:IPaddr2):   Stopped
      Resource Group: Trinity-secondary
          secondary  (ocf::heartbeat:Dummy): Stopped
@@ -521,7 +527,7 @@ Let's assume that the shared block device is ``/dev/sda``, and that we want 2 pa
                   monitor interval=33s (trinity-fs-homes-monitor-interval-33s)
                   monitor interval=65s OCF_CHECK_LEVEL=10 (trinity-fs-homes-monitor-interval-65s)
 
-#. If you have data to rsync back onto the new home partition, do it now. Then restart the NFS server and check again that all is well::
+#. If you have data to rsync back onto the new home partition, do it now. Then restart ``fs-ready`` and check again that all is well::
 
     # crm_resource -L
      Resource Group: Trinity
@@ -529,6 +535,7 @@ Let's assume that the shared block device is ``/dev/sda``, and that we want 2 pa
          wait-for-device    (ocf::heartbeat:Delay): Started
          trinity-fs (ocf::heartbeat:Filesystem):    Started
          trinity-fs-homes   (ocf::heartbeat:Filesystem):    Started
+         fs-ready   (ocf::heartbeat:Dummy): Started
          trinity-nfs-server (ocf::heartbeat:nfsserver): Started
          trinity-ip (ocf::heartbeat:IPaddr2):   Started
      Resource Group: Trinity-secondary
