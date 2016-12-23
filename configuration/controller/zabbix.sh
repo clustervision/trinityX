@@ -163,10 +163,6 @@ function copy_data_to_trix_local() {
     done
 }
 
-function mkdir_userparamanters() {
-  echo_info $FUNCNAME $@
-}
-
 function symlynks_to_config() {
     echo_info $FUNCNAME $@
     FILES=" /etc/zabbix/zabbix_server.conf \
@@ -305,7 +301,7 @@ function configure_pacemaker() {
     echo_info "Configure pacemaker's resources."
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_zabbix.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
-    /usr/sbin/pcs -f ${TMPFILE} resource delete zabbix-server || true
+    /usr/sbin/pcs -f ${TMPFILE} resource delete zabbix-server 2>/dev/null || /usr/bin/true
     /usr/sbin/pcs -f ${TMPFILE} resource create zabbix-server systemd:zabbix-server --force
     /usr/sbin/pcs -f ${TMPFILE} constraint colocation add zabbix-server with Trinity
     /usr/sbin/pcs -f ${TMPFILE} constraint order start trinity-fs then start zabbix-server
@@ -331,7 +327,7 @@ function install_primary() {
     /usr/bin/systemctl disable zabbix-server
     copy_data_to_trix_local
     symlynks_to_config
-    /usr/bin/systemctl restart zabbix-server 
+    /usr/bin/systemctl restart zabbix-server
     configure_pacemaker
 }
 
@@ -342,8 +338,8 @@ function install_secondary() {
     zabbix_web_config_init
     slave_copy_files
     symlynks_to_config
-    /usr/bin/systemctl restart httpd 
-    /usr/bin/systemctl enable httpd 
+    /usr/bin/systemctl restart httpd
+    /usr/bin/systemctl enable httpd
     /usr/bin/systemctl disable zabbix-server
 }
 
