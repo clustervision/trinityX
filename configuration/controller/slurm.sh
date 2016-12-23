@@ -157,8 +157,8 @@ function move_spool() {
     /usr/bin/sed -i -e '/StateSaveLocation/d' /etc/slurm/slurm.conf
     append_line /etc/slurm/slurm.conf "StateSaveLocation=$SPOOL_DIR"
     if [ -f /var/spool/slurm/clustername ]; then
-        /usr/bin/mv /var/spool/slurm/* ${SPOOL_DIR} || true
-        /usr/bin/rm -rf /var/spool/slurm || true
+        /usr/bin/mv /var/spool/slurm/* ${SPOOL_DIR} 2>/dev/null || /usr/bin/true
+        /usr/bin/rm -rf /var/spool/slurm 2>/dev/null || /usr/bin/true
     fi
 
 }
@@ -182,7 +182,7 @@ function create_slurmdbd_user() {
     SUFFIX="trixbkp.$(/usr/bin/date +%Y-%m-%d_%H-%M-%S)"
     /usr/bin/mysqldump -u root --password="${MYSQL_ROOT_PASSWORD}" \
         --databases ${SLURMDBD_MYSQL_DB} >\
-        /root/mysqldump.${SLURMDBD_MYSQL_DB}.${SUFFIX} || true
+        /root/mysqldump.${SLURMDBD_MYSQL_DB}.${SUFFIX} 2>/dev/null || /usr/bin/true
     do_sql_req "DROP DATABASE IF EXISTS ${SLURMDBD_MYSQL_DB};"
     do_sql_req "CREATE DATABASE IF NOT EXISTS ${SLURMDBD_MYSQL_DB};"
     do_sql_req "DROP USER IF EXISTS '${SLURMDBD_MYSQL_USER}'@'localhost';"
@@ -214,8 +214,8 @@ function configure_pacemaker() {
     echo_info "Configure pacemaker's resources."
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_drbd.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
-    /usr/sbin/pcs -f ${TMPFILE} resource delete slurmctld || true
-    /usr/sbin/pcs -f ${TMPFILE} resource delete slurmdbd || true
+    /usr/sbin/pcs -f ${TMPFILE} resource delete slurmctld 2>/dev/null || /usr/bin/true
+    /usr/sbin/pcs -f ${TMPFILE} resource delete slurmdbd 2>/dev/null || /usr/bin/true
     /usr/sbin/pcs -f ${TMPFILE} resource create slurmdbd systemd:slurmdbd --force --group=Slurm
     /usr/sbin/pcs -f ${TMPFILE} resource create slurmctld systemd:slurmctld --force --group=Slurm
     /usr/sbin/pcs -f ${TMPFILE} constraint colocation add Slurm with Trinity
