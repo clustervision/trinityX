@@ -233,7 +233,7 @@ function configure_pacemaker() {
     for SERVICE in dhcpd lweb ltorrent; do
         /usr/sbin/pcs -f ${TMPFILE} resource delete ${SERVICE} 2>/dev/null || /usr/bin/true
         /usr/sbin/pcs -f ${TMPFILE} \
-            resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna mongod-arbiter
+            resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna
         /usr/sbin/pcs -f ${TMPFILE} resource update ${SERVICE} op monitor interval=0 # disable fail actions
     done
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
