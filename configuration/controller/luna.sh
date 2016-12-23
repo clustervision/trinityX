@@ -231,7 +231,7 @@ function configure_pacemaker() {
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_luna.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
     for SERVICE in dhcpd lweb ltorrent; do
-        /usr/sbin/pcs -f ${TMPFILE} resource delete ${SERVICE} || true
+        /usr/sbin/pcs -f ${TMPFILE} resource delete ${SERVICE} 2>/dev/null || /usr/bin/true
         /usr/sbin/pcs -f ${TMPFILE} \
             resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna mongod-arbiter
         /usr/sbin/pcs -f ${TMPFILE} resource update ${SERVICE} op monitor interval=0 # disable fail actions
@@ -241,7 +241,7 @@ function configure_pacemaker() {
 }
 
 function install_standalone() {
-    /usr/bin/systemctl stop named dhcpd xinetd nginx || /usr/bin/true
+    /usr/bin/systemctl stop named dhcpd xinetd nginx 2>/dev/null || /usr/bin/true
     /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
     add_luna_user $1

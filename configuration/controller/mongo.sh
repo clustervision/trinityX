@@ -320,6 +320,7 @@ function configure_pacemaker() {
     echo_info "Configure pacemaker's resources."
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_drbd.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
+    /usr/sbin/pcs -f ${TMPFILE} resource delete mongod-arbiter 2>/dev/null || /usr/bin/true
     /usr/sbin/pcs -f ${TMPFILE} resource create mongod-arbiter systemd:mongod-arbiter --force
     /usr/sbin/pcs -f ${TMPFILE} resource update mongod-arbiter op monitor interval=0 # disable fail actions
     /usr/sbin/pcs -f ${TMPFILE} resource group add Luna mongod-arbiter

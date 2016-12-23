@@ -115,7 +115,7 @@ function configure_pacemaker() {
     echo_info 'Configure pacemaker.'
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_named.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
-    /usr/sbin/pcs -f ${TMPFILE} resource delete named || true
+    /usr/sbin/pcs -f ${TMPFILE} resource delete named 2>/dev/null || /usr/bin/true
     /usr/sbin/pcs -f ${TMPFILE} resource create named systemd:named --force
     /usr/sbin/pcs -f ${TMPFILE} constraint colocation add named with Trinity
     /usr/sbin/pcs -f ${TMPFILE} constraint order start trinity-fs then start named
