@@ -163,8 +163,6 @@ function move_spool() {
 
 }
 
-echo_info "Creating db for slurm accounting"
-
 function do_sql_req {
     if [ -f ~/.my.cnf ]; then
         echo $@ | /usr/bin/mysql
