@@ -314,8 +314,8 @@ function install_standalone() {
     check_zabbix_installation
     create_script_dirs
     setup_snmp_trapd
-    zabbix_web_config_init
     setup_zabbix_database
+    zabbix_web_config_init
     edit_zabbix_conf
     /usr/bin/systemctl restart httpd zabbix-server
     /usr/bin/systemctl enable httpd zabbix-server
