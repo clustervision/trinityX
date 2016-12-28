@@ -386,6 +386,23 @@ else
     echo
     display_var SHARED_FS_{DEVICE,PART}
 
+    # Step 3: Move /trinity in order not to be mounted on top
+    # -------
+
+    if flag_is_unset HA || flag_is_set PRIMARY_INSTALL ; then
+        # We need to save /trinity as new block device will be mounted on top
+
+        echo_info 'Move data from ${TRIX_ROOT} to ${TRIX_ROOT}.bkp'
+
+        if ! /usr/bin/mv ${TRIX_ROOT}{,.bkp}; then
+            echo_error "Unable to move ${TRIX_ROOT} to ${TRIX_ROOT}.bkp, exiting."
+            exit 1
+        fi
+
+        echo_info 'Create empty ${TRIX_ROOT}'
+
+        /usr/bin/mkdir ${TRIX_ROOT}
+    fi
 
     # Step 2: set up the mount / Pacemaker resource
     # -------
@@ -430,6 +447,15 @@ else
         fi
 
         check_cluster trinity-fs
+    fi
+
+    # Step 3: restore /trinity
+    # -------
+
+    if flag_is_unset HA || flag_is_set PRIMARY_INSTALL ; then
+        if ! /usr/bin/rsync -HAXavz ${TRIX_ROOT}.bkp/ ${TRIX_ROOT}; then
+            echo_error "Unable to restore from ${TRIX_ROOT}.bkp to ${TRIX_ROOT}, exiting."
+            exit 1
     fi
 fi
 
