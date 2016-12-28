@@ -120,6 +120,11 @@ else
 
         pcs resource create Galera ocf:heartbeat:galera wsrep_cluster_address="$CLUSTER_ADDR"
         pcs resource master Trinity-galera Galera master-max=1
+
+        pcs resource update Galera op monitor interval=20 timeout=90
+        pcs resource update Galera op monitor role=Master interval=10 timeout=90
+        pcs resource update Galera op monitor role=Slave interval=30 timeout=90
+
         pcs constraint colocation add Master Trinity-galera with Trinity INFINITY
 
         echo_info "Bootstrapping the galera cluster"

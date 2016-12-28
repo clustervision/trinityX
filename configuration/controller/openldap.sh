@@ -144,7 +144,7 @@ chmod 600 /etc/obol.conf
 
 sed -i "s,{{ rootPW }},$SLAPD_ROOT_PW," /etc/obol.conf
 
-if flag_is_set NFS_HOME_OPTS ; then
+if [[ $TRIX_HOME ]]; then
     echo_info 'Update the user homes location'
 
     sed -i "s,# \(home =\),\1 $TRIX_HOME," /etc/obol.conf

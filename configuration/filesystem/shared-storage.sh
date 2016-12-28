@@ -264,6 +264,10 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
         tmpfile=$(mktemp -p /root pacemaker_drbd.XXXX)
         pcs cluster cib $tmpfile
 
+        # A group to hold the filesystem resources with a dummy resource
+        pcs -f $tmpfile resource create fs-ready ocf:heartbeat:Dummy op monitor interval=183s
+        pcs -f $tmpfile resource group add Trinity-fs fs-ready
+
         # The pair of resources for the DRBD service
         pcs -f $tmpfile resource create DRBD ocf:linbit:drbd drbd_resource=trinity_disk op monitor interval=59s promote interval=67s
         pcs -f $tmpfile resource master Trinity-drbd DRBD master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
@@ -281,9 +285,11 @@ if [[ $SHARED_FS_TYPE == drbd ]] ; then
         pcs -f $tmpfile resource op add trinity-fs monitor interval=67s OCF_CHECK_LEVEL=10
 
         # The colocation rules
-        pcs -f $tmpfile constraint order set Trinity-drbd Trinity Trinity-secondary
-        pcs -f $tmpfile constraint colocation add Trinity with Trinity-drbd score=INFINITY with-rsc-role=Master
-        pcs -f $tmpfile resource group add Trinity wait-for-device trinity-fs --after primary
+        pcs -f $tmpfile constraint order set Trinity Trinity-drbd Trinity-fs Trinity-secondary
+        pcs -f $tmpfile constraint colocation add Master Trinity-drbd with Trinity INFINITY
+
+        pcs -f $tmpfile resource group add Trinity-fs wait-for-device trinity-fs --before fs-ready
+        pcs -f $tmpfile constraint colocation add Trinity-fs with Trinity
 
         # That one shouldn't be needed with the constraints above, but DRBD
         # takes forever to promote a clone after Pacemaker decided that it
@@ -407,6 +413,10 @@ else
         tmpfile=$(mktemp -p /root pacemaker_dev.XXXX)
         pcs cluster cib $tmpfile
 
+        # A group to hold the filesystem resources with a dummy resource
+        pcs -f $tmpfile resource create fs-ready ocf:heartbeat:Dummy op monitor interval=183s
+        pcs -f $tmpfile resource group add Trinity-fs fs-ready
+
         # Chances are, there will be another resource to deal with RAID.
         # So just add a delay right now.
         pcs -f $tmpfile resource create wait-for-device ocf:heartbeat:Delay startdelay=10 stopdelay=3
@@ -421,7 +431,8 @@ else
         pcs -f $tmpfile resource op add trinity-fs monitor interval=67s OCF_CHECK_LEVEL=10
 
         # The colocation rules
-        pcs -f $tmpfile resource group add Trinity wait-for-device trinity-fs --after primary
+        pcs -f $tmpfile resource group add Trinity-fs wait-for-device trinity-fs --before fs-ready
+        pcs -f $tmpfile constraint colocation add Trinity-fs with Trinity
 
         # Apply the changes
         if ! pcs cluster cib-push $tmpfile ; then

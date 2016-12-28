@@ -20,12 +20,16 @@
 # Post-installation script to set up a local RPM repository with all the
 # packages required for installation.
 
+# TRIX_ROOT is still undefined at the time this script runs. We set a
+# default value here. (The other solution being rewriting too much of the code)
+# It will be defined later on when critical-section-beginning is run.
+
+TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trinity}"
+
 # This is used for sites where there is no internet access, in which case all
 # packages dependencies are needed, as well as for custom-built packages.
 
-
 echo_info 'Copying packages and setting up the local repositories'
-
 
 # On a node, those are made available via bind mount at installation time, and
 # NFS later.
