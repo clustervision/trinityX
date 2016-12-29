@@ -274,6 +274,7 @@ function install_secondary() {
         /usr/bin/mv /etc/slurm{,.orig}
     fi
     /usr/bin/ln -s ${TRIX_ROOT}/shared/etc/slurm /etc/slurm
+    tune_systemd_units
 }
 
 display_var SLURMDBD_MYSQL_DB SLURMDBD_MYSQL_USER
