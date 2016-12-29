@@ -99,6 +99,9 @@ else
 
     echo_info "Stopping MariaDB server; Will be managed via pacemaker"
     systemctl stop mariadb
+    systemctl stop mysql
+    systemctl disable mariadb
+    systemctl disable mysql
 
     # --------------------------------------------------------
 
