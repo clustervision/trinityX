@@ -207,7 +207,6 @@ function configure_dns_dhcp() {
         echo_error "Luna is unable to create dhcpd config."
         exit 1
     fi
-    /usr/bin/systemctl start named
     if ! /usr/sbin/luna cluster makedns; then
         echo_error "Luna is unable to create DNS config."
         exit 1
@@ -241,7 +240,7 @@ function configure_pacemaker() {
 }
 
 function install_standalone() {
-    /usr/bin/systemctl stop named dhcpd xinetd nginx 2>/dev/null || /usr/bin/true
+    /usr/bin/systemctl stop dhcpd xinetd nginx 2>/dev/null || /usr/bin/true
     /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
     add_luna_user $1
@@ -259,24 +258,27 @@ function install_standalone() {
         echo_error "Unable to start Luna services."
         exit 1
     fi
-    if ! /usr/bin/systemctl start named dhcpd xinetd nginx; then
+    if ! /usr/bin/systemctl start dhcpd xinetd nginx; then
         echo_error "Unable to start services."
         exit 1
     fi
-    /usr/bin/systemctl enable named dhcpd xinetd nginx lweb ltorrent
+    /usr/bin/systemctl enable dhcpd xinetd nginx lweb ltorrent
 }
 
 function install_primary() {
     install_standalone $1
-    /usr/bin/systemctl disable named dhcpd lweb ltorrent
-    /usr/bin/systemctl stop named dhcpd lweb ltorrent || /usr/bin/true
+    /usr/bin/systemctl disable dhcpd lweb ltorrent
+    /usr/bin/systemctl stop dhcpd lweb ltorrent || /usr/bin/true
     copy_configs_to_trix_local
     create_symlinks
+    if ! /usr/bin/systemctl start dhcpd lweb ltorrent; then
+        echo_error "Unable to start services"
+    fi
     configure_pacemaker
 }
 
 function install_secondary() {
-    /usr/bin/systemctl stop named dhcpd lweb ltorrent 2>/dev/null || /usr/bin/true
+    /usr/bin/systemctl stop dhcpd lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
     add_luna_user $1
     setup_tftp
@@ -286,7 +288,7 @@ function install_secondary() {
     configure_mongo_credentials 1
     /usr/bin/systemctl start xinetd nginx
     /usr/bin/systemctl enable xinetd nginx
-    /usr/bin/systemctl disable named dhcpd lweb ltorrent
+    /usr/bin/systemctl disable dhcpd lweb ltorrent
     create_symlinks
 }
 
