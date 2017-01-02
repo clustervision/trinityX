@@ -476,7 +476,7 @@ detect_first_master()
     local nodes_recovered=""
 
     # avoid selecting a recovered node as bootstrap if possible
-    for node in $(echo "$OCF_RESKEY_wsrep_cluster_address" | sed 's/gcomm:\/\///g' | tr -d ' ' | tr -s ',' ' '); do
+    for node in $(echo "$OCF_RESKEY_wsrep_cluster_address" | sed -e 's,gcomm://,,g' -e s'/,/\n/' | sort -r); do
         if is_no_grastate $node; then
             nodes_recovered="$nodes_recovered $node"
         else
