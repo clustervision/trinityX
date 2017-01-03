@@ -61,7 +61,7 @@ chown -R ldap. /var/lib/ldap/
 
 # --------------------------------------
 
-# Prepare trinity's openldap configuration and start the service
+# Prepare trinity's openldap configuration 
 
 echo_info "Update slapd's configuration files"
 
@@ -85,11 +85,46 @@ if flag_is_set HA; then
 
 fi
 
-echo_info "Setup slapd to accept TLS requests"
+# --------------------------------------
 
-cp -r "${POST_FILEDIR}"/conf/ssl/* /etc/openldap/certs/
+# Generate certificates to enable ldap over SSL
+
+if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
+
+    echo_info "Generating a certificate authority for this cluster"
+
+    mkdir -p ${TRIX_LOCAL}/certs
+
+    openssl genrsa -out ${TRIX_LOCAL}/certs/cluster-ca.key 2048
+    openssl req -x509 -new -nodes -days 5475 \
+                -key ${TRIX_LOCAL}/certs/cluster-ca.key \
+                -out ${TRIX_LOCAL}/certs/cluster-ca.crt \
+                -subj "/C=NL/L=Amsterdam/O=ClusterVision BV./CN=clustervision.com"
+
+fi
+
+FQDN=$(hostname --fqdn)
+echo_info "Generating and signing a certificate for ${FQDN}"
+
+openssl req -new -nodes \
+            -keyout ${TRIX_LOCAL}/certs/${FQDN}.key \
+            -out ${TRIX_LOCAL}/certs/${FQDN}.csr \
+            -subj "/C=NL/L=Amsterdam/O=ClusterVision BV./CN=${FQDN}"
+
+openssl x509 -req -days 5475 \
+            -in ${TRIX_LOCAL}/certs/${FQDN}.csr \
+            -CA ${TRIX_LOCAL}/certs/cluster-ca.crt \
+            -CAkey ${TRIX_LOCAL}/certs/cluster-ca.key \
+            -out ${TRIX_LOCAL}/certs/${FQDN}.crt \
+            -set_serial ${SLAPD_SERVER_ID:-1}
+
+echo_info "Setting up certificate permissions"
+
+chmod 600 ${TRIX_LOCAL}/certs/*.key
+rm -f ${TRIX_LOCAL}/certs/*.csr
+cp -f ${TRIX_LOCAL}/certs/* /etc/openldap/certs/
+
 chown -R ldap. /etc/openldap/certs
-chmod 600 /etc/openldap/certs/key
 
 sed -i 's,^SLAPD_URLS=.*$,SLAPD_URLS="ldapi:/// ldap:/// ldaps:///",' /etc/sysconfig/slapd
 
