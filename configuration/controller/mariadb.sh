@@ -33,8 +33,12 @@ function pass_esc {
 function setup_root_pass {
     PASS=`pass_esc $1`
 
-    do_sql_req "UPDATE mysql.user SET Password=PASSWORD('$PASS') WHERE User='root';"
-    do_sql_req "FLUSH PRIVILEGES;"
+    # Only update the root password in the database if the argument SETUP_DB is supplied
+
+    if [[ "x$2" == "xSETUP_DB" ]]; then
+        do_sql_req "UPDATE mysql.user SET Password=PASSWORD('$PASS') WHERE User='root';"
+        do_sql_req "FLUSH PRIVILEGES;"
+    fi
 
     # Save default mysql root credentials to avoid having to provide then in every cmd
     # This here is heredocument that uses the "-EOF" operator to improve readability
@@ -76,12 +80,16 @@ if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
 
     echo_info "Setting up mariadb's root user credentials"
     MYSQL_ROOT_PASSWORD="$(get_password "$MYSQL_ROOT_PASSWORD")"
-    setup_root_pass $MYSQL_ROOT_PASSWORD
+    setup_root_pass $MYSQL_ROOT_PASSWORD SETUP_DB
     store_password MYSQL_ROOT_PASSWORD $MYSQL_ROOT_PASSWORD
 
     echo_info "Cleaning up test db and anonymous users"
     remove_test_db
     remove_anonymous_users
+
+else
+
+    setup_root_pass $MYSQL_ROOT_PASSWORD
 
 fi
 
@@ -91,6 +99,9 @@ else
 
     echo_info "Stopping MariaDB server; Will be managed via pacemaker"
     systemctl stop mariadb
+    systemctl stop mysql
+    systemctl disable mariadb
+    systemctl disable mysql
 
     # --------------------------------------------------------
 
