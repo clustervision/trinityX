@@ -126,7 +126,18 @@ cp -f ${TRIX_LOCAL}/certs/* /etc/openldap/certs/
 
 chown -R ldap. /etc/openldap/certs
 
-sed -i 's,^SLAPD_URLS=.*$,SLAPD_URLS="ldapi:/// ldap:/// ldaps:///",' /etc/sysconfig/slapd
+# --------------------------------------
+
+# Enable ldap over SSL and start the service
+
+sed -i "s,{{ fqdn.key }},${FQDN}.key," $TMP_DIR/config.ldif
+sed -i "s,{{ fqdn.crt }},${FQDN}.crt," $TMP_DIR/config.ldif
+
+echo_info "Configuring slapd and ldap clients to use SSL"
+
+append_line /etc/openldap/ldap.conf "TLS_CACERT   /etc/openldap/certs/cluster-ca.crt"
+
+sed -i 's,^SLAPD_URLS=.*$,SLAPD_URLS="ldapi:/// ldaps:///",' /etc/sysconfig/slapd
 
 echo_info "Enable and start slapd service"
 
@@ -160,7 +171,7 @@ flag_is_set HA && ldapmodify -Y EXTERNAL -H ldapi:/// -Q -f $TMP_DIR/syncrepl.ld
 
 echo_info "Setup the local directory's schema"
 
-ldapadd -D "cn=manager,dc=local" -w $SLAPD_ROOT_PW -f "${POST_FILEDIR}"/conf/local_schema.ldif
+ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w $SLAPD_ROOT_PW -f "${POST_FILEDIR}"/conf/local_schema.ldif
 
 # Store the openldap password
 
