@@ -78,9 +78,9 @@ if flag_is_set HA; then
     sed -e "s,{{ rootPW }},$SLAPD_ROOT_PW," "${POST_FILEDIR}"/conf/syncrepl.ldif > $TMP_DIR/syncrepl.ldif
 
     if [[ "x$SLAPD_SERVER_ID" == "x1" ]]; then
-        sed -i "s,{{ syncProvider }},$TRIX_CTRL2_HOSTNAME," $TMP_DIR/syncrepl.ldif
+        sed -i "s,{{ syncProvider }},${TRIX_CTRL2_HOSTNAME}.${TRIX_DOMAIN}," $TMP_DIR/syncrepl.ldif
     else
-        sed -i "s,{{ syncProvider }},$TRIX_CTRL1_HOSTNAME," $TMP_DIR/syncrepl.ldif
+        sed -i "s,{{ syncProvider }},${TRIX_CTRL1_HOSTNAME}.${TRIX_DOMAIN}," $TMP_DIR/syncrepl.ldif
     fi
 
 fi
