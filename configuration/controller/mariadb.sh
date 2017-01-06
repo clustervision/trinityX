@@ -139,16 +139,24 @@ else
         pcs constraint colocation add Master Trinity-galera with Trinity INFINITY
 
         echo_info "Bootstrapping the galera cluster"
-        crm_attribute -l reboot --name "Galera-bootstrap" -v "true"
 
-        echo_info "Waiting for the galera cluster to start"
-        crm_resource -r Trinity-galera --wait
+        TRY=3
+        until do_sql_req "SHOW GLOBAL STATUS LIKE 'wsrep_cluster_status';" 2>/dev/null | grep -q -w Primary ; do
 
-        if ! do_sql_req "SHOW GLOBAL STATUS LIKE 'wsrep_cluster_status';" | grep -q -w Primary; then
-            echo_error "Configuration completed but failed to start the galera cluster. \ 
-                        Please fix the issue before proceeding with the installation";
-            exit 1;
-        fi
+            TRY=$(( ${TRY}-1 ))
+
+            if [ ${TRY} -lt 0 ]; then
+                echo_error "Configuration completed but starting the galera cluster timed out. Please start galera before proceeding."
+                exit 1
+            fi
+
+            crm_attribute -l reboot --name "Galera-bootstrap" -v "true"
+            pcs resource cleanup &>/dev/null
+
+            echo "Waiting for the galera cluster to start"
+            crm_resource -r Trinity-galera --wait
+
+        done
 
     else
         sed -i "s,{{ node.addr }},$TRIX_CTRL2_IP," /etc/my.cnf.d/galera.cnf
