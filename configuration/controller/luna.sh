@@ -26,6 +26,21 @@ if flag_is_set HA; then
     MONGO_HOST=luna/localhost
 fi
 
+function replace_template() {
+    [ $# -gt 3 -o $# -lt 2 ] && echo "Wrong numger of argument in replace_template." && exit 1
+    if [ $# -eq 3 ]; then
+        FROM=${1}
+        TO=${2}
+        FILE=${3}
+    fi
+    if [ $# -eq 2 ]; then
+        FROM=${1}
+        TO=${!FROM}
+        FILE=${2}
+    fi
+    sed -i -e "s/{{ ${FROM} }}/${TO//\//\\/}/g" $FILE
+}
+
 function add_luna_user() {
     LPATH=$1
     if [ "x${LPATH}" = "x" ]; then
@@ -135,11 +150,16 @@ function setup_dns() {
 }
 
 function setup_nginx() {
+    LPATH=$1
+    if [ "x${LPATH}" = "x" ]; then
+        LPATH="/opt"
+    fi
     echo_info "Setup nginx."
 
     /usr/bin/cp ${POST_FILEDIR}/nginx.conf /etc/nginx/
     /usr/bin/mkdir -p /etc/nginx/conf.d/
     /usr/bin/cp ${POST_FILEDIR}/nginx-luna.conf /etc/nginx/conf.d/
+    replace_template LPATH /etc/nginx/conf.d/nginx-luna.conf
 }
 
 function create_mongo_user() {
@@ -229,7 +249,7 @@ function configure_pacemaker() {
     echo_info "Configure pacemaker's resources."
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_luna.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
-    for SERVICE in dhcpd lweb ltorrent; do
+    for SERVICE in dhcpd nginx lweb ltorrent; do
         /usr/sbin/pcs -f ${TMPFILE} resource delete ${SERVICE} 2>/dev/null || /usr/bin/true
         /usr/sbin/pcs -f ${TMPFILE} \
             resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna
@@ -249,7 +269,7 @@ function install_standalone() {
     copy_dracut
     setup_tftp
     setup_dns
-    setup_nginx
+    setup_nginx $1
     create_mongo_user
     configure_mongo_credentials
     configure_luna $1
@@ -283,7 +303,7 @@ function install_secondary() {
     add_luna_user $1
     setup_tftp
     setup_dns
-    setup_nginx
+    setup_nginx $1
     create_system_local_dirs
     configure_mongo_credentials 1
     /usr/bin/systemctl start xinetd nginx
