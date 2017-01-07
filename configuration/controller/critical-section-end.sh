@@ -52,6 +52,16 @@ function fix_trinity_files {
 
 
 
+function share_ssh_keys {
+
+    echo_info 'Copying the SSH info to the shared directory'
+
+    mkdir -p "${TRIX_LOCAL}/root"
+    rsync -raW /root/.ssh "${TRIX_LOCAL}/root/"
+}
+
+
+
 #---------------------------------------
 # Non-HA, HA primary
 #---------------------------------------
@@ -60,6 +70,7 @@ if flag_is_unset HA ; then
 
     create_trinity_tree
     fix_trinity_files
+    share_ssh_keys
 
 
 
@@ -76,6 +87,7 @@ elif flag_is_set PRIMARY_INSTALL ; then
     mv /root/secondary "${TRIX_LOCAL}"
 
     fix_trinity_files
+    share_ssh_keys
 
 
 

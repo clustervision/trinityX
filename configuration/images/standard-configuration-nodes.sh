@@ -38,10 +38,10 @@ fi
 
 echo_info "Copying the root's SSH public key, if it exists"
 
-if [[ -r "${TRIX_ROOT}/root/.ssh/id_ed25519.pub" ]] ; then
+if [[ -r "${TRIX_LOCAL}/root/.ssh/id_ed25519.pub" ]] ; then
     mkdir -p /root/.ssh
     chmod 700 /root/.ssh
-    append_line /root/.ssh/authorized_keys "$(cat "${TRIX_ROOT}/root/.ssh/id_ed25519.pub")"
+    append_line /root/.ssh/authorized_keys "$(cat "${TRIX_LOCAL}/root/.ssh/id_ed25519.pub")"
     chmod 600 /root/.ssh/authorized_keys
 fi
 
