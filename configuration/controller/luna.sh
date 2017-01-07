@@ -287,7 +287,7 @@ function install_standalone() {
 
 function install_primary() {
     install_standalone $1
-    /usr/bin/systemctl disable dhcpd lweb ltorrent
+    /usr/bin/systemctl disable nginx dhcpd lweb ltorrent
     /usr/bin/systemctl stop dhcpd lweb ltorrent || /usr/bin/true
     copy_configs_to_trix_local
     create_symlinks
@@ -308,7 +308,7 @@ function install_secondary() {
     configure_mongo_credentials 1
     /usr/bin/systemctl start xinetd nginx
     /usr/bin/systemctl enable xinetd nginx
-    /usr/bin/systemctl disable dhcpd lweb ltorrent
+    /usr/bin/systemctl disable nginx dhcpd lweb ltorrent
     create_symlinks
 }
 
