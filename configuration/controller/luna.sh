@@ -125,10 +125,10 @@ function install_luna() {
 }
 
 function copy_dracut() {
-    echo_info "Copy dracut module"
+    echo_info "Copy dracut module to ${TRIX_LOCAL}/luna/dracut/"
 
-    /usr/bin/mkdir -p ${TRIX_ROOT}/luna/dracut/
-    /usr/bin/cp -pr /luna/src/dracut/95luna ${TRIX_ROOT}/luna/dracut/
+    /usr/bin/mkdir -p ${TRIX_LOCAL}/luna/dracut/
+    /usr/bin/cp -pr /luna/src/dracut/95luna ${TRIX_LOCAL}/luna/dracut/
 }
 
 function setup_tftp() {
