@@ -404,9 +404,9 @@ function disable_remote_repos {
         # disable everything that is explicitely enabled first
         sed -i 's/^\(enabled=1\)/#\1/g' "$repofile"
         # then disable all remote and enable only our local ones
-        sed -i -e '/^baseurl=http/a enabled=0' \
-               -e '/^mirrorlist=http/a enabled=0' \
-               -e '/^baseurl=file:\/\/'${TRIX_SHARED//\//\\\/}'/a enabled=1' \
+        sed -i -e '/^baseurl\s*=\s*http/a enabled=0' \
+               -e '/^mirrorlist\s*=\s*http/a enabled=0' \
+               -e '/^baseurl\s*=\s*file:\/\/'${TRIX_SHARED//\//\\\/}'/a enabled=1' \
                "$repofile"
     done
 }
