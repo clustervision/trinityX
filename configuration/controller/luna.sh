@@ -72,13 +72,14 @@ function create_luna_folders() {
     echo_info "Create dirs for Luna in ${LPATH}."
 
     /usr/bin/mkdir -p ${LPATH}/luna
-    /usr/bin/chown -R luna: ${LPATH}/luna
-    /usr/bin/chmod ag+rx ${LPATH}/luna
     /usr/bin/mkdir -p ${LPATH}/luna/{boot,torrents}
-    /usr/bin/chown -R luna: ${LPATH}/luna/{boot,torrents}
+
     pushd ${LPATH}/luna
         /usr/bin/cp -pr /luna/src/templates ./
     popd
+
+    /usr/bin/chown -R luna: ${LPATH}/luna
+    /usr/bin/chmod ag+rx ${LPATH}/luna
 }
 
 function create_system_local_dirs() {
