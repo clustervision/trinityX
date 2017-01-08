@@ -62,6 +62,32 @@ function share_ssh_keys {
 
 
 
+function share_local_repos {
+
+    if [[ "x$1" == "xcleanup" ]]; then
+
+        # Local repos have already been shared by the primary
+
+        rm -rf /root/shared
+
+    else
+
+        echo_info 'Moving local-repo to the shared directory'
+
+        mv /root/shared/packages "${TRIX_SHARED}/"
+
+    fi
+
+    for repo in /etc/yum.repos.d/*.repo ; do
+        sed -i 's|\(file://\)/root/shared\(/packages\)|\1'"$TRIX_SHARED"'\2|' "$repo"
+    done
+
+    # Finally, update yum's cache
+    yum -y makecache fast
+}
+
+
+
 #---------------------------------------
 # Non-HA, HA primary
 #---------------------------------------
@@ -71,6 +97,7 @@ if flag_is_unset HA ; then
     create_trinity_tree
     fix_trinity_files
     share_ssh_keys
+    share_local_repos
 
 
 
@@ -88,6 +115,7 @@ elif flag_is_set PRIMARY_INSTALL ; then
 
     fix_trinity_files
     share_ssh_keys
+    share_local_repos
 
 
 
@@ -105,5 +133,7 @@ else
 
     echo_info 'Cleaning up the data from the primary installation'
     rm -fr /root/secondary
+    
+    share_local_repos cleanup
 fi
 

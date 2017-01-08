@@ -32,8 +32,8 @@ echo_info 'Copying packages and setting up the local repositories'
 
 if  flag_is_unset POST_CHROOT ; then
     # Copy the whole tree with all local repos
-    mkdir -p "${TRIX_ROOT}/shared"
-    rsync -ra "${POST_TOPDIR}/packages" "${TRIX_ROOT}/shared/"
+    mkdir -p "/root/shared"
+    rsync -ra "${POST_TOPDIR}/packages" "/root/shared/"
 fi
 
 
@@ -44,7 +44,7 @@ for repo in "${POST_FILEDIR}"/*.repo ; do
     bname="$(basename "$repo" .repo)"
     
     cp "${repo}" /etc/yum.repos.d/
-    sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' "/etc/yum.repos.d/${bname}.repo"
+    sed -i 's#TRIX_ROOT#/root#g' "/etc/yum.repos.d/${bname}.repo"
     
     if ! ls "${POST_TOPDIR}/packages/${bname}/repodata/"*primary.sqlite.* >/dev/null 2>&1 ; then
         echo_warn "Repository \"${bname}\" is empty, disabling the repo file."
