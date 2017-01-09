@@ -28,8 +28,8 @@ display_var TRIX_{CTRL_HOSTNAME,SHARED,HOME} \
 flag_is_set NFS_ENABLE_RDMA && proto=rdma || proto=tcp
 
 
-sharedopts="nfs    defaults,nfsvers=4,ro,rsize=64k,wsize=64k,retrans=4,proto=${proto}    0  0"
-homeopts="nfs    defaults,nfsvers=4,rw,rsize=64k,wsize=64k,retrans=4,noatime,proto=${proto}    0  0"
+sharedopts="nfs    defaults,nfsvers=4,ro,rsize=65536,wsize=65536,retrans=4,proto=${proto}    0  0"
+homeopts="nfs    defaults,nfsvers=4,rw,rsize=65536,wsize=65536,retrans=4,noatime,proto=${proto}    0  0"
 
 
 append_line /etc/fstab '#  ----  Trinity NFS mounts  ----'

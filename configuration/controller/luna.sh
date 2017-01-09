@@ -72,13 +72,14 @@ function create_luna_folders() {
     echo_info "Create dirs for Luna in ${LPATH}."
 
     /usr/bin/mkdir -p ${LPATH}/luna
-    /usr/bin/chown -R luna: ${LPATH}/luna
-    /usr/bin/chmod ag+rx ${LPATH}/luna
     /usr/bin/mkdir -p ${LPATH}/luna/{boot,torrents}
-    /usr/bin/chown -R luna: ${LPATH}/luna/{boot,torrents}
+
     pushd ${LPATH}/luna
         /usr/bin/cp -pr /luna/src/templates ./
     popd
+
+    /usr/bin/chown -R luna: ${LPATH}/luna
+    /usr/bin/chmod ag+rx ${LPATH}/luna
 }
 
 function create_system_local_dirs() {
@@ -125,10 +126,10 @@ function install_luna() {
 }
 
 function copy_dracut() {
-    echo_info "Copy dracut module"
+    echo_info "Copy dracut module to ${TRIX_LOCAL}/luna/dracut/"
 
-    /usr/bin/mkdir -p ${TRIX_ROOT}/luna/dracut/
-    /usr/bin/cp -pr /luna/src/dracut/95luna ${TRIX_ROOT}/luna/dracut/
+    /usr/bin/mkdir -p ${TRIX_LOCAL}/luna/dracut/
+    /usr/bin/cp -pr /luna/src/dracut/95luna ${TRIX_LOCAL}/luna/dracut/
 }
 
 function setup_tftp() {
@@ -287,7 +288,7 @@ function install_standalone() {
 
 function install_primary() {
     install_standalone $1
-    /usr/bin/systemctl disable dhcpd lweb ltorrent
+    /usr/bin/systemctl disable nginx dhcpd lweb ltorrent
     /usr/bin/systemctl stop dhcpd lweb ltorrent || /usr/bin/true
     copy_configs_to_trix_local
     create_symlinks
@@ -308,7 +309,7 @@ function install_secondary() {
     configure_mongo_credentials 1
     /usr/bin/systemctl start xinetd nginx
     /usr/bin/systemctl enable xinetd nginx
-    /usr/bin/systemctl disable dhcpd lweb ltorrent
+    /usr/bin/systemctl disable nginx dhcpd lweb ltorrent
     create_symlinks
 }
 

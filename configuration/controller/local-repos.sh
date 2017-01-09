@@ -20,24 +20,20 @@
 # Post-installation script to set up a local RPM repository with all the
 # packages required for installation.
 
-# TRIX_ROOT is still undefined at the time this script runs. We set a
-# default value here. (The other solution being rewriting too much of the code)
-# It will be defined later on when critical-section-beginning is run.
-
-TRIX_ROOT="${STDCFG_TRIX_ROOT:-/trinity}"
-
 # This is used for sites where there is no internet access, in which case all
 # packages dependencies are needed, as well as for custom-built packages.
 
+
 echo_info 'Copying packages and setting up the local repositories'
+
 
 # On a node, those are made available via bind mount at installation time, and
 # NFS later.
 
 if  flag_is_unset POST_CHROOT ; then
     # Copy the whole tree with all local repos
-    mkdir -p "${TRIX_ROOT}/shared"
-    rsync -ra "${POST_TOPDIR}/packages" "${TRIX_ROOT}/shared/"
+    mkdir -p "/root/shared"
+    rsync -ra "${POST_TOPDIR}/packages" "/root/shared/"
 fi
 
 
@@ -48,7 +44,7 @@ for repo in "${POST_FILEDIR}"/*.repo ; do
     bname="$(basename "$repo" .repo)"
     
     cp "${repo}" /etc/yum.repos.d/
-    sed -i 's#TRIX_ROOT#'"$TRIX_ROOT"'#g' "/etc/yum.repos.d/${bname}.repo"
+    sed -i 's#TRIX_ROOT#/root#g' "/etc/yum.repos.d/${bname}.repo"
     
     if ! ls "${POST_TOPDIR}/packages/${bname}/repodata/"*primary.sqlite.* >/dev/null 2>&1 ; then
         echo_warn "Repository \"${bname}\" is empty, disabling the repo file."
