@@ -261,7 +261,8 @@ function setup_mongod_arbiter() {
         echo_error "Unable to make mackup of ${MONGODB_PATH}"
         exit 1
     fi
-    rm -rf ${MONGODB_PATH}/*
+    /usr/bin/rm -rf ${MONGODB_PATH}/*
+    /usr/bin/rm -rf /root/.mongorc.js
     /usr/bin/cp /etc/mongod.conf /etc/mongod-arbiter.conf
     /usr/bin/sed -i \
         -e "s/^[#\t ]*bind_ip = .*/bind_ip = 127.0.0.1,${MONGODB_FLOATING_HOST}/"  \
