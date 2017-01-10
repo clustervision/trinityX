@@ -25,9 +25,6 @@
 ##
 ################################################################################
 
-
-# Right number of arguments?
-
 function syntax_exit {
     echo "
 SYNTAX:     $0 [options] <config file> [<config file> ...]
@@ -38,11 +35,12 @@ OPTIONS:
 -q                  be quieter
 -d                  run the post scripts in debug mode (bash -x)
 --nocolor           don't use color escape codes in the messages
---step              pause and weait for input after every post script
+--step              pause and wait for input after every post script
 --continue          don't wait for user input on error
 --stop              exit when a post script returns an error code
 --hardstop          exit on any error inside a post script (bash -e)
 --chroot <dir>      apply the configuration inside <dir>
+--help/-h           display this help
 
 RULES:
 -v and -q are mutually exclusive.
@@ -58,7 +56,16 @@ Please refer to the documentation for additional information.
     exit 1
 }
 
+
+# Right number of arguments?
+
 (( $# )) || syntax_exit
+
+for arg in "$@"; do
+    if [ "$arg" == "--help" -o "$arg" == "-h" ] ; then
+      syntax_exit
+    fi
+done
 
 
 #---------------------------------------
