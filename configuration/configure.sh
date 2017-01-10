@@ -40,7 +40,7 @@ OPTIONS:
 --stop              exit when a post script returns an error code
 --hardstop          exit on any error inside a post script (bash -e)
 --chroot <dir>      apply the configuration inside <dir>
---help/-h           display this help
+-h, --help          display this help
 
 RULES:
 -v and -q are mutually exclusive.
