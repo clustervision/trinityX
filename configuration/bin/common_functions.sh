@@ -72,53 +72,62 @@ export COL_CYAN=$ESC_SEQ"36;01m"
 # Display a string in a big fat header in colors
 
 function echo_header {
-    echo -e "${NOCOLOR-$COL_GREEN}"
+    flag_is_unset NOCOLOR && echo -ne $COL_GREEN ; echo
     echo -e "################################################################################\n##"
     echo "##  $@"
     echo -e "##\n################################################################################"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 # Display a big fat footer in colors
 
 function echo_footer {
-    echo -e "${NOCOLOR-$COL_GREEN}"
+    flag_is_unset NOCOLOR && echo -ne $COL_GREEN ; echo
     echo -e "################################################################################"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 # Display a standard progress message
 
 function echo_progress {
-    echo -e "${NOCOLOR-$COL_CYAN}"
+    flag_is_unset NOCOLOR && echo -ne $COL_CYAN ; echo
     echo " ----->>>  $@  <<<-----"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 
 # Display an information message
 
 function echo_info {
-    echo -e "${NOCOLOR-$COL_MAGENTA}"
+    flag_is_unset NOCOLOR && echo -ne $COL_MAGENTA ; echo
     echo "[ info ]   $@"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 # Display a warning message
 
 function echo_warn {
-    echo -e "${NOCOLOR-$COL_YELLOW}"
+    flag_is_unset NOCOLOR && echo -ne $COL_YELLOW ; echo
     echo "[ warn ]   $@"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 # Display an error message
 
 function echo_error {
-    echo -e "${NOCOLOR-$COL_RED}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RED ; echo
     echo "[ ERROR ]  $@"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
+
+
+# Only export the functions that are available to the post scripts
+typeset -fx echo_info
+typeset -fx echo_warn
+typeset -fx echo_error
+
+
+#---------------------------------------
 
 # Retry/Continue/Exit prompt
 
@@ -148,12 +157,6 @@ function rce_prompt {
         esac
     done
 }
-
-
-# Only export the functions that are available to the post scripts
-typeset -fx echo_info
-typeset -fx echo_warn
-typeset -fx echo_error
 
 
 #---------------------------------------
@@ -401,9 +404,9 @@ function disable_remote_repos {
         # disable everything that is explicitely enabled first
         sed -i 's/^\(enabled=1\)/#\1/g' "$repofile"
         # then disable all remote and enable only our local ones
-        sed -i -e '/^baseurl=http/a enabled=0' \
-               -e '/^mirrorlist=http/a enabled=0' \
-               -e '/^baseurl=file:\/\/'${TRIX_SHARED//\//\\\/}'/a enabled=1' \
+        sed -i -e '/^baseurl\s*=\s*http/a enabled=0' \
+               -e '/^mirrorlist\s*=\s*http/a enabled=0' \
+               -e '/^baseurl\s*=\s*file:\/\/'${TRIX_SHARED//\//\\\/}'/a enabled=1' \
                "$repofile"
     done
 }

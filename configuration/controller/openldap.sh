@@ -61,7 +61,7 @@ chown -R ldap. /var/lib/ldap/
 
 # --------------------------------------
 
-# Prepare trinity's openldap configuration and start the service
+# Prepare trinity's openldap configuration 
 
 echo_info "Update slapd's configuration files"
 
@@ -78,20 +78,66 @@ if flag_is_set HA; then
     sed -e "s,{{ rootPW }},$SLAPD_ROOT_PW," "${POST_FILEDIR}"/conf/syncrepl.ldif > $TMP_DIR/syncrepl.ldif
 
     if [[ "x$SLAPD_SERVER_ID" == "x1" ]]; then
-        sed -i "s,{{ syncProvider }},$TRIX_CTRL2_HOSTNAME," $TMP_DIR/syncrepl.ldif
+        sed -i "s,{{ syncProvider }},${TRIX_CTRL2_HOSTNAME}.${TRIX_DOMAIN}," $TMP_DIR/syncrepl.ldif
     else
-        sed -i "s,{{ syncProvider }},$TRIX_CTRL1_HOSTNAME," $TMP_DIR/syncrepl.ldif
+        sed -i "s,{{ syncProvider }},${TRIX_CTRL1_HOSTNAME}.${TRIX_DOMAIN}," $TMP_DIR/syncrepl.ldif
     fi
 
 fi
 
-echo_info "Setup slapd to accept TLS requests"
+# --------------------------------------
 
-cp -r "${POST_FILEDIR}"/conf/ssl/* /etc/openldap/certs/
+# Generate certificates to enable ldap over SSL
+
+if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
+
+    echo_info "Generating a certificate authority for this cluster"
+
+    mkdir -p ${TRIX_LOCAL}/certs
+
+    openssl genrsa -out ${TRIX_LOCAL}/certs/cluster-ca.key 2048
+    openssl req -x509 -new -nodes -days 5475 \
+                -key ${TRIX_LOCAL}/certs/cluster-ca.key \
+                -out ${TRIX_LOCAL}/certs/cluster-ca.crt \
+                -subj "/C=NL/L=Amsterdam/O=ClusterVision BV./CN=clustervision.com"
+
+fi
+
+FQDN=$(hostname --fqdn)
+echo_info "Generating and signing a certificate for ${FQDN}"
+
+openssl req -new -nodes \
+            -keyout ${TRIX_LOCAL}/certs/${FQDN}.key \
+            -out ${TRIX_LOCAL}/certs/${FQDN}.csr \
+            -subj "/C=NL/L=Amsterdam/O=ClusterVision BV./CN=${FQDN}"
+
+openssl x509 -req -days 5475 \
+            -in ${TRIX_LOCAL}/certs/${FQDN}.csr \
+            -CA ${TRIX_LOCAL}/certs/cluster-ca.crt \
+            -CAkey ${TRIX_LOCAL}/certs/cluster-ca.key \
+            -out ${TRIX_LOCAL}/certs/${FQDN}.crt \
+            -set_serial ${SLAPD_SERVER_ID:-1}
+
+echo_info "Setting up certificate permissions"
+
+chmod 600 ${TRIX_LOCAL}/certs/*.key
+rm -f ${TRIX_LOCAL}/certs/*.csr
+cp -f ${TRIX_LOCAL}/certs/* /etc/openldap/certs/
+
 chown -R ldap. /etc/openldap/certs
-chmod 600 /etc/openldap/certs/key
 
-sed -i 's,^SLAPD_URLS=.*$,SLAPD_URLS="ldapi:/// ldap:/// ldaps:///",' /etc/sysconfig/slapd
+# --------------------------------------
+
+# Enable ldap over SSL and start the service
+
+sed -i "s,{{ fqdn.key }},${FQDN}.key," $TMP_DIR/config.ldif
+sed -i "s,{{ fqdn.crt }},${FQDN}.crt," $TMP_DIR/config.ldif
+
+echo_info "Configuring slapd and ldap clients to use SSL"
+
+append_line /etc/openldap/ldap.conf "TLS_CACERT   /etc/openldap/certs/cluster-ca.crt"
+
+sed -i 's,^SLAPD_URLS=.*$,SLAPD_URLS="ldapi:/// ldaps:///",' /etc/sysconfig/slapd
 
 echo_info "Enable and start slapd service"
 
@@ -125,7 +171,7 @@ flag_is_set HA && ldapmodify -Y EXTERNAL -H ldapi:/// -Q -f $TMP_DIR/syncrepl.ld
 
 echo_info "Setup the local directory's schema"
 
-ldapadd -D "cn=manager,dc=local" -w $SLAPD_ROOT_PW -f "${POST_FILEDIR}"/conf/local_schema.ldif
+ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w $SLAPD_ROOT_PW -f "${POST_FILEDIR}"/conf/local_schema.ldif
 
 # Store the openldap password
 
@@ -144,7 +190,7 @@ chmod 600 /etc/obol.conf
 
 sed -i "s,{{ rootPW }},$SLAPD_ROOT_PW," /etc/obol.conf
 
-if flag_is_set NFS_HOME_OPTS ; then
+if [[ $TRIX_HOME ]]; then
     echo_info 'Update the user homes location'
 
     sed -i "s,# \(home =\),\1 $TRIX_HOME," /etc/obol.conf

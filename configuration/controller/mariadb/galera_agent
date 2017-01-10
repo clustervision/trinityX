@@ -476,7 +476,7 @@ detect_first_master()
     local nodes_recovered=""
 
     # avoid selecting a recovered node as bootstrap if possible
-    for node in $(echo "$OCF_RESKEY_wsrep_cluster_address" | sed 's/gcomm:\/\///g' | tr -d ' ' | tr -s ',' ' '); do
+    for node in $(echo "$OCF_RESKEY_wsrep_cluster_address" | sed -e 's,gcomm://,,g' -e s'/,/\n/' | sort -r); do
         if is_no_grastate $node; then
             nodes_recovered="$nodes_recovered $node"
         else
@@ -510,16 +510,16 @@ detect_first_master()
 
         if is_bootstrap; then
             ocf_log info "Second node is missing and bootstrap flag is set; promoting local node";
-            set_master_score $NODENAME
             set_bootstrap_node $NODENAME
+            set_master_score $NODENAME
         fi
 
         return
     fi
 
     ocf_log info "Promoting $best_node to be our bootstrap node"
-    set_master_score $best_node
     set_bootstrap_node $best_node
+    set_master_score $best_node
 }
 
 detect_galera_pid()
@@ -631,6 +631,9 @@ galera_start_local_node()
     # bootstrap node extensively. Joiner nodes are monitored in the
     # "monitor" op
     if ocf_is_true $bootstrap; then
+        # force bootstrapping the cluster by setting safe_to_boot to 1
+        sed -i 's,\(safe_to_bootstrap\): 0,\1: 1,' /var/lib/mysql/grastate.dat
+
         # start server and wait until it's up and running
         mysql_common_start "$extra_opts"
         rc=$?
@@ -674,6 +677,10 @@ galera_start_local_node()
         set_sync_needed
         # attribute no-grastate will be cleared once the joiner
         # has finished syncing and is promoted to Master
+
+        # restore node score if it is mistakenly promoted to master by
+        # some pacemaker ordering constraint
+        clear_master_score
     fi
 
     ocf_log info "Galera started"
@@ -775,8 +782,8 @@ galera_promote()
             force_primary
         fi
 
-        set_master_score $NODENAME
         set_bootstrap_node $NODENAME
+        set_master_score $NODENAME
 
         return $OCF_SUCCESS
     else
@@ -795,13 +802,6 @@ galera_promote()
 
 galera_demote()
 {
-    mysql_common_stop
-    rc=$?
-    if [ $rc -ne $OCF_SUCCESS ] && [ $rc -ne $OCF_NOT_RUNNING ]; then
-        ocf_exit_reason "Failed to stop Master galera instance during demotion to Master"
-        return $rc
-    fi
-
     # if this node was previously a bootstrap node, that is no longer the case.
     clear_bootstrap_node
     clear_last_commit
@@ -867,32 +867,29 @@ galera_monitor()
     galera_status $status_loglevel
     rc=$?
 
-    master_exists
-    if [ $? -ne 0 ]; then
-        detect_last_commit
-    fi
-
     if [ $rc -eq $OCF_NOT_RUNNING ]; then
+        last_commit=$(get_last_commit $NODENAME)
+        if [ -n "$last_commit" ];then
+            # set to slave mode in case we are master
+            #clear_master_score
 
-        # set to slave mode in case we are master
-        clear_master_score
+            rc=$OCF_SUCCESS
 
-        rc=$OCF_SUCCESS
+            if ocf_is_probe; then
+                # prevent state change during probe
+                return $rc
+            fi
 
-        if ocf_is_probe; then
-            # prevent state change during probe
-            return $rc
-        fi
-
-        master_exists
-        if [ $? -ne 0 ]; then
-            detect_first_master
-        else
-            # a master instance exists and is healthy.
-            # start this node and mark it as "pending sync"
-            ocf_log info "cluster is running. start local node to join in"
-            galera_start_local_node
-            rc=$?
+            master_exists
+            if [ $? -ne 0 ]; then
+                detect_first_master
+            else
+                # a master instance exists and is healthy.
+                # start this node and mark it as "pending sync"
+                ocf_log info "cluster is running. start local node to join in"
+                galera_start_local_node
+                rc=$?
+            fi
         fi
 
         return $rc

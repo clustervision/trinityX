@@ -26,6 +26,21 @@ if flag_is_set HA; then
     MONGO_HOST=luna/localhost
 fi
 
+function replace_template() {
+    [ $# -gt 3 -o $# -lt 2 ] && echo "Wrong numger of argument in replace_template." && exit 1
+    if [ $# -eq 3 ]; then
+        FROM=${1}
+        TO=${2}
+        FILE=${3}
+    fi
+    if [ $# -eq 2 ]; then
+        FROM=${1}
+        TO=${!FROM}
+        FILE=${2}
+    fi
+    sed -i -e "s/{{ ${FROM} }}/${TO//\//\\/}/g" $FILE
+}
+
 function add_luna_user() {
     LPATH=$1
     if [ "x${LPATH}" = "x" ]; then
@@ -57,13 +72,14 @@ function create_luna_folders() {
     echo_info "Create dirs for Luna in ${LPATH}."
 
     /usr/bin/mkdir -p ${LPATH}/luna
-    /usr/bin/chown -R luna: ${LPATH}/luna
-    /usr/bin/chmod ag+rx ${LPATH}/luna
     /usr/bin/mkdir -p ${LPATH}/luna/{boot,torrents}
-    /usr/bin/chown -R luna: ${LPATH}/luna/{boot,torrents}
+
     pushd ${LPATH}/luna
         /usr/bin/cp -pr /luna/src/templates ./
     popd
+
+    /usr/bin/chown -R luna: ${LPATH}/luna
+    /usr/bin/chmod ag+rx ${LPATH}/luna
 }
 
 function create_system_local_dirs() {
@@ -110,10 +126,10 @@ function install_luna() {
 }
 
 function copy_dracut() {
-    echo_info "Copy dracut module"
+    echo_info "Copy dracut module to ${TRIX_LOCAL}/luna/dracut/"
 
-    /usr/bin/mkdir -p ${TRIX_ROOT}/luna/dracut/
-    /usr/bin/cp -pr /luna/src/dracut/95luna ${TRIX_ROOT}/luna/dracut/
+    /usr/bin/mkdir -p ${TRIX_LOCAL}/luna/dracut/
+    /usr/bin/cp -pr /luna/src/dracut/95luna ${TRIX_LOCAL}/luna/dracut/
 }
 
 function setup_tftp() {
@@ -135,11 +151,16 @@ function setup_dns() {
 }
 
 function setup_nginx() {
+    LPATH=$1
+    if [ "x${LPATH}" = "x" ]; then
+        LPATH="/opt"
+    fi
     echo_info "Setup nginx."
 
     /usr/bin/cp ${POST_FILEDIR}/nginx.conf /etc/nginx/
     /usr/bin/mkdir -p /etc/nginx/conf.d/
     /usr/bin/cp ${POST_FILEDIR}/nginx-luna.conf /etc/nginx/conf.d/
+    replace_template LPATH /etc/nginx/conf.d/nginx-luna.conf
 }
 
 function create_mongo_user() {
@@ -207,7 +228,6 @@ function configure_dns_dhcp() {
         echo_error "Luna is unable to create dhcpd config."
         exit 1
     fi
-    /usr/bin/systemctl start named
     if ! /usr/sbin/luna cluster makedns; then
         echo_error "Luna is unable to create DNS config."
         exit 1
@@ -230,7 +250,7 @@ function configure_pacemaker() {
     echo_info "Configure pacemaker's resources."
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_luna.XXXX)
     /usr/sbin/pcs cluster cib ${TMPFILE}
-    for SERVICE in dhcpd lweb ltorrent; do
+    for SERVICE in dhcpd nginx lweb ltorrent; do
         /usr/sbin/pcs -f ${TMPFILE} resource delete ${SERVICE} 2>/dev/null || /usr/bin/true
         /usr/sbin/pcs -f ${TMPFILE} \
             resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna
@@ -241,7 +261,7 @@ function configure_pacemaker() {
 }
 
 function install_standalone() {
-    /usr/bin/systemctl stop named dhcpd xinetd nginx 2>/dev/null || /usr/bin/true
+    /usr/bin/systemctl stop dhcpd xinetd nginx 2>/dev/null || /usr/bin/true
     /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
     add_luna_user $1
@@ -250,7 +270,7 @@ function install_standalone() {
     copy_dracut
     setup_tftp
     setup_dns
-    setup_nginx
+    setup_nginx $1
     create_mongo_user
     configure_mongo_credentials
     configure_luna $1
@@ -259,34 +279,37 @@ function install_standalone() {
         echo_error "Unable to start Luna services."
         exit 1
     fi
-    if ! /usr/bin/systemctl start named dhcpd xinetd nginx; then
+    if ! /usr/bin/systemctl start dhcpd xinetd nginx; then
         echo_error "Unable to start services."
         exit 1
     fi
-    /usr/bin/systemctl enable named dhcpd xinetd nginx lweb ltorrent
+    /usr/bin/systemctl enable dhcpd xinetd nginx lweb ltorrent
 }
 
 function install_primary() {
     install_standalone $1
-    /usr/bin/systemctl disable named dhcpd lweb ltorrent
-    /usr/bin/systemctl stop named dhcpd lweb ltorrent || /usr/bin/true
+    /usr/bin/systemctl disable nginx dhcpd lweb ltorrent
+    /usr/bin/systemctl stop dhcpd lweb ltorrent || /usr/bin/true
     copy_configs_to_trix_local
     create_symlinks
+    if ! /usr/bin/systemctl start dhcpd lweb ltorrent; then
+        echo_error "Unable to start services"
+    fi
     configure_pacemaker
 }
 
 function install_secondary() {
-    /usr/bin/systemctl stop named dhcpd lweb ltorrent 2>/dev/null || /usr/bin/true
+    /usr/bin/systemctl stop dhcpd lweb ltorrent 2>/dev/null || /usr/bin/true
     install_luna
     add_luna_user $1
     setup_tftp
     setup_dns
-    setup_nginx
+    setup_nginx $1
     create_system_local_dirs
     configure_mongo_credentials 1
     /usr/bin/systemctl start xinetd nginx
     /usr/bin/systemctl enable xinetd nginx
-    /usr/bin/systemctl disable named dhcpd lweb ltorrent
+    /usr/bin/systemctl disable nginx dhcpd lweb ltorrent
     create_symlinks
 }
 

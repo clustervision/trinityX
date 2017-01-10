@@ -167,9 +167,8 @@ if flag_is_set PRIMARY_INSTALL ; then
 
     # Primary core resources
     pcs -f $tmpfile resource create primary ocf:heartbeat:Dummy op monitor interval=179s
-    pcs -f $tmpfile resource create fs-ready ocf:heartbeat:Dummy op monitor interval=183s
     pcs -f $tmpfile resource create trinity-ip ocf:heartbeat:IPaddr2 ip=${TRIX_CTRL_IP} op monitor interval=29s
-    pcs -f $tmpfile resource group add Trinity primary fs-ready trinity-ip
+    pcs -f $tmpfile resource group add Trinity primary trinity-ip
 
     # Secondary core resources
     pcs -f $tmpfile resource create secondary ocf:heartbeat:Dummy op monitor interval=181s

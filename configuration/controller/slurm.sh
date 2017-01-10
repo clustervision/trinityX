@@ -198,7 +198,7 @@ function create_cluster_in_acc_db() {
         TRIES=5
     fi
     while ! /usr/bin/sacctmgr -i add cluster cluster; do
-        "Trying again in 5 sec. (${TRIES})"
+        echo_info "Trying again in 5 sec. (${TRIES})"
         TRIES=$(( ${TRIES}-1 ))
         if [ ${TRIES} -le 0 ]; then
              echo_error "Timeout waiting initialization slurm accounting."
@@ -274,6 +274,7 @@ function install_secondary() {
         /usr/bin/mv /etc/slurm{,.orig}
     fi
     /usr/bin/ln -s ${TRIX_ROOT}/shared/etc/slurm /etc/slurm
+    tune_systemd_units
 }
 
 display_var SLURMDBD_MYSQL_DB SLURMDBD_MYSQL_USER

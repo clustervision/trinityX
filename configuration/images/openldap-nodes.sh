@@ -1,3 +1,4 @@
+#!/bin/bash
 
 ######################################################################
 # TrinityX
@@ -16,9 +17,12 @@
 ######################################################################
 
 
-echo_info "Set symlink to /trinity/shared/etc/slurm"
-pushd /etc
-[ -d /etc/slurm.orig ] && ( echo_error "/etc/slurm.orig exists! Stopping!"; exit 1 )
-/usr/bin/mv slurm{,.orig}
-/usr/bin/ln -s /trinity/shared/etc/slurm slurm
-popd
+# --------------------------------------
+
+# Enable ldap over SSL
+
+echo_info "Configuring ldap clients to trust the cluster's CA certificate"
+
+cp -f ${TRIX_LOCAL}/certs/cluster-ca.crt /etc/openldap/certs/
+append_line /etc/openldap/ldap.conf "TLS_CACERT   /etc/openldap/certs/cluster-ca.crt"
+

@@ -33,8 +33,12 @@ function pass_esc {
 function setup_root_pass {
     PASS=`pass_esc $1`
 
-    do_sql_req "UPDATE mysql.user SET Password=PASSWORD('$PASS') WHERE User='root';"
-    do_sql_req "FLUSH PRIVILEGES;"
+    # Only update the root password in the database if the argument SETUP_DB is supplied
+
+    if [[ "x$2" == "xSETUP_DB" ]]; then
+        do_sql_req "UPDATE mysql.user SET Password=PASSWORD('$PASS') WHERE User='root';"
+        do_sql_req "FLUSH PRIVILEGES;"
+    fi
 
     # Save default mysql root credentials to avoid having to provide then in every cmd
     # This here is heredocument that uses the "-EOF" operator to improve readability
@@ -76,12 +80,16 @@ if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
 
     echo_info "Setting up mariadb's root user credentials"
     MYSQL_ROOT_PASSWORD="$(get_password "$MYSQL_ROOT_PASSWORD")"
-    setup_root_pass $MYSQL_ROOT_PASSWORD
+    setup_root_pass $MYSQL_ROOT_PASSWORD SETUP_DB
     store_password MYSQL_ROOT_PASSWORD $MYSQL_ROOT_PASSWORD
 
     echo_info "Cleaning up test db and anonymous users"
     remove_test_db
     remove_anonymous_users
+
+else
+
+    setup_root_pass $MYSQL_ROOT_PASSWORD
 
 fi
 
@@ -91,6 +99,9 @@ else
 
     echo_info "Stopping MariaDB server; Will be managed via pacemaker"
     systemctl stop mariadb
+    systemctl stop mysql
+    systemctl disable mariadb
+    systemctl disable mysql
 
     # --------------------------------------------------------
 
@@ -120,19 +131,32 @@ else
 
         pcs resource create Galera ocf:heartbeat:galera wsrep_cluster_address="$CLUSTER_ADDR"
         pcs resource master Trinity-galera Galera master-max=1
+
+        pcs resource update Galera op monitor interval=20 timeout=90
+        pcs resource update Galera op monitor role=Master interval=10 timeout=90
+        pcs resource update Galera op monitor role=Slave interval=30 timeout=90
+
         pcs constraint colocation add Master Trinity-galera with Trinity INFINITY
 
         echo_info "Bootstrapping the galera cluster"
-        crm_attribute -l reboot --name "Galera-bootstrap" -v "true"
 
-        echo_info "Waiting for the galera cluster to start"
-        crm_resource -r Trinity-galera --wait
+        TRY=3
+        until do_sql_req "SHOW GLOBAL STATUS LIKE 'wsrep_cluster_status';" 2>/dev/null | grep -q -w Primary ; do
 
-        if ! do_sql_req "SHOW GLOBAL STATUS LIKE 'wsrep_cluster_status';" | grep -q -w Primary; then
-            echo_error "Configuration completed but failed to start the galera cluster. \ 
-                        Please fix the issue before proceeding with the installation";
-            exit 1;
-        fi
+            TRY=$(( ${TRY}-1 ))
+
+            if [ ${TRY} -lt 0 ]; then
+                echo_error "Configuration completed but starting the galera cluster timed out. Please start galera before proceeding."
+                exit 1
+            fi
+
+            crm_attribute -l reboot --name "Galera-bootstrap" -v "true"
+            pcs resource cleanup &>/dev/null
+
+            echo "Waiting for the galera cluster to start"
+            crm_resource -r Trinity-galera --wait
+
+        done
 
     else
         sed -i "s,{{ node.addr }},$TRIX_CTRL2_IP," /etc/my.cnf.d/galera.cnf

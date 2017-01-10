@@ -1,1 +1,0 @@
-../controller/yum-update.sh
