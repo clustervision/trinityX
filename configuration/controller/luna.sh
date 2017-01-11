@@ -209,7 +209,7 @@ function configure_luna() {
     fi
     /usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND}
     /usr/sbin/luna network add -n ${LUNA_NETWORK_NAME} -N ${LUNA_NETWORK} -P ${LUNA_PREFIX}
-    /usr/sbin/luna network change -n ${LUNA_NETWORK_NAME} --ns_ip ${LUNA_FRONTEND} --ns_hostname ${CTRL_HOSTNAME}
+    /usr/sbin/luna network change -n ${LUNA_NETWORK_NAME} --ns_ip ${LUNA_FRONTEND} --ns_hostname ${TRIX_CTRL_HOSTNAME}
 }
 
 function create_luna_db_backup() {
