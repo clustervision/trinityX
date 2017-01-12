@@ -52,12 +52,9 @@ if [[ ! -d /etc/systemd/system/slurmd.service.d ]]; then
 		EOF
 fi
 
-echo_info "Fixing slurm security limits"
-    cat > /etc/sysconfig/slurm <<-EOF
-		ulimit -l unlimited
-		ulimit -n 16384
-		ulimit -u 515224
-		EOF
+echo_info "Disable SYSV unit"
+
+/usr/sbin/chkconfig slurm off
 
 echo_info "Enable munge and slurmd services"
 
