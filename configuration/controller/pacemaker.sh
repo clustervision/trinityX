@@ -188,7 +188,7 @@ if flag_is_set PRIMARY_INSTALL ; then
 
     # Cosmetics
 
-    /usr/bin/"${POST_FILEDIR}"/pcs-status.sh  /etc/profile.d/
+    /usr/bin/cp "${POST_FILEDIR}"/pcs-status.sh  /etc/profile.d/
 
 
 
@@ -218,7 +218,7 @@ else
 
     # Cosmetics
 
-    /usr/bin/"${POST_FILEDIR}"/pcs-status.sh  /etc/profile.d/
+    /usr/bin/cp "${POST_FILEDIR}"/pcs-status.sh  /etc/profile.d/
 
 
 fi
