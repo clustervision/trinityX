@@ -1,3 +1,4 @@
+#!/bin/bash
 
 ######################################################################
 # TrinityX
@@ -15,24 +16,30 @@
 # details.
 ######################################################################
 
+function replace_template() {
+    [ $# -gt 3 -o $# -lt 2 ] && echo "Wrong numger of argument in replace_template." && exit 1
+    if [ $# -eq 3 ]; then
+        FROM=${1}
+        TO=${2}
+        FILE=${3}
+    fi
+    if [ $# -eq 2 ]; then
+        FROM=${1}
+        TO=${!FROM}
+        FILE=${2}
+    fi
+    sed -i -e "s/{{ ${FROM} }}/${TO//\//\\/}/g" $FILE
+}
 
-# Cleanup unneeded services that were installed at some point or other
+display_var TRIX_CTRL_IP
 
-STOPME=( \
-        wpa_supplicant \
-       )
+echo_info "Creating config."
 
+cp ${POST_FILEDIR}/rsyslog.conf /etc/rsyslog.conf
 
-echo_info "Stopping unnecessary services"
+replace_template TRIX_CTRL_IP /etc/rsyslog.conf
 
-for i in ${STOPME[@]} ; do
-    systemctl stop $i
-    systemctl disable $i
-done
+echo_info "Restart rsyslog."
 
-# ausidtd needs special procedure
-# https://bugzilla.redhat.com/show_bug.cgi?id=973697
-# https://access.redhat.com/solutions/1240243
-#
-/usr/bin/systemctl disable auditd
-/usr/sbin/service auditd stop
+systemctl restart rsyslog.service
+systemctl enable rsyslog.service

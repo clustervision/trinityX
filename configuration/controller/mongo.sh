@@ -216,14 +216,19 @@ function initiate_rs() {
 
     echo_info "Initialize MongoDB replica set."
 
-    ERR=$(/usr/bin/mongo >/dev/null 2>&1 <<EOF
-rs.initiate()
-EOF
-    echo $?)
-
-    if [ "${ERR}" -gt 0 ]; then
-        echo_err "Unable to initiate MongoDB's replica"
-    fi
+    STATUS=$(echo "rs.initiate()" |/usr/bin/mongo | /usr/bin/grep -q '"ok" : 1'; echo $?)
+    TRY=3
+    while [ "x${STATUS}" != "x0" ]; do
+        STATUS=${STATUS:-1}
+        echo "Try=${TRY} Exit STATUS=${STATUS}"
+        sleep 5
+        TRY=$(( ${TRY}-1 ))
+        if [ ${TRY} -le 0 ]; then
+            echo_error "Unable to initiate replica set."
+            exit 5
+        fi
+        STATUS=$(echo "rs.initiate()" |/usr/bin/mongo | /usr/bin/grep -q '"ok" : 1'; echo $?)
+    done
     wait_master
 
 }
@@ -261,7 +266,8 @@ function setup_mongod_arbiter() {
         echo_error "Unable to make mackup of ${MONGODB_PATH}"
         exit 1
     fi
-    rm -rf ${MONGODB_PATH}/*
+    /usr/bin/rm -rf ${MONGODB_PATH}/*
+    /usr/bin/rm -rf /root/.mongorc.js
     /usr/bin/cp /etc/mongod.conf /etc/mongod-arbiter.conf
     /usr/bin/sed -i \
         -e "s/^[#\t ]*bind_ip = .*/bind_ip = 127.0.0.1,${MONGODB_FLOATING_HOST}/"  \
