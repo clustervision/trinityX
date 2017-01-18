@@ -9,7 +9,7 @@ The TrinityX installation post scripts can set up the controller, or controller 
 
 In the stand-alone setup (also called non-HA in the TrinityX documentation), the various services are set up in a very straightforward way. The configuration will be similar to what can be achieved by setting up the services by hand, and it should not present any surprise to an experienced systems administrator.
 
-When the ``HA`` option is set to ``1`` in the configuration file, the TrinityX configuration script will set up an HA controller pair. Technically the installation script will need to run twice, on each controller, but it is referred to as a single installation. The configuration is then a bit more complex, and may require a reference and documentation to understand how it is set up.
+When the ``HA`` option is set to ``1`` in the configuration file, the TrinityX configuration script will set up an HA controller pair. Technically the installation script will need to run twice, once on each controller, but it is referred to as a single installation. The configuration is then a bit more complex, and may require a reference and documentation to understand how it is set up.
 
 This document will cover the design and implementation of the HA configuration in TrinityX.
 
@@ -80,11 +80,11 @@ The resources defined in Pacemaker are separated into two broad groups, which ar
 
 The resources defined by the TrinityX installer are grouped together in resource groups. Resource groups are:
 
-- colocated: all resources in a griven group run on the same node;
+- colocated: all resources in a given group run on the same node;
 
 - serialized: the resources start in that specific order and stop in reverse order; any failure of a resource prevents the subsequent ones from running.
 
-There are two core groups: ``Trinity``, which defines the primary role, and ``Trinity-secondary`` which defines the secondary role.
+There are two core groups: ``Trinity``, which defines the primary role, and ``Trinity-secondary`` which defines the secondary role. Three other groups attached to the core ``Trinity`` group: ``Trinity-fs``, ``Slurm`` and ``Luna``. Two Master/Slave sets: ``Trinity-drbd`` and ``Trinity-galera``. And two more resources that do not belong to any group or set: ``named`` and ``zabbix-server``
 
 The exact number of resources defined depends on the storage model chosen by the user.
 
@@ -95,36 +95,53 @@ Resources
 The full list of resources that may be created for the TrinityX base HA configuration is the following::
 
     01  Resource Group: Trinity
-    02      primary             (ocf::heartbeat:Dummy)
-    03      wait-for-device     (ocf::heartbeat:Delay)              # only with dev and drbd
-    04      trinity-fs          (ocf::heartbeat:Filesystem)         # only with dev and drbd
-    05      fs-ready            (ocf::heartbeat:Dummy)
-    06      trinity-nfs-server  (ocf::heartbeat:nfsserver)          # only with export, dev and drbd
-    07      trinity-ip          (ocf::heartbeat:IPaddr2)
-    
-    08  Resource Group: Trinity-secondary
-    09      secondary                   (ocf::heartbeat:Dummy)
-    10      trinity-nfs-client-local    (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
-    11      trinity-nfs-client-images   (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
-    12      trinity-nfs-client-shared   (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
-    13      trinity-nfs-client-home     (ocf::heartbeat:Filesystem)     # only with export, dev and drbd
-    
-    14  Master/Slave Set: Trinity-drbd [DRBD]       # only with drbd
+    02      primary          (ocf::heartbeat:Dummy)
+    03      trinity-ip       (ocf::heartbeat:IPaddr2)
+
+    04  Resource Group: Trinity-secondary
+    05      secondary                   (ocf::heartbeat:Dummy)
+    06      trinity-nfs-client-local    (ocf::heartbeat:Filesystem)    # only with export, dev and drbd
+    07      trinity-nfs-client-images   (ocf::heartbeat:Filesystem)    # only with export, dev and drbd
+    08      trinity-nfs-client-shared   (ocf::heartbeat:Filesystem)    # only with export, dev and drbd
+    09      trinity-nfs-client-home     (ocf::heartbeat:Filesystem)    # only with export, dev and drbd
+
+    10  Resource Group: Trinity-fs
+    11      wait-for-device     (ocf::heartbeat:Delay)         # only with dev and drbd
+    12      trinity-fs          (ocf::heartbeat:Filesystem)    # only with dev and drbd
+    13      fs-ready            (ocf::heartbeat:Dummy)
+    14      trinity-nfs-server  (ocf::heartbeat:nfsserver)     # only with export, dev and drbd
+
+    15  Master/Slave Set: Trinity-drbd [DRBD]        # only with drbd
+    16  Master/Slave Set: Trinity-galera [Galera]
+
+    17  named                   (systemd:named)
+    18  zabbix-server           (systemd:zabbix-server)
+
+    19  Resource Group: Slurm
+    20      slurmdbd            (systemd:slurmdbd)
+    21      slurmctld           (systemd:slurmctld)
+
+    22  Resource Group: Luna
+    23      mongod-arbiter      (systemd:mongod-arbiter)
+    24      dhcpd               (systemd:dhcpd)
+    25      nginx               (systemd:nginx)
+    26      lweb                (systemd:lweb)
+    27      ltorrent            (systemd:ltorrent)
 
 
 Notes:
 
-- The resources which names start with ``trinity-`` are part of the actual configuration and setup of a TrinityX system. The ones without are there for practical reasons, but have no impact on the system.
+- The NFS resources (server #14, clients #06-09) are not created when the ``none`` storage use case is selected.
 
-- The NFS resources (server #06, clients #10-13) are not created when the ``none`` storage use case is selected.
+- The filesystem resources (#11, which is only a delay to make sure that the kernel has caught up with the new device, and #12, which mounts the underlying filesystem) only exist for use cases where a separate filesystem is created for the TrinityX directory tree: ``dev`` and ``drbd``.
 
-- The filesystem resources (#03, which is only a delay to make sure that the kernel has caught up with the new device, and #04, which mounts the underlying filesystem) only exist for use cases where a separate filesystem is created for the TrinityX directory tree: ``dev`` and ``drbd``.
+- The DRBD master-slave set (#15) is only created when the ``drbd`` use case is selected. Due to its architecture, DRBD can only be managed through a master-slave resource. That resource includes two instances, the master which will always run on a node, and a slave which will run if another node is available.
 
-- The DRBD master-slave set (#14) is only created when the ``drbd`` use case is selected. Due to its architecture, DRBD can only be managed through a master-slave resource. That resource include two instances, the master which will always run on a node, and a slave which will run if another node is available.
+- The dummy resources #02 and #05 are there for practical reasons. It's not possible to insert a new resource at the very beginning of a group, only at the end or after an existing resource in that group. The dummy resources (which do nothing at all) are there so that other resources can be inserted just after them, which is as good as being the first one in the group.
 
-- The dummy resources #02 and #09 are there for practical reasons. It's not possible to insert a new resource at the very beginning of a group, only at the end or after an existing resource in that group. The dummy resources (which do nothing at all) are there so that other resources can be inserted just after them, which is as good as being the first one in the group.
+- The dummy resource #13 serves as an anchor for resources that require the TrinityX directory tree. With the ``dev`` and ``drbd`` use cases, the corresponding shared filesystem resources will be inserted before that one. All resources inserted after this anchor will be able to use the directory tree, regardless of the storage use case.
 
-- The dummy resource #05 serves as an anchor for resources that require the TrinityX directory tree. With the ``dev`` and ``drbd`` use cases, the corresponding shared filesystem resources will be inserted before that one. All resources inserted after this anchor will be able to use the directory tree, regardless of the storage use case.
+- The resource group Luna (#22-27) has monitoring disabled so that a service failing in this group does not trigger a failover or any pacemaker operations.
 
 
 Constraints
@@ -138,26 +155,38 @@ As mentioned earlier, groups have implicit constraints: they are both colocated 
 A few additional constraints are defined to locate and order groups between themselves::
 
     01  Ordering Constraints:
-    02    promote Trinity-drbd then start wait-for-device (kind:Mandatory)      # only with drbd
+    02    promote Trinity-drbd then start wait-for-device (kind:Mandatory)  # only with drbd
+    03    promote Trinity-galera then start Slurm         (kind:Mandatory)
+    04    promote Trinity-galera then start zabbix-server (kind:Mandatory)
+    05    start trinity-fs then start Slurm               (kind:Mandatory)
+    06    start trinity-fs then start zabbix-server       (kind:Mandatory)
+    07    start trinity-fs then start named               (kind:Mandatory)
+    08    start trinity-fs then start Luna                (kind:Mandatory)
     
-    03    Resource Sets:
-    04      set Trinity Trinity-secondary
-    05      set Trinity-drbd Trinity Trinity-secondary      # only with drbd
+    09    Resource Sets:
+    10      set Trinity Trinity-secondary
+    11      set Trinity Trinity-drbd Trinity-fs Trinity-secondary           # only with drbd
     
-    06  Colocation Constraints:
-    07    Trinity-secondary with Trinity (score:-INFINITY)
-    08    Trinity with Trinity-drbd (score:INFINITY) (with-rsc-role:Master)     # only with drbd
+    12  Colocation Constraints:
+    13    Trinity-secondary with Trinity (score:-INFINITY)
+    14    Trinity-drbd      with Trinity (score:INFINITY) (rsc-role:Master) (with-rsc-role:Started)  # only with drbd
+    15    Trinity-galera    with Trinity (score:INFINITY) (rsc-role:Master) (with-rsc-role:Started)
+    16    Trinity-fs        with Trinity (score:INFINITY)
+    17    named             with Trinity (score:INFINITY)
+    18    zabbix-server     with Trinity (score:INFINITY)
+    19    Slurm             with Trinity (score:INFINITY)
+    20    Luna              with Trinity (score:INFINITY)
 
 
 Notes:
 
-- The two essential constraints, that are always present, are #04 and #07. #04 is a resource set, which serializes the two groups. It means that ``Trinity-secondary`` will only start after ``Trinity`` has started successfully. As most, if not all, secondary resources depend on services that are started in the primary group, this is again the most intuitive strategy.
+- The two essential constraints, that are always present, are #10 and #13. #10 is a resource set, which serializes the two groups. It means that ``Trinity-secondary`` will only start after ``Trinity`` has started successfully. As most, if not all, secondary resources depend on services that are started in the primary group, this is again the most intuitive strategy.
 
-- #07 is a colocation constraint, which says that ``Trinity-secondary`` cannot run on the same node as ``Trinity``, and that ``Trinity`` comes first. In other words: pick a node to run the primary, and if there is another one available, run the secondary on it, otherwise don't run the secondary. This is the rule that allows for failover of the primary resources, and makes sure that primary services are always up.
+- #13 is a colocation constraint, which says that ``Trinity-secondary`` cannot run on the same node as ``Trinity``, and that ``Trinity`` comes first. In other words: pick a node to run the primary, and if there is another one available, run the secondary on it, otherwise don't run the secondary. This is the rule that allows for failover of the primary resources, and makes sure that primary services are always up.
 
-- Due to its existence as a master-slave resource, DRBD requires a few additional rules. #05 is a superset of #04, which says that DRBD must start first. As a lot of primary services depend on the availability of the shared storage, this makes sense. The #04 constraint will be satisfied if #05 is; in effect #04 can be deleted on DRBD setups without negative effect.
+- Due to its existence as a master-slave resource, DRBD requires a few additional rules. #11 is a superset of #10, which says that DRBD must start first. As a lot of primary services depend on the availability of the shared storage, this makes sense. The #10 constraint will be satisfied if #11 is; in effect #10 can be deleted on DRBD setups without negative effect.
 
-- #08 means that the primary group must start on the node that is currently the DRBD master. As the DRBD master is the only node where the shared storage is available, this is mandatory. We don't need another colocation rule for the DRBD slave and the secondary node, as the implicit rule of the master-slave set (the slave must be on another node) and #07 guarantee that they will end up on the same node, in a 2-node system.
+- #14-20 means that the primary group serves as an anchor for all other services that must run on the primary controller. In effect, that node becomes the DRBD master node (#14) as well as the Galera master node (#15). We don't need another colocation rule for the DRBD/Galera slave and the secondary node, as the implicit rule of the master-slave set (the slave must be on another node) and #13 guarantee that they will end up on the same node, in a 2-node system.
 
 - #02 is there to make sure that the device-related resources (``wait-for-device`` and ``trinity-fs``) only start after the promotion of the DRBD resource, which is to say, after it becomes master on the local node. This is needed due to the way Pacemaker starts resources, and the difference between starting and promoting a resource.
 
