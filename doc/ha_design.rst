@@ -192,6 +192,17 @@ Notes:
 
 
 
+OpenLDAP
+--------
+
+In TrinityX HA installs, OpenLDAP is not managed as a pacemaker resource. It uses instead its builtin mirroring system.
+
+Both controllers have an openldap server that can accept both writes and reads and that can mirror the writes to the other controller. However, in practice only the server running on the primary controller does receive write requests since it is the server that listens on the floating IP of the HA cluster.
+
+OpenLDAP server is managed by systemd and a failure does not result in a failover. It should however result in a notification being sent to the admins. This part should be taken care of by the monitoring system.
+
+
+
 Conclusion
 ----------
 
