@@ -243,6 +243,20 @@ Once the sequence number of each node is recovered, the sysadmin can proceed to 
 .. note:: The second command must be run immediatly after the first one in order for it to take effect.
 
 
+Maintenance 
+~~~~~~~~~~~ 
+
+During the lifetime of the cluster a sysadmin might need to change configuration files, update packages or restart services. Doing so, however can have a negative impact on the cluster as it might trigger a failover. To avoid such behaviour and temporarily prevent pacemaker from interfering with the state of the cluster it is advised that the maintenance mode be activated before applying any changes. 
+ 
+This way, the admins can take full control of the cluster to perform any required operations without having to worry about the state of the cluster. maintenance mode in pacemaker can be enabled by running the following command:: 
+ 
+    pcs property set maintenance-mode=true 
+ 
+It is expected that this mode be deactivated once the maintenance operations are completed and that the cluster is brought up to the same state where it was before activating the mode. maintenance mode can be deactivated by running the following command:: 
+ 
+    pcs property set maintenance-mode=false 
+ 
+ 
 
 Conclusion
 ----------
