@@ -203,6 +203,47 @@ OpenLDAP server is managed by systemd and a failure does not result in a failove
 
 
 
+HA-pair management
+------------------
+
+A fully configured TrinityX HA cluster will automatically perform a failover upon a critical failure. There are however a few guidelines that should be kept in mind when managing the cluster. These include bringing a failing secondary controller up, bringing the cluster up from a cold state (a state in which both the primary and secondary controllers were down such us a power failure) or recovering the new secondary node after a successful failover.
+
+Upon a failure of the secondary node or a successful failover the system adminstraors should be notified in order for them to either fix the issues on the secondary node in the first case, or to recover the new secondary node in the second case. Otherwise, if these failures remain unhandled, they will interfere with the proper execution of a failover in a case where the primary controller encounters an issue.
+
+As such, the monitoring system should include checks to monitor the state of the HA cluster.
+
+.. note:: TrinityX does not configue pacemaker and corosync to start when a controller starts up. It is left at the discrection of the sysadmin to manually start it up using ``pcs cluster start`` on the newly booted controller.
+
+
+Booting the controllers
+~~~~~~~~~~~~~~~~~~~~~~~
+
+When booting the cluster from a cold state (all nodes down) special care should be taken in order to chose which node will serve as the primary controller.
+
+TrinityX comes preconfigured with a Galera based MariaDB cluster. This means that all controllers can serve as a write destination for any SQL write requests. But for the purposes of TrinityX we have adapted the pacemaker resource agent from a multi-master resource to a master-slave resource, and we exclusively use the floating IP of the cluster for any database requests. This effectively transforms the galera cluster into a synchronously replicated master/slave setup.
+
+When booting the cluster, the first resource group that comes up is ``Trinity`` which includes the floating IP, then pacemaker will try to start ``Trinity-galera`` and ``Trinity-drbd``. In cases where the node on which the resources are being started was the previous primary node (before the cold boot), the cluster will continue booting up successfully. If, however, this node had the secondary role before the cold bootthe cluster can hit a special case. The node that is now being promoted to the primary role may or may not have the latest state of the cluster. Namely, its galera replication sequence number might be lower than the one on the node that pacemaker decided to load as secondary.
+
+To avoid such a situation it is crucial that a sysadmin verifies the state of each node before trying to start the pacemaker cluster. To do so, a sysadmin can run the following commands to obtain the sequence number of each node::
+
+    # First we can try retrieving the number from galera's state file
+
+    cat /var/lib/mysql/grastate.dat | sed -n 's|^seqno.\s*\(.*\)\s*$|\1|p'
+
+    # If the above number is '-1' then we will have to load the mariadb server to get the sequence number
+
+    mysqld --datadir=/var/lib/mysql --user=mysql --wsrep-recover |& sed -n 's|.*WSREP:\s*[R|r]ecovered\s*position.*:\(.*\)\s*$|\1|p'
+
+
+Once the sequence number of each node is recovered, the sysadmin can proceed to boot the cluster by running the following commands on the node that has the highest galera sequence number::
+
+    pcs cluster start --all
+    crm_attribute -l reboot --name "Galera-bootstrap" -v "true"
+
+.. note:: The second command must be run immediatly after the first one in order for it to take effect.
+
+
+
 Conclusion
 ----------
 
