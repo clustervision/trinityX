@@ -2,12 +2,12 @@
 ######################################################################
 # TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -28,14 +28,14 @@ display_var HA PRIMARY_INSTALL TRIX_CTRL{1,2}_{HOSTNAME,IP} \
 #---------------------------------------
 
 function corosync_config_file {
-    
+
     echo_info "Setting up Corosync's configuration file"
     render_template "${POST_FILEDIR}"/templ_corosync.conf > /etc/corosync/corosync.conf
 }
 
 
 function corosync_start_and_check {
-    
+
     echo_info 'Starting Corosync'
     systemctl restart corosync
     sleep 5s
@@ -48,28 +48,28 @@ function corosync_start_and_check {
 
 
 function pacemaker_hacluster_pw_auth {
-    
+
     echo_info 'Starting the Pacemaker daemon'
     systemctl start pcsd
 
     echo "$PACEMAKER_HACLUSTER_PW" | passwd --stdin hacluster
-    
+
     if (( $? )) ; then
         echo_error 'Failed to set the password for the "hacluster" user, exiting.'
         exit 1
     fi
-    
+
     # This is expected to produce a half-error during the primary installation, as
     # the secondary node isn't there yet. Which means that we can't use the return
     # code to check if it's done...
-    
+
     echo_info 'Authenticating the "hacluster" user'
     pcs cluster auth -u hacluster -p "${PACEMAKER_HACLUSTER_PW}" --all
 }
 
 
 function pacemaker_start_and_check {
-    
+
     echo_info 'Starting the cluster'
     pcs cluster start
     sleep 5s
@@ -89,7 +89,7 @@ function pacemaker_start_and_check {
 #---------------------------------------
 
 if flag_is_unset HA ; then
-    
+
     echo_info 'No HA support was requested, exiting.'
     exit
 fi
@@ -128,27 +128,27 @@ if flag_is_set PRIMARY_INSTALL ; then
 
 
     # --- Corosync ---
-    
+
     corosync_config_file
-    
+
     echo_info "Setting up Corosync's authentication key"
     [[ -e /etc/corosync/authkey ]] || corosync-keygen -l
     cp -a /etc/corosync/authkey /root/secondary/corosync.authkey
-    
+
     corosync_start_and_check
-    
+
 
     # -- Pacemaker ---
-    
+
     echo_info 'Setting the password for the "hacluster" user'
     if ! declare PACEMAKER_HACLUSTER_PW="$(get_password "$PACEMAKER_HACLUSER_PW")" ; then
         echo_warn 'Reusing a read-only password, probably from a previous installation.'
         display_var PACEMAKER_HACLUSTER_PW
     fi
-    
+
     pacemaker_hacluster_pw_auth
     pacemaker_start_and_check
-    
+
     # We need to store that password in the local shadow file, as well as in a
     # file for the secondary to pick up.
     store_password PACEMAKER_HACLUSTER_PW "$PACEMAKER_HACLUSTER_PW"
@@ -186,30 +186,40 @@ if flag_is_set PRIMARY_INSTALL ; then
 
     check_cluster trinity-ip
 
+    # Cosmetics
+
+    /usr/bin/cp "${POST_FILEDIR}"/pcs-status.sh  /etc/profile.d/
+
 
 
 #---------------------------------------
 # HA, secondary
 #---------------------------------------
-    
+
 else
-    
+
     # --- Corosync ---
-    
+
     corosync_config_file
-    
+
     echo_info "Setting up Corosync's authentication key"
     install -D -m 400 --backup /root/secondary/corosync.authkey /etc/corosync/authkey
-    
+
     corosync_start_and_check
-    
+
     # -- Pacemaker ---
-    
+
     echo_info 'Setting the password for the "hacluster" user'
     # The password comes from the shadow file of the primary installation
     pacemaker_hacluster_pw_auth
     pacemaker_start_and_check
 
     check_cluster secondary
+
+    # Cosmetics
+
+    /usr/bin/cp "${POST_FILEDIR}"/pcs-status.sh  /etc/profile.d/
+
+
 fi
 

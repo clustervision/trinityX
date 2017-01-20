@@ -70,6 +70,12 @@ Administator's manual
 .. note::
     Some parts of the `Engineering documentation`_ may be useful to system administrators, especially :doc:`config_tool` and :doc:`config_cfg_files`.
 
+
+.. toctree::
+   :maxdepth: 1
+
+   user_management.rst
+
 Hints and tips
 ~~~~~~~~~~~~~~
 
