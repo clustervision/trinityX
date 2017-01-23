@@ -11,14 +11,14 @@ resource trinity_disk {
         after-sb-2pri disconnect;
     }
     
-    on ${TRIX_CTRL1_HOSTNAME}.${TRIX_DOMAIN} {
+    on ${TRIX_CTRL1_HOSTNAME}
         device    ${SHARED_FS_DRBD_DEVICE};
         disk      ${SHARED_FS_DEVICE};
         address   ${SHARED_FS_CTRL1_IP:-$TRIX_CTRL1_IP}:7789;
         meta-disk internal;
     }
     
-    on ${TRIX_CTRL2_HOSTNAME}.${TRIX_DOMAIN} {
+    on ${TRIX_CTRL2_HOSTNAME}
         device    ${SHARED_FS_DRBD_DEVICE};
         disk      ${SHARED_FS_DEVICE};
         address   ${SHARED_FS_CTRL2_IP:-$TRIX_CTRL2_IP}:7789;

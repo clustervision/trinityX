@@ -78,7 +78,7 @@ TRIX_LOCAL_SHFILE="/etc/trinity.local.sh"
 # The hosts PS checked the hostname and domain name. They are assumed to be set
 # correctly.
 
-TRIX_DOMAIN="$(hostname -d)"
+TRIX_DOMAIN="$DOMAIN"
 TRIX_CTRL1_HOSTNAME="$(basename ${CTRL1_HOSTNAME} ${TRIX_DOMAIN})"
 TRIX_CTRL1_IP="${CTRL1_IP}"
 TRIX_CTRL2_HOSTNAME="$(basename ${CTRL2_HOSTNAME} ${TRIX_DOMAIN})"
