@@ -75,7 +75,7 @@ fi
 # Get some information about the current host
 
 myhname="$(hostname -s)"
-mydomain="$LUNA_NETWORK_NAME"
+mydomain="$CTRL_DOMAINNAME"
 
 if ! ( [[ "$myhname" ]] && [[ "$mydomain" ]] ) ; then
     echo_error 'Host or domain name not defined! Please reconfigure your system.'
