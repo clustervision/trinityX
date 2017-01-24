@@ -74,54 +74,49 @@ fi
 
 # Get some information about the current host
 
-myhname="$(hostname -s)"
-mydomain="$(hostname -d)"
+mydomain="$CTRL_DOMAINNAME"
 
-if ! ( [[ "$myhname" ]] && [[ "$mydomain" ]] ) ; then
-    echo_error 'Host or domain name not defined! Please reconfigure your system.'
+if ! ( [[ "$mydomain" ]] ) ; then
+    echo_error "Domain name not set in $POST_CONFIG"
     exit 1
 fi
 
 
 # Strip the hostname of the domain, if set
 
-CTRL_HOSTNAME="$(basename ${CTRL_HOSTNAME} ${mydomain})"
-CTRL1_HOSTNAME="$(basename ${CTRL1_HOSTNAME} ${mydomain})"
+CTRL_HOSTNAME="${CTRL_HOSTNAME%%.*}"
+CTRL1_HOSTNAME="${CTRL1_HOSTNAME%%.*}"
 flag_is_set CTRL2_HOSTNAME && \
-    CTRL2_HOSTNAME="$(basename ${CTRL2_HOSTNAME} ${mydomain})"
+    CTRL2_HOSTNAME="${CTRL2_HOSTNAME%%.*}"
 
 
 # List of active interface / IP pairs
 
 ifips="$(ip -o -4 addr show | awk -F '[ :/]+' '/scope global/ {print $2, $4}')"
 
-
 #---------------------------------------
 
-# Next thing to check: are we really one of the controllers?
+# Identify which controller the script is running on at the moment
 
-case $myhname in
+while read ifname myip; do
+    if [ "$myip" == "$CTRL1_IP" ] ; then
+        myhname=$CTRL1_HOSTNAME
+        break
+    elif [ "$myip" == "$CTRL2_IP" ] ; then
+        myhname=$CTRL2_HOSTNAME
+        break
+    fi
+done <<< "$ifips"     
 
-    "$CTRL1_HOSTNAME" )     myip="$CTRL1_IP" ;;
-
-    "$CTRL2_HOSTNAME" )     myip="$CTRL2_IP" ;;
-
-    * )
-        echo_error "Fatal error: the current hostname doesn't match any of the controller hostnames."
-        exit 1
-esac
-
-
-#---------------------------------------
-
-# Did the user pass an IP address that doesn't match any of our interfaces?
-
-if ! grep -q " ${myip}$" ; then
-    echo_error "The IP defined in the configuration doesn't match any of this machine's IPs:"
-    echo "$ifips"
+if [ -z "$myhname" ] ; then
+    echo_error "Fatal error: none of the IPs found on this node matches the configuration in $POST_CONFIG!"
     exit 1
-fi <<< "$ifips"
+fi
 
+# When identified, set the hostname
+
+echo "$myhname" > /etc/hostname
+/usr/bin/hostname --file /etc/hostname
 
 # At that point we know that:
 # - we are one of the two controllers
