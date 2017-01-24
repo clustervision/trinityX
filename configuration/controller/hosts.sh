@@ -75,7 +75,7 @@ fi
 # Get some information about the current host
 
 myhname="$(hostname -s)"
-mydomain="$(hostname -d)"
+mydomain="$CTRL_DOMAINNAME"
 
 if ! ( [[ "$myhname" ]] && [[ "$mydomain" ]] ) ; then
     echo_error 'Host or domain name not defined! Please reconfigure your system.'
@@ -85,10 +85,10 @@ fi
 
 # Strip the hostname of the domain, if set
 
-CTRL_HOSTNAME="$(basename ${CTRL_HOSTNAME} ${mydomain})"
-CTRL1_HOSTNAME="$(basename ${CTRL1_HOSTNAME} ${mydomain})"
+CTRL_HOSTNAME="${CTRL_HOSTNAME%%.*}"
+CTRL1_HOSTNAME="${CTRL1_HOSTNAME%%.*}"
 flag_is_set CTRL2_HOSTNAME && \
-    CTRL2_HOSTNAME="$(basename ${CTRL2_HOSTNAME} ${mydomain})"
+    CTRL2_HOSTNAME="${CTRL2_HOSTNAME%%.*}"
 
 
 # List of active interface / IP pairs
