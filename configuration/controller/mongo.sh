@@ -375,7 +375,7 @@ function install_secondary() {
     setup_rs_mongo ${CTRL2_IP}
     setup_mongod_arbiter ${CTRL_IP}
     create_auth_file
-    /usr/bin/systemctl disable mongod
+    /usr/bin/systemctl enable mongod
     /usr/bin/systemctl restart mongod
     wait_secondary_sync "root" "${MONGODB_ROOT_PASS}"
     check_rs_status
