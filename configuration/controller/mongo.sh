@@ -373,7 +373,7 @@ function install_secondary() {
     /usr/bin/systemctl stop mongod
     copy_mongo_key
     setup_rs_mongo ${CTRL2_IP}
-    setup_mongod_arbiter
+    setup_mongod_arbiter ${CTRL_IP}
     create_auth_file
     /usr/bin/systemctl disable mongod
     /usr/bin/systemctl restart mongod
