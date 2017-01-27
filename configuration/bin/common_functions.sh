@@ -57,6 +57,11 @@ typeset -fx systemctl
 
 #---------------------------------------
 
+# Trinity config markers
+export TRIX_CONFIG_START="############   Trinity X CONFIG START   ############"
+export TRIX_CONFIG_WARNING="############        DON'T MODIFY!       ############"
+export TRIX_CONFIG_END="############    Trinity X CONFIG END    ############"
+
 # Colors!
 
 export ESC_SEQ="\x1b["
@@ -179,11 +184,18 @@ function append_line {
     if [[ -r "$1" ]] && grep -q -- "^${2}$" "$1" ; then
         echo "Line already present in destination file: $2"
     else
-        if flag_is_set QUIET ; then
-            echo "$2" >> "$1"
-        else
-            echo "$2" | tee -a "$1"
-        fi
+        if grep -q -- "^${TRIX_CONFIG_END}$" "$1" ; then
+	    if flag_is_unset QUIET ; then
+		echo "$2"
+	    fi
+	    /usr/bin/sed -i -e /"^${TRIX_CONFIG_END}$"/i"$2" "$1"
+	else
+	    if flag_is_set QUIET ; then
+                echo "$2" >> "$1"
+            else
+                echo "$2" | tee -a "$1"
+            fi
+	fi
     fi
 }
 

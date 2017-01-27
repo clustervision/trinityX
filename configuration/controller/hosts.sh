@@ -134,7 +134,9 @@ echo "$myhname" > /etc/hostname
 
 # Loop on the pairs and write to the hosts file
 
-append_line /etc/hosts '#  ----  Trinity machines  ----'
+append_line /etc/hosts "$TRIX_CONFIG_START"
+append_line /etc/hosts "$TRIX_CONFIG_WARNING"
+append_line /etc/hosts "$TRIX_CONFIG_END"
 
 for i in CTRL{1,2} ; do
 
