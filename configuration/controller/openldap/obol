@@ -3,12 +3,12 @@
 ######################################################################
 # Obol user management tool
 # Copyright (c) 2016  ClusterVision B.V.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -19,6 +19,8 @@
 
 import os
 import sys
+import grp
+import pwd
 import ldap
 import time
 import json
@@ -48,28 +50,46 @@ def make_secret(password):
     return tagged_digest
 
 
+def exists(key, value):
+    try:
+        if key == 'uid':
+            pwd.getpwuid(int(value))
+        elif key == 'username':
+            pwd.getpwnam(value)
+        elif key == 'gid':
+            grp.getgrgid(int(value))
+        elif key == 'groupname':
+            grp.getgrnam(value)
+
+        return True
+
+    except KeyError:
+        return False
+
+
 def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
              shell, groups, expire):
     """Add a user to the LDAP directory"""
 
     if uid:
-
         # Ensure uid's uniqueness
-        dn = 'ou=People,%s' % b
-        filter = 'uidNumber=%s' % uid
-        attrs = ['uidNumber']
-    
-        result = conn.search_s(dn, ldap.SCOPE_ONELEVEL, filter, attrs)
-    
-        if result:
+        if exists('uid', uid):
             raise Exception('UID %s already exists' % uid)
-    
+
         uidNumber = uid
 
     else:
         uidNumber = increment_id(b, 'uid')
 
-    gidNumber = gid if gid else uidNumber
+    if gid:
+        # Ensure gid's uniqueness
+        if exists('gid', gid):
+            raise Exception('GID %s already exists' % gid)
+
+        gidNumber = gid
+
+    else:
+        gidNumber = gid if gid else uidNumber
 
     # Add the user
     dn = 'uid=%s,ou=People,%s' % (username, b)
@@ -185,27 +205,34 @@ def user_modify(b, username, **kwargs):
     mod_attrs = []
 
     for key, value in kwargs.iteritems():
+        if not value:
+            continue
+
         if key == 'uid':
             key = 'uidNumber'
 
+            # Ensure uid's uniqueness
+            if exists('uid', value):
+                raise Exception('UID %s already exists' % value)
+
         elif key == 'gid':
             key = 'gidNumber'
+
+            # Ensure gid's uniqueness
+            if exists('gid', value):
+                raise Exception('GID %s already exists' % value)
 
         elif key == 'phone':
             key = 'telephoneNumber'
 
         elif key == 'shell':
             key = 'loginShell'
-            value = value if value else load_param("users", "shell")
 
         elif key == 'expire':
             key = 'shadowExpire'
 
-            if value and value != '-1':
+            if value != '-1':
                 value = str(int(value) + int(time.time() / 86400))
-
-        if not value:
-            continue
 
         mod_attrs.append((ldap.MOD_REPLACE, key, value))
 
@@ -264,13 +291,7 @@ def group_add(b, groupname, gid):
     if gid:
 
         # Ensure gid's uniqueness
-        dn = 'ou=Group,%s' % b
-        filter = 'gidNumber=%s' % gid
-        attrs = ['gidNumber']
-
-        result = conn.search_s(dn, ldap.SCOPE_ONELEVEL, filter, attrs)
-
-        if result:
+        if exists('gid', uid):
             raise Exception('GID %s already exists' % gid)
 
         gidNumber = gid
@@ -296,6 +317,11 @@ def group_addusers(b, groupname, username):
 
     for name in username:
         try:
+            # Check if user exists
+            if not exists('username', name):
+                print "User '%s' does not exist" % name
+                continue
+
             mod_attrs = []
             mod_attrs.append((ldap.MOD_ADD, 'member',
                               'uid=%s,ou=People,%s' % (name, b)))
@@ -526,4 +552,3 @@ if __name__ == '__main__':
 
     except Exception as e:
         sys.exit("[Error] %s" % e)
-
