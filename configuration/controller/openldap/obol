@@ -205,10 +205,16 @@ def user_modify(b, username, **kwargs):
     mod_attrs = []
 
     for key, value in kwargs.iteritems():
+        append = True
+
         if not value:
             continue
 
-        if key == 'uid':
+        if key == 'password':
+            conn.passwd_s(dn, None, value)
+            append = False
+
+        elif key == 'uid':
             key = 'uidNumber'
 
             # Ensure uid's uniqueness
@@ -234,16 +240,10 @@ def user_modify(b, username, **kwargs):
             if value != '-1':
                 value = str(int(value) + int(time.time() / 86400))
 
-        mod_attrs.append((ldap.MOD_REPLACE, key, value))
+        if append:
+            mod_attrs.append((ldap.MOD_REPLACE, key, value))
 
     conn.modify_s(dn, mod_attrs)
-
-
-def user_reset(b, username, password):
-    """Reset a users password"""
-
-    dn = 'uid=%s,ou=People,%s' % (username, b)
-    conn.passwd_s(dn, None, password)
 
 
 def user_show(b, username):
@@ -433,14 +433,14 @@ group_commands = groups.add_subparsers(dest='command')
 # User commands
 command = user_commands.add_parser('add', help='Add a user')
 command.add_argument('username')
-command.add_argument('--password')
+command.add_argument('--password', '-p')
 command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
 command.add_argument('--uid', '-u', metavar='USER ID')
 command.add_argument('--gid', '-g', metavar='GROUP ID')
 command.add_argument('--mail', metavar="EMAIL ADDRESS")
-command.add_argument('--phone', '-p', metavar="PHONE NUMBER")
+command.add_argument('--phone', metavar="PHONE NUMBER")
 command.add_argument('--shell')
 command.add_argument('--groups', type=csep,
                      help='A comma separated list of group names')
@@ -454,12 +454,9 @@ command.add_argument('username')
 command = user_commands.add_parser('show', help='Show user details')
 command.add_argument('username')
 
-command = user_commands.add_parser('reset', help='Reset user password')
-command.add_argument('username')
-command.add_argument('--password')
-
 command = user_commands.add_parser('modify', help='Modify a user attribute')
 command.add_argument('username')
+command.add_argument('--password', '-p')
 command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
@@ -467,7 +464,7 @@ command.add_argument('--uid', '-u', metavar='USER ID')
 command.add_argument('--gid', '-g', metavar='GROUP ID')
 command.add_argument('--shell')
 command.add_argument('--mail', metavar="EMAIL ADDRESS")
-command.add_argument('--phone', '-p', metavar="PHONE NUMBER")
+command.add_argument('--phone', metavar="PHONE NUMBER")
 command.add_argument('--expire', metavar="DAYS",
                      help=('Number of days after which the account expires. '
                            'Set to -1 to disable'))
