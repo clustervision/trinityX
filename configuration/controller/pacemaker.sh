@@ -141,7 +141,7 @@ if flag_is_set PRIMARY_INSTALL ; then
     # -- Pacemaker ---
 
     echo_info 'Setting the password for the "hacluster" user'
-    if ! declare PACEMAKER_HACLUSTER_PW="$(get_password "$PACEMAKER_HACLUSER_PW")" ; then
+    if ! declare PACEMAKER_HACLUSTER_PW="$(get_password "$PACEMAKER_HACLUSTER_PW")" ; then
         echo_warn 'Reusing a read-only password, probably from a previous installation.'
         display_var PACEMAKER_HACLUSTER_PW
     fi
