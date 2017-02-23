@@ -75,7 +75,7 @@ function create_luna_folders() {
     /usr/bin/mkdir -p ${LPATH}/luna/{boot,torrents}
 
     pushd ${LPATH}/luna
-        /usr/bin/cp -pr /luna/src/templates ./
+        /usr/bin/cp -pr /luna/templates ./
     popd
 
     /usr/bin/chown -R luna: ${LPATH}/luna
@@ -95,26 +95,29 @@ function install_luna() {
     echo_info "Download Luna"
     pushd /
         [ -d /luna ] && rm -rf /luna
-        /usr/bin/git clone https://github.com/clustervision/luna
+        /usr/bin/git clone https://github.com/clustervision/luna -b dev
     popd
 
     echo_info "Create symlinks."
 
     pushd /usr/lib64/python2.7
-        /usr/bin/ln -fs /luna/src/module luna
+        /usr/bin/ln -fs /luna/luna luna
     popd
     pushd /usr/sbin
-        /usr/bin/ln -fs /luna/src/exec/luna
-        /usr/bin/ln -fs /luna/src/exec/lpower
-        /usr/bin/ln -fs /luna/src/exec/lweb
-        /usr/bin/ln -fs /luna/src/exec/ltorrent
-        /usr/bin/ln -fs /luna/src/exec/lchroot
+        /usr/bin/ln -fs /luna/bin/luna
+        /usr/bin/ln -fs /luna/bin/lpower
+        /usr/bin/ln -fs /luna/bin/lweb
+        /usr/bin/ln -fs /luna/bin/ltorrent
+        /usr/bin/ln -fs /luna/bin/lchroot
+        /usr/bin/ln -fs /luna/bin/lfs_pxelinux
     popd
 
     echo_info "Copy systemd unit files."
 
-    /usr/bin/cp -pr /luna/src/system/lweb.service /etc/systemd/system/lweb.service
-    /usr/bin/cp -pr /luna/src/system/ltorrent.service /etc/systemd/system/ltorrent.service
+    /usr/bin/cp -pr /luna/contrib/systemd/lweb.service /etc/systemd/system/lweb.service
+    /usr/bin/cp -pr /luna/contrib/systemd/ltorrent.service /etc/systemd/system/ltorrent.service
+    /usr/bin/cp -pr /luna/contrib/systemd/lfs_pxelinux.service /etc/systemd/system/lfs_pxelinux.service
+    /usr/bin/cp -pr /luna/contrib/systemd/lfs_pxelinux /etc/sysconfig/lfs_pxelinux
 
     echo_info "Reload systemd config."
 
@@ -122,14 +125,14 @@ function install_luna() {
 
     echo_info "Copy autocompletion functions."
 
-    /usr/bin/cp -pr /luna/src/system/luna_autocomplete.sh /etc/profile.d/
+    /usr/bin/cp -pr /luna/contrib/luna_autocomplete.sh /etc/profile.d/
 }
 
 function copy_dracut() {
     echo_info "Copy dracut module to ${TRIX_LOCAL}/luna/dracut/"
 
     /usr/bin/mkdir -p ${TRIX_LOCAL}/luna/dracut/
-    /usr/bin/cp -pr /luna/src/dracut/95luna ${TRIX_LOCAL}/luna/dracut/
+    /usr/bin/cp -pr /luna/contrib/dracut/95luna ${TRIX_LOCAL}/luna/dracut/
 }
 
 function setup_tftp() {
