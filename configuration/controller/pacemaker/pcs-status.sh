@@ -10,6 +10,7 @@ function pcs() {
             -e 's/Slaves/\x1b[1;36mSlaves\x1b[0m/g' \
             -e 's/standby/\x1b[1;34mstandby\x1b[0m/g' \
             -e 's/OFFLINE/\x1b[1;31;5mOFFLINE\x1b[0m/g' \
+            -e 's/unmanaged/\x1b[1;34munmanaged\x1b[0m/g' \
             -e 's/Failed Actions/\x1b[1;31;5mFailed Actions\x1b[0m/g' 
     else
         /usr/sbin/pcs $@
