@@ -33,3 +33,8 @@ echo_info "Disabling SELinux"
 sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux /etc/selinux/config
 sestatus | grep -q '^SELinux status.*disabled$' || setenforce 0
 
+
+echo_info "Make screen mode user-friendly"
+
+append_line /etc/screenrc 'log on'
+append_line /etc/screenrc 'termcapinfo xterm* ti@:te@'

@@ -256,6 +256,11 @@ function configure_pacemaker() {
             resource create ${SERVICE} systemd:${SERVICE} --force --group=Luna
         /usr/sbin/pcs -f ${TMPFILE} resource update ${SERVICE} op monitor interval=0 # disable fail actions
     done
+    # On failover mongo requires about 30 seconds to get quorum and find new primary node.
+    # Systemd unit has 90 sec timeout. So systemd should report a failure, not pacemaker.
+    # Fix for https://github.com/clustervision/trinityX/issues/201
+    /usr/sbin/pcs -f ${TMPFILE} resource update ltorrent op start timeout=120
+    /usr/sbin/pcs -f ${TMPFILE} resource update lweb     op start timeout=120
     /usr/sbin/pcs cluster cib-push ${TMPFILE}
 
 }
