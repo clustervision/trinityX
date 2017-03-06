@@ -128,6 +128,12 @@ function install_luna() {
     /usr/bin/cp -pr /luna/contrib/luna_autocomplete.sh /etc/profile.d/
 }
 
+function build_ltorrent_client() {
+    pushd /luna/contrib/ltorrent-client
+    /usr/bin/make
+    popd
+}
+
 function copy_dracut() {
     echo_info "Copy dracut module to ${TRIX_LOCAL}/luna/dracut/"
 
@@ -275,6 +281,7 @@ function install_standalone() {
     add_luna_user $1
     create_luna_folders $1
     create_system_local_dirs
+    build_ltorrent_client
     copy_dracut
     setup_tftp
     setup_dns
