@@ -130,7 +130,11 @@ function install_luna() {
 
 function build_ltorrent_client() {
     pushd /luna/contrib/ltorrent-client
-    /usr/bin/make
+    if ! /usr/bin/make ; then
+        echo_error "Unable to make ltorrent-client"
+        exit 1
+    fi
+    /usr/bin/mv ltorrent-client ../dracut/95luna/
     popd
 }
 
