@@ -70,6 +70,7 @@ function setup_dns() {
 
 function setup_dns_secondary() {
     echo_info "Setup DNS."
+    /usr/bin/touch /etc/named.luna.zones
     append_line /etc/named.conf "include \"/etc/named.luna.zones\";"
 }
 
