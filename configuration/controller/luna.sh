@@ -163,6 +163,11 @@ function setup_dns() {
     append_line /etc/named.conf "include \"/etc/named.luna.zones\";"
 }
 
+function setup_dns_secondary() {
+    echo_info "Setup DNS."
+    append_line /etc/named.conf "include \"/etc/named.luna.zones\";"
+}
+
 function setup_nginx() {
     LPATH=$1
     if [ "x${LPATH}" = "x" ]; then
@@ -322,7 +327,7 @@ function install_secondary() {
     install_luna
     add_luna_user $1
     setup_tftp
-    setup_dns
+    setup_dns_secondary
     setup_nginx $1
     create_system_local_dirs
     configure_mongo_credentials 1
