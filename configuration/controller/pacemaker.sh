@@ -59,9 +59,10 @@ function pacemaker_hacluster_pw_auth {
         exit 1
     fi
 
-    # This is expected to produce a half-error during the primary installation, as
-    # the secondary node isn't there yet. Which means that we can't use the return
-    # code to check if it's done...
+    # When someone runs 'auth' from controller1 and controller2 in unavailable it will not
+    # be possible to run pcsd-related commands from first controller
+    # As this controller is not authorized to run commands on controller2
+    # See secondary section.
 
     echo_info 'Authenticating the "hacluster" user'
     pcs cluster auth -u hacluster -p "${PACEMAKER_HACLUSTER_PW}" --all
@@ -212,6 +213,12 @@ else
     echo_info 'Setting the password for the "hacluster" user'
     # The password comes from the shadow file of the primary installation
     pacemaker_hacluster_pw_auth
+
+    #
+    # We need to run pcs cluster auth from every member of the cluster when ALL members are available
+    #
+    /usr/bin/ssh $COROSYNC_CTRL1 /usr/sbin/pcs cluster auth -u hacluster -p "${PACEMAKER_HACLUSTER_PW}" --all
+
     pacemaker_start_and_check
 
     check_cluster secondary
