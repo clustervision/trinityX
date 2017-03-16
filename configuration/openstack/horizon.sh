@@ -47,7 +47,7 @@ cat >> /etc/openstack-dashboard/local_settings <<EOF
 CACHES = {
     'default': {
          'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-         'LOCATION': '${TRIX_CTRL_HOSTNAME}:11211',
+         'LOCATION': '127.0.0.1:11211',
     }
 }
 
