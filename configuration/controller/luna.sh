@@ -50,6 +50,10 @@ function get_lpath() {
     eval echo ~${U}
 }
 
+function luna_versionlock() {
+    /usr/bin/yum versionlock luna-*
+}
+
 function setup_tftp() {
     echo_info "Setup tftp."
 
@@ -190,6 +194,7 @@ function configure_pacemaker() {
 function install_standalone() {
     /usr/bin/systemctl stop dhcpd xinetd nginx 2>/dev/null || /usr/bin/true
     /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
+    luna_versionlock
     setup_tftp
     setup_dns
     setup_nginx
@@ -222,6 +227,7 @@ function install_primary() {
 
 function install_secondary() {
     /usr/bin/systemctl stop dhcpd lweb ltorrent 2>/dev/null || /usr/bin/true
+    luna_versionlock
     setup_tftp
     setup_dns_secondary
     setup_nginx
