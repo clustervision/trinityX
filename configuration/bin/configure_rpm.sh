@@ -1,6 +1,6 @@
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -81,23 +81,19 @@ function install_packages {
     # if no parameter, return
     (( $# )) || return 0
 
-    flag_is_set YUMRETRY && tries=2 || tries=1
     pkgs="$@"
 
-    while (( tries )) ; do
-        ret=0
-        yum -y ${POST_CHROOT:+--installroot "${POST_CHROOT}"} install $pkgs
-        echo_info 'Checking if packages were installed correctly'
-        pkgs="$(not_installed $pkgs)"
-        ret=$?
-        # did something fail to install?
-        if (( ret )) ; then
-            echo_warn 'The following packages failed to install:' $pkgs
-            (( tries-- ))
-        else
-            break
-        fi
-    done
+    ret=0
+    yum -y ${POST_CHROOT:+--installroot "${POST_CHROOT}"} install $pkgs
+
+    echo_info 'Checking if packages were installed correctly'
+    pkgs="$(not_installed $pkgs)"
+    ret=$?
+
+    # did something fail to install?
+    if (( ret )) ; then
+        echo_warn 'The following packages failed to install:' $pkgs
+    fi
 
     return $ret
 }

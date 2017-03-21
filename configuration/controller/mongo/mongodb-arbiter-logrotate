@@ -1,0 +1,12 @@
+/var/log/mongodb-arbiter/*.log {
+       weekly
+       rotate 10
+       copytruncate
+       delaycompress
+       compress
+       notifempty
+       missingok
+       postrotate
+          /bin/kill -USR1 `cat /var/run/mongodb-arbiter/mongod.pid 2>/dev/null` 2> /dev/null|| true
+       endscript
+}

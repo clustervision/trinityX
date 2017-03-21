@@ -1,18 +1,18 @@
 
-Trinity X installation procedure
+TrinityX installation procedure
 ================================
 
-This document describes the installation of a Trinity X controller, as well as the creation and configuration of an image for the compute nodes of a Trinity X cluster.
+This document describes the installation of a TrinityX controller, as well as the creation and configuration of an image for the compute nodes of a TrinityX cluster.
 
-Both procedures run on the machine that will be used as the controller. The requirements for this system, as well as for the compute nodes, are decribed in the `Trinity X pre-installation requirements`_. It is assumed that the guidelines included in this document have been followed, and that the controller machine is ready for the Trinity X configuration.
+Both procedures run on the machine that will be used as the controller. The requirements for this system, as well as for the compute nodes, are decribed in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machine is ready for the TrinityX configuration.
 
 
 Controller installation
 -----------------------
 
-The Trinity X configuration script will install and configure all packages required for setting up a working Trinity X controller.
+The TrinityX configuration script will install and configure all packages required for setting up a working TrinityX controller.
 
-The configuration for a default controller installation is described in the file called ``controller.cfg``, located in the ``configuration`` subdirectory of the Trinity X tree::
+The configuration for a default controller installation is described in the file called ``controller.cfg``, located in the ``configuration`` subdirectory of the TrinityX tree::
 
     # pwd
     ~/trinityX
@@ -33,9 +33,9 @@ This file can be edited to reflect the user's own installation choices. All conf
     
     # ./configure.sh controller.cfg
 
-For further details about the use of the configuration script, including its command line options, please see `Configuration tool usage`_.
+For further details about the use of the configuration script, including its command line options, please see :doc:`config_tool`.
 
-For further details about the configuration files, please see `Configuration files`_.
+For further details about the configuration files, please see :doc:`config_cfg_files`.
 
 
 Compute node image creation
@@ -67,14 +67,14 @@ After the configuration has completed, the node image is ready but not yet integ
 Offline installation
 --------------------
 
-The configuration script relies on the built-in package management commands of the operating system: ``yum`` and ``rpm`` in the case of CentOS. By default those commands pull the packages that they require from online repositories. For the rare cases where an offline installation is required, the Trinity X configuration tool provides support for using local repositories.
+The configuration script relies on the built-in package management commands of the operating system: ``yum`` and ``rpm`` in the case of CentOS. By default those commands pull the packages that they require from online repositories. For the rare cases where an offline installation is required, the TrinityX configuration tool provides support for using local repositories.
 
 .. note:: When doing an offline installation, you may want to enable the option ``REPOS_DISABLE_REMOTE`` in the configuration file. This will save time as ``yum`` won't try to connect to remote repositories. Make sure to read all documentation and READMEs before, and remember that all required packages must be available in one of the local repositories.
 
 Local repositories
 ~~~~~~~~~~~~~~~~~~
 
-The Trinity X configuration tool copies the whole ``packages`` folder over to the controller, and sets up the repository files to make it available to yum as a source of packages. The matching ``.repo`` files are located in a subfolder of the installer::
+The TrinityX configuration tool copies the whole ``packages`` folder over to the controller, and sets up the repository files to make it available to yum as a source of packages. The matching ``.repo`` files are located in a subfolder of the installer::
 
     # pwd
     ~/trinityX
@@ -98,18 +98,18 @@ Each repo file configures the local repository contained in one folder, for exam
 
     # cat configuration/controller/local-repos/local-repo.repo 
     [local-repo]
-    name=trinityX - local repository
+    name=TrinityX - local repository
     baseurl=file://TRIX_ROOT/shared/packages/local-repo
     enabled=1
     gpgcheck=0
 
-.. note:: The string ``TRIX_ROOT`` will be replaced at installation time by the installation path of Trinity X. The last part of the ``baseurl`` line (``packages/local-repo``) is the name of the folder in which the local repository resides.
+.. note:: The string ``TRIX_ROOT`` will be replaced at installation time by the installation path of TrinityX. The last part of the ``baseurl`` line (``packages/local-repo``) is the name of the folder in which the local repository resides.
 
 The first option for an offline installation is to make full local mirrors of the repositories required by the installer, in the ``packages`` folder before installation. This has the advantage of making all packages available to a fully disconnected system, at the cost of gigabytes of storage space.
 
 Various methods for creating local mirrors from DVD images or online sources are described in `Creating Local Mirrors for Updates or Installs <https://wiki.centos.org/HowTos/CreateLocalMirror>`_.
 
-The exact list of repositories required for a specific installation depends on the post scripts selected in the configuration file. As of Trinity X release 1, those are:
+The exact list of repositories required for a specific installation depends on the post scripts selected in the configuration file. As of TrinityX release 1, those are:
 
 - base system: CentOS (including updates and extras), EPEL, ELRepo, OpenHPC
 
@@ -135,7 +135,7 @@ The procedure starts with a full configuration of the controller and the image::
     # ./configure.sh images-create-compute.cfg
 
 
-Then all rpm files are copied to the installation media that will be used for the offline installation. It is assumed to contain the full Trinity X tree already, and therefore contains the ``packages`` directory. We can make use of the ``local-repo`` subdirectory as it comes with a repo file already::
+Then all rpm files are copied to the installation media that will be used for the offline installation. It is assumed to contain the full TrinityX tree already, and therefore contains the ``packages`` directory. We can make use of the ``local-repo`` subdirectory as it comes with a repo file already::
 
     # MEDIAPATH=/path/to/your/media
     
@@ -156,11 +156,11 @@ Group files
 
 YUM supports group files, which are a convenient way of installing sets of packages at once. Those group files are provided with the repository metadata if the repos have been created with group definitions, which are XML files.
 
-The Trinity X configuration makes use of groups to install the base OS for node images. When installing from online repos, the necessary group files are available. When installing from local repos, the user must make sure that the group definitions are still available.
+The TrinityX configuration makes use of groups to install the base OS for node images. When installing from online repos, the necessary group files are available. When installing from local repos, the user must make sure that the group definitions are still available.
 
-As the XML files are hard to edit by hand and may change from subrelease to subrelease, the easiest way to provide a group file in your local repo is to re-use the upstream group file. If you obtained your packages through a `Test installation`_, all packages described in the file may not be available in the local repo. The ones required by the Trinity X configuration tool will be, as they have all been downloaded already.
+As the XML files are hard to edit by hand and may change from subrelease to subrelease, the easiest way to provide a group file in your local repo is to re-use the upstream group file. If you obtained your packages through a `Test installation`_, all packages described in the file may not be available in the local repo. The ones required by the TrinityX configuration tool will be, as they have all been downloaded already.
 
-The name of the group file is usually ``comps.xml``, altough sometimes it can be found under ``groups.xml``. As of Trinity X release 1, only the groups for the base CentOS repository are needed. Adding a group file is done with the ``-g`` flag to ``createrepo``; see `Test installation`_ for an example of usage.
+The name of the group file is usually ``comps.xml``, altough sometimes it can be found under ``groups.xml``. As of TrinityX release 1, only the groups for the base CentOS repository are needed. Adding a group file is done with the ``-g`` flag to ``createrepo``; see `Test installation`_ for an example of usage.
 
 When the local repository was created with the correct group files, the output of this command should be very similar even when all remote repos are disabled::
 
@@ -173,12 +173,4 @@ When the local repository was created with the correct group files, the output o
         core
      Optional Groups:
        +debugging
-
-
-
-.. Relative file links
-
-.. _Trinity X pre-installation requirements: requirements.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
 

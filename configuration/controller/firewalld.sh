@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -19,7 +19,18 @@
 
 # Basic configuration of firewalld, without TUI
 
-display_var FWD_{PUBLIC_IF,TRUSTED_IF,NAT_PUBLIC,HTTPS_PUBLIC}
+display_var FWD_{PUBLIC_IF,TRUSTED_IF,NAT_PUBLIC,TCP_PUBLIC,UDP_PUBLIC}
+
+
+# This is a patch for some errors of the type:
+# ERROR: Exception DBusException: org.freedesktop.DBus.Error.AccessDenied
+
+if flag_is_unset POST_CHROOT ; then
+    echo_info 'Restarting some services, strange messages are normal'
+
+    systemctl daemon-reexec
+    systemctl restart dbus polkit sshd systemd-logind
+fi
 
 
 # So we want firewalld. Enable and start it now, otherwise lots of commands will
@@ -55,30 +66,32 @@ systemctl restart firewalld
 
 if flag_is_set FWD_PUBLIC_IF ; then
     for i in $FWD_PUBLIC_IF ; do
+        echo_info "Assigning interfaces: $i -> Public"
+        firewall-cmd --zone=public --change-interface=${i}
+        firewall-cmd --permanent --zone=public --change-interface=${i}
+
         ifcfg="/etc/sysconfig/network-scripts/ifcfg-${i}"
         if [[ -r "$ifcfg" ]] ; then
-            echo_info "Assigning interfaces: $i -> Public"
-            firewall-cmd --zone=public --change-interface=${i}
-            #firewall-cmd --permanent --zone=public --change-interface=${i}
             store_system_variable "$ifcfg" NM_CONTROLLED no
             store_system_variable "$ifcfg" ZONE public
         else
-            echo_warn "Interface $i doesn't have an ifcfg file, skipping..."
+            echo_warn "Interface $i doesn't have an ifcfg file, skipping file update..."
         fi
     done
 fi
 
 if flag_is_set FWD_TRUSTED_IF ; then
     for i in $FWD_TRUSTED_IF ; do
+        echo_info "Assigning interfaces: $i -> Trusted"
+        firewall-cmd --zone=trusted --change-interface=${i}
+        firewall-cmd --permanent --zone=trusted --change-interface=${i}
+
         ifcfg="/etc/sysconfig/network-scripts/ifcfg-${i}"
         if [[ -r "$ifcfg" ]] ; then
-            echo_info "Assigning interfaces: $i -> Trusted"
-            firewall-cmd --zone=trusted --change-interface=${i}
-            #firewall-cmd --permanent --zone=trusted --change-interface=${i}
             store_system_variable "$ifcfg" NM_CONTROLLED no
             store_system_variable "$ifcfg" ZONE trusted
         else
-            echo_warn "Interface $i doesn't have an ifcfg file, skipping..."
+            echo_warn "Interface $i doesn't have an ifcfg file, skipping file update..."
             fi
     done
 fi
@@ -98,13 +111,19 @@ fi
 
 #---------------------------------------
 
-# Enable HTTPS on public zone
+# Enable required ports on the public zone
 
-if flag_is_set FWD_HTTPS_PUBLIC ; then
-    echo_info "Enabling HTTPS on the public zone"
-    firewall-cmd --zone=public --add-service=https
-    firewall-cmd --permanent --zone=public --add-service=https
-fi
+echo_info "Allowing TCP ports on the public zone"
+
+for range in ${FWD_TCP_PUBLIC[*]}; do
+    firewall-cmd --permanent --zone=public --add-port="$range"/tcp
+done
+
+echo_info "Allowing UDP ports on the public zone"
+
+for range in ${FWD_UDP_PUBLIC[*]}; do
+    firewall-cmd --permanent --zone=public --add-port="$range"/udp
+done
 
 
 #---------------------------------------

@@ -1,6 +1,6 @@
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,7 @@ function mkdir      { command mkdir ${VERBOSE+-v} "${@}" ; }
 function mount      { command mount ${VERBOSE+-v} "${@}" ; }
 function rsync      { command rsync ${VERBOSE+-v} "${@}" ; }
 function umount     { command umount ${VERBOSE+-v} "${@}" ; }
+function install    { command install ${VERBOSE+-v} "${@}" ; }
 function systemctl  { command systemctl ${QUIET+-q} "${@}" ; }
 
 typeset -fx cp
@@ -50,10 +51,16 @@ typeset -fx mkdir
 typeset -fx mount
 typeset -fx rsync
 typeset -fx umount
+typeset -fx install
 typeset -fx systemctl
 
 
 #---------------------------------------
+
+# Trinity config markers
+export TRIX_CONFIG_START="############   Trinity X CONFIG START   ############"
+export TRIX_CONFIG_WARNING="############        DON'T MODIFY!       ############"
+export TRIX_CONFIG_END="############    Trinity X CONFIG END    ############"
 
 # Colors!
 
@@ -70,73 +77,91 @@ export COL_CYAN=$ESC_SEQ"36;01m"
 # Display a string in a big fat header in colors
 
 function echo_header {
-    echo -e "${NOCOLOR-$COL_GREEN}"
+    flag_is_unset NOCOLOR && echo -ne $COL_GREEN ; echo
     echo -e "################################################################################\n##"
     echo "##  $@"
     echo -e "##\n################################################################################"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 # Display a big fat footer in colors
 
 function echo_footer {
-    echo -e "${NOCOLOR-$COL_GREEN}"
+    flag_is_unset NOCOLOR && echo -ne $COL_GREEN ; echo
     echo -e "################################################################################"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 # Display a standard progress message
 
 function echo_progress {
-    echo -e "${NOCOLOR-$COL_CYAN}"
+    flag_is_unset NOCOLOR && echo -ne $COL_CYAN ; echo
     echo " ----->>>  $@  <<<-----"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 
 # Display an information message
 
 function echo_info {
-    echo -e "${NOCOLOR-$COL_MAGENTA}"
+    flag_is_unset NOCOLOR && echo -ne $COL_MAGENTA ; echo
     echo "[ info ]   $@"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 # Display a warning message
 
 function echo_warn {
-    echo -e "${NOCOLOR-$COL_YELLOW}"
+    flag_is_unset NOCOLOR && echo -ne $COL_YELLOW ; echo
     echo "[ warn ]   $@"
-    echo -e "${NOCOLOR-$COL_RESET}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
 # Display an error message
 
 function echo_error {
-    echo -e "${NOCOLOR-$COL_RED}"
+    flag_is_unset NOCOLOR && echo -ne $COL_RED ; echo
     echo "[ ERROR ]  $@"
-    echo -e "${NOCOLOR-$COL_RESET}"
-    
-    if [[ "${SOFTSTOP+x}" == x ]] ; then
-        echo 'Stop requested, exiting now.'
-        exit 1
-    fi
+    flag_is_unset NOCOLOR && echo -ne $COL_RESET ; echo
 }
 
-# Same, and wait for user input
-
-function echo_error_wait {
-    echo_error "$@"
-    
-    if ! [[ -v NOSTOP ]] ; then
-        read -p "           Press Enter to continue."
-    fi
-}
 
 # Only export the functions that are available to the post scripts
 typeset -fx echo_info
 typeset -fx echo_warn
 typeset -fx echo_error
+
+
+#---------------------------------------
+
+# Retry/Continue/Exit prompt
+
+# $1: return value of the function in the RCE loop
+# This value sets the default behaviour: continue if successful, retry if not
+
+function rce_prompt {
+
+    flag_is_set SOFTSTOP && return 3
+    flag_is_set NOSTOP && return 2
+
+    if [[ "$1" == "0" ]] ; then
+        defchar='C'
+        defval=2
+    else
+        defchar='R'
+        defval=1
+    fi
+
+    while true ; do
+        read -p "           [R]etry, [C]ontinue or [E]xit? [${defchar}] "
+        case "${REPLY,,}" in
+            "" )    return $defval ;;
+            "r" )   return 1 ;;
+            "c" )   return 2 ;;
+            "e" )   return 3 ;;
+        esac
+    done
+}
 
 
 #---------------------------------------
@@ -159,11 +184,18 @@ function append_line {
     if [[ -r "$1" ]] && grep -q -- "^${2}$" "$1" ; then
         echo "Line already present in destination file: $2"
     else
-        if flag_is_set QUIET ; then
-            echo "$2" >> "$1"
-        else
-            echo "$2" | tee -a "$1"
-        fi
+        if grep -q -- "^${TRIX_CONFIG_END}$" "$1" ; then
+	    if flag_is_unset QUIET ; then
+		echo "$2"
+	    fi
+	    /usr/bin/sed -i -e /"^${TRIX_CONFIG_END}$"/i"$2" "$1"
+	else
+	    if flag_is_set QUIET ; then
+                echo "$2" >> "$1"
+            else
+                echo "$2" | tee -a "$1"
+            fi
+	fi
     fi
 }
 
@@ -384,13 +416,109 @@ function disable_remote_repos {
         # disable everything that is explicitely enabled first
         sed -i 's/^\(enabled=1\)/#\1/g' "$repofile"
         # then disable all remote and enable only our local ones
-        sed -i -e '/^baseurl=http/a enabled=0' \
-               -e '/^mirrorlist=http/a enabled=0' \
-               -e '/^baseurl=file:\/\/'${TRIX_SHARED//\//\\\/}'/a enabled=1' \
+        sed -i -e '/^baseurl\s*=\s*http/a enabled=0' \
+               -e '/^mirrorlist\s*=\s*http/a enabled=0' \
+               -e '/^baseurl\s*=\s*file:\/\/'${TRIX_SHARED//\//\\\/}'/a enabled=1' \
                "$repofile"
     done
 }
 
 
 typeset -fx disable_remote_repos
+
+
+#---------------------------------------
+
+# The simplest templating function in the west
+
+# Syntaxes: command | render_template
+#           render_template file
+
+# The output is written to the stdout. It consists of the stdin or the contents
+# of the file with all environment variables replaced by their values. If a
+# given variable mustn't be expanded, follow the Bash expansion rules and escape
+# the dollar sign:
+# 
+# echo '$USER' | render_template        -->     (your username)
+# echo '\$USER' | render_template       -->     $USER
+# echo '\\\$USER' | render_template     -->     \$USER
+
+function render_template {
+
+    eval "echo \"$(cat ${1})\""
+}
+
+
+typeset -fx render_template
+
+
+#---------------------------------------
+
+# Check wether the Pacemaker cluster has brought up the required resources
+
+# Syntax: resources_are_started <resource name> [<resource name> ...]
+
+# Pacemaker is a real pain. There is no easy way of getting a return value
+# matching the state of a resource through pcs or crm*. So one has to grep...
+# Note that the resource name must not contain weird characters, only alphanum
+# and dash and underscore.
+
+function resources_are_started {
+
+    (( $# )) || return 1
+
+    status="$(crm_resource -L)"
+
+    # Check first that the resources actually exist
+    for res in "$@" ; do
+        if ! echo "$status" | grep -q -w "$res" ; then
+            echo_error "Error: the resource \"$res\" doesn't exist."
+            return 1
+        fi
+    done
+
+    ret=0
+
+    for res in "$@" ; do
+        echo "$status" | grep -w "$res" | grep -q -w Started
+        (( ret+=$? ))
+    done
+
+    return $ret
+}
+
+
+typeset -fx resources_are_started
+
+
+#---------------------------------------
+
+# Wait for the cluster to settle, and if required, check for the state of
+# resources.
+
+# Syntax: check_cluster [<resource name> ...]
+
+# Without parameters, this function will just wait until Pacemaker reaches a
+# stable state. When that happens, all resources that can run should have been
+# started. Just to make sure one can pass additional resource names, and the
+# function will check that those resources are really started.
+
+function check_cluster {
+
+    echo_info 'Waiting for the cluster to settle...'
+    crm_resource --wait
+
+    if (( $# )) ; then
+        echo_info "Checking the state of resources: $@"
+        until resources_are_started "$@" ; do
+            echo 'Waiting for the resources to start...'
+            sleep 5s
+        done
+    fi
+
+    return 0
+}
+
+
+typeset -fx check_cluster
 

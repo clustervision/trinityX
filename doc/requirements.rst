@@ -1,18 +1,18 @@
 
-Trinity X pre-installation requirements
+TrinityX pre-installation requirements
 =======================================
 
 
 Hardware
 --------
 
-Trinity X has very few hardware requirements, which are summarized in the following paragraphs.
+TrinityX has very few hardware requirements, which are summarized in the following paragraphs.
 
 
 Controllers
 ~~~~~~~~~~~
 
-The machines that will be used as Trinity X controllers are expected to have a minimum of 2 Ethernet NIC:
+The machines that will be used as TrinityX controllers are expected to have a minimum of 2 Ethernet NIC:
 
 - one NIC for the public interface, used to connect to the cluster;
 
@@ -32,7 +32,7 @@ The controllers must have enough disk space to install the base operating system
 
 - user homes.
 
-All of the above are located in specific directories under the root of the Trinity X installation, and can be hosted either on the controller's drives or on remote filesystems. Sufficient storage space must be provided in all cases.
+All of the above are located in specific directories under the root of the TrinityX installation, and can be hosted either on the controller's drives or on remote filesystems. Sufficient storage space must be provided in all cases.
 
 
 Compute nodes
@@ -58,21 +58,21 @@ Software and configuration
 Controllers
 ~~~~~~~~~~~
 
-The Trinity X installer requires the operating system of the controllers to be already installed. As of Trinity X v1, the only supported OS version is:
+The TrinityX installer requires the operating system of the controllers to be already installed. As of TrinityX v1, the only supported OS version is:
 
 - CentOS 7.2 **Minimal**
 
-It is important to install only the Minimal edition, as some of the packages that are installed with larger editions conflict with what will be installed for Trinity X. Note that when installing from a non-Minimal edition, it is usually possible to select the Minimal setup at the package selection step.
+It is important to install only the Minimal edition, as some of the packages that are installed with larger editions conflict with what will be installed for TrinityX. Note that when installing from a non-Minimal edition, it is usually possible to select the Minimal setup at the package selection step.
 
-The network configuration of the controllers must be done before installing Trinity X, and it must be correct. This includes:
+The network configuration of the controllers must be done before installing TrinityX, and it must be correct. This includes:
 
-- IP addresses and netmasks of all interfaces that will be used by Trinity X;
+- IP addresses and netmasks of all interfaces that will be used by TrinityX;
 
 - hostname and domainname (the commands `hostname`, `hostname -s` and `hostname -d` must return the correct values).
 
 The timezone must also be set correctly before installation.
 
-If the user homes or the Trinity X installation directory (part of or whole) are to be set up on remote or distributed volume(s) or filesystem(s), all relevant configuration must be done before installing Trinity X. If necessary, remember to disable the NFS post script.
+If the user homes or the TrinityX installation directory (part of or whole) are to be set up on remote or distributed volume(s) or filesystem(s), all relevant configuration must be done before installing TrinityX. If necessary, remember to disable the NFS post script.
 
 
 Compute nodes

@@ -1,7 +1,4 @@
 
-.. vim: tw=0
-
-
 Post scripts
 ============
 
@@ -78,7 +75,7 @@ The Bash script for most post scripts should follow a standard structure::
 General rules
 ~~~~~~~~~~~~~
 
-- Separate your code and data. In other words, as much as possible don't define whole configuration files as strings in the shell script. Some of it is unavoidable (changing an option value, appending a line, etc -- use the provided functions for that!), but if you're copying whole files, then use the post script's private directory and copy them from there. See ``POST_FILEDIR`` in `Environment variables`_.
+- Separate your code and data. In other words, as much as possible don't define whole configuration files as strings in the shell script. Some of it is unavoidable (changing an option value, appending a line, etc -- use the provided functions for that!), but if you're copying whole files, then use the post script's private directory and copy them from there. See ``POST_FILEDIR`` in :doc:`config_env_vars`.
 
 - If you really have to chose between mutually exclusive sets of packages (for example Nagios + Ganglia vs. Zabbix), create multiple post scripts that can be toggled on and off by commenting them out in the configuration file. Especially for different versions of a given package, or support for different CentOS releases, write separate post scripts.
 
@@ -90,7 +87,7 @@ General rules
 Default behaviour
 ~~~~~~~~~~~~~~~~~
 
-- Try to make your scripts as `idempotent <https://en.wikipedia.org/wiki/Idempotence>`_ as possible, that is; being able to run multiple times without changing the results beyond those of the first run. Some functions are provided to help with that goal, those are described in `Common functions`_.
+- Try to make your scripts as `idempotent <https://en.wikipedia.org/wiki/Idempotence>`_ as possible, that is; being able to run multiple times without changing the results beyond those of the first run. Some functions are provided to help with that goal, those are described in :doc:`config_common_funcs`.
 
 - At the very least, make sure that the shell script doesn't do any damage when the state of the system at the beginning of execution is not what expected. In other words, don't make too many assumptions and do a few checks at the beginning. The sane default behaviour when a configuration already exists is to wipe it and start clean (a.k.a. the big red reset button), so that re-running a post script that failed restarts it from the beginning.
 
@@ -104,15 +101,15 @@ Package management
 
 - The only exceptions to the above rule are the small RPMs used for additional repositories only. Copy them to the private directory of the ``additional-repos`` post script, and they will be installed and ready before processing your own post script.
 
-- When no RPM is available in external repos and it's necessary to provide one with Trinity, then use the local repository, which exists for that purpose. When installing a group of packages for a specific post script, then create your own local repository: create a subdirectory in the `packages directory`_ and copy your files there; it will be automatically picked up by the ``local-repos`` post script, copied and installed on the controllers. In both cases, remember to create or update the repository metadata after copying your files! See the documentation in the `packages directory`_ for more details.
+- When no RPM is available in external repos and it's necessary to provide one with Trinity, then use the local repository, which exists for that purpose. When installing a group of packages for a specific post script, then create your own local repository: create a subdirectory in the ``packages`` and copy your files there; it will be automatically picked up by the ``local-repos`` post script, copied and installed on the controllers. In both cases, remember to create or update the repository metadata after copying your files! See the documentation in the ``packages`` directory for more details.
 
 
 Variable and configuration management
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Feel free to append information to ``/etc/trinity.sh``, as long as it's only environment variables and it's pertinent. This file is sourced automatically and its contents made available to all post scripts. See `Environment variables`_ and `Common functions`_ for more details and the correct way to do so.
+- Feel free to append information to ``/etc/trinity.sh``, as long as it's only environment variables and it's pertinent. This file is sourced automatically and its contents made available to all post scripts. See :doc:`config_env_vars` and :doc:`config_common_funcs` for more details and the correct way to do so.
 
-- Print out the variables that you will need at the beginning of your script. That way, the output messages will contain the exact state of the post script's input. Use the function ``display_var`` for that, see `Common functions`_.
+- Print out the variables that you will need at the beginning of your script. That way, the output messages will contain the exact state of the post script's input. Use the function ``display_var`` for that, see :doc:`config_common_funcs`.
 
 - Be careful in the choice of your variables in the configuration file. If possible, try to have a sane default value if no config option is set (i.e., empty configuration). For example, if ``something`` is required in 99% if cases but you want to give the option to disable it, make it ``DISABLE_SOMETHING`` and not ``ENABLE_SOMETHING``. With an empty config file, ``ENABLE_SOMETHING`` would not be set and that would break the 99% of cases. When a configuration option must have a value (for example a path to a file), make sure that you have a fallback value if the option is not set, and document it very well next to the option in ``controller.cfg`` and your shell script.
 
@@ -120,9 +117,9 @@ Variable and configuration management
 
 - The prefix ``TRIX_`` is reserved for the values contained in ``/etc/trinity.sh``. Never use it as a configuration option prefix.
 
-- All configuration variables must be added to the file `controller.cfg`_, which serves as the reference. The variables for a given post script must be listed under a header containing the name of the post script; see the file for examples. They must be set to a sane value or commented out.
+- All configuration variables must be added to the file ``controller.cfg``, which serves as the reference. The variables for a given post script must be listed under a header containing the name of the post script; see the file for examples. They must be set to a sane value or commented out.
 
-- All the configuration variables added to `controller.cfg`_ must be documented: what their role is, what range of values do they accept, what their default option is if not set.
+- All the configuration variables added to ``controller.cfg`` must be documented: what their role is, what range of values do they accept, what their default option is if not set.
 
 - When appending a line to a file, use the function called ``append_line``. It avoids duplication, which causes problems in many configuration files.
 
@@ -144,7 +141,7 @@ Shell script error management
 Password management
 ~~~~~~~~~~~~~~~~~~~
 
-- Passwords are stored read-only in the shadow file, and the Trinity X functions will not overwrite them. For that reason, as well as basic logic, the passwords should only be stored at the very end of the post scripts, once everything else has been completed successfully.
+- Passwords are stored read-only in the shadow file, and the TrinityX functions will not overwrite them. For that reason, as well as basic logic, the passwords should only be stored at the very end of the post scripts, once everything else has been completed successfully.
 
 - When setting up software with password, it is critical to respect the `Shell script error management`_ rules and undo all configuration in case of an error. Passwords make reconfiguration pretty much impossible, so clean up behind yourselves.
 
@@ -159,18 +156,4 @@ Documentation
 - All configuration variables in the config files **must** be documented: role, range of values and default value must be documented.
 
 - If the post script is particularly complex and / or deserves more explanation than what can be included in source code comments, then a Markdown or ReST file should be provided with it and included in the configuration tool documentation.
-
-
-
-.. _controller.cfg: ../controller.cfg
-.. _packages directory: ../../packages
-
-.. Relative file links
-
-.. _Documentation: README.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
-.. _Post scripts: config_post_scripts.rst
-.. _Environment variables: config_env_vars.rst
-.. _Common functions: config_common_funcs.rst
 

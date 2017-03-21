@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -17,16 +17,13 @@
 ######################################################################
 
 
-# Trinity X configuration tool
+# TrinityX configuration tool
 
 ################################################################################
 ##
 ## NO ACCESS TO THE SHARED FUNCTIONS YET
 ##
 ################################################################################
-
-
-# Right number of arguments?
 
 function syntax_exit {
     echo "
@@ -38,15 +35,16 @@ OPTIONS:
 -q                  be quieter
 -d                  run the post scripts in debug mode (bash -x)
 --nocolor           don't use color escape codes in the messages
+--step              pause and wait for input after every post script
 --continue          don't wait for user input on error
 --stop              exit when a post script returns an error code
 --hardstop          exit on any error inside a post script (bash -e)
---yum-retry         retry once installing packages that failed to install
 --chroot <dir>      apply the configuration inside <dir>
+-h, --help          display this help
 
 RULES:
 -v and -q are mutually exclusive.
---continue is mutually exclusive with --stop and --hardstop.
+--continue is mutually exclusive with --stop / --hardstop and --step.
 --hardstop selects --stop too.
 
 In the main syntax form, all options are positional: they apply only to the
@@ -58,7 +56,16 @@ Please refer to the documentation for additional information.
     exit 1
 }
 
+
+# Right number of arguments?
+
 (( $# )) || syntax_exit
+
+for arg in "$@"; do
+    if [ "$arg" == "--help" -o "$arg" == "-h" ] ; then
+      syntax_exit
+    fi
+done
 
 
 #---------------------------------------
@@ -92,14 +99,25 @@ source "${MYPATH}/bin/configure_backend.sh"
 
 echo "Beginning of script: $(date)"
 
-unset QUIET VERBOSE DEBUG NOCOLOR
+unset QUIET VERBOSE DEBUG NOCOLOR {NO,SOFT,HARD}STOP STEP
 
 
 # Check if stdout is being redirected or piped to something else.
 # In both cases, disable the color codes to avoid polluting the output.
 
 if [[ -p /dev/stdout ]] || [[ ! -t 1 && ! -p /dev/stdout ]] ; then
-    declare -x NOCOLOR=
+    declare -x NOCOLOR="keep"
+else
+    echo_warn "The output of this script isn't being redirected to a log file.
+
+If this is the intended behaviour, press Enter to continue.
+
+If you want to keep a log of the installation, exit the script right now by
+typing Ctrl+C, and run the following command instead:
+
+$0 $@ |& tee -a trinityX_installation.log"
+
+    flag_is_unset NOSTOP && read
 fi
 
 
@@ -112,44 +130,40 @@ while (( $# )) ; do
     case "$1" in
 
         -q )
-            declare -x QUIET=
+            declare -x QUIET="keep"
             unset VERBOSE
             ;;
 
         -v )
-            declare -x VERBOSE=
+            declare -x VERBOSE="keep"
             unset QUIET
             ;;
 
         -d )
-            declare -x DEBUG=
+            declare -x DEBUG="keep"
             ;;
 
         --nocolor )
-            declare -x NOCOLOR=
+            declare -x NOCOLOR="keep"
             ;;
 
-        --dontstopmenow|--continue )
-            declare -x NOSTOP=
-            unset HARDSTOP
-            unset SOFTSTOP
-            ;;
-
-        --hitthewall|--hardstop )
-            declare -x HARDSTOP=
-            ;&
-
-        --bailout|--stop )
-            declare -x SOFTSTOP=
+        --step )
+            declare -x STEP="keep"
             unset NOSTOP
             ;;
 
-        --skip-pkg )
-            declare -x SKIPPKG=
+        --dontstopmenow|--continue )
+            declare -x NOSTOP="keep"
+            unset {HARD,SOFT}STOP STEP
             ;;
 
-        --yum-retry )
-            declare -x YUMRETRY=
+        --hitthewall|--hardstop )
+            declare -x HARDSTOP="keep"
+            ;&
+
+        --bailout|--stop )
+            declare -x SOFTSTOP="keep"
+            unset NOSTOP
             ;;
 
         --chroot )

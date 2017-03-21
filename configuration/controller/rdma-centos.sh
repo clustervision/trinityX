@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -20,12 +20,17 @@
 # Enable RDMA on interfaces that support it, with the default package included
 # in the CentOS distribution.
 
-# You will want to disable this post script if you're using a HW-specific RDMA
-# configuration.
+# You may want to disable this post script if the vendor software stack for your
+# hardware contains those functionalities.
 
-echo_info 'Enabling and starting the RDMA service'
+echo_info 'Enabling and starting the RDMA services'
 
-systemctl enable rdma
+systemctl enable rdma rdma-ndd
+
 # The restart fails but the start behaves like a restart, so...
-flag_is_unset POST_CHROOT && systemctl start rdma || true
+if flag_is_unset POST_CHROOT ; then
+    systemctl start rdma && systemctl restart rdma-ndd
+else
+    true
+fi
 

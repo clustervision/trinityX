@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -152,7 +152,7 @@ openstack-config --set /etc/nova/nova.conf neutron password $NEUTRON_PW
 openstack-config --set /etc/nova/nova.conf neutron service_metadata_proxy True
 openstack-config --set /etc/nova/nova.conf neutron metadata_proxy_shared_secret $METADATA_SECRET
 
-ln -s /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/plugin.ini
+ln -sf /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/plugin.ini
 
 echo_info "Initializing the neutron database"
 su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
@@ -175,7 +175,7 @@ if flag_is_set NEUTRON_USE_OPENVSWITCH; then
     systemctl restart openvswitch.service
 
     ovs-vsctl --may-exist add-br br-ex
-    ovs-vsctl add-port br-ex $NEUTRON_EXT_NIC
+    ovs-vsctl --may-exist add-port br-ex $NEUTRON_EXT_NIC
 
     systemctl enable neutron-openvswitch-agent.service
     systemctl restart neutron-openvswitch-agent.service

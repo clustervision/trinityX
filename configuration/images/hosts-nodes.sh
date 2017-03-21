@@ -1,6 +1,6 @@
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 
 
 # Setup the hosts files on the nodes
-# The base Trinity X setup must have been done, and we're using /etc/trinity.sh
+# The base TrinityX setup must have been done, and we're using /etc/trinity.sh
 # for the IPs of the controllers.
 
 display_var TRIX_CTRL{1,2,}_{HOSTNAME,IP}

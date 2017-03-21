@@ -1,6 +1,6 @@
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -50,18 +50,19 @@ function run_one_script {
         return 1
     fi
 
-    ret=0
-
 
     # First, bind mount the directories for yum
     (( ${#DIRYUMLIST[@]} )) && bind_mounts "$POST_CHROOT" "${DIRYUMLIST[@]}"
 
-    # Install the groups and packages if we have lists
+    # First install the groups
 
     if flag_is_set POST_GRPLIST ; then
         echo_progress "Installing package groups: $POST_GRPLIST"
-        install_groups $(grep -v '^#\|^$' "$POST_GRPLIST")
-        (( ret+=$? ))
+        if ! install_groups $(grep -v '^#\|^$' "$POST_GRPLIST") ; then
+            echo_error 'Error during group installation'
+            (( ${#DIRYUMLIST[@]} )) && unbind_mounts "$POST_CHROOT" "${DIRYUMLIST[@]}"
+            return 1
+        fi
     elif flag_is_set VERBOSE; then
         echo_info "No package group file found for post script $1"
     fi
@@ -76,10 +77,15 @@ function run_one_script {
         echo_info "No removal file found for post script $1"
     fi
 
+    # And finally the single packages
+
     if flag_is_set POST_PKGLIST ; then
         echo_progress "Installing packages: $POST_PKGLIST"
-        install_packages $(grep -v '^#\|^$' "$POST_PKGLIST")
-        (( ret+=$? ))
+        if ! install_packages $(grep -v '^#\|^$' "$POST_PKGLIST") ; then
+            echo_error 'Error during package installation'
+            (( ${#DIRYUMLIST[@]} )) && unbind_mounts "$POST_CHROOT" "${DIRYUMLIST[@]}"
+            return 1
+        fi
     elif flag_is_set VERBOSE ; then
         echo_info "No package file found for post script $1"
     fi
@@ -87,17 +93,12 @@ function run_one_script {
     # Unbind those directories
     (( ${#DIRYUMLIST[@]} )) && unbind_mounts "$POST_CHROOT" "${DIRYUMLIST[@]}"
 
-    # Take a break if the installation didn't go right
-    if (( $ret )) ; then
-        echo_error_wait 'Error during group or package installation, check the output for details.'
-    fi
 
-
-    ret=0
 
     # Then run the script if we have one
     if flag_is_set POST_SCRIPT ; then
 
+        ret=0
         echo_progress "Running post script: $POST_SCRIPT"
 
         # bind the configuration directories
@@ -111,7 +112,7 @@ function run_one_script {
         # redefine the trinity.sh variables in POST_CONFIG, re-source trinity.sh
         # afterwards... And because we have no guarantee that trinity.sh exists
         # already, those have to be conditional.
-        # Finally, load the password file if it exists already.
+        # Finally, load the local shfile and password file if they exist.
         # We cannot do all of that at a higher level because each script may
         # modify the .sh{,adow} files, and subsequent scripts will need the
         # updated versions in their environment.
@@ -121,6 +122,7 @@ function run_one_script {
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
             source \"$POST_CONFIG\"
             [[ -r /etc/trinity.sh ]] && source /etc/trinity.sh
+            [[ -r /etc/trinity.local.sh ]] && source /etc/trinity.local.sh
             [[ -r \"\$TRIX_SHADOW\" ]] && source \"\$TRIX_SHADOW\"
             source \"$POST_SCRIPT\" "
 
@@ -133,13 +135,10 @@ function run_one_script {
         echo_info "No shell script found for post script $1"
     fi
 
-    # Take a break if the script returned an error code
-    if (( $ret )) ; then
-        echo_error_wait "Error during post script: $POST_SCRIPT"
-    fi
-
     unset POST_{GRPLIST,PKGLIST,REMLIST,SCRIPT,FILEDIR}
+    return $ret
 }
+
 
 
 #---------------------------------------
@@ -162,8 +161,8 @@ function apply_config {
         export POST_CONFIG
         export POST_CONFDIR
     else
-        echo_error_wait "Fatal error: configuration file \"$POST_CONFIG\" doesn't exist."
-        return 1
+        echo_error "Fatal error: configuration file \"$POST_CONFIG\" doesn't exist."
+        exit 1
     fi
 
     # Is a chroot required?
@@ -203,8 +202,8 @@ function apply_config {
     fi
 
     if ! [[ -d "$POSTDIR" && -x "$POSTDIR" ]] ; then
-        echo_error_wait "Configuration directory doesn't exist: $POSTDIR"
-        return 1
+        echo_error "Configuration directory doesn't exist: $POSTDIR"
+        exit 1
     fi
 
     
@@ -221,8 +220,8 @@ function apply_config {
         POST_CHROOT="$(readlink -e "$POST_CHROOT")"
 
         if (( $? )) || ! [[ -d "$POST_CHROOT" && -x "$POST_CHROOT" ]] ; then
-            echo_error_wait "Chroot directory doesn't exist: $POST_CHROOT"
-            return 1
+            echo_error "Chroot directory doesn't exist: $POST_CHROOT"
+            exit 1
         else
             echo_info "Using the following directory for chroot: $POST_CHROOT"
             export POST_CHROOT
@@ -283,7 +282,54 @@ function apply_config {
     # where the directory is, we can loop over the list of post scripts.
 
     for post in "${POSTLIST[@]}" ; do
-        run_one_script "$post"
+
+        # Tweak the environment variables on the fly
+
+        # Defining a new variable
+        if [[ "$post" =~ ^\+.* ]] ; then
+            tmpvar=${post#+}
+            echo_progress "Setting the environment variable: $tmpvar"
+            if flag_is_unset $tmpvar ; then
+                declare -x -- ${tmpvar}=1
+            fi
+            continue
+
+        # Unsetting an existing variable, if not set on the command line
+        elif [[ "$post" =~ ^-.* ]] ; then
+            tmpvar=${post#-}
+            echo_progress "Unsetting the environment variable: $tmpvar"
+            if flag_is_set $tmpvar && [[ "${!tmpvar}" != "keep" ]] ; then
+                unset -- $tmpvar
+            fi
+            continue
+        fi
+
+
+        while true ; do
+
+            run_one_script "$post"
+            ret=$?
+
+            if (( ret == 0 )) ; then
+                if flag_is_unset STEP ; then
+                    break
+                else
+                    echo_warn "Stepping mode: please select the next step."
+                fi
+
+            else
+                echo_error "Error during post script: $post"
+            fi
+
+            rce_prompt $ret
+            case $? in
+                2 )     break       # continue
+                        ;;
+                3 )     exit 1      # exit
+                        ;;
+                * )     continue    # retry
+            esac
+        done
     done
 
     # Clean up the environment variables to avoid background noise later

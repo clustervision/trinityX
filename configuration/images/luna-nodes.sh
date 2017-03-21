@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -18,13 +18,13 @@
 
 
 # Copy luna's dracut module to the image. The files are supposed to be located at
-# ${TRIX_ROOT}/luna/dracut/95luna
+# ${TRIX_LOCAL}/luna/dracut/95luna
 
 echo_info 'Installing luna dracut module'
 
-if [[ -d "${TRIX_ROOT}/luna/dracut/95luna" ]]; then
-    cp -pr "${TRIX_ROOT}/luna/dracut/95luna" "/usr/lib/dracut/modules.d/"
+if [[ -d "${TRIX_LOCAL}/luna/dracut/95luna" ]]; then
+    cp -pr "${TRIX_LOCAL}/luna/dracut/95luna" "/usr/lib/dracut/modules.d/"
 else
-    echo_error 'Could not find the dracut module in ${TRIX_ROOT}/luna/dracut/95luna'
+    echo_error 'Could not find the dracut module in ${TRIX_LOCAL}/luna/dracut/95luna'
 fi
 

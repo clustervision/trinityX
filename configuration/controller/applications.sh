@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -30,6 +30,14 @@
 # 
 # This script will replace {{ prefix }} with the correct value
 #
+
+
+if flag_is_set HA && flag_is_unset PRIMARY_INSTALL ; then
+
+    echo_info 'Secondary installation, nothing to do.'
+    exit 0
+fi
+
 
 for GROUP in 'cv-standard' 'cv-advanced' 'site-local'; do
 

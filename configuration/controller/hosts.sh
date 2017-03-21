@@ -1,6 +1,6 @@
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -16,22 +16,19 @@
 ######################################################################
 
 
-# Setup the /etc/hosts file
+# Check basic name configuration and setup the /etc/hosts file
 
 # The CentOS installer doesn't update the hosts file for some reason (maybe
 # because of multiple interfaces?). We have to do it ourselves or nothing will
 # resolve and lots o' stuff will break.
 
-# Display the variables that we will need
 
 display_var HA CTRL{1,2,}_{HOSTNAME,IP} HOSTNAME
 
 
-#---------------------------------------
 
 # Are we running in an HA pair?
 # Are all the values set?
-# And on the way, sanitize the value of HA as it will end up in the .sh file
 
 if flag_is_unset HA ; then
 
@@ -40,7 +37,7 @@ if flag_is_unset HA ; then
 
     if flag_is_unset CTRL1_HOSTNAME || flag_is_unset CTRL1_IP; then
         echo_error 'Fatal error: missing hostname or IP value!'
-        exit 234
+        exit 1
     fi
 
     CTRL_HOSTNAME=$CTRL1_HOSTNAME
@@ -51,14 +48,13 @@ if flag_is_unset HA ; then
 else
 
     echo_info 'HA setup selected'
-    HA=1
 
     if flag_is_unset CTRL_HOSTNAME  || flag_is_unset CTRL_IP  || \
        flag_is_unset CTRL1_HOSTNAME || flag_is_unset CTRL1_IP || \
        flag_is_unset CTRL2_HOSTNAME || flag_is_unset CTRL2_IP ; then
         
         echo_error 'Fatal error: missing hostname or IP value(s)!'
-        exit 234
+        exit 1
     fi
 
     if [[ "$CTRL_HOSTNAME"  == "$CTRL1_HOSTNAME" || \
@@ -69,7 +65,7 @@ else
           "$CTRL1_IP"       == "$CTRL2_IP" ]] ; then
           
         echo_error 'Fatal error: some of the hostnames or IPs are identical!'
-        exit 234
+        exit 1
     fi
 fi
 
@@ -78,47 +74,49 @@ fi
 
 # Get some information about the current host
 
-hname=$(hostname -s)
-fname=$(hostname)
-[[ "$hname" == "$fname" ]] && unset fname
+mydomain="$DOMAIN"
+
+if ! ( [[ "$mydomain" ]] ) ; then
+    echo_error "Domain name not set in $POST_CONFIG"
+    exit 1
+fi
+
+
+# Strip the hostname of the domain, if set
+
+CTRL_HOSTNAME="${CTRL_HOSTNAME%%.*}"
+CTRL1_HOSTNAME="${CTRL1_HOSTNAME%%.*}"
+flag_is_set CTRL2_HOSTNAME && \
+    CTRL2_HOSTNAME="${CTRL2_HOSTNAME%%.*}"
+
 
 # List of active interface / IP pairs
 
 ifips="$(ip -o -4 addr show | awk -F '[ :/]+' '/scope global/ {print $2, $4}')"
 
-
 #---------------------------------------
 
-# Next thing to check: are we really one of the controllers?
+# Identify which controller the script is running on at the moment
 
-case $hname in
+while read ifname myip; do
+    if [ "$myip" == "$CTRL1_IP" ] ; then
+        myhname=$CTRL1_HOSTNAME
+        break
+    elif [ "$myip" == "$CTRL2_IP" ] ; then
+        myhname=$CTRL2_HOSTNAME
+        break
+    fi
+done <<< "$ifips"     
 
-    "${CTRL1_HOSTNAME%.*}" )
-        ctrlname="$CTRL1_HOSTNAME"
-        ctrlip="$CTRL1_IP"
-        ;;
+if [ -z "$myhname" ] ; then
+    echo_error "Fatal error: none of the IPs found on this node matches the configuration in $POST_CONFIG!"
+    exit 1
+fi
 
-    "${CTRL2_HOSTNAME%.*}" )
-        ctrlname="$CTRL2_HOSTNAME"
-        ctrlip="$CTRL2_IP"
-        ;;
+# When identified, set the hostname
 
-    * )
-        echo_error "Fatal error: the current hostname doesn't match any of the controller hostnames!"
-        exit 234
-esac
-
-
-#---------------------------------------
-
-# Did the user pass an IP address that doesn't match any of our interfaces?
-
-if ! grep -q " ${ctrlip}$" ; then
-    echo_warn "The IP defined in the configuration doesn't match any of this machine's IPs:"
-    echo "$ifips"
-    echo
-fi <<< "$ifips"
-
+echo "$myhname" > /etc/hostname
+/usr/bin/hostname --file /etc/hostname
 
 # At that point we know that:
 # - we are one of the two controllers
@@ -136,33 +134,36 @@ fi <<< "$ifips"
 
 # Loop on the pairs and write to the hosts file
 
-append_line /etc/hosts '#  ----  Trinity machines  ----'
+append_line /etc/hosts "$TRIX_CONFIG_START"
+append_line /etc/hosts "$TRIX_CONFIG_WARNING"
+append_line /etc/hosts "$TRIX_CONFIG_END"
 
 for i in CTRL{1,2} ; do
 
-    # in non-HA setups we must skip CTRL2 entirely
+    # The CTRL2_* were unset earlier for non-HA setups
     if flag_is_set ${i}_HOSTNAME ; then
 
         # The joys of indirection in Bash
+        # The controller names have already been stripped of their domain
         tmpname=${i}_HOSTNAME ; tmpname=${!tmpname}
         tmpip=${i}_IP ; tmpip=${!tmpip}
 
-        if [[ "$ctrlname" == "$tmpname" ]] ; then
+        if [[ "$myhname" == "$tmpname" ]] ; then
 
             # that's the current machine, so better put in all the interfaces
             while read -a ifip ; do
 
-                if [[ "$ctrlip" == "${ifip[1]}" ]] ; then
-                    append_line /etc/hosts "${ifip[1]}  ${fname:+$fname }$hname ${hname}-${ifip[0]}"
+                if [[ "$myip" == "${ifip[1]}" ]] ; then
+                    append_line /etc/hosts "${ifip[1]}  ${myhname}.${mydomain} ${myhname} ${myhname}-${ifip[0]}"
                 else
-                    append_line /etc/hosts "${ifip[1]}  ${hname}-${ifip[0]}"
+                    append_line /etc/hosts "${ifip[1]}  ${myhname}-${ifip[0]}"
                 fi
             done <<< "$ifips"
 
         else
 
-            # not our machine, just write the data from the env varibales
-            append_line /etc/hosts "$tmpip  $tmpname"
+            # not our machine, just write the data from the env variables
+            append_line /etc/hosts "$tmpip  ${tmpname}.${mydomain} ${tmpname}"
         fi
     fi
 done
@@ -170,26 +171,9 @@ done
 
 # And if we're HA, we need to add the floating IP too
 
-flag_is_set HA && append_line /etc/hosts "$CTRL_IP  $CTRL_HOSTNAME"
-
-
-#---------------------------------------
-
-# And finally, write the environment variables to the trinity.sh file
-
-# We may need to run that script before any form of configuration is done, to
-# set up /etc/hosts for the shared storage. In that case the .sh file won't
-# exist yet, so don't try to write to it.
-
-if [[ -r /etc/trinity.sh ]] ; then
-    source /etc/trinity.sh
-    for i in HA CTRL{1,2,}_{HOSTNAME,IP} ; do
-        if [[ -v $i ]] ; then
-            store_variable "${TRIX_SHFILE}" "TRIX_$i" "${!i}"
-        else
-            # make sure that we're not picking up background noise
-            append_line "${TRIX_SHFILE}" "unset $i TRIX_$i"
-        fi
-    done
+if flag_is_set HA ; then
+    append_line /etc/hosts "$CTRL_IP  ${CTRL_HOSTNAME}.${mydomain} ${CTRL_HOSTNAME}"
+else
+    true    # otherwise it picks up the non-zero return of the if...
 fi
 

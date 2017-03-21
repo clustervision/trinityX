@@ -1,17 +1,14 @@
 
-.. vim: tw=0
-
-
-Trinity X configuration tool
+TrinityX configuration tool
 ============================
 
-The Trinity X configuration tool is used for the basic configuration of the controllers, as well as the creation and configuration of the node images.
+The TrinityX configuration tool is used for the basic configuration of the controllers, as well as the creation and configuration of the node images.
 
 The core idea behind that tool is to have a modular post-installation configuration system, so that various packages and configuration steps are optional and can be turned on and off depending on the required configuration. To that effect, the configuration tool runs a set of post-installation scripts and installs the packages required by those scripts. And that's about it.
 
 It is *not* a full-blown configuration manager. Amongst other things, as of the time of writing it can't undo a configuration. That limitation means that it is only suited to an initial configuration, and not to updating configurations later.
 
-This document will present the high-level use of the tool. For more details, including how to write new post scripts, please see the other chapters of the `Documentation`_.
+This document will present the high-level use of the tool. For more details, including how to write new post scripts, please see the other chapters of the :doc:`index`.
 
 
 
@@ -100,6 +97,9 @@ The following options are mainly useful for automated testing:
     Display all output messages without any color.
     Note that this only applies to the messages coming from the configuration tool itself; other commands called by post scripts may still use colors. Also, redirecting the tool's output (to a pipe or file) disables the colors automatically.
 
+- ``--step``
+    Pause after each post script, and wait for user input before continuing.
+
 - ``--continue``
     Do not stop for user input when an error occurs.
 
@@ -109,9 +109,6 @@ The following options are mainly useful for automated testing:
 - ``--hardstop``
     Hard stop: exit both the current post script and the configuration tool when any error of any form happens in the shell script. This may be overkill in a lot of cases as there are legitimate situations where a post script may not care about the return code of any command within, including an error, yet will be terminated. (Think of ``grep`` returning a non-zero code when the string doesn't match anything, for example.)
 
-- ``--yum-retry``
-    Retry installing the packages that failed to install the first time around. This is a workaround for some network issues that yum can encounter; usually re-running yum for those packages fixes the issue. It will only retry once, if anything is still missing afterwards it will display the usual error message.
-
 - ``--chroot <dir>``
     Apply the configuration(s) inside a chroot to ``<dir>``. This is the way through which node images are configured. Note that it is also possible to define a ``CHROOT`` variable in a configuration file, for the same purpose. If both are used, the command line flag will have precedence over the configuration file option.
 
@@ -120,7 +117,7 @@ A few additional rules:
 
 - ``-v`` and ``-q`` are mutually exclusive;
 
-- ``--continue`` is mutually exclusive with ``--stop`` and ``--hardstop``;
+- ``--continue`` is mutually exclusive with ``--stop`` / ``--hardstop`` and ``--step``;
 
 - ``--hardstop`` selects ``--stop`` too.
 
@@ -139,15 +136,4 @@ Running it is, again, very easy::
     ./configure.sh example.cfg
 
 This will give you an idea of what to expect from the running of the configuration tool.
-
-
-
-.. Relative file links
-
-.. _Documentation: README.rst
-.. _Configuration tool usage: config_tool.rst
-.. _Configuration files: config_cfg_files.rst
-.. _Post scripts: config_post_scripts.rst
-.. _Environment variables: config_env_vars.rst
-.. _Common functions: config_common_funcs.rst
 

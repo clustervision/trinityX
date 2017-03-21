@@ -1,1 +1,0 @@
-../controller/firewalld.sh

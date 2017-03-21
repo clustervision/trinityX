@@ -1,14 +1,14 @@
 #!/bin/bash
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -17,83 +17,151 @@
 ######################################################################
 
 
-set -e
-# set up slurmctld daemon
 
-echo "
-${SLURMDBD_MYSQL_DB?"Variable SLURMDBD_MYSQL_DB was not set"}
-${SLURMDBD_MYSQL_USER?"Variable SLURMDBD_MYSQL_USER  was not set"}
-">/dev/null
-_SLURMDBD_MYSQL_PASS=`get_password $SLURMDBD_MYSQL_PASS`
-store_password SLURMDBD_MYSQL_PASS $_SLURMDBD_MYSQL_PASS
-
-echo_info "Creating ${TRIX_ROOT}/shared/etc"
-
-mkdir -p ${TRIX_ROOT}/shared/etc
+if [ "x${SLURMDBD_MYSQL_PASS}" = "x" ]; then
+    SLURMDBD_MYSQL_PASS=`get_password $SLURMDBD_MYSQL_PASS`
+    store_password SLURMDBD_MYSQL_PASS $SLURMDBD_MYSQL_PASS
+fi
 
 
-echo_info "Moving /etc/slurm to ${TRIX_ROOT}/shared/etc"
 
-[ -d ${TRIX_ROOT}/shared/etc/slurm ] || ( mv /etc/slurm ${TRIX_ROOT}/shared/etc/ && ln -s ${TRIX_ROOT}/shared/etc/slurm /etc/slurm )
+function replace_template() {
+    [ $# -gt 3 -o $# -lt 2 ] && echo "Wrong numger of argument in replace_template." && exit 1
+    if [ $# -eq 3 ]; then
+        FROM=${1}
+        TO=${2}
+        FILE=${3}
+    fi
+    if [ $# -eq 2 ]; then
+        FROM=${1}
+        TO=${!FROM}
+        FILE=${2}
+    fi
+    sed -i -e "s/{{ ${FROM} }}/${TO//\//\\/}/g" $FILE
+}
 
-echo_info "Moving /etc/munge to ${TRIX_ROOT}/shared/etc"
+function make_bkp() {
+    FILE=$1
+    SUFFIX="trixbkp.$(/usr/bin/date +%Y-%m-%d_%H-%M-%S)"
+    if [ ! -e "${FILE}" ]; then
+        echo_warn "Unable to find ${FILE}"
+        return 0
+    fi
+    echo_info "Create backup of $FILE to ${FILE}.${SUFFIX}"
+    RES=$(/usr/bin/cp -prf "${FILE}" "${FILE}.${SUFFIX}"; echo $?)
+    return $RES
 
-[ -d ${TRIX_ROOT}/shared/etc/munge ] || mv /etc/munge ${TRIX_ROOT}/shared/etc/
+}
 
-echo_info "Create munge.key file."
+function move_etc_slurm() {
+    echo_info "Creating ${TRIX_ROOT}/shared/etc"
+    mkdir -p ${TRIX_ROOT}/shared/etc
+    echo_info "Moving /etc/slurm to ${TRIX_ROOT}/shared/etc"
+    if [ -d ${TRIX_ROOT}/shared/etc/slurm ]; then
+        make_bkp ${TRIX_ROOT}/shared/etc/slurm
+    fi
+    if [ ! -h /etc/slurm ]; then
+        /usr/bin/mv /etc/slurm ${TRIX_ROOT}/shared/etc/
+        /usr/bin/ln -s ${TRIX_ROOT}/shared/etc/slurm /etc/slurm
+    else
+        echo_warn "Unable to find /etc/slurm"
+    fi
+    if [ ! -d ${TRIX_ROOT}/shared/etc/slurm ]; then
+        echo_error "Unable to copy /etc/slurm to ${TRIX_ROOT}/shared/etc/slurm"
+    fi
+    echo_info "Copy slurm config files"
 
-[ -f ${TRIX_ROOT}/shared/etc/munge/munge.key ] || ( /usr/bin/dd if=/dev/urandom bs=1 count=1024 of=${TRIX_ROOT}/shared/etc/munge/munge.key && \
-chmod 400 ${TRIX_ROOT}/shared/etc/munge/munge.key && chown munge:munge ${TRIX_ROOT}/shared/etc/munge/munge.key )
+    /usr/bin/cp ${POST_FILEDIR}/slurm*.conf /etc/slurm/
+    /usr/bin/cp ${POST_FILEDIR}/{topology,cgroup}.conf /etc/slurm/
+    /usr/bin/chmod 640 /etc/slurm/slurmdbd.conf
+}
 
-echo_info "Update munge unit files."
+function create_spool_dir() {
+    echo_info "Create spool dir"
+    /usr/bin/mkdir -p /var/spool/slurm
+    /usr/bin/chmod 755 /var/spool/slurm
+}
 
+function create_munge_key() {
+    echo_info "Creating munge.key in ${TRIX_ROOT}/shared/etc/munge"
+    /usr/bin/mkdir -p ${TRIX_ROOT}/shared/etc/munge
+    /usr/bin/chmod 700 ${TRIX_ROOT}/shared/etc/munge
+    /usr/bin/chown munge:munge ${TRIX_ROOT}/shared/etc/munge
+    /usr/bin/dd if=/dev/urandom bs=1 count=1024 of=${TRIX_ROOT}/shared/etc/munge/munge.key
+    /usr/bin/chmod 400 ${TRIX_ROOT}/shared/etc/munge/munge.key
+    /usr/bin/chown munge:munge ${TRIX_ROOT}/shared/etc/munge/munge.key
+}
 
-if [ !  -d /etc/systemd/system/munge.service.d ]; then
-    mkdir -p /etc/systemd/system/munge.service.d
-    cat << EOF > /etc/systemd/system/munge.service.d/remote-fs.conf
+function tune_systemd_units() {
+
+    echo_info "Update systemd units"
+    SYSTEMD_PATH="/etc/systemd/system/"
+
+    mkdir -p ${SYSTEMD_PATH}/munge.service.d
+    mkdir -p ${SYSTEMD_PATH}/slurmctld.service.d
+    mkdir -p ${SYSTEMD_PATH}/slurmdbd.service.d
+
+    for service in munge slurmctld slurmdbd; do
+        cat << EOF > ${SYSTEMD_PATH}/${service}.service.d/remote-fs.conf
 [Unit]
 After=remote-fs.target
 Requires=remote-fs.target
 EOF
+    done
 
-    cat << EOF > /etc/systemd/system/munge.service.d/customexec.conf
+    cat << EOF > ${SYSTEMD_PATH}/slurmctld.service.d/customexec.conf
+[Unit]
+Requires=munge.service slurmdbd.service
+
+[Service]
+Restart=always
+EOF
+
+        cat << EOF > ${SYSTEMD_PATH}/munge.service.d/customexec.conf
 [Service]
 ExecStart=
 ExecStart=/usr/sbin/munged  --key-file ${TRIX_ROOT}/shared/etc/munge/munge.key
+Restart=always
+
 EOF
-    systemctl daemon-reload
+        cat << EOF > ${SYSTEMD_PATH}/slurmdbd.service.d/customexec.conf
+[Unit]
+Requires=munge.service
 
-fi
+[Service]
+Restart=always
+EOF
+        systemctl daemon-reload
 
-echo_info "Start munge."
-
-systemctl restart munge
-systemctl enable munge
+}
 
 
-if [ ! -f ${TRIX_ROOT}/shared/etc/slurm/slurm.conf ]; then
-
-    echo_info "Copy slurm config files"
-
-    cp ${POST_FILEDIR}/slurm*.conf /etc/slurm/
-    cp ${POST_FILEDIR}/topology.conf /etc/slurm/
+function configure_slurm() {
 
     echo_info "Changing variable placeholders."
 
-    sed -i -e "s/{{ HEADNODE }}/${SLURM_HEADNODE=$(hostname -s)}/" /etc/slurm/slurm.conf
-    sed -i -e "s/{{ HEADNODE }}/${SLURM_HEADNODE=$(hostname -s)}/" /etc/slurm/slurmdbd.conf
-    if [ ${SLURM_BACKUPNODE} ]; then
-        sed -i -e '/BACKUPNODE/{s/^[# \t]\+//}' /etc/slurm/slurm.conf
-        sed -i -e '/BACKUPNODE/{s/^[# \t]\+//}' /etc/slurm/slurmdbd.conf
-        sed -i -e "s/{{ BACKUPNODE }}/${SLURM_BACKUPNODE}/" /etc/slurm/slurm.conf
-        sed -i -e "s/{{ BACKUPNODE }}/${SLURM_BACKUPNODE}/" /etc/slurm/slurmdbd.conf
+    replace_template TRIX_CTRL_IP                /etc/slurm/slurm.conf
+    replace_template TRIX_CTRL_IP                /etc/slurm/slurmdbd.conf
+    replace_template TRIX_CTRL1_HOSTNAME         /etc/slurm/slurmdbd.conf
+    replace_template TRIX_CTRL2_HOSTNAME         /etc/slurm/slurmdbd.conf
+    replace_template SLURMDBD_MYSQL_PASS    /etc/slurm/slurmdbd.conf
+    replace_template SLURMDBD_MYSQL_USER    /etc/slurm/slurmdbd.conf
+    replace_template SLURMDBD_MYSQL_DB      /etc/slurm/slurmdbd.conf
+}
+
+function move_spool() {
+    echo_info "Move spool dir"
+    SPOOL_DIR=${TRIX_ROOT}/shared/slurm-spool
+    /usr/bin/mkdir -p ${SPOOL_DIR}
+    /usr/bin/chmod 750 ${SPOOL_DIR}
+    /usr/bin/sed -i -e '/StateSaveLocation/d' /etc/slurm/slurm.conf
+    append_line /etc/slurm/slurm.conf "StateSaveLocation=$SPOOL_DIR"
+    if [ -f /var/spool/slurm/clustername ]; then
+        /usr/bin/mv /var/spool/slurm/* ${SPOOL_DIR} 2>/dev/null || /usr/bin/true
+        /usr/bin/rm -rf /var/spool/slurm 2>/dev/null || /usr/bin/true
     fi
-    sed -i -e "s/{{ SLURMDBD_MYSQL_DB }}/${SLURMDBD_MYSQL_DB}/" /etc/slurm/slurmdbd.conf
-    sed -i -e "s/{{ SLURMDBD_MYSQL_USER }}/${SLURMDBD_MYSQL_USER}/" /etc/slurm/slurmdbd.conf
-    sed -i -e "s|{{ SLURMDBD_MYSQL_PASS }}|${_SLURMDBD_MYSQL_PASS}|" /etc/slurm/slurmdbd.conf
-fi
-    
-echo_info "Creating db for slurm accounting"
+
+}
 
 function do_sql_req {
     if [ -f ~/.my.cnf ]; then
@@ -104,59 +172,119 @@ function do_sql_req {
         echo $@ | /usr/bin/mysql -u root --password="${MYSQL_ROOT_PASSWORD}"
         return 0
     fi
-    echo $@ | /usr/bin/mysql -u root 
+    echo $@ | /usr/bin/mysql -u root
 }
 
+function create_slurmdbd_user() {
+    echo_info "Create DB for slurm accounting."
+    SUFFIX="trixbkp.$(/usr/bin/date +%Y-%m-%d_%H-%M-%S)"
+    /usr/bin/mysqldump -u root --password="${MYSQL_ROOT_PASSWORD}" \
+        --databases ${SLURMDBD_MYSQL_DB} >\
+        /root/mysqldump.${SLURMDBD_MYSQL_DB}.${SUFFIX} 2>/dev/null || /usr/bin/true
+    do_sql_req "DROP DATABASE IF EXISTS ${SLURMDBD_MYSQL_DB};"
+    do_sql_req "CREATE DATABASE IF NOT EXISTS ${SLURMDBD_MYSQL_DB};"
+    do_sql_req "DROP USER IF EXISTS '${SLURMDBD_MYSQL_USER}'@'localhost';"
+    do_sql_req "DROP USER IF EXISTS '${SLURMDBD_MYSQL_USER}'@'%';"
+    do_sql_req "CREATE USER '${SLURMDBD_MYSQL_USER}'@'localhost' IDENTIFIED BY '${SLURMDBD_MYSQL_PASS}';"
+    do_sql_req "CREATE USER '${SLURMDBD_MYSQL_USER}'@'%' IDENTIFIED BY '${SLURMDBD_MYSQL_PASS}';"
+    do_sql_req "GRANT ALL PRIVILEGES ON ${SLURMDBD_MYSQL_DB}.* TO '${SLURMDBD_MYSQL_USER}'@'%';"
+    do_sql_req "FLUSH PRIVILEGES;"
+}
 
-do_sql_req "CREATE DATABASE IF NOT EXISTS ${SLURMDBD_MYSQL_DB};"
-do_sql_req "CREATE USER '${SLURMDBD_MYSQL_USER}'@'localhost' IDENTIFIED BY '${_SLURMDBD_MYSQL_PASS}';"
-do_sql_req "CREATE USER '${SLURMDBD_MYSQL_USER}'@'%' IDENTIFIED BY '${_SLURMDBD_MYSQL_PASS}';"
-do_sql_req "GRANT ALL PRIVILEGES ON ${SLURMDBD_MYSQL_DB}.* TO '${SLURMDBD_MYSQL_USER}'@'%';"
-do_sql_req "FLUSH PRIVILEGES;"
+function create_cluster_in_acc_db() {
+    echo_info "Initialize accounting database for the default cluster"
+    TRIES=$1
+    if [ "x${TRIES}" = "x" ]; then
+        TRIES=5
+    fi
+    while ! /usr/bin/sacctmgr -i add cluster cluster; do
+        echo_info "Trying again in 5 sec. (${TRIES})"
+        TRIES=$(( ${TRIES}-1 ))
+        if [ ${TRIES} -le 0 ]; then
+             echo_error "Timeout waiting initialization slurm accounting."
+             exit 1
+        fi
+        sleep 5
+    done
+}
 
+function configure_pacemaker() {
+    echo_info "Configure pacemaker's resources."
+    TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_drbd.XXXX)
+    /usr/sbin/pcs cluster cib ${TMPFILE}
+    /usr/sbin/pcs -f ${TMPFILE} resource delete slurmctld 2>/dev/null || /usr/bin/true
+    /usr/sbin/pcs -f ${TMPFILE} resource delete slurmdbd 2>/dev/null || /usr/bin/true
+    /usr/sbin/pcs -f ${TMPFILE} resource create slurmdbd systemd:slurmdbd --force --group=Slurm
+    /usr/sbin/pcs -f ${TMPFILE} resource create slurmctld systemd:slurmctld --force --group=Slurm
+    /usr/sbin/pcs -f ${TMPFILE} constraint colocation add Slurm with Trinity
+    /usr/sbin/pcs -f ${TMPFILE} constraint order start trinity-fs then start Slurm
+    /usr/sbin/pcs -f ${TMPFILE} constraint order promote Trinity-galera then start Slurm
+    /usr/sbin/pcs cluster cib-push ${TMPFILE}
+}
 
+function install_basic() {
+    move_etc_slurm
+    create_munge_key
+    create_spool_dir
+    tune_systemd_units
+    configure_slurm
+    create_slurmdbd_user
+}
 
-echo_info "Start slurm accounting."
+function install_standalone() {
+    install_basic
+    replace_template HEADNODE "${TRIX_CTRL1_HOSTNAME}" /etc/slurm/slurm.conf
+    echo_info "Start services"
+    if ! /usr/bin/systemctl start slurmdbd; then
+        echo_error "Unable to start slurmdbd"
+        exit 1
+    fi
+    if ! /usr/bin/systemctl start munge slurmctld; then
+        echo_error "Unable to start services"
+        exit 1
+    fi
+    /usr/bin/systemctl enable munge slurmctld slurmdbd
+    create_cluster_in_acc_db
+}
 
-# for record, how to create db:
-# CREATE DATABASE slurm_accounting;
-# CREATE USER 'slurm_accounting'@'%' IDENTIFIED BY 'P@ssw0rd';
-# GRANT ALL PRIVILEGES ON slurm_accounting.* TO 'slurm_accounting'@'%';
-# FLUSH PRIVILEGES;
+function install_primary() {
+    install_basic
+    replace_template HEADNODE "${TRIX_CTRL1_HOSTNAME},${TRIX_CTRL2_HOSTNAME}" /etc/slurm/slurm.conf
+    /usr/bin/sed -i -e 's/^#\(ControlAddr=.*\)$/\1/' /etc/slurm/slurm.conf
+    /usr/bin/sed -i -e 's/^#\(DbdBackupHost=.*\)$/\1/' /etc/slurm/slurmdbd.conf
+    /usr/bin/systemctl stop slurmctld slurmdbd
+    /usr/bin/systemctl disable slurmctld slurmdbd
+    move_spool
+    if ! /usr/bin/systemctl start slurmdbd; then
+        echo_error "Unable to start slurmdbd"
+        exit 1
+    fi
+    if ! /usr/bin/systemctl start munge slurmctld; then
+        echo_error "Unable to start services"
+        exit 1
+    fi
+    create_cluster_in_acc_db
+    configure_pacemaker
+}
 
-if [ !  -d /etc/systemd/system/slurmdbd.service.d ]; then
+function install_secondary() {
+    if [ -h /etc/slurm ]; then
+        /usr/bin/rm -rf /etc/slurm
+    else
+        /usr/bin/mv /etc/slurm{,.orig}
+    fi
+    /usr/bin/ln -s ${TRIX_ROOT}/shared/etc/slurm /etc/slurm
+    tune_systemd_units
+}
 
-    mkdir -p /etc/systemd/system/slurmdbd.service.d
-    cat << EOF > /etc/systemd/system/slurmdbd.service.d/customexec.conf
-[Unit]
-Requires=munge.service
+display_var SLURMDBD_MYSQL_DB SLURMDBD_MYSQL_USER
 
-[Service]
-Restart=always
-EOF
-    systemctl daemon-reload
-
+if flag_is_unset HA; then
+    install_standalone
+else
+    if flag_is_set PRIMARY_INSTALL; then
+        install_primary
+    else
+        install_secondary
+    fi
 fi
-
-systemctl restart slurmdbd
-systemctl enable slurmdbd
-
-
-echo_info "Start slurm."
-
-if [ !  -d /etc/systemd/system/slurm.service.d ]; then
-
-    mkdir -p /etc/systemd/system/slurm.service.d
-    cat << EOF > /etc/systemd/system/slurm.service.d/customexec.conf
-[Unit]
-Requires=munge.service slurmdbd.service
-
-[Service]
-Restart=always
-EOF
-    systemctl daemon-reload
-fi 
-
-
-systemctl restart slurm
-systemctl enable slurm

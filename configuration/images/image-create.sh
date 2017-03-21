@@ -1,6 +1,6 @@
 
 ######################################################################
-# Trinity X
+# TrinityX
 # Copyright (c) 2016  ClusterVision B.V.
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -47,6 +47,7 @@ cat > "$TARGET_SHADOW" << EOF
 # $TARGET_BASE
 EOF
 
+chmod 600 "$TARGET_SHADOW"
 
 echo_info "Creating the local Trinity directory tree"
 
