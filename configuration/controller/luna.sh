@@ -75,7 +75,7 @@ function create_luna_folders() {
     /usr/bin/mkdir -p ${LPATH}/luna/{boot,torrents}
 
     pushd ${LPATH}/luna
-        /usr/bin/cp -pr /luna/src/templates ./
+        /usr/bin/cp -pr /luna/templates ./
     popd
 
     /usr/bin/chown -R luna: ${LPATH}/luna
@@ -95,26 +95,29 @@ function install_luna() {
     echo_info "Download Luna"
     pushd /
         [ -d /luna ] && rm -rf /luna
-        /usr/bin/git clone https://github.com/clustervision/luna
+        /usr/bin/git clone https://github.com/clustervision/luna -b v1.1
     popd
 
     echo_info "Create symlinks."
 
     pushd /usr/lib64/python2.7
-        /usr/bin/ln -fs /luna/src/module luna
+        /usr/bin/ln -fs /luna/luna luna
     popd
     pushd /usr/sbin
-        /usr/bin/ln -fs /luna/src/exec/luna
-        /usr/bin/ln -fs /luna/src/exec/lpower
-        /usr/bin/ln -fs /luna/src/exec/lweb
-        /usr/bin/ln -fs /luna/src/exec/ltorrent
-        /usr/bin/ln -fs /luna/src/exec/lchroot
+        /usr/bin/ln -fs /luna/bin/luna
+        /usr/bin/ln -fs /luna/bin/lpower
+        /usr/bin/ln -fs /luna/bin/lweb
+        /usr/bin/ln -fs /luna/bin/ltorrent
+        /usr/bin/ln -fs /luna/bin/lchroot
+        /usr/bin/ln -fs /luna/bin/lfs_pxelinux
     popd
 
     echo_info "Copy systemd unit files."
 
-    /usr/bin/cp -pr /luna/src/system/lweb.service /etc/systemd/system/lweb.service
-    /usr/bin/cp -pr /luna/src/system/ltorrent.service /etc/systemd/system/ltorrent.service
+    /usr/bin/cp -pr /luna/contrib/systemd/lweb.service /etc/systemd/system/lweb.service
+    /usr/bin/cp -pr /luna/contrib/systemd/ltorrent.service /etc/systemd/system/ltorrent.service
+    /usr/bin/cp -pr /luna/contrib/systemd/lfs_pxelinux.service /etc/systemd/system/lfs_pxelinux.service
+    /usr/bin/cp -pr /luna/contrib/systemd/lfs_pxelinux /etc/sysconfig/lfs_pxelinux
 
     echo_info "Reload systemd config."
 
@@ -122,14 +125,24 @@ function install_luna() {
 
     echo_info "Copy autocompletion functions."
 
-    /usr/bin/cp -pr /luna/src/system/luna_autocomplete.sh /etc/profile.d/
+    /usr/bin/cp -pr /luna/contrib/luna_autocomplete.sh /etc/profile.d/
+}
+
+function build_ltorrent_client() {
+    pushd /luna/contrib/ltorrent-client
+    if ! /usr/bin/make ; then
+        echo_error "Unable to make ltorrent-client"
+        exit 1
+    fi
+    /usr/bin/mv ltorrent-client ../dracut/95luna/
+    popd
 }
 
 function copy_dracut() {
     echo_info "Copy dracut module to ${TRIX_LOCAL}/luna/dracut/"
 
     /usr/bin/mkdir -p ${TRIX_LOCAL}/luna/dracut/
-    /usr/bin/cp -pr /luna/src/dracut/95luna ${TRIX_LOCAL}/luna/dracut/
+    /usr/bin/cp -pr /luna/contrib/dracut/95luna ${TRIX_LOCAL}/luna/dracut/
 }
 
 function setup_tftp() {
@@ -147,6 +160,11 @@ function setup_dns() {
     /usr/bin/rm -rf /etc/named.luna.zones
     /usr/bin/touch /etc/named.luna.zones
 
+    append_line /etc/named.conf "include \"/etc/named.luna.zones\";"
+}
+
+function setup_dns_secondary() {
+    echo_info "Setup DNS."
     append_line /etc/named.conf "include \"/etc/named.luna.zones\";"
 }
 
@@ -272,6 +290,7 @@ function install_standalone() {
     add_luna_user $1
     create_luna_folders $1
     create_system_local_dirs
+    build_ltorrent_client
     copy_dracut
     setup_tftp
     setup_dns
@@ -308,7 +327,7 @@ function install_secondary() {
     install_luna
     add_luna_user $1
     setup_tftp
-    setup_dns
+    setup_dns_secondary
     setup_nginx $1
     create_system_local_dirs
     configure_mongo_credentials 1

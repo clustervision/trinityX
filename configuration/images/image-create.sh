@@ -47,6 +47,7 @@ cat > "$TARGET_SHADOW" << EOF
 # $TARGET_BASE
 EOF
 
+chmod 600 "$TARGET_SHADOW"
 
 echo_info "Creating the local Trinity directory tree"
 
