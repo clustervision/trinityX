@@ -23,11 +23,9 @@ NOVA_PW="$(get_password "$NOVA_PW")"
 OS_RMQ_PW="$(get_password "$OS_RMQ_PW")"
 
 echo_info "Setting up nova configuration files"
-openstack-config --set /etc/nova/nova.conf DEFAULT rpc_backend rabbit
-openstack-config --set /etc/nova/nova.conf oslo_messaging_rabbit rabbit_host $OS_CTRL_HOSTNAME
-openstack-config --set /etc/nova/nova.conf oslo_messaging_rabbit rabbit_userid openstack
-openstack-config --set /etc/nova/nova.conf oslo_messaging_rabbit rabbit_password $OS_RMQ_PW
-openstack-config --set /etc/nova/nova.conf DEFAULT auth_strategy keystone
+openstack-config --set /etc/nova/nova.conf DEFAULT transport_url rabbit://openstack:${OS_RMQ_PW}@${TRIX_CTRL_HOSTNAME}
+openstack-config --set /etc/nova/nova.conf DEFAULT firewall_driver nova.virt.firewall.NoopFirewallDriver
+openstack-config --set /etc/nova/nova.conf api auth_strategy keystone
 openstack-config --set /etc/nova/nova.conf keystone_authtoken auth_uri http://${OS_CTRL_HOSTNAME}:5000
 openstack-config --set /etc/nova/nova.conf keystone_authtoken auth_url http://${OS_CTRL_HOSTNAME}:35357
 openstack-config --set /etc/nova/nova.conf keystone_authtoken memcached_servers ${OS_CTRL_HOSTNAME}:11211
@@ -37,8 +35,6 @@ openstack-config --set /etc/nova/nova.conf keystone_authtoken user_domain_name d
 openstack-config --set /etc/nova/nova.conf keystone_authtoken project_name service
 openstack-config --set /etc/nova/nova.conf keystone_authtoken username nova
 openstack-config --set /etc/nova/nova.conf keystone_authtoken password $NOVA_PW
-openstack-config --set /etc/nova/nova.conf DEFAULT use_neutron True
-openstack-config --set /etc/nova/nova.conf DEFAULT firewall_driver nova.virt.firewall.NoopFirewallDriver
 openstack-config --set /etc/nova/nova.conf vnc enabled True
 openstack-config --set /etc/nova/nova.conf vnc vncserver_listen 0.0.0.0
 openstack-config --set /etc/nova/nova.conf vnc vncserver_proxyclient_address  '$my_ip'

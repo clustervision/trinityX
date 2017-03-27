@@ -70,11 +70,10 @@ openstack-config --set /etc/neutron/neutron.conf database connection "mysql+pymy
 openstack-config --set /etc/neutron/neutron.conf DEFAULT core_plugin ml2
 openstack-config --set /etc/neutron/neutron.conf DEFAULT service_plugins router
 openstack-config --set /etc/neutron/neutron.conf DEFAULT allow_overlapping_ips True
-openstack-config --set /etc/neutron/neutron.conf DEFAULT rpc_backend rabbit
-openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_host $TRIX_CTRL_HOSTNAME
-openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_userid openstack
-openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_password $OS_RMQ_PW
-openstack-config --set /etc/neutron/neutron.conf DEFAULT auth_strategy keystone
+openstack-config --set /etc/neutron/neutron.conf DEFAULT transport_url rabbit://openstack:${OS_RMQ_PW}@${TRIX_CTRL_HOSTNAME}
+openstack-config --set /etc/neutron/neutron.conf DEFAULT notify_nova_on_port_status_changes True
+openstack-config --set /etc/neutron/neutron.conf DEFAULT notify_nova_on_port_data_changes True
+openstack-config --set /etc/neutron/neutron.conf api auth_strategy keystone
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken auth_uri http://${TRIX_CTRL_HOSTNAME}:5000
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken auth_url http://${TRIX_CTRL_HOSTNAME}:35357
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken memcached_servers ${TRIX_CTRL_HOSTNAME}:11211
@@ -84,8 +83,6 @@ openstack-config --set /etc/neutron/neutron.conf keystone_authtoken user_domain_
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken project_name service
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken username neutron
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken password $NEUTRON_PW
-openstack-config --set /etc/neutron/neutron.conf DEFAULT notify_nova_on_port_status_changes True
-openstack-config --set /etc/neutron/neutron.conf DEFAULT notify_nova_on_port_data_changes True
 openstack-config --set /etc/neutron/neutron.conf nova auth_url http://${TRIX_CTRL_HOSTNAME}:35357
 openstack-config --set /etc/neutron/neutron.conf nova auth_type password
 openstack-config --set /etc/neutron/neutron.conf nova project_domain_name default
