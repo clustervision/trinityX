@@ -355,3 +355,5 @@ else
         install_secondary
     fi
 fi
+
+setsebool zabbix_can_network 1 -P

@@ -152,6 +152,8 @@ function setup_tftp() {
     /usr/bin/sed -e 's/^\(\W\+disable\W\+\=\W\)yes/\1no/g' -i /etc/xinetd.d/tftp
     /usr/bin/sed -e 's|^\(\W\+server_args\W\+\=\W-s\W\)/var/lib/tftpboot|\1/tftpboot|g' -i /etc/xinetd.d/tftp
     [ -f /tftpboot/luna_undionly.kpxe ] || cp /usr/share/ipxe/undionly.kpxe /tftpboot/luna_undionly.kpxe
+
+    restorecon -Rv /tftpboot/
 }
 
 function setup_dns() {
@@ -179,6 +181,8 @@ function setup_nginx() {
     /usr/bin/mkdir -p /etc/nginx/conf.d/
     /usr/bin/cp ${POST_FILEDIR}/nginx-luna.conf /etc/nginx/conf.d/
     replace_template LPATH /etc/nginx/conf.d/nginx-luna.conf
+    semanage port -a -t http_port_t  -p tcp 7050
+    setsebool httpd_can_network_connect 1 -P
 }
 
 function create_mongo_user() {

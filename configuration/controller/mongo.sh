@@ -109,13 +109,6 @@ function wait_secondary_sync() {
 
 }
 
-function disable_selinux() {
-    echo_info "Disable SELinux."
-
-    sed -i -e 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
-    setenforce 0
-}
-
 function create_mongo_key() {
 
     echo_info "Create MongoDB key file."
