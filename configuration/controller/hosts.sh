@@ -84,10 +84,10 @@ fi
 
 # Strip the hostname of the domain, if set
 
-CTRL_HOSTNAME="${CTRL_HOSTNAME%%.*}"
-CTRL1_HOSTNAME="${CTRL1_HOSTNAME%%.*}"
+CTRL_HOSTNAME="$(/usr/bin/basename $CTRL_HOSTNAME .$DOMAIN)"
+CTRL1_HOSTNAME="$(/usr/bin/basename $CTRL1_HOSTNAME .$DOMAIN)"
 flag_is_set CTRL2_HOSTNAME && \
-    CTRL2_HOSTNAME="${CTRL2_HOSTNAME%%.*}"
+    CTRL2_HOSTNAME="$(/usr/bin/basename $CTRL2_HOSTNAME .$DOMAIN)"
 
 
 # List of active interface / IP pairs
