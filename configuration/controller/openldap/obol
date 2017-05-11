@@ -80,9 +80,9 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
         uidNumber = increment_id(b, 'uid')
 
     if group:
-        gidNumber = str(exists('groupname', group))
+        gidNumber = exists('groupname', group)
         if gidNumber is False:
-            raise Exception('The group %s does not exist' % gid)
+            raise Exception('The group "%s" does not exist' % group)
 
     elif gid:
         # Ensure gid's uniqueness
@@ -117,13 +117,13 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
      ('cn', [cn]),
      ('sn', [sn]),
      ('loginShell', [shell]),
-     ('uidNumber', [uidNumber]),
-     ('gidNumber', [gidNumber]),
+     ('uidNumber', [str(uidNumber)]),
+     ('gidNumber', [str(gidNumber)]),
      ('homeDirectory', [home]),
      ('shadowMin', ['0']),
      ('shadowMax', ['99999']),
      ('shadowWarning', ['7']),
-     ('shadowExpire', [expire]),
+     ('shadowExpire', [str(expire)]),
      ('shadowLastChange', ['%d' % (time.time() / 86400)])
     ]
 
@@ -189,7 +189,7 @@ def user_delete(b, username):
     # Delete the default group if it exists and has no other members
     try:
         dn = 'cn=%s,ou=Group,%s' % (username, b)
-        members = conn.search_s(dn, ldap.SCOPE_SUBTREE, attrlist=['member'])
+        [(group_dn, members)] = conn.search_s(dn, ldap.SCOPE_SUBTREE, attrlist=['member'])
 
         if not members:
             conn.delete_s(dn)
@@ -560,5 +560,4 @@ if __name__ == '__main__':
         cmd(**args)
 
     except Exception as e:
-        raise
         sys.exit("[Error] %s" % e)
