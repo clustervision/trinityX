@@ -1,0 +1,86 @@
+---
+  - name: Ensure OpenSSL is installed
+    package: name=openssl state=present
+    tags: [ssl-certs,packages]
+
+  - name: Ensure ssl folder exist
+    file:
+      path: "{{ ssl_certs_path }}"
+      state: directory
+      owner: "{{ ssl_certs_path_owner }}"
+      group: "{{ ssl_certs_path_group }}"
+      mode: "{{ ssl_certs_mode }}"
+    tags: [ssl-certs,configuration]
+
+  - local_action: stat path={{ ssl_certs_local_privkey_path }}
+    register: stat_privkey
+    become: no
+    tags: [ssl-certs,configuration]
+
+  - local_action: stat path={{ ssl_certs_local_cert_path }}
+    register: stat_cert
+    become: no
+    tags: [ssl-certs,configuration]
+
+  - name: Test if privkey file is needed
+    fail: msg="Privkey file {{ ssl_certs_local_privkey_path }} is missing"
+    when: not stat_privkey.stat.exists and stat_cert.stat.exists
+    tags: [ssl-certs,configuration]
+
+  - name: Test if cert file is needed
+    fail: msg="Cert file {{ ssl_certs_local_cert_path }} is missing"
+    when: stat_privkey.stat.exists and not stat_cert.stat.exists
+    tags: [ssl-certs,configuration]
+
+  - include: generate.yml
+    when: >
+      ( not stat_privkey.stat.exists and not stat_cert.stat.exists )
+      and ( ssl_certs_local_privkey_data == '' and ssl_certs_local_cert_data == '' )
+    tags: [ssl-certs,configuration]
+
+  - name: Copy SSL private key file (if exists)
+    copy:
+      src: "{{ ssl_certs_local_privkey_path }}"
+      dest: "{{ ssl_certs_privkey_path }}"
+      owner: "{{ ssl_certs_path_owner }}"
+      group: "{{ ssl_certs_path_group }}"
+      mode: "{{ ssl_certs_mode }}"
+      force: "{{ ssl_certs_force_replace }}"
+    when: >
+      ( stat_privkey.stat.exists )
+      and ( ssl_certs_local_privkey_data == '' )
+    tags: [ssl-certs,configuration]
+
+  - name: Copy SSL certificate file (if exists)
+    copy:
+      src: "{{ ssl_certs_local_cert_path }}"
+      dest: "{{ ssl_certs_cert_path }}"
+      owner: "{{ ssl_certs_path_owner }}"
+      group: "{{ ssl_certs_path_group }}"
+      mode: "{{ ssl_certs_mode }}"
+      force: "{{ ssl_certs_force_replace }}"
+    when: >
+      ( stat_cert.stat.exists )
+      and ( ssl_certs_local_cert_data == '' )
+    tags: [ssl-certs,configuration]
+
+  - name: Copy SSL certificate data
+    copy:
+      content: "{{ item.content }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ ssl_certs_path_owner }}"
+      group: "{{ ssl_certs_path_group }}"
+      mode: "{{ ssl_certs_mode }}"
+      force: "{{ ssl_certs_force_replace }}"
+    when: item.content != ''
+    with_items:
+      - { content: "{{ ssl_certs_local_cert_data|default }}", dest: "{{ ssl_certs_cert_path }}" }
+      - { content: "{{ ssl_certs_local_privkey_data|default }}", dest: "{{ ssl_certs_privkey_path }}" }
+    no_log: true
+    tags: [ssl-certs,configuration]
+
+  - name: Generate strong DHE parameter - https://weakdh.org/
+    command: openssl dhparam -out {{ssl_certs_dhparam_path}} {{ssl_certs_dhparam_size}} creates={{ssl_certs_dhparam_path}}
+    when: ssl_certs_generate_dh_param
+    tags: [ssl-certs,configuration]
+

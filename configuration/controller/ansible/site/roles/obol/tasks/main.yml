@@ -1,0 +1,36 @@
+---
+# tasks file for obol
+
+- name: Install obol dependency packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ obol_packages }}'
+  tags: obol
+
+- name: Install obol to /usr/local/bin
+  copy:
+    src: 'obol'
+    dest: '/usr/local/bin'
+    owner: 'root'
+    group: 'root'
+    mode: '0750'
+  tags: obol
+
+- name: Add default configuration to {{ obol_conf_path }}
+  template:
+    src: 'obol.conf'
+    dest: '{{ obol_conf_path }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+  tags: obol
+
+- name: Add link to the configuration file in /etc
+  file:
+    src: '{{ obol_conf_path }}'
+    dest: '/etc/'
+    state: link
+  when: obol_conf_path|string not in '/etc'
+  tags: obol
+
