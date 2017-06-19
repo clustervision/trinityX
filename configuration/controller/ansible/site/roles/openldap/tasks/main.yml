@@ -1,0 +1,165 @@
+---
+# tasks file for openldap
+
+- name: Install OpenLDAP packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ openldap_packages }}'
+  tags: openldap
+
+- name: Get /etc/openldap status
+  stat:
+    path: '/etc/openldap'
+  register: default_openldap_path
+  when: primary == True
+  tags: openldap
+
+- name: Copy default configuration to {{ openldap_server_conf_path }}
+  command: cp -arfT /etc/openldap {{ openldap_server_conf_path }}
+  when: > 
+    primary == True
+    and default_openldap_path.stat.isdir == True
+    and openldap_server_conf_path|string not in '/etc/openldap'
+  tags: openldap
+
+- name: Delete default configuration
+  file:
+    path: '/etc/openldap'
+    state: absent
+  when: openldap_server_conf_path|string not in '/etc/openldap'
+  tags: openldap
+
+- name: Replace default configuration path with symlink to {{ openldap_server_conf_path }}
+  file:
+    src: '{{ openldap_server_conf_path }}'
+    dest: '/etc/openldap'
+    state: link
+    force: yes
+  when: openldap_server_conf_path|string not in '/etc/openldap'
+  tags: openldap
+
+- name: Hash OpenLDAP root password
+  command: slappasswd -h {SSHA} -s {{ openldap_root_pw }}
+  register: openldap_root_pw_hash
+  when: primary == True
+  tags: openldap
+
+- name: Ensure OpenLDAP data directory exists
+  file:
+    path: '{{ openldap_server_dir_path }}'
+    state: directory
+    owner: '{{ openldap_default_user }}'
+    group: '{{ openldap_default_group }}'
+  when: primary == True
+  tags: openldap
+
+- name: Ensure OpenLDAP configuration directory exists
+  file:
+    path: '{{ openldap_server_conf_path }}'
+    state: directory
+    owner: '{{ openldap_default_user }}'
+    group: '{{ openldap_default_group }}'
+  when: primary == True
+  tags: openldap
+
+- name: Adjust OpenLDAP server TLS configuration
+  lineinfile:
+    path: '{{ openldap_server_defaults_file }}'
+    regexp: '^SLAPD_URLS='
+    line: 'SLAPD_URLS="{{ openldap_endpoints }}"'
+  tags: openldap
+
+- name: Adjust OpenLDAP client TLS configuration
+  lineinfile:
+    path: '{{ openldap_server_conf_path }}/ldap.conf'
+    line: 'TLS_CACERT   {{ ssl_certs_path }}/cluster-ca.crt'
+  when: primary == True
+  tags: openldap
+
+- name: Ensure OpenLDAP has access to the ssl certificates
+  file:
+    path: '{{ ssl_certs_path }}'
+    state: directory
+    owner: 'ldap'
+    group: 'ldap'
+    recurse: yes
+  when: primary == True
+  tags: openldap
+
+- name: Enable OpenLDAP service
+  service:
+    name: slapd
+    enabled: yes
+  when: ha == False
+  tags: openldap
+
+- name: Start OpenLDAP service
+  service:
+    name: slapd
+    state: started
+  when: primary == True
+  tags: openldap
+
+- name: Copy OpenLDAP schemas
+  copy:
+    src: '{{ item }}'
+    dest: '{{ openldap_server_conf_path }}/schema/'
+    owner: '{{ openldap_default_user }}'
+    group: '{{ openldap_default_group }}'
+    mode: '0644'
+  with_items:
+    - rfc2307bis.ldif
+    - autoinc.ldif
+    - local_schema.ldif
+  when: primary == True
+  tags: openldap
+
+- name: Load OpenLDAP schemas
+  command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f {{ openldap_server_conf_path }}/schema/{{ item }}.ldif
+  with_items: '{{ openldap_schemas }}'
+  ignore_errors: yes
+  when: primary == True
+  tags: openldap
+
+- name: Copy OpenLDAP configuration
+  template:
+    src: '{{ item }}'
+    dest: '/tmp/'
+  with_items: [config.ldif, local.ldif, proxy.ldif]
+  when: primary == True
+  tags: openldap
+
+- name: Copy OpenLDAP configuration
+  copy:
+    src: memberof.ldif
+    dest: /tmp/memberof.ldif
+  when: primary == True
+  tags: openldap
+
+- name: Load OpenLDAP configuration
+  command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
+  with_items: [config.ldif, local.ldif, proxy.ldif, memberof.ldif]
+  ignore_errors: yes
+  when: primary == True
+  tags: openldap
+
+- name: Load OpenLDAP local schema
+  command: >
+    ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pw }} 
+                           -f {{ openldap_server_conf_path }}/schema/local_schema.ldif
+  ignore_errors: yes
+  when: primary == True
+  tags: openldap
+
+- name: Add pacemaker resource
+  pcs_resource:
+    name: 'openldap'
+    resource_class: 'systemd'
+    resource_type: 'systemd:slapd'
+    options: 'op monitor interval=0 --group Trinity-stack'
+    state: present
+  when: primary == True and ha == True
+  tags:
+    - openldap
+    - pcs
