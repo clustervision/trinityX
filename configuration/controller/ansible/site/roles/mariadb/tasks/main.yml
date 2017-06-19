@@ -1,0 +1,120 @@
+---
+# tasks for mariadb role
+
+- name: Aquire root password (generate or use one from /etc/trinity/passwords)
+  set_fact:
+    mysql_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mysql/root.txt  
+                           chars=ascii_letters,digits,hexdigits') }}"
+  when: primary == True
+  tags: mariadb
+
+- name: Install MariaDB packages
+  yum:
+   name: '{{ item }}'
+   state: present
+  with_items: '{{ mariadb_packages }}'
+  tags: mariadb
+
+- name: Ensure {{ mariadb_db_path }} exists
+  file:
+    path: '{{ mariadb_db_path }}'
+    owner: mysql
+    group: mysql
+    state: directory
+  when: primary == True
+  tags: mariadb
+
+- name: Copy /var/lib/mysql to {{ mariadb_db_path }}
+  command: cp -arfT /var/lib/mysql {{ mariadb_db_path }}
+  when: >
+    primary == True
+    and mariadb_db_path|string not in '/var/lib/mysql'
+  tags: mariadb
+
+- name: Delete default /var/lib/mysql
+  file:
+    path: '/var/lib/mysql'
+    state: absent
+  when: mariadb_db_path|string not in '/var/lib/mysql'
+  tags: mariadb
+
+- name: replace /var/lib/mysql with symlink to {{ mariadb_db_path }}
+  file:
+    src: '{{ mariadb_db_path }}'
+    dest: /var/lib/mysql
+    state: link
+    force: yes
+  when: mariadb_db_path|string not in '/var/lib/mysql'
+  tags: mariadb
+
+- name: Render /etc/my.cnf
+  template:
+    src: 'etc_my.cnf.j2'
+    dest: '/etc/my.cnf'
+    backup: yes
+  tags: mariadb
+
+- name: Enable MariaDB service
+  service:
+    name: mariadb
+    enabled: yes
+  when: ha == False
+  tags: mariadb
+
+- name: Start MariaDB service
+  service:
+    name: mariadb
+    state: started
+  when: primary == True
+  tags: mariadb
+
+- name: Create /root/.my.cnf
+  template:
+    src: my.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: 0600
+    backup: yes
+  tags: mariadb
+
+- name: Set MariaDB's root pasword
+  mysql_user: 
+    config_file: '/root/.my.cnf'
+    name: root
+    password: '{{ mysql_root_pwd }}'
+    host_all: yes
+    check_implicit_admin: yes
+    state: present
+  when: primary == True
+  tags: mariadb
+
+- name: Remove anonymous users
+  mysql_user:
+    config_file: '/root/.my.cnf'
+    name: ''
+    host_all: yes
+    state: absent
+  when: primary == True
+  tags: mariadb
+
+- name: Remove test db
+  mysql_db:
+    config_file: '/root/.my.cnf'
+    name: test
+    state: absent
+  when: primary == True
+  tags: mariadb
+
+- name: Add pacemaker resource
+  pcs_resource:
+    name: 'mariadb'
+    resource_class: 'systemd'
+    resource_type: 'systemd:mariadb'
+    options: 'op monitor interval=0 --group Trinity-stack'
+    state: present
+  when: primary == True and ha == True
+  tags:
+    - mariadb
+    - pcs
