@@ -25,6 +25,14 @@ echo_info "Excluding selected packages from yum"
 
 store_system_variable /etc/yum.conf exclude 'NetworkManager* plymouth*'
 
+if flag_is_unset SELINUX ; then
+    # We can't remove SELinux, but we can disable it
+
+    echo_info "Disabling SELinux"
+
+    sed -i 's/\(^SELINUX=\).*/\1disabled/g' /etc/sysconfig/selinux /etc/selinux/config
+    sestatus | grep -q '^SELinux status.*disabled$' || setenforce 0
+fi
 
 echo_info "Make screen mode user-friendly"
 
