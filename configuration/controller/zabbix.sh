@@ -355,3 +355,5 @@ else
         install_secondary
     fi
 fi
+
+flag_is_set SELINUX && setsebool zabbix_can_network 1 -P
