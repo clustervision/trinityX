@@ -67,11 +67,9 @@ openstack endpoint create --region RegionOne volumev2 admin http://${TRIX_CTRL_H
 
 echo_info "Setting up cinder configuration files"
 openstack-config --set /etc/cinder/cinder.conf database connection "mysql+pymysql://cinder:${CINDER_DB_PW}@127.0.0.1/cinder"
-openstack-config --set /etc/cinder/cinder.conf DEFAULT rpc_backend rabbit
-openstack-config --set /etc/cinder/cinder.conf oslo_messaging_rabbit rabbit_host ${TRIX_CTRL_HOSTNAME}
-openstack-config --set /etc/cinder/cinder.conf oslo_messaging_rabbit rabbit_userid openstack
-openstack-config --set /etc/cinder/cinder.conf oslo_messaging_rabbit rabbit_password $OS_RMQ_PW
-openstack-config --set /etc/cinder/cinder.conf DEFAULT auth_strategy keystone
+openstack-config --set /etc/cinder/cinder.conf DEFAULT transport_url rabbit://openstack:${OS_RMQ_PW}@${TRIX_CTRL_HOSTNAME}
+openstack-config --set /etc/cinder/cinder.conf DEFAULT my_ip $TRIX_CTRL_IP
+openstack-config --set /etc/cinder/cinder.conf api auth_strategy keystone
 openstack-config --set /etc/cinder/cinder.conf keystone_authtoken auth_uri http://${TRIX_CTRL_HOSTNAME}:5000
 openstack-config --set /etc/cinder/cinder.conf keystone_authtoken auth_url http://${TRIX_CTRL_HOSTNAME}:35357
 openstack-config --set /etc/cinder/cinder.conf keystone_authtoken memcached_servers ${TRIX_CTRL_HOSTNAME}:11211
@@ -81,7 +79,6 @@ openstack-config --set /etc/cinder/cinder.conf keystone_authtoken user_domain_na
 openstack-config --set /etc/cinder/cinder.conf keystone_authtoken project_name service
 openstack-config --set /etc/cinder/cinder.conf keystone_authtoken username cinder
 openstack-config --set /etc/cinder/cinder.conf keystone_authtoken password $CINDER_PW
-openstack-config --set /etc/cinder/cinder.conf DEFAULT my_ip $TRIX_CTRL_IP
 openstack-config --set /etc/cinder/cinder.conf oslo_concurrency lock_path /var/lib/cinder/tmp
 
 openstack-config --set /etc/nova/nova.conf cinder os_region_name RegionOne
