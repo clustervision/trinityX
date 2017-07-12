@@ -22,3 +22,5 @@
 systemctl enable haveged
 flag_is_unset POST_CHROOT && systemctl restart haveged || true
 
+systemctl enable nscd.service
+flag_is_unset POST_CHROOT && systemctl restart nscd.service || true
