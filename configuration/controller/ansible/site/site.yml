@@ -5,15 +5,16 @@
 
    vars:
      ha: True
-     trix_ctrl_ip: 172.16.1.11
-     trix_ctrl1_ip: 172.16.1.11
-     trix_ctrl2_ip: 172.16.1.12
+     trix_ctrl_ip: 10.141.255.252
+     trix_ctrl1_ip: 10.141.255.254
+     trix_ctrl2_ip: 10.141.255.253
      trix_ctrl_hostname: controller
      trix_ctrl1_hostname: controller1
      trix_ctrl2_hostname: controller2
      trix_shared: '/trinity/shared'
      trix_local: '/trinity/local'
      trix_home: '/trinity/home'
+
      ssl_certs_path: '{{ trix_local }}/etc/ssl'
      ssl_certs_country: 'NL'
      ssl_certs_locality: 'Amsterdam'
@@ -22,21 +23,39 @@
      ssl_certs_days: '3650'
      ssl_certs_path_owner: 'root'
      ssl_certs_path_group: 'root'
+
+     firewalld_public_interfaces:
+       - eth2
+     firewalld_trusted_interfaces:
+       - eth0
+       - eth1
+     firewalld_public_tcp_ports:
+       - 443
+     
+     rsyslog_cluster_logs_path: '/var/log/cluster-messages'
+     rsyslog_cluster_netprefix: 16
+     rsyslog_cluster_net: 10.141.0.0
+
      openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
      openldap_server_conf_path: '{{ trix_local }}/etc/openldap'
+
      users_home_path: '{{ trix_home }}'
      controller_hostname: 'controller'
      sss_allowed_groups: 'admins'
+
      mariadb_db_path: '{{ trix_local }}/var/lib/mysql'
      mongo_db_path: '{{ trix_local }}/var/lib/mongodb'
      luna_data_path: '{{ trix_local }}/luna'
      bind_db_path: '{{ trix_local }}/var/lib/named'
+
      bind_dnssec_enable: no
      bind_dns_forwarders:
        - '8.8.8.8'
        - '8.8.4.4'
      slurmdbd_sql_user: 'slurm_accounting'
      slurmdbd_sql_db: 'slurm_accounting'
+
+     pacemaker_user_pwd: password
      slurmdbd_sql_pwd: password
      openldap_root_pw: password
      mysql_root_pwd: password
@@ -47,6 +66,12 @@
      - role: OndrejHome.pcs-modules-2
      - role: init
      - { role: jdauphant.ssl-certs, when: primary == True }
+     - role: firewalld
+     - role: chrony
+     - role: ssh
+     - role: fail2ban
+     - role: environment-modules
+     - role: pacemaker
      - role: openldap
      - role: obol
      - role: sssd       
@@ -56,3 +81,4 @@
      - role: bind
      - role: nginx
      - role: luna
+     - role: rsyslog
