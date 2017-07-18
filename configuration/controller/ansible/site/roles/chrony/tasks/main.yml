@@ -1,0 +1,30 @@
+---
+# tasks file for chrony
+
+- name: Install chrony packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ chrony_packages }}'
+  tags: chrony
+
+- name: Update chrony configuration file
+  template:
+    src: 'chrony.conf'
+    dest: '/etc/chrony.conf'
+    owner: root
+    group: root
+    mode: 0644
+  tags: chrony
+
+- name: Enable chrony service
+  service:
+    name: chronyd
+    enabled: yes
+  tags: chrony
+
+- name: Start chrony service
+  service:
+    name: chronyd
+    state: restarted
+  tags: chrony
