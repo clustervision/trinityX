@@ -1,0 +1,28 @@
+---
+# tasks file for rsyslog
+
+- name: Create rsyslog HA configutation string
+  set_fact:
+    rsyslog_ha_conf: '*.* @@{{ trix_ctrl2_ip if primary == true else trix_ctrl1_ip }}:514'
+  when: ha == true
+  tags: rsyslog
+
+- name: Update rsyslog configuration file
+  template:
+    src: 'rsyslog.conf'
+    dest: '/etc/rsyslog.conf'
+    owner: root
+    group: root
+  tags: rsyslog
+
+- name: Enable rsyslog daemon
+  service:
+    name: rsyslog
+    enabled: yes
+  tags: rsyslog
+
+- name: Restart rsyslog daemon
+  service:
+    name: rsyslog
+    state: restarted
+  tags: rsyslog
