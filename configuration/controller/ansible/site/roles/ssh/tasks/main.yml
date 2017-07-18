@@ -1,0 +1,48 @@
+---
+# tasks file for ssh
+
+- name: Generate ssh keys on the primary controller
+  user:
+    name: root
+    generate_ssh_key: yes
+    ssh_key_bits: 4096
+    ssh_key_type: rsa
+  when: primary == true
+  tags: ssh
+
+- name: Install ssh keys on the secondary controller
+  fetch:
+    dest: '/root/.ssh/{{ item }}'
+    src: '/root/.ssh/{{ item }}'
+    flat: yes
+  when: primary == false and ha == true
+  delegate_to: '{{ play_hosts[0] }}'
+  with_items:
+    - id_rsa
+    - id_rsa.pub
+  tags: ssh
+
+- name: Set authorized key
+  authorized_key:
+    user: root
+    state: present
+    key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
+  tags: ssh
+
+- name: Update ssh and sshd configuration files
+  file:
+    src: '{{ item.0 }}'
+    dest: '/etc/ssh/{{ item.0 }}'
+    mode: '{{ item.1 }}'
+    owner: root
+    group: root
+  with_together:
+    - [ 'sshd_config', 'ssh_config']
+    - [ '0600', '0644' ]
+  tags: ssh
+
+- name: Restart sshd daemon
+  service:
+    name: sshd
+    state: restarted
+  tags: ssh
