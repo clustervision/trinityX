@@ -1,0 +1,10 @@
+# Trinity NFS exports
+
+#{{ trix_local }}   -rw,sync,no_wdelay,no_root_squash  {{ trix_ctrl1_hostname }} {{ trix_ctrl2_hostname }} {{ trix_ctrl_hostname }}
+#{{ trix_images }}  -rw,async,no_root_squash  {{ trix_ctrl1_hostname }} {{ trix_ctrl2_hostname }} {{ trix_ctrl_hostname }}
+{% if nfs_export_shared == true %}
+{{ trix_shared }}   -rw,sync,no_wdelay,no_root_squash  {{ trix_ctrl1_hostname }} {{ trix_ctrl2_hostname }} {{ trix_ctrl_hostname }} *(ro)
+{% endif %}
+{% if nfs_export_home == true %}
+{{ trix_home }}     *(rw,async,no_root_squash)
+{% endif %}

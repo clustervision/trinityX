@@ -2,7 +2,7 @@
  - hosts:
      - controller1
      - controller2
-
+   
    vars:
      ha: True
      trix_ctrl_ip: 10.141.255.252
@@ -11,9 +11,19 @@
      trix_ctrl_hostname: controller
      trix_ctrl1_hostname: controller1
      trix_ctrl2_hostname: controller2
+     trix_images: '/trinity/images'
      trix_shared: '/trinity/shared'
      trix_local: '/trinity/local'
      trix_home: '/trinity/home'
+
+     shared_fs_type: 'drbd'
+     shared_fs_device: '/dev/sdb'
+
+     nfs_rpccount: 256
+     nfs_enable_rdma: false
+     nfs_export_shared: true
+     nfs_export_home: true
+     nfs_exports_path: '{{ trix_local }}/etc/exports.d'
 
      ssl_certs_path: '{{ trix_local }}/etc/ssl'
      ssl_certs_country: 'NL'
@@ -31,7 +41,7 @@
        - eth1
      firewalld_public_tcp_ports:
        - 443
-     
+
      rsyslog_cluster_logs_path: '/var/log/cluster-messages'
      rsyslog_cluster_netprefix: 16
      rsyslog_cluster_net: 10.141.0.0
@@ -72,6 +82,7 @@
      - role: fail2ban
      - role: environment-modules
      - role: pacemaker
+     - role: nfs
      - role: openldap
      - role: obol
      - role: sssd       
