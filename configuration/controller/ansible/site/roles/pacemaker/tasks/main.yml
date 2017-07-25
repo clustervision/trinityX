@@ -78,13 +78,13 @@
 - name: Setup pacemaker properties
   command: pcs property set '{{ item }}'
   with_items: '{{ pacemaker_properties }}'
-  when: ha == true
+  when: primary == True and ha == True
   tags: pcs
 
 - name: Setup pacemaker resource defaults
   command: pcs resource defaults '{{ item }}'
   with_items: '{{ pacemaker_resource_defaults }}'
-  when: ha == true
+  when: primary == True and ha == True
   tags: pcs
 
 - name: Add primary dummy resource
@@ -194,6 +194,41 @@
     state: present
   when: primary == True and ha == True
   tags: pcs
+
+- name: Toggle pacemaker stonith property
+  command: pcs property set 'stonith-enabled={{ fence_ipmilan_enabled }}'
+  when: primary == True and ha == True
+  tags: pcs
+  
+- name: Configure fencing resourcesusing the ipmilan fencing agent
+  pcs_resource:
+    name: 'fence-{{ item.0 }}'
+    resource_class: 'stonith'
+    resource_type: 'fence_ipmilan'
+    options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
+    state: present
+  with_together:
+    - ['{{ trix_ctrl1_hostname }}', '{{ trix_ctrl2_hostname }}']
+    - ['{{ trix_ctrl1_bmcip }}', '{{ trix_ctrl2_bmcip }}']
+  when: primary == True and ha == True and fence_ipmilan_enabled == 'true'
+  tags:
+    - pcs
+    - fencing
+
+- name: Add fencing location constraints
+  pcs_constraint:
+    constraint_type: 'location'
+    resource1: 'fence-{{ item }}'
+    node_name: '{{ item }}'
+    score: '-INFINITY'
+    state: present
+  with_items:
+    - '{{ trix_ctrl1_hostname }}'
+    - '{{ trix_ctrl2_hostname }}'
+  when: primary == True and ha == True and fence_ipmilan_enabled == 'true'
+  tags:
+    - pcs
+    - fencing
 
 - name: Add colouring to pcs status
   file:
