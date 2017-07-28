@@ -18,6 +18,13 @@
     nfs_proto: '{{ "rdma" if nfs_enable_rdma == true else "tcp" }}'
   tags: nfs
 
+- name: Create {{ nfs_exports_path }} if needed
+  file:
+    path: '{{ nfs_exports_path }}'
+    state: directory
+  when: primary
+  tags: nfs
+      
 - name: Setup NFS exports in {{ nfs_exports_path }}
   template:
     src: '{{ "HA_exports" if ha == true else "nonHA_exports" }}'
