@@ -1,0 +1,56 @@
+---
+- name: Ensure {{ ssl_cert_path }} exists
+  file:
+    path: '{{ ssl_cert_path }}'
+    state: directory
+
+- name: Generate a certificate authority for the cluster
+  command: >
+    openssl req -newkey rsa:4096
+      -nodes -sha512 -x509
+      -days {{ ssl_cert_days }}
+      -subj "/C=NL/L=Amsterdam/O=ClusterVision BV./CN=clustervision.com"
+      -out '{{ ssl_cert_path }}/cluster-ca.crt'
+      -keyout '{{ ssl_cert_path }}/cluster-ca.key'
+  args:
+    creates: '{{ ssl_cert_path }}/cluster-ca.crt'
+
+- name: Create a certificate request for each controller
+  command: >
+    openssl req -new -nodes -sha512
+      -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ hostvars[item]["ansible_fqdn"] }}'
+      -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
+      -keyout '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.key'
+  args:
+    creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
+  with_items: '{{ groups["controllers"] }}'
+
+- name: Sign the certificate requests
+  command: >
+    openssl x509 -req
+      -days {{ ssl_cert_days }}
+      -in '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
+      -CA '{{ ssl_cert_path }}/cluster-ca.crt'
+      -CAkey '{{ ssl_cert_path }}/cluster-ca.key'
+      -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
+      -set_serial {{ 2 | random }}
+  args:
+    creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
+  with_items: '{{ groups["controllers"] }}'
+
+- name: Restrict access permissions to the private keys
+  file:
+    path: '{{ item }}'
+    owner: '{{ ssl_cert_owner }}'
+    group: '{{ ssl_cert_group }}'
+    mode: 0640
+  with_fileglob:
+    - '{{ ssl_cert_path }}/*.key'
+
+- name: Update access permissions to the certificate
+  file:
+    path: '{{ item }}'
+    owner: '{{ ssl_cert_owner }}'
+    group: '{{ ssl_cert_group }}'
+  with_fileglob:
+    - '{{ ssl_cert_path }}/*.crt'
