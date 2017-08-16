@@ -6,174 +6,33 @@
     slurmdbd_sql_pwd: '{{ lookup("password",
                            "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt  
                             chars=ascii_letters,digits,hexdigits") }}'
-  tags: slurm
 
-- name: Create a group for munge
+- name: Create groups for munge and slurm
   group:
-    name: munge
-    gid: '{{ munge_group_id }}'
+    name: '{{ item.0 }}'
+    gid: '{{ item.1 }}'
     state: present
-  tags: slurm
+  with_together:
+    - ['munge', 'slurm']
+    - ['{{ munge_group_id }}', '{{ slurm_group_id }}']
 
-- name: Create a user for munge
+- name: Create users for munge and slurm
   user:
-    name: munge
-    uid: '{{ munge_user_id }}'
-    group: munge
+    name: '{{ item.0 }}'
+    uid: '{{ item.1 }}'
+    group: '{{ item.0 }}'
     shell: /sbin/nologin
     system: yes
     state: present
-  tags: slurm
-
-- name: Create a group for slurm
-  group:
-    name: slurm
-    gid: '{{ slurm_group_id }}'
-    state: present
-  tags: slurm
-
-- name: Create a user for slurm
-  user:
-    name: slurm
-    uid: '{{ slurm_user_id }}'
-    group: slurm
-    shell: /sbin/nologin
-    system: yes
-    state: present
-  tags: slurm
+  with_together:
+    - ['munge', 'slurm']
+    - ['{{ munge_user_id }}', '{{ slurm_user_id }}']
 
 - name: Install slurm packages
   yum:
     name: '{{ item }}'
     state: present
   with_items: '{{ slurm_packages }}'
-  tags: slurm
-
-- name: Create shared spool dir
-  file:
-    name: "{{ slurm_spool_path }}"
-    state: directory
-    owner: root
-    group: root
-    mode: 0750
-  when: primary == True
-  tags: slurm
-
-- name: Ensure {{ slurm_log_path }} exists
-  file:
-    path: '{{ slurm_log_path }}'
-    owner: slurm
-    group: slurm
-    mode: 0750
-    state: directory
-  tags: slurm
-
-- name: Create shared munge folder
-  file:
-    name: '{{ munge_conf_path }}'
-    state: directory
-    owner: munge
-    group: munge
-    mode: 0700
-  when: primary == True
-  tags: slurm
-
-- name: Get status of munge.key
-  stat:
-    path: "{{ munge_conf_path }}/munge.key"
-  register: file_munge_key
-  when: primary == True
-  tags: slurm
-
-- name: Create munge.key
-  command: 'dd if=/dev/urandom bs=1 count=1024 of={{ munge_conf_path }}/munge.key'
-  when: >
-    primary == True
-    and file_munge_key.stat.exists == False
-  tags: slurm
-
-- name: Set munge.key permissions
-  file:
-    name: '{{ munge_conf_path }}/munge.key'
-    state: file
-    owner: munge
-    group: munge
-    mode: 0400
-  when: primary == True
-  tags: slurm
-
-- name: Create DB for accounting
-  mysql_db:
-    name: '{{ slurmdbd_sql_db }}'
-    state: present
-  when: primary == True
-  tags: slurm
-    
-- name: Create DB user for accounting
-  mysql_user:
-    name: '{{ slurmdbd_sql_user }}'
-    password: '{{ slurmdbd_sql_pwd }}'
-    priv: '{{ slurmdbd_sql_db }}.*:ALL'
-    state: present
-  when: primary == True
-  tags: slurm
-
-- name: Get /etc/slurm status
-  stat:
-    path: '/etc/slurm'
-  register: default_slurm_path
-  when: primary == True
-  tags: slurm
-
-- name: Copy default configuration to {{ slurm_conf_path }}
-  command: cp -arfT /etc/slurm {{ slurm_conf_path }}
-  when: > 
-    primary == True
-    and default_slurm_path.stat.isdir == True
-    and slurm_conf_path|string not in '/etc/slurm'
-  tags: slurm
-
-- name: Delete default configuration
-  file:
-    path: '/etc/slurm'
-    state: absent
-  when: slurm_conf_path|string not in '/etc/slurm'
-  tags: slurm
-
-- name: Replace default configuration path with symlink to {{ slurm_conf_path }}
-  file:
-    src: '{{ slurm_conf_path }}'
-    dest: '/etc/slurm'
-    state: link
-    force: yes
-  when: slurm_conf_path|string not in '/etc/slurm'
-  tags: slurm
-
-- name: Copy configuration files 
-  copy:
-    src: '{{ item }}'
-    dest: '{{ slurm_conf_path }}/{{ item }}'
-    force: no
-  with_items:
-   - slurm-partitions.conf
-   - slurm-nodes.conf
-   - slurm-user.conf
-   - slurm-health.conf
-   - topology.conf
-   - cgroup.conf
-  when: primary == True
-  tags: slurm
-
-- name: Render slurm.conf and slurmdbd.conf
-  template:
-    src: '{{ item }}'
-    dest: '{{ slurm_conf_path }}/{{ item }}'
-    backup: yes
-  with_items:
-    - slurmdbd.conf
-    - slurm.conf
-  when: primary == True
-  tags: slurm
 
 - name: Create systemd unit dirs
   file:
@@ -183,7 +42,6 @@
     - munge
     - slurmdbd
     - slurmctld
-  tags: slurm
 
 - name: Render systemd units for slurm, slurmdbd and munge
   template:
@@ -194,52 +52,158 @@
     - munge
     - slurmdbd
     - slurmctld
-  tags: slurm
+
+- name: Ensure {{ slurm_log_path }} exists
+  file:
+    path: '{{ slurm_log_path }}'
+    owner: slurm
+    group: slurm
+    mode: 0750
+    state: directory
+
+- name: Ensure {{ slurm_conf_path }} exists
+  file:
+    path: '{{ slurm_conf_path }}'
+    state: directory
+
+- name: Ensure {{ slurm_conf_path }} has the correct permissions
+  file:
+    path: '{{ slurm_conf_path }}'
+    owner: slurm
+    group: slurm
+    mode: 0750
+    state: directory
+
+- name: Get /etc/slurm status
+  stat:
+    path: '/etc/slurm'
+  register: default_slurm_path
+
+- block:
+
+  - name: Delete default configuration
+    file:
+      path: '/etc/slurm'
+      state: absent
+  
+  - name: Replace default configuration path with symlink to {{ slurm_conf_path }}
+    file:
+      src: '{{ slurm_conf_path }}'
+      dest: '/etc/slurm'
+      state: link
+      force: yes
+
+  when: slurm_conf_path|string not in '/etc/slurm'
+        and default_slurm_path.stat.isdir
 
 - name: Enable slurm services
   service:
     daemon_reload: yes
     name: '{{ item }}'
     enabled: yes
-  when: ha == False
+  when: not ha|default(False)
   with_items:
     - munge
     - slurmdbd
     - slurmctld
-  tags: slurm
 
-- name: Start slurm services
-  service:
-    daemon_reload: yes
-    name: '{{ item }}'
-    state: started
-  when: primary == True
-  with_items:
-    - munge
-    - slurmdbd
-    - slurmctld
-  tags: slurm
+- block:
 
-- name: Add slurm pacemaker resources
-  pcs_resource:
-    name: '{{ item }}'
-    resource_class: 'systemd'
-    resource_type: 'systemd:{{ item }}'
-    options: 'op monitor interval=0 --group Trinity-stack'
-    state: present
-  when: primary == True and ha == True
-  with_items:
-    - slurmdbd
-    - slurmctld
-  tags:
-    - slurm
-    - pcs
+  - name: Create shared spool dir
+    file:
+      name: "{{ slurm_spool_path }}"
+      state: directory
+      owner: root
+      group: root
+      mode: 0750
+  
+  - name: Create shared munge dir
+    file:
+      name: '{{ munge_conf_path }}'
+      state: directory
+      owner: munge
+      group: munge
+      mode: 0700
+  
+  - name: Create munge.key
+    command: 'dd if=/dev/urandom bs=1 count=1024 of={{ munge_conf_path }}/munge.key'
+    args:
+      creates: '{{ munge_conf_path }}/munge.key'
+  
+  - name: Set munge.key permissions
+    file:
+      name: '{{ munge_conf_path }}/munge.key'
+      state: file
+      owner: munge
+      group: munge
+      mode: 0400
+    notify: restart munge
+  
+  - name: Create DB for accounting
+    mysql_db:
+      name: '{{ slurmdbd_sql_db }}'
+      state: present
+      
+  - name: Create DB user for accounting
+    mysql_user:
+      name: '{{ slurmdbd_sql_user }}'
+      password: '{{ slurmdbd_sql_pwd }}'
+      priv: '{{ slurmdbd_sql_db }}.*:ALL'
+      state: present
+  
+  - name: Copy configuration files 
+    copy:
+      src: '{{ item }}'
+      dest: '{{ slurm_conf_path }}/{{ item }}'
+      force: no
+    with_items:
+     - slurm-partitions.conf
+     - slurm-nodes.conf
+     - slurm-user.conf
+     - slurm-health.conf
+     - topology.conf
+     - cgroup.conf
+    notify: restart slurm
+  
+  - name: Render slurm.conf and slurmdbd.conf
+    template:
+      src: '{{ item }}'
+      dest: '{{ slurm_conf_path }}/{{ item }}'
+      backup: yes
+    with_items:
+      - slurmdbd.conf
+      - slurm.conf
+    notify: restart slurm
+  
+  - name: Start slurm services
+    service:
+      daemon_reload: yes
+      name: '{{ item }}'
+      state: started
+    with_items:
+      - munge
+      - slurmdbd
+      - slurmctld
+  
+  - name: Add slurm pacemaker resources
+    pcs_resource:
+      name: '{{ item }}'
+      resource_class: 'systemd'
+      resource_type: 'systemd:{{ item }}'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: ha | default(True)
+    with_items:
+      - slurmdbd
+      - slurmctld
+    tags: pcs
+  
+  - name: Register slurm cluster in slurmdbd
+    shell: 'sacctmgr -i add cluster cluster | grep -i adding'
+    register: sacctmgr_success
+    changed_when: '"Not adding." not in sacctmgr_success.stdout'
+    until: '"Adding Cluster" in sacctmgr_success.stdout or "Not adding." in sacctmgr_success.stdout'
+    retries: 6
+    delay: 5
 
-- name: Register slurm cluster in slurmdbd
-  shell: '/usr/bin/sacctmgr -i add cluster cluster >/dev/null 2>&1; /usr/bin/sacctmgr -p -n show cluster | /usr/bin/grep -q cluster'
-  register: sacctmgr_success
-  until: sacctmgr_success|success
-  retries: 6
-  delay: 10
-  when: primary == True
-  tags: slurm
+  when: primary | default(True)
