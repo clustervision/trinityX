@@ -1,238 +1,184 @@
 ---
 # tasks file for pacemaker
 
+- name: Aquire hacluster password (generate or use one from /etc/trinity/passwords)
+  set_fact:
+    pacemaker_user_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/hacluster.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
 - name: Install pacemaker packages
   yum:
     name: '{{ item }}'
     state: present
   with_items: '{{ pacemaker_packages }}'
-  when: ha == true
-  tags: pcs
 
 - name: Set up Corosync's configuration file
   template:
     src: corosync.conf
     dest: '/etc/corosync/corosync.conf'
-  when: ha == true
-  tags: pcs
+  notify: restart corosync
+
+- meta: flush_handlers
 
 - name: Generate corosync's authentication key
   command: corosync-keygen -l
   args:
     creates: '/etc/corosync/authkey'
-  when: ha == true
-  tags: pcs
 
 - name: Copy corosync's authentication key to the secondary controller
   fetch:
     dest: '/etc/corosync/authkey'
     src: '/etc/corosync/authkey'
     flat: yes
-  when: primary == false and ha == true
+  when: not primary|default(True)
   delegate_to: '{{ play_hosts[0] }}'
-  tags: pcs
+
+- name: Add colouring to pcs status
+  copy:
+    src: pcs-status.sh
+    dest: /etc/profile.d/pcs-status.sh
 
 - name: Start corosync service
   service:
     name: corosync
-    state: restarted
-  when: ha == true
-  tags: pcs
+    state: started
 
-- name: Start pcsd service
-  service:
-    name: pcsd
-    state: restarted
-  when: ha == true
-  tags: pcs
-
-- name: Enable pcsd service
+- name: Start and enable pcsd service
   service:
     name: pcsd
     enabled: yes
-  when: ha == true
-  tags: pcs
+    state: started
 
 - name: Set a passwd for the user hacluster
   user:
     name: hacluster
     password: '{{ pacemaker_user_pwd | password_hash("sha512", ansible_hostname) }}'
-  when: ha == true
-  tags: pcs
 
 - name: Authenticate the controllers
   command: pcs cluster auth --all -u 'hacluster' -p '{{ pacemaker_user_pwd }}'
   args:
     creates: '/var/lib/pcsd/tokens'
   run_once: true
-  when: ha == true
-  tags: pcs
 
 - name: Start pacemaker service
   service:
     name: pacemaker
-    state: restarted
-  when: ha == true
-  tags: pcs
+    state: started
 
-- name: Setup pacemaker properties
-  command: pcs property set '{{ item }}'
-  with_items: '{{ pacemaker_properties }}'
-  when: primary == True and ha == True
-  tags: pcs
+- block:
 
-- name: Setup pacemaker resource defaults
-  command: pcs resource defaults '{{ item }}'
-  with_items: '{{ pacemaker_resource_defaults }}'
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add primary dummy resource
-  pcs_resource:
-    name: 'primary'
-    resource_class: 'ocf'
-    resource_type: 'Dummy'
-    options: 'op monitor interval=179s --group Trinity'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add secondary dummy resource
-  pcs_resource:
-    name: 'secondary'
-    resource_class: 'ocf'
-    resource_type: 'Dummy'
-    options: 'op monitor interval=181s --group Trinity-secondary'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add floating IP resource
-  pcs_resource:
-    name: 'trinity-ip'
-    resource_class: 'ocf'
-    resource_type: 'IPaddr2'
-    options: 'ip={{ trix_ctrl_ip }} op monitor interval=29s --group Trinity'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add pacemaker order constraint - Trinity then Trinity-secondary
-  pcs_constraint:
-    constraint_type: 'order'
-    resource1: 'Trinity'
-    resource2: 'Trinity-secondary'
-    score: 'INFINITY'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add pacemaker colocation constraint - Trinity-secondary not with Trinity
-  pcs_constraint:
-    constraint_type: 'colocation'
-    resource1: 'Trinity-secondary'
-    resource2: 'Trinity'
-    score: '-INFINITY'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add pacemaker resource group Trinity-fs
-  pcs_resource:
-    name: 'fs'
-    resource_type: 'Dummy'
-    options: 'op monitor interval=0 --group Trinity-fs'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add pacemaker order constraint - Trinity then Trinity-fs
-  pcs_constraint:
-    constraint_type: 'order'
-    resource1: 'Trinity'
-    resource2: 'Trinity-fs'
-    score: 'INFINITY'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add pacemaker colocation constraint - Trinity-fs with Trinity
-  pcs_constraint:
-    constraint_type: 'colocation'
-    resource1: 'Trinity-fs'
-    resource2: 'Trinity'
-    score: 'INFINITY'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add pacemaker resource group Trinity-stack
-  pcs_resource:
-    name: 'stack'
-    resource_type: 'Dummy'
-    options: 'op monitor interval=0 --group Trinity-stack'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add pacemaker colocation constraint - Trinity-stack with Trinity
-  pcs_constraint:
-    constraint_type: 'colocation'
-    resource1: 'Trinity-stack'
-    resource2: 'Trinity'
-    score: 'INFINITY'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Add pacemaker order constraint - Trinity-fs then Trinity-stack
-  pcs_constraint:
-    constraint_type: 'order'
-    resource1: 'Trinity-fs'
-    resource2: 'Trinity-stack'
-    score: 'INFINITY'
-    state: present
-  when: primary == True and ha == True
-  tags: pcs
-
-- name: Toggle pacemaker stonith property
-  command: pcs property set 'stonith-enabled={{ fence_ipmilan_enabled }}'
-  when: primary == True and ha == True
-  tags: pcs
+  - name: Setup pacemaker properties
+    command: pcs property set '{{ item }}'
+    with_items: '{{ pacemaker_properties }}'
   
-- name: Configure fencing resourcesusing the ipmilan fencing agent
-  pcs_resource:
-    name: 'fence-{{ item.0 }}'
-    resource_class: 'stonith'
-    resource_type: 'fence_ipmilan'
-    options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
-    state: present
-  with_together:
-    - ['{{ trix_ctrl1_hostname }}', '{{ trix_ctrl2_hostname }}']
-    - ['{{ trix_ctrl1_bmcip }}', '{{ trix_ctrl2_bmcip }}']
-  when: primary == True and ha == True and fence_ipmilan_enabled == 'true'
-  tags:
-    - pcs
-    - fencing
+  - name: Setup pacemaker resource defaults
+    command: pcs resource defaults '{{ item }}'
+    with_items: '{{ pacemaker_resource_defaults }}'
+  
+  - name: Add primary dummy resource
+    pcs_resource:
+      name: 'primary'
+      resource_class: 'ocf'
+      resource_type: 'Dummy'
+      options: 'op monitor interval=179s --group Trinity'
+      state: present
+  
+  - name: Add secondary dummy resource
+    pcs_resource:
+      name: 'secondary'
+      resource_class: 'ocf'
+      resource_type: 'Dummy'
+      options: 'op monitor interval=181s --group Trinity-secondary'
+      state: present
+  
+  - name: Add floating IP resource
+    pcs_resource:
+      name: 'trinity-ip'
+      resource_class: 'ocf'
+      resource_type: 'IPaddr2'
+      options: 'ip={{ trix_ctrl_ip }} op monitor interval=29s --group Trinity'
+      state: present
+  
+  - name: Add pacemaker order constraint - Trinity then Trinity-secondary
+    pcs_constraint_order:
+      resource1: 'Trinity'
+      resource2: 'Trinity-secondary'
+      state: present
+  
+  - name: Add pacemaker colocation constraint - Trinity-secondary not with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-secondary'
+      resource2: 'Trinity'
+      score: '-INFINITY'
+      state: present
+  
+  - name: Add pacemaker resource group Trinity-fs
+    pcs_resource:
+      name: 'fs'
+      resource_type: 'Dummy'
+      options: 'op monitor interval=0 --group Trinity-fs'
+      state: present
+  
+  - name: Add pacemaker order constraint - Trinity then Trinity-fs
+    pcs_constraint_order:
+      resource1: 'Trinity'
+      resource2: 'Trinity-fs'
+      state: present
+  
+  - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-fs'
+      resource2: 'Trinity'
+      score: 'INFINITY'
+      state: present
+  
+  - name: Add pacemaker resource group Trinity-stack
+    pcs_resource:
+      name: 'stack'
+      resource_type: 'Dummy'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+  
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity'
+      score: 'INFINITY'
+      state: present
+  
+  - name: Add pacemaker order constraint - Trinity-fs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-fs'
+      resource2: 'Trinity-stack'
+      state: present
+  
+  - name: Toggle pacemaker stonith property
+    command: pcs property set 'stonith-enabled={{ fence_ipmilan_enabled }}'
+    
+  - name: Configure fencing resourcesusing the ipmilan fencing agent
+    pcs_resource:
+      name: 'fence-{{ item.0 }}'
+      resource_class: 'stonith'
+      resource_type: 'fence_ipmilan'
+      options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
+      state: present
+    with_together:
+      - ['{{ trix_ctrl1_hostname }}', '{{ trix_ctrl2_hostname }}']
+      - ['{{ trix_ctrl1_bmcip }}', '{{ trix_ctrl2_bmcip }}']
+    when: fence_ipmilan_enabled == 'true'
+    tags: fencing
+  
+  - name: Add fencing location constraints
+    pcs_constraint_location:
+      resource1: 'fence-{{ item }}'
+      node_name: '{{ item }}'
+      score: '-INFINITY'
+      state: present
+    with_items:
+      - '{{ trix_ctrl1_hostname }}'
+      - '{{ trix_ctrl2_hostname }}'
+    when: fence_ipmilan_enabled == 'true'
+    tags: fencing
 
-- name: Add fencing location constraints
-  pcs_constraint:
-    constraint_type: 'location'
-    resource1: 'fence-{{ item }}'
-    node_name: '{{ item }}'
-    score: '-INFINITY'
-    state: present
-  with_items:
-    - '{{ trix_ctrl1_hostname }}'
-    - '{{ trix_ctrl2_hostname }}'
-  when: primary == True and ha == True and fence_ipmilan_enabled == 'true'
-  tags:
-    - pcs
-    - fencing
-
-- name: Add colouring to pcs status
-  copy:
-    src: pcs-status.sh
-    dest: /etc/profile.d/pcs-status.sh
-  when: ha == true
-  tags: pcs
+  when: primary|default(True)
