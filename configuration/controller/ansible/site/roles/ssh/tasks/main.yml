@@ -7,27 +7,24 @@
     generate_ssh_key: yes
     ssh_key_bits: 4096
     ssh_key_type: rsa
-  when: primary == true
-  tags: ssh
+  when: primary
 
 - name: Install ssh keys on the secondary controller
   fetch:
     dest: '/root/.ssh/{{ item }}'
     src: '/root/.ssh/{{ item }}'
     flat: yes
-  when: primary == false and ha == true
+  when: ha and not primary
   delegate_to: '{{ play_hosts[0] }}'
   with_items:
     - id_rsa
     - id_rsa.pub
-  tags: ssh
 
 - name: Set authorized key
   authorized_key:
     user: root
     state: present
     key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
-  tags: ssh
 
 - name: Update ssh and sshd configuration files
   file:
@@ -39,10 +36,10 @@
   with_together:
     - [ 'sshd_config', 'ssh_config']
     - [ '0600', '0644' ]
-  tags: ssh
+  notify: restart sshd
 
-- name: Restart sshd daemon
+- name: Start and enable sshd daemon
   service:
     name: sshd
-    state: restarted
-  tags: ssh
+    state: started
+    enabled: yes
