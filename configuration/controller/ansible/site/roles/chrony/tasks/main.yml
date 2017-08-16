@@ -6,7 +6,6 @@
     name: '{{ item }}'
     state: present
   with_items: '{{ chrony_packages }}'
-  tags: chrony
 
 - name: Update chrony configuration file
   template:
@@ -15,16 +14,10 @@
     owner: root
     group: root
     mode: 0644
-  tags: chrony
+  notify: restart chrony
 
-- name: Enable chrony service
+- name: Start and enable chrony service
   service:
     name: chronyd
+    state: started
     enabled: yes
-  tags: chrony
-
-- name: Start chrony service
-  service:
-    name: chronyd
-    state: restarted
-  tags: chrony
