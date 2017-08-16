@@ -5,15 +5,12 @@
     mongo_root_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/mongo/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
-    when: primary == True
-    tags: mongodb
 
 - name: Install MongoDB packages
   yum:
     name: '{{ item }}'
     state: present
   with_items: '{{ mongo_packages }}'
-  tags: mongodb
 
 - name: Ensure {{ mongo_db_path }} exists
   file:
@@ -21,80 +18,47 @@
     owner: mongodb
     group: mongodb
     state: directory
-  tags: mongodb
 
-- name: Copy /var/lib/mongodb to {{ mongo_db_path }}
-  command: cp -rafT /var/lib/mongodb {{ mongo_db_path }}
-  when: >
-    primary == True
-    and mongo_db_path|string not in '/var/lib/mongodb'
-  ignore_errors: yes
-  tags: mongodb
-
-- name: Delete default /var/lib/mongodb
-  file:
-    path: /var/lib/mongodb
-    state: absent
-  when: mongo_db_path|string not in '/var/lib/mongodb'
-  tags: mongodb
-
-- name: replace /var/lib/mongodb with symlink to {{ mongo_db_path }}
-  file:
-    src: '{{ mongo_db_path }}'
-    dest: /var/lib/mongodb
-    state: link
-    force: yes
-  when: mongo_db_path|string not in '/var/lib/mongodb'
-  tags: mongodb
-
-- name: Render /etc/mongod.conf
-  template:
-    src: "mongod.conf.j2"
-    dest: "/etc/mongod.conf"
+- name: Update mongod configuration
+  lineinfile:
+    path: "/etc/mongod.conf"
+    line: "dbpath = {{ mongo_db_path }}"
+    regexp: "^dbpath ="
     backup: yes
-  tags: mongodb
-
-- name: Enable MongoDB service
-  service:
-    name: mongod
-    enabled: yes
-  when: ha == False
-  tags: mongodb
-
-- name: Start MongoDB service
-  service:
-    name: mongod
-    state: started
-  when: primary == True
-  tags: mongodb
-
-- name: Check if /root/.mongorc.js exists
-  stat:
-    path: "/root/.mongorc.js"
-  register: file_mongorc_js
-  tags: mongodb
-
-- name: Create root user
-  command: "mongo --eval \"db.createUser({user: 'root', pwd: '{{ mongo_root_pwd }}', roles: [ { role: 'root', db: 'admin' } ]})\" admin"
-  when: file_mongorc_js.stat.exists == False and primary == True
-  tags: mongodb
+  notify: restart mongod
 
 - name: Render /root/.mongorc.js
   template:
     src: "mongorc.js.j2"
     dest: "/root/.mongorc.js"
     backup: yes
-  when: file_mongorc_js.stat.exists == False
-  tags: mongodb
 
-- name: Add pacemaker resource
-  pcs_resource:
-    name: 'mongod'
-    resource_class: 'systemd'
-    resource_type: 'systemd:mongod'
-    options: 'op monitor interval=0 --group Trinity-stack'
-    state: present
-  when: primary == True and ha == True
-  tags:
-    - mongod
-    - pcs
+- name: Enable MongoDB service
+  service:
+    name: mongod
+    enabled: yes
+  when: not ha|default(False)
+
+- block:
+
+  - name: Start MongoDB service
+    service:
+      name: mongod
+      state: started
+  
+  - name: Create root user
+    command: "mongo --eval \"db.createUser({user: 'root', pwd: '{{ mongo_root_pwd }}', roles: [ { role: 'root', db: 'admin' } ]})\" admin"
+    args:
+      creates: "/root/.mongorc.js"
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'mongod'
+      resource_class: 'systemd'
+      resource_type: 'systemd:mongod'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: ha | default(False)
+    tags: pcs
+
+  when: primary | default(True)
