@@ -4,6 +4,13 @@
 - name: Check if this node is the primary controller
   set_fact:
     primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses else False }}'
-  tags:
-    - init
-    - always
+  tags: always
+
+- name: Toggle selinux state
+  selinux:
+    state: '{{ "enforcing" if selinux_enabled else "disabled" }}'
+
+- name: Remove NetworkManager
+  yum:
+    name: NetworkManager
+    state: absent
