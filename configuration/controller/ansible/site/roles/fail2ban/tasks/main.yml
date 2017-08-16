@@ -6,22 +6,15 @@
     name: '{{ item }}'
     state: present
   with_items: '{{ fail2ban_packages }}'
-  tags: fail2ban
 
 - name: Update fail2ban configuration file
   copy:
     src: 'trinityx.conf'
     dest: '/etc/fail2ban/jail.d/trinityx.conf'
-  tags: fail2ban
+  notify: restart fail2ban
 
-- name: Enable fail2ban service
+- name: Start and enable fail2ban service
   service:
     name: fail2ban
+    state: started
     enabled: yes
-  tags: fail2ban
-
-- name: Restart fail2ban service
-  service:
-    name: fail2ban
-    state: restarted
-  tags: fail2ban
