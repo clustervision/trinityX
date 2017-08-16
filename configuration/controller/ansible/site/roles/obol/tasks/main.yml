@@ -1,12 +1,17 @@
 ---
 # tasks file for obol
 
+- name: Aquire openldap root password (generate or use one from /etc/trinity/passwords)
+  set_fact:
+    openldap_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/openldap/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
 - name: Install obol dependency packages
   yum:
     name: '{{ item }}'
     state: present
   with_items: '{{ obol_packages }}'
-  tags: obol
 
 - name: Install obol to /usr/local/bin
   copy:
@@ -15,7 +20,6 @@
     owner: 'root'
     group: 'root'
     mode: '0750'
-  tags: obol
 
 - name: Add default configuration to {{ obol_conf_path }}
   template:
@@ -24,7 +28,6 @@
     owner: 'root'
     group: 'root'
     mode: '0600'
-  tags: obol
 
 - name: Add link to the configuration file in /etc
   file:
@@ -32,5 +35,4 @@
     dest: '/etc/'
     state: link
   when: obol_conf_path|string not in '/etc'
-  tags: obol
 
