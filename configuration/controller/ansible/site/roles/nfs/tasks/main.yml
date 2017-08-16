@@ -3,34 +3,29 @@
 
 - name: Check if shared_fs_type is not 'none'
   meta: end_play
-  when: shared_fs_type == 'none'
-  tags: nfs
+  when: shared_fs_type|string in "none"
 
 - name: Install nfs packages
   yum:
     name: '{{ item }}'
     state: present
   with_items: '{{ nfs_packages }}'
-  tags: nfs
 
 - name: Enable NFS over RDMA
   set_fact:
     nfs_proto: '{{ "rdma" if nfs_enable_rdma == true else "tcp" }}'
-  tags: nfs
 
 - name: Create {{ nfs_exports_path }} if needed
   file:
     path: '{{ nfs_exports_path }}'
     state: directory
-  when: primary
-  tags: nfs
+  when: primary | default(True)
       
 - name: Setup NFS exports in {{ nfs_exports_path }}
   template:
     src: '{{ "HA_exports" if ha == true else "nonHA_exports" }}'
     dest: '{{ nfs_exports_path }}/trinity.exports'
-  when: primary == true
-  tags: nfs
+  when: primary | default(True)
 
 - name: Add link to the exports file in /etc/exports.d
   file:
@@ -39,60 +34,39 @@
     state: link
     force: yes
   when: nfs_exports_path|string not in '/etc/exports.d'
-  tags: nfs
 
 - name: Render nfsmount.conf configuration file
   template:
     src: 'nfsmount.conf'
     dest: '/etc/nfsmount.conf'
-  tags: nfs
 
 - name: Setup NFS sysconfig
   template:
     src: 'sysconfig_nfs'
     dest: '/etc/sysconfig/nfs'
-  tags: nfs
+  notify: restart nfs-config
 
-# RH7 uses a weird configuration system for NFS. At boot the
-# nfs-config.service unit file processes /etc/sysconfig/nfs and writes the
-# results in /run/sysconfig/nfs-utils, which is used by the NFS server.
-# I'm not really sure about the logic behind it. What it means for us though
-# is that we have to restart that service after updating the config file.
-- name: restart nfs-config for the configuration to take effect
-  service:
-    name: nfs-config
-    state: restarted
-  tags: nfs
-
-- name: Start nfs server
+- name: Start and enable nfs server
   service:
     name: nfs-server
-    state: restarted
-  when: ha == false
-  tags: nfs
-
-- name: Enable nfs server
-  service:
-    name: nfs-server
+    state: started
     enabled: yes
-  when: ha == false
-  tags: nfs
+  when: not ha|default(False)
 
-- name: Create shared directory for data that should survive a failover
-  file:
-    path: '{{ trix_local }}/var/lib/nfs'
-    state: directory
-  when: primary == true and ha == true
-  tags: nfs
+- block:
 
-- name: Add NFS server pacemaker resource
-  pcs_resource:
-    name: 'trinity-nfs-server'
-    resource_class: 'ocf'
-    resource_type: 'nfsserver'
-    options: 'nfs_shared_infodir="{{ trix_local }}/var/lib/nfs" op monitor interval=47s --group Trinity-fs'
-    state: present
-  when: primary == True and ha == True
-  tags: 
-    - nfs
-    - pcs
+  - name: Create shared directory for data that should survive a failover
+    file:
+      path: '{{ trix_local }}/var/lib/nfs'
+      state: directory
+  
+  - name: Add NFS server pacemaker resource
+    pcs_resource:
+      name: 'trinity-nfs-server'
+      resource_class: 'ocf'
+      resource_type: 'nfsserver'
+      options: 'nfs_shared_infodir="{{ trix_local }}/var/lib/nfs" op monitor interval=47s --group Trinity-fs'
+      state: present
+    tags: pcs
+
+  when: primary|default(True) and ha|default(False)
