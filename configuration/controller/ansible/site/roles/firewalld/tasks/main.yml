@@ -6,19 +6,12 @@
     name: '{{ item }}'
     state: present
   with_items: '{{ firewalld_packages }}'
-  tags: firewalld
 
-- name: Enable firewalld service
+- name: Start and enable firewalld service
   service:
     name: firewalld
+    state: started
     enabled: yes
-  tags: firewalld
-
-- name: Start firewalld service
-  service:
-    name: firewalld
-    state: restarted
-  tags: firewalld
 
 - name: Assigne interfaces to the public zone
   firewalld:
@@ -28,7 +21,6 @@
     permanent: true
     immediate: true
   with_items: '{{ firewalld_public_interfaces }}'
-  tags: firewalld
 
 - name: Update ifcfg files for interfaces '{{ firewalld_public_interfaces }}'
   lineinfile:
@@ -36,7 +28,6 @@
     regexp: '^ZONE='
     line: 'ZONE=public'
   with_items: '{{ firewalld_public_interfaces }}'
-  tags: firewalld
 
 - name: Assigne interfaces to the trusted zone
   firewalld:
@@ -46,7 +37,6 @@
     permanent: true
     immediate: true
   with_items: '{{ firewalld_trusted_interfaces }}'
-  tags: firewalld
 
 - name: Update ifcfg files for interfaces '{{ firewalld_trusted_interfaces }}'
   lineinfile:
@@ -54,9 +44,8 @@
     regexp: '^ZONE='
     line: 'ZONE=trusted'
   with_items: '{{ firewalld_trusted_interfaces }}'
-  tags: firewalld
 
-- name: Disable NetworkManager for interfaces public and trusted interfaces
+- name: Disable NetworkManager for public and trusted interfaces
   lineinfile:
     path: '/etc/sysconfig/network-scripts/ifcfg-{{ item }}'
     regexp: '^NM_CONTROLLED='
@@ -64,16 +53,14 @@
   with_flattened:
     - '{{ firewalld_public_interfaces }}'
     - '{{ firewalld_trusted_interfaces }}'
-  tags: firewalld
 
-- name: Enable masquerading on the public zone
-  firewalld:
-    zone: public
-    masquerade: yes
-    state: enabled
-    permanent: true
-    immediate: true
-  tags: firewalld
+#- name: Enable masquerading on the public zone
+#  firewalld:
+#    zone: public
+#    masquerade: yes
+#    state: enabled
+#    permanent: true
+#    immediate: true
 
 - name: Configure open TCP ports on the public zone
   firewalld:
@@ -83,7 +70,6 @@
     permanent: true
     immediate: true
   with_items: '{{ firewalld_public_tcp_ports }}'
-  tags: firewalld
 
 - name: Configure open UDP ports on the public zone
   firewalld:
@@ -93,4 +79,3 @@
     permanent: true
     immediate: true
   with_items: '{{ firewalld_public_udp_ports }}'
-  tags: firewalld
