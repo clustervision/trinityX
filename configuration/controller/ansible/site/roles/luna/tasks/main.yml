@@ -4,16 +4,14 @@
 - name: Acquire password for DB user (generate or use one from /etc/trinity/passwords)
   set_fact:
     luna_db_pwd: '{{ lookup("password",
-                           "/etc/trinity/passwords/mysql/{{ luna_db_pwd }}.txt  
+                           "/etc/trinity/passwords/mongo/luna.txt  
                             chars=ascii_letters,digits,hexdigits") }}'
-  tags: luna
 
 - name: Create a group for luna
   group:
     name: luna
     gid: '{{ luna_group_id }}'
     state: present
-  tags: luna
 
 - name: Create a user for luna
   user:
@@ -24,91 +22,29 @@
     shell: /sbin/nologin
     system: yes
     state: present
-  tags: luna
 
 - name: Install luna packages
   yum:
     name: '{{ item }}'
     state: present
   with_items: '{{ luna_packages }}'
-  tags: luna
-
-- name: Ensure {{ luna_data_path }} exists
-  file:
-    path: '{{ luna_data_path }}'
-    owner: luna
-    group: luna
-    state: directory
-  when: primary == True
-  tags: luna
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
     src: 'tftp'
     dest: '/etc/xinetd.d/tftp'
-  tags: luna
+  notify: restart xinetd
 
 - name: Ensure /tftpboot exists
   file:
     path: '/tftpboot'
     state: directory
-  tags: luna
 
 - name: Copy luna_undionly.kpxe to /tftpboot
   copy:
     src: '/usr/share/ipxe/undionly.kpxe'
     dest: '/tftpboot/luna_undionly.kpxe'
     remote_src: True
-  tags: luna
-
-- name: Add a placeholder for luna's DNS zone file
-  file:
-    path: '{{ trix_local }}/etc/named.luna.zones'
-    state: touch
-  when: primary == True
-  tags: luna
-
-- name: Include luna's DNS zone file in named conf
-  lineinfile:
-    path: '/etc/named.conf'
-    line: 'include "{{ trix_local }}/etc/named.luna.zones";'
-  tags: luna
-
-- name: Add luna's server configuration to nginx
-  template:
-    src: 'nginx-luna.conf'
-    dest: '/etc/nginx/conf.d/nginx-luna.conf'
-    backup: no
-  tags: luna
-
-- name: Copy /etc/dhcp to {{ trix_local }}/etc/dhcp
-  command: cp -rafT /etc/dhcp {{ trix_local }}/etc/dhcp
-  ignore_errors: yes
-  when: >
-    primary == True
-    and ha == True
-  tags: luna
-
-- name: Delete default /etc/dhcp
-  file:
-    path: /etc/dhcp
-    state: absent
-  when: ha == True
-  tags: luna
-
-- name: replace /etc/dhcp with symlink to {{ trix_local }}/etc/dhcp
-  file:
-    src: '{{ trix_local }}/etc/dhcp'
-    dest: /etc/dhcp
-    state: link
-    force: yes
-  when: ha == True
-  tags: luna
-
-- name: Create a user for luna in mongodb
-  command: "mongo -u root -p {{ mongo_root_pwd }} --authenticationDatabase admin --eval \"try { db.updateUser('luna', { pwd: '{{ luna_db_pwd }}', roles: [ { role: 'dbOwner', db: 'luna' } ]}) } catch(err) { db.createUser({ user: 'luna', pwd: '{{ luna_db_pwd }}', roles: [ { role: 'dbOwner', db: 'luna' } ]}) }\" luna"
-  when: primary == True
-  tags: luna
 
 - name: Render /etc/luna.conf
   template:
@@ -117,66 +53,115 @@
     owner: luna
     group: luna
     mode: 0600
-    backup: yes
-  tags: luna
+  notify: restart luna
     
+- name: Include luna's DNS zone file in named conf
+  lineinfile:
+    path: '/etc/named.conf'
+    line: 'include "{{ trix_local }}/etc/named.luna.zones";'
+  notify: restart named
+
+- name: Add luna's server configuration to nginx
+  template:
+    src: 'nginx-luna.conf'
+    dest: '/etc/nginx/conf.d/nginx-luna.conf'
+  notify: reload nginx
+
 - name: Enable luna services
   service:
     name: '{{ item }}'
     enabled: yes
-  when: ha == False
+  when: not ha
   with_items:
     - xinetd
     - dhcpd
     - lweb
     - ltorrent
-  tags: luna
 
-- name: Start luna services
-  service:
-    name: '{{ item }}'
-    state: restarted
-  when: primary == True
-  with_items:
-    - xinetd
-    - dhcpd
-    - lweb
-    - ltorrent
-  tags: luna
+- name: Get /etc/dhcp status
+  stat:
+    path: '/etc/dhcp'
+  register: default_dhcp_path
 
-- name: Restart nginx service
-  service:
-    name: nginx
-    state: restarted
-  when: primary == True
-  tags: luna
+- block:
 
-- name: Add dependency pacemaker resources
-  pcs_resource:
-    name: '{{ item }}'
-    resource_class: 'systemd'
-    resource_type: 'systemd:{{ item }}'
-    options: 'op monitor interval=0 --group Trinity-stack'
-    state: present
-  when: primary == True and ha == True
-  with_items:
-    - xinetd
-    - dhcpd
-  tags:
-    - luna
-    - pcs
+  - name: Ensure {{ dhcp_conf_path }} exists
+    file:
+      path: '{{ dhcp_conf_path }}'
+      state: directory
 
-- name: Add luna pacemaker resources
-  pcs_resource:
-    name: '{{ item }}'
-    resource_class: 'systemd'
-    resource_type: 'systemd:{{ item }}'
-    options: 'op monitor interval=0 op start timeout=120 --group Trinity-stack'
-    state: present
-  when: primary == True and ha == True
-  with_items:
-    - lweb
-    - ltorrent
-  tags:
-    - luna
-    - pcs
+  - name: Copy default dhcp configuraion to {{ dhcp_conf_path }}
+    shell: rsync -raW /etc/dhcp/* {{ dhcp_conf_path }}
+    args:
+      creates: '{{ dhcp_conf_path }}/dhclient.d'
+    when: primary|default(True)
+
+  - name: Delete default configuration
+    file:
+      path: '/etc/dhcp'
+      state: absent
+  
+  - name: Replace default dhcp configuration path with symlink to {{ dhcp_conf_path }}
+    file:
+      src: '{{ dhcp_conf_path }}'
+      dest: '/etc/dhcp'
+      state: link
+      force: yes
+
+  when: dhcp_conf_path|string not in '/etc/dhcp'
+        and default_dhcp_path.stat.isdir
+
+- block:
+
+  - name: Ensure {{ luna_data_path }} exists
+    file:
+      path: '{{ luna_data_path }}'
+      owner: luna
+      group: luna
+      state: directory
+  
+  - name: Add a placeholder for luna's DNS zone file
+    file:
+      path: '{{ trix_local }}/etc/named.luna.zones'
+      state: touch
+  
+  - name: Create a user for luna in mongodb
+    command: "mongo luna --authenticationDatabase admin --eval \"try {db.updateUser('luna', {pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})} catch(err) {db.createUser({user: 'luna', pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})}\""
+  
+  - name: Start luna services
+    service:
+      name: '{{ item }}'
+      state: started
+    with_items:
+      - xinetd
+      - dhcpd
+      - lweb
+      - ltorrent
+  
+  - name: Add dependency pacemaker resources
+    pcs_resource:
+      name: '{{ item }}'
+      resource_class: 'systemd'
+      resource_type: 'systemd:{{ item }}'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: ha | default(False)
+    with_items:
+      - xinetd
+      - dhcpd
+    tags: pcs
+  
+  - name: Add luna pacemaker resources
+    pcs_resource:
+      name: '{{ item }}'
+      resource_class: 'systemd'
+      resource_type: 'systemd:{{ item }}'
+      options: 'op monitor interval=0 op start timeout=120 --group Trinity-stack'
+      state: present
+    when: ha | default(False)
+    with_items:
+      - lweb
+      - ltorrent
+    tags: pcs
+
+  when: primary | default(True)
