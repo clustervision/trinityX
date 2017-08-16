@@ -6,7 +6,6 @@
     name: '{{ item }}'
     state: present
   with_items: '{{ bind_packages }}'
-  tags: bind
 
 - name: Ensure {{ bind_db_path }} exists
   file:
@@ -14,75 +13,52 @@
     owner: named
     group: named
     state: directory
-  tags: bind
-
-- name: Copy /var/named to {{ bind_db_path }}
-  command: cp -rafT /var/named {{ bind_db_path }}
-  ignore_errors: yes
-  when: >
-    primary == True
-    and bind_db_path|string not in '/var/named'
-  tags: bind
-
-- name: Delete default /var/named
-  file:
-    path: /var/named
-    state: absent
-  when: bind_db_path|string not in '/var/named'
-  tags: bind
-
-- name: replace /var/named with symlink to {{ bind_db_path }}
-  file:
-    src: '{{ bind_db_path }}'
-    dest: /var/named
-    state: link
-    force: yes
-  when: bind_db_path|string not in '/var/named'
-  tags: bind
 
 - name: Render /etc/named.conf
   template:
     src: "named.conf"
     dest: "/etc/named.conf"
     backup: yes
-  tags: bind
+  notify: restart named
 
 - name: Render /etc/resolv.conf
   template:
     src: "resolv.conf"
     dest: "/etc/resolv.conf"
     backup: yes
-  tags: bind
 
 - name: Preserve resolv.conf from being overwriten
   copy:
     src: dhclient-enter-hooks
     dest: /etc/dhcp/dhclient-enter-hooks
     backup: yes
-  tags: bind
 
 - name: Enable named service
   service:
     name: named
     enabled: yes
-  when: ha == False
-  tags: bind
+  when: not ha|default(False)
 
-- name: Start named service
-  service:
-    name: named
-    state: restarted
-  when: primary == True
-  tags: bind
+- block:
 
-- name: Add pacemaker resource
-  pcs_resource:
-    name: 'named'
-    resource_class: 'systemd'
-    resource_type: 'systemd:named'
-    options: 'op monitor interval=0 --group Trinity-stack'
-    state: present
-  when: primary == True and ha == True
-  tags:
-    - bind
-    - pcs
+  - name: Copy default zones to {{ bind_db_path }}
+    shell: rsync -raW /var/named/* {{ bind_db_path }}
+    args:
+      creates: '{{ bind_db_path }}/named.empty'
+
+  - name: Start named service
+    service:
+      name: named
+      state: started
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'named'
+      resource_class: 'systemd'
+      resource_type: 'systemd:named'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    tags: pcs
+    when: ha | default(False)
+
+  when: primary | default(True)
