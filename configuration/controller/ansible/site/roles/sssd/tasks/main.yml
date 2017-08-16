@@ -1,12 +1,11 @@
 ---
-# tasks file for obol
+# tasks file for sssd
 
 - name: Install sssd packages
   yum:
     name: '{{ item }}'
     state: present
   with_items: '{{ sss_packages }}'
-  tags: sssd
 
 - name: Add configuration file to /etc/sssd/sssd.conf
   template:
@@ -15,49 +14,38 @@
     owner: 'root'
     group: 'root'
     mode: '0600'
-  tags: sssd
-
-#- name: Add link to the configuration file in /etc
-#  file:
-#    src: '{{ obol_conf_path }}'
-#    dest: '/etc/'
-#    state: link
-#  when: '{{ obol_conf_path }}' != '/etc'
-#  tags: obol
+  notify: restart sssd
 
 - name: Enable sssd service
   service:
     name: sssd
     enabled: yes
-  when: ha == False
-  tags: sssd
+  when: not ha|default(False)
 
-- name: Start MariaDB service
-  service:
-    name: sssd
-    state: started
-  when: primary == True
-  tags: sssd
+- block:
+
+  - name: Start sssd service
+    service:
+      name: sssd
+      state: started
+  
+  - name: Adding access controler groups to the system
+    shell: 'obol group list | grep {{ item }} || obol group add {{ item }}'
+    register: obol_result
+    with_items: '{{ sss_allowed_groups }}'
+    changed_when: item not in obol_result.stdout
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'sssd'
+      resource_class: 'systemd'
+      resource_type: 'systemd:sssd'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: ha | default(False)
+    tags: pcs
+
+  when: primary | default(True)
 
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
-  tags: sssd
-
-- name: Adding access controler groups to the system
-  command: obol group add {{ item }}
-  with_items: '{{ sss_allowed_groups }}'
-  ignore_errors: yes
-  when: primary == True
-  tags: sssd
-
-- name: Add pacemaker resource
-  pcs_resource:
-    name: 'sssd'
-    resource_class: 'systemd'
-    resource_type: 'systemd:sssd'
-    options: 'op monitor interval=0 --group Trinity-stack'
-    state: present
-  when: primary == True and ha == True
-  tags:
-    - sssd
-    - pcs
