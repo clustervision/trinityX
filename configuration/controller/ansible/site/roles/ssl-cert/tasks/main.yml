@@ -4,6 +4,16 @@
     path: '{{ ssl_cert_path }}'
     state: directory
 
+- name: Ensure '{{ ssl_cert_owner }}' user exists
+  user:
+    name: '{{ ssl_cert_owner }}'
+    system: yes
+
+- name: Ensure '{{ ssl_cert_group }}' group exists
+  group:
+    name: '{{ ssl_cert_group }}'
+    system: yes
+
 - name: Generate a certificate authority for the cluster
   command: >
     openssl req -newkey rsa:4096
@@ -41,16 +51,13 @@
 - name: Restrict access permissions to the private keys
   file:
     path: '{{ item }}'
-    owner: '{{ ssl_cert_owner }}'
-    group: '{{ ssl_cert_group }}'
     mode: 0640
   with_fileglob:
     - '{{ ssl_cert_path }}/*.key'
 
-- name: Update access permissions to the certificate
+- name: Update ownership of the certificates
   file:
-    path: '{{ item }}'
+    path: '{{ ssl_cert_path }}'
     owner: '{{ ssl_cert_owner }}'
     group: '{{ ssl_cert_group }}'
-  with_fileglob:
-    - '{{ ssl_cert_path }}/*.crt'
+    recurse: yes
