@@ -26,6 +26,9 @@
      shared_fs_type: 'drbd'
      shared_fs_device: '/dev/sdb'
 
+     ssl_cert_path: '{{ trix_local }}/etc/ssl'
+     ssl_cert_group: 'ssl'
+
    roles:
      - role: init
        selinux_enabled: false
@@ -78,14 +81,11 @@
 
      - role: ssl-cert
        when: primary
-       ssl_cert_path: '{{ trix_local }}/etc/ssl'
        ssl_cert_country: 'NL'
        ssl_cert_locality: 'Amsterdam'
        ssl_cert_organization: 'ClusterVision B.V.'
        ssl_cert_state: 'Noord Holland'
        ssl_cert_days: '3650'
-       ssl_cert_owner: 'root'
-       ssl_cert_group: 'root'
        tags: ssl-cert
 
      - role: openldap

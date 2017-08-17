@@ -28,7 +28,7 @@
 - name: Adjust OpenLDAP client TLS configuration
   lineinfile:
     path: '/etc/openldap/ldap.conf'
-    line: 'TLS_CACERT   {{ ssl_certs_path }}/cluster-ca.crt'
+    line: 'TLS_CACERT   {{ openldap_tls_cacrt }}'
 
 - name: Enable OpenLDAP service
   service:
@@ -76,7 +76,7 @@
 
   - name: Add cluster CA certificate to /etc/openldap/certs
     copy:
-      src: '{{ ssl_certs_path }}/cluster-ca.crt'
+      src: '{{ openldap_tls_cacrt }}'
       dest: '/etc/openldap/certs/'
       remote_src: yes
 
@@ -88,12 +88,9 @@
       group: '{{ openldap_default_group }}'
   
   - name: Ensure OpenLDAP has access to the ssl certificates
-    file:
-      path: '{{ ssl_certs_path }}'
-      state: directory
-      owner: 'ldap'
-      group: 'ldap'
-      recurse: yes
+    user:
+      name: '{{ openldap_default_user }}'
+      groups: '{{ ssl_cert_group }}'
   
   - name: Start OpenLDAP service
     service:
