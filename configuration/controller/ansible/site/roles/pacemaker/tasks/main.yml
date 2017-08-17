@@ -68,9 +68,11 @@
 
 - block:
 
-  - name: Setup pacemaker properties
-    command: pcs property set '{{ item }}'
-    with_items: '{{ pacemaker_properties }}'
+  - name: Set pacemaker properties
+    pcs_property:
+      name: '{{ item.key }}'
+      value: '{{ item.value }}'
+    with_dict: '{{ pacemaker_properties }}'
   
   - name: Setup pacemaker resource defaults
     command: pcs resource defaults '{{ item }}'
@@ -154,7 +156,9 @@
       state: present
   
   - name: Toggle pacemaker stonith property
-    command: pcs property set 'stonith-enabled={{ fence_ipmilan_enabled }}'
+    pcs_property:
+      name: stonith-enabled
+      value: '{{ fence_ipmilan_enabled }}'
     
   - name: Configure fencing resourcesusing the ipmilan fencing agent
     pcs_resource:
