@@ -121,9 +121,11 @@
       state: directory
   
   - name: Add a placeholder for luna's DNS zone file
-    file:
+    lineinfile:
       path: '{{ trix_local }}/etc/named.luna.zones'
-      state: touch
+      line: '// PLACEHOLDER'
+      insertbefore: BOF
+      create: yes
   
   - name: Create a user for luna in mongodb
     command: "mongo luna --authenticationDatabase admin --eval \"try {db.updateUser('luna', {pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})} catch(err) {db.createUser({user: 'luna', pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})}\""
