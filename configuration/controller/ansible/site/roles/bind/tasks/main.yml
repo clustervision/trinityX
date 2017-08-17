@@ -14,11 +14,47 @@
     group: named
     state: directory
 
-- name: Render /etc/named.conf
-  template:
-    src: "named.conf"
-    dest: "/etc/named.conf"
+- name: Update named data path
+  replace:
+    path: /etc/named.conf
+    regexp: '/var/named'
+    replace: '{{ bind_db_path }}'
     backup: yes
+  notify: restart named
+
+- name: Configure named to listen on all ports
+  replace:
+    path: /etc/named.conf
+    regexp: '{{ item }}'
+    replace: ' any; '
+  with_items:
+    - ' localhost; '
+    - ' 127\.0\.0\.1; '
+    - ' ::1; '
+  notify: restart named
+ 
+- name: Toggle DNSSEC
+  lineinfile:
+    path: /etc/named.conf
+    line: 'dnssec-enable {{ "yes" if bind_dnssec_enable else "no"}};'
+    regexp: 'dnssec-enable'
+  notify: restart named
+
+- name: Configure named forwarders
+  blockinfile:
+    path: /etc/named.conf
+    insertafter: 'recursion yes;'
+    marker: '// {mark} forwarders'
+    block: |
+      {% if ansible_dns['nameservers'] is defined or bind_dns_forwarders %}
+          forwarders {
+            {% if bind_dns_forwarders %}
+              {% for f in bind_dns_forwarders %}{{ f }}; {% endfor %}
+            {% else %}
+              {% for f in ansible_dns['nameservers'] %}{% if f not in ansible_all_ipv4_addresses%}{{ f }};{% endif %} {% endfor %}
+            {% endif %}
+          };
+      {% endif %}
   notify: restart named
 
 - name: Render /etc/resolv.conf
