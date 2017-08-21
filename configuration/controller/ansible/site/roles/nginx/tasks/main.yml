@@ -6,7 +6,6 @@
     name: '{{ item }}'
     state: present
   with_items: '{{ nginx_packages }}'
-  tags: nginx
 
 - name: Ensure /etc/nginx/conf.d exists
   file:
@@ -14,37 +13,35 @@
     owner: root
     group: root
     state: directory
-  tags: nginx
 
 - name: Copy configuration file
-  file:
+  copy:
     src: "nginx.conf"
     dest: "/etc/nginx/nginx.conf"
     backup: yes
-  tags: nginx
+  notify: reload nginx
 
 - name: Enable nginx service
   service:
     name: nginx
     enabled: yes
-  when: ha == False
-  tags: nginx
+  when: not ha|default(False)
 
-- name: Start nginx service
-  service:
-    name: nginx
-    state: restarted
-  when: primary == True
-  tags: nginx
+- block:
 
-- name: Add pacemaker resource
-  pcs_resource:
-    name: 'nginx'
-    resource_class: 'systemd'
-    resource_type: 'systemd:nginx'
-    options: 'op monitor interval=0 --group Trinity-stack'
-    state: present
-  when: primary == True and ha == True
-  tags:
-    - nginx
-    - pcs
+  - name: Start nginx service
+    service:
+      name: nginx
+      state: started
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'nginx'
+      resource_class: 'systemd'
+      resource_type: 'systemd:nginx'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: ha | default(False)
+    tags: pcs
+
+  when: primary | default(True) 

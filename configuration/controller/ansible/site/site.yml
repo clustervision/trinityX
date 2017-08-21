@@ -1,10 +1,13 @@
 ---
- - hosts:
-     - controller1
-     - controller2
+ - hosts: controllers
    
    vars:
      ha: True
+
+     trix_domain: cluster
+     trix_cluster_net: 10.141.0.0
+     trix_cluster_netprefix: 16
+
      trix_ctrl_ip: 10.141.255.252
      trix_ctrl1_ip: 10.141.255.254
      trix_ctrl2_ip: 10.141.255.253
@@ -13,95 +16,136 @@
      trix_ctrl_hostname: controller
      trix_ctrl1_hostname: controller1
      trix_ctrl2_hostname: controller2
-     trix_domain: cluster
-     trix_root: /trinity
-     trix_images: '/trinity/images'
-     trix_shared: '/trinity/shared'
-     trix_local: '/trinity/local'
-     trix_home: '/trinity/home'
+
+     trix_root: '/trinity'
+     trix_images: '{{ trix_root }}/images'
+     trix_shared: '{{ trix_root }}/shared'
+     trix_local: '{{ trix_root }}/local'
+     trix_home: '{{ trix_root }}/home'
 
      shared_fs_type: 'drbd'
      shared_fs_device: '/dev/sdb'
 
-     nfs_rpccount: 256
-     nfs_enable_rdma: false
-     nfs_export_shared: true
-     nfs_export_home: true
-     nfs_exports_path: '{{ trix_local }}/etc/exports.d'
-
-     ssl_certs_path: '{{ trix_local }}/etc/ssl'
-     ssl_certs_country: 'NL'
-     ssl_certs_locality: 'Amsterdam'
-     ssl_certs_organization: 'ClusterVision B.V.'
-     ssl_certs_state: 'Noord Holland'
-     ssl_certs_days: '3650'
-     ssl_certs_path_owner: 'root'
-     ssl_certs_path_group: 'root'
-
-     firewalld_public_interfaces:
-       - eth2
-     firewalld_trusted_interfaces:
-       - eth0
-       - eth1
-     firewalld_public_tcp_ports:
-       - 443
-
-     rsyslog_cluster_logs_path: '/var/log/cluster-messages'
-     rsyslog_cluster_netprefix: 16
-     rsyslog_cluster_net: 10.141.0.0
-
-     openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
-     openldap_server_conf_path: '{{ trix_local }}/etc/openldap'
-
-     users_home_path: '{{ trix_home }}'
-     controller_hostname: 'controller'
-     sss_allowed_groups: 'admins'
-
-     mariadb_db_path: '{{ trix_local }}/var/lib/mysql'
-     mongo_db_path: '{{ trix_local }}/var/lib/mongodb'
-     luna_data_path: '{{ trix_local }}/luna'
-     bind_db_path: '{{ trix_local }}/var/lib/named'
-
-     bind_dnssec_enable: no
-     bind_dns_forwarders:
-       - '8.8.8.8'
-       - '8.8.4.4'
-     slurmdbd_sql_user: 'slurm_accounting'
-     slurmdbd_sql_db: 'slurm_accounting'
-
-     fence_ipmilan_enabled: 'false'
-     fence_ipmilan_login: 'user'
-     fence_ipmilan_passwd: 'password'
-
-     pacemaker_user_pwd: password
-     slurmdbd_sql_pwd: password
-     openldap_root_pw: password
-     mysql_root_pwd: password
-     mongo_root_pwd: password
-     luna_db_pwd: password
+     ssl_cert_path: '{{ trix_local }}/etc/ssl'
+     ssl_cert_group: 'ssl'
 
    roles:
-     - role: OndrejHome.pcs-modules-2
      - role: init
+       selinux_enabled: false
+       tags: init  
+
      - role: hostname
        tags: hostname  
+
      - role: firewalld
+       firewalld_public_interfaces:
+         - eth2
+       firewalld_trusted_interfaces:
+         - eth0
+         - eth1
+       firewalld_public_tcp_ports:
+         - 443
+       tags: firewalld  
+
      - role: chrony
+       tags: chrony 
+
      - role: ssh
+       tags: ssh  
+
      - role: fail2ban
+       tags: fail2ban  
+
      - role: pacemaker
+       when: ha
+       fence_ipmilan_enabled: 'false'
+       fence_ipmilan_login: 'user'
+       fence_ipmilan_passwd: 'password'
+       tags: pcs
+
      - role: drbd
+       when: ha
        tags: drbd
+
      - role: nfs
-     - { role: jdauphant.ssl-certs, when: primary == True }
-     - role: openldap
+       nfs_rpccount: 256
+       nfs_enable_rdma: false
+       nfs_export_shared: true
+       nfs_export_home: true
+       nfs_exports_path: '{{ trix_local }}/etc/exports.d'
+       tags: nfs
+
      - role: environment-modules
+       modulefiles_path: '{{ trix_shared }}/modulefiles'
+       tags: environment-modules
+
+     - role: ssl-cert
+       when: primary
+       ssl_cert_country: 'NL'
+       ssl_cert_locality: 'Amsterdam'
+       ssl_cert_organization: 'ClusterVision B.V.'
+       ssl_cert_state: 'Noord Holland'
+       ssl_cert_days: '3650'
+       tags: ssl-cert
+
+     - role: openldap
+       openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
+       openldap_server_conf_path: '{{ trix_local }}/etc/openldap/slapd.d'
+       tags: openldap
+
      - role: obol
-     - role: sssd       
+       users_home_path: '{{ trix_home }}'
+       tags: obol
+
+     - role: sssd
+       sss_allowed_groups:
+         - 'admins'
+       sss_ldap_hostname: '{{ trix_ctrl_hostname }}'
+       tags: sssd
+
      - role: mariadb
+       mariadb_db_path: '{{ trix_local }}/var/lib/mysql'
+       tags: mariadb
+
      - role: slurm
+       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+       slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+       munge_conf_path: '{{ trix_shared }}/etc/munge'
+       slurmdbd_sql_user: 'slurm_accounting'
+       slurmdbd_sql_db: 'slurm_accounting'
+       tags: slurm
+
      - role: mongodb
+       mongo_db_path: '{{ trix_local }}/var/lib/mongodb'
+       tags: mongodb
+
      - role: bind
+       bind_db_path: '{{ trix_local }}/var/lib/named'
+       bind_dnssec_enable: no
+       bind_dns_forwarders:
+         - '8.8.8.8'
+         - '8.8.4.4'
+       tags: bind
+
      - role: nginx
+       tags: nginx
+
      - role: luna
+       luna_data_path: '{{ trix_local }}/luna'
+       dhcp_conf_path: '{{ trix_local }}/etc/dhcp'
+       tags: luna
+
      - role: rsyslog
+       syslog_listeners:
+         - name: default
+           proto: udp
+           port: 514
+       
+       syslog_file_template_rules:
+         - name: controllers
+           type: string
+           content: '/var/log/cluster-messages/%HOSTNAME%.messages'
+           field: '$fromhost-ip'
+           criteria: startswith
+           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
+       tags: rsyslog
