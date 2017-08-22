@@ -4,7 +4,7 @@
 - name: Acquire password for DB user (generate or use one from /etc/trinity/passwords)
   set_fact:
     luna_db_pwd: '{{ lookup("password",
-                           "/etc/trinity/passwords/mongo/luna.txt  
+                           "/etc/trinity/passwords/mongo/luna.txt
                             chars=ascii_letters,digits,hexdigits") }}'
 
 - name: Create a group for luna
@@ -54,7 +54,7 @@
     group: luna
     mode: 0600
   notify: restart luna
-    
+
 - name: Include luna's DNS zone file in named conf
   lineinfile:
     path: '/etc/named.conf'
@@ -100,7 +100,7 @@
     file:
       path: '/etc/dhcp'
       state: absent
-  
+
   - name: Replace default dhcp configuration path with symlink to {{ dhcp_conf_path }}
     file:
       src: '{{ dhcp_conf_path }}'
@@ -119,17 +119,29 @@
       owner: luna
       group: luna
       state: directory
-  
+
   - name: Add a placeholder for luna's DNS zone file
     lineinfile:
       path: '{{ trix_local }}/etc/named.luna.zones'
       line: '// PLACEHOLDER'
       insertbefore: BOF
       create: yes
-  
+
   - name: Create a user for luna in mongodb
     command: "mongo luna --authenticationDatabase admin --eval \"try {db.updateUser('luna', {pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})} catch(err) {db.createUser({user: 'luna', pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})}\""
-  
+
+  - name: Init cluster
+    command: "luna cluster init --path {{ luna_data_path }}"
+
+  - name: Set frontend
+    command: "luna cluster change --frontend_address {{ trix_ctrl_ip }}"
+
+  - name: Create network
+    command: "luna network add --name {{ trix_domain }} --network {{ trix_cluster_net }} --prefix {{ trix_cluster_netprefix }}"
+
+  - name: Create dhcpd config
+    command: "luna cluster makedhcp -N {{ trix_domain }} -s {{ trix_cluster_dhcp_start }} -e {{ trix_cluster_dhcp_end }}"
+
   - name: Start luna services
     service:
       name: '{{ item }}'
@@ -139,7 +151,7 @@
       - dhcpd
       - lweb
       - ltorrent
-  
+
   - name: Add dependency pacemaker resources
     pcs_resource:
       name: '{{ item }}'
@@ -152,7 +164,7 @@
       - xinetd
       - dhcpd
     tags: pcs
-  
+
   - name: Add luna pacemaker resources
     pcs_resource:
       name: '{{ item }}'
