@@ -41,108 +41,17 @@ function replace_template() {
     sed -i -e "s/{{ ${FROM} }}/${TO//\//\\/}/g" $FILE
 }
 
-function add_luna_user() {
-    LPATH=$1
-    if [ "x${LPATH}" = "x" ]; then
-        LPATH="/opt"
+function get_lpath() {
+    # get luna homedir
+    U=$1
+    if [ "x${U}" = "x" ]; then
+        U="luna"
     fi
-    echo_info "Add users and create folders."
-
-    if /usr/bin/id -u luna >/dev/null 2>&1; then
-        /usr/sbin/userdel luna
-
-    fi
-    if /usr/bin/grep -q -E "^luna:" /etc/group ; then
-        /usr/sbin/groupdel luna
-    fi
-
-    /usr/sbin/groupadd -r ${LUNA_GROUP_ID:+"-g $LUNA_GROUP_ID"} luna
-    store_variable "${TRIX_SHFILE}" LUNA_GROUP_ID $(/usr/bin/getent group | /usr/bin/awk -F\: '$1=="luna"{print $3}')
-
-    /usr/sbin/useradd -r ${LUNA_USER_ID:+"-u $LUNA_USER_ID"} -g luna -d ${LPATH}/luna luna
-    store_variable "${TRIX_SHFILE}" LUNA_USER_ID $(/usr/bin/id -u luna)
+    eval echo ~${U}
 }
 
-function create_luna_folders() {
-
-    LPATH=$1
-    if [ "x${LPATH}" = "x" ]; then
-        LPATH="/opt"
-    fi
-    echo_info "Create dirs for Luna in ${LPATH}."
-
-    /usr/bin/mkdir -p ${LPATH}/luna
-    /usr/bin/mkdir -p ${LPATH}/luna/{boot,torrents}
-
-    pushd ${LPATH}/luna
-        /usr/bin/cp -pr /luna/templates ./
-    popd
-
-    /usr/bin/chown -R luna: ${LPATH}/luna
-    /usr/bin/chmod ag+rx ${LPATH}/luna
-}
-
-function create_system_local_dirs() {
-    echo_info "Create pid and log folders."
-    /usr/bin/mkdir -p /var/log/luna
-    /usr/bin/chown -R luna: /var/log/luna
-    /usr/bin/mkdir -p /var/run/luna
-    /usr/bin/chown -R luna: /var/run/luna
-
-}
-
-function install_luna() {
-    echo_info "Download Luna"
-    pushd /
-        [ -d /luna ] && rm -rf /luna
-        /usr/bin/git clone https://github.com/clustervision/luna -b v1.1
-    popd
-
-    echo_info "Create symlinks."
-
-    pushd /usr/lib64/python2.7
-        /usr/bin/ln -fs /luna/luna luna
-    popd
-    pushd /usr/sbin
-        /usr/bin/ln -fs /luna/bin/luna
-        /usr/bin/ln -fs /luna/bin/lpower
-        /usr/bin/ln -fs /luna/bin/lweb
-        /usr/bin/ln -fs /luna/bin/ltorrent
-        /usr/bin/ln -fs /luna/bin/lchroot
-        /usr/bin/ln -fs /luna/bin/lfs_pxelinux
-    popd
-
-    echo_info "Copy systemd unit files."
-
-    /usr/bin/cp -pr /luna/contrib/systemd/lweb.service /etc/systemd/system/lweb.service
-    /usr/bin/cp -pr /luna/contrib/systemd/ltorrent.service /etc/systemd/system/ltorrent.service
-    /usr/bin/cp -pr /luna/contrib/systemd/lfs_pxelinux.service /etc/systemd/system/lfs_pxelinux.service
-    /usr/bin/cp -pr /luna/contrib/systemd/lfs_pxelinux /etc/sysconfig/lfs_pxelinux
-
-    echo_info "Reload systemd config."
-
-    /usr/bin/systemctl daemon-reload
-
-    echo_info "Copy autocompletion functions."
-
-    /usr/bin/cp -pr /luna/contrib/luna_autocomplete.sh /etc/profile.d/
-}
-
-function build_ltorrent_client() {
-    pushd /luna/contrib/ltorrent-client
-    if ! /usr/bin/make ; then
-        echo_error "Unable to make ltorrent-client"
-        exit 1
-    fi
-    /usr/bin/mv ltorrent-client ../dracut/95luna/
-    popd
-}
-
-function copy_dracut() {
-    echo_info "Copy dracut module to ${TRIX_LOCAL}/luna/dracut/"
-
-    /usr/bin/mkdir -p ${TRIX_LOCAL}/luna/dracut/
-    /usr/bin/cp -pr /luna/contrib/dracut/95luna ${TRIX_LOCAL}/luna/dracut/
+function luna_versionlock() {
+    /usr/bin/yum versionlock luna-*
 }
 
 function setup_tftp() {
@@ -167,14 +76,14 @@ function setup_dns() {
 
 function setup_dns_secondary() {
     echo_info "Setup DNS."
+    /usr/bin/touch /etc/named.luna.zones
     append_line /etc/named.conf "include \"/etc/named.luna.zones\";"
 }
 
 function setup_nginx() {
-    LPATH=$1
-    if [ "x${LPATH}" = "x" ]; then
-        LPATH="/opt"
-    fi
+
+    LPATH=$(get_lpath)
+
     echo_info "Setup nginx."
 
     /usr/bin/cp ${POST_FILEDIR}/nginx.conf /etc/nginx/
@@ -218,14 +127,12 @@ EOF
 }
 
 function configure_luna() {
-    echo_info "Initialize Luna."
-    LPATH=$1
-    if [ "x${LPATH}" = "x" ]; then
-        LPATH="/opt"
-    fi
+
+    LPATH=$(get_lpath)
+
     create_luna_db_backup
     echo -e "use luna\ndb.dropDatabase()" | /usr/bin/mongo -u "root" -p${MONGODB_ROOT_PASS} --authenticationDatabase admin --host ${MONGO_HOST}
-    if ! /usr/sbin/luna cluster init --path $LPATH/luna; then
+    if ! /usr/sbin/luna cluster init --path $LPATH; then
         echo_error "Luna is unable to initialize cluster"
         exit 1
     fi
@@ -257,17 +164,18 @@ function configure_dns_dhcp() {
 }
 
 function copy_configs_to_trix_local() {
-    /usr/bin/mkdir -p /trinity/local/etc
-    /usr/bin/mv /etc/named.luna.zones /trinity/local/etc/
+    /usr/bin/mkdir -p ${TRIX_LOCAL}/etc
+    /usr/bin/mv /etc/named.luna.zones ${TRIX_LOCAL}/etc/
 
-    /usr/bin/mkdir -p /trinity/shared/etc/dhcp
-    /usr/bin/mv /etc/dhcp/dhcpd.conf /trinity/shared/etc/
+    /usr/bin/mkdir -p ${TRIX_SHARED}/etc/dhcp
+    /usr/bin/mv /etc/dhcp/dhcpd.conf ${TRIX_SHARED}/etc/
 }
 
 function create_symlinks() {
-    /usr/bin/ln -fs /trinity/local/etc/named.luna.zones /etc/named.luna.zones
-    /usr/bin/ln -fs /trinity/shared/etc/dhcpd.conf /etc/dhcp/dhcpd.conf
+    /usr/bin/ln -fs ${TRIX_LOCAL}/etc/named.luna.zones /etc/named.luna.zones
+    /usr/bin/ln -fs ${TRIX_SHARED}/etc/dhcpd.conf /etc/dhcp/dhcpd.conf
 }
+
 function configure_pacemaker() {
     echo_info "Configure pacemaker's resources."
     TMPFILE=$(/usr/bin/mktemp -p /root pacemaker_luna.XXXX)
@@ -290,18 +198,13 @@ function configure_pacemaker() {
 function install_standalone() {
     /usr/bin/systemctl stop dhcpd xinetd nginx 2>/dev/null || /usr/bin/true
     /usr/bin/systemctl stop lweb ltorrent 2>/dev/null || /usr/bin/true
-    install_luna
-    add_luna_user $1
-    create_luna_folders $1
-    create_system_local_dirs
-    build_ltorrent_client
-    copy_dracut
+    luna_versionlock
     setup_tftp
     setup_dns
-    setup_nginx $1
+    setup_nginx
     create_mongo_user
     configure_mongo_credentials
-    configure_luna $1
+    configure_luna
     configure_dns_dhcp
     if ! /usr/bin/systemctl start lweb ltorrent; then
         echo_error "Unable to start Luna services."
@@ -315,7 +218,7 @@ function install_standalone() {
 }
 
 function install_primary() {
-    install_standalone $1
+    install_standalone
     /usr/bin/systemctl disable nginx dhcpd lweb ltorrent
     /usr/bin/systemctl stop dhcpd lweb ltorrent || /usr/bin/true
     copy_configs_to_trix_local
@@ -328,11 +231,10 @@ function install_primary() {
 
 function install_secondary() {
     /usr/bin/systemctl stop dhcpd lweb ltorrent 2>/dev/null || /usr/bin/true
-    install_luna
-    add_luna_user $1
+    luna_versionlock
     setup_tftp
     setup_dns_secondary
-    setup_nginx $1
+    setup_nginx
     create_system_local_dirs
     configure_mongo_credentials 1
     /usr/bin/systemctl start xinetd nginx
@@ -342,12 +244,12 @@ function install_secondary() {
 }
 
 if flag_is_unset HA; then
-    install_standalone "/opt"
+    install_standalone
 else
     if flag_is_set PRIMARY_INSTALL; then
-        install_primary "/trinity/local"
+        install_primary
     else
-        install_secondary "/trinity/local"
+        install_secondary
     fi
 fi
 
