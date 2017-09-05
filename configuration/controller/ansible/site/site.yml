@@ -1,12 +1,14 @@
 ---
  - hosts: controllers
-   
+
    vars:
      ha: True
 
      trix_domain: cluster
      trix_cluster_net: 10.141.0.0
      trix_cluster_netprefix: 16
+     trix_cluster_dhcp_start: 10.141.128.0
+     trix_cluster_dhcp_end: 10.141.140.0
 
      trix_ctrl_ip: 10.141.255.252
      trix_ctrl1_ip: 10.141.255.254
@@ -32,10 +34,10 @@
    roles:
      - role: init
        selinux_enabled: false
-       tags: init  
+       tags: init
 
      - role: hostname
-       tags: hostname  
+       tags: hostname
 
      - role: firewalld
        firewalld_public_interfaces:
@@ -45,16 +47,16 @@
          - eth1
        firewalld_public_tcp_ports:
          - 443
-       tags: firewalld  
+       tags: firewalld
 
      - role: chrony
-       tags: chrony 
+       tags: chrony
 
      - role: ssh
-       tags: ssh  
+       tags: ssh
 
      - role: fail2ban
-       tags: fail2ban  
+       tags: fail2ban
 
      - role: pacemaker
        when: ha
@@ -140,7 +142,7 @@
          - name: default
            proto: udp
            port: 514
-       
+
        syslog_file_template_rules:
          - name: controllers
            type: string

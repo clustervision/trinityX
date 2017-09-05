@@ -1,8 +1,18 @@
 ---
+- name: Import rpm_key for elrepo
+  rpm_key:
+    key: https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+    state: present
+
+- name: Configure elrepo
+  template:
+    src: elrepo.repo
+    dest: /etc/yum.repos.d/elrepo.repo
 
 - name: Install DRBD packages
   yum:
     name: '{{ item }}'
+    enablerepo: elrepo
     state: present
   with_items: '{{drbd_packages}}'
 
@@ -67,7 +77,7 @@
       name: trinity-fs
       resource_class: ocf
       resource_type: Filesystem
-      options: 'device=/dev/drbd/by-res/{{ drbd_shared_resource_name }} 
+      options: 'device=/dev/drbd/by-res/{{ drbd_shared_resource_name }}
           directory="{{ trix_root }}" fstype=xfs options="nodiscard,inode64"
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs'
@@ -78,7 +88,7 @@
       name: fs-ready
       resource_class: ocf
       resource_type: Dummy
-      options: op monitor interval=183s --group=Trinity-fs 
+      options: op monitor interval=183s --group=Trinity-fs
       state: present
 
   - name: Add pacemaker order constraint - Trinity then Trinity-drbd
@@ -87,20 +97,20 @@
       #resource2: Trinity-drbd
       resource2: DRBD-master
       state: present
-      
+
   - name: Add pacemaker order constraint - Trinity-drbd then Trinity-fs
     pcs_constraint_order:
       #resource1: Trinity-drbd
       resource1: DRBD-master
       resource2: Trinity-fs
       state: present
-      
+
   - name: Add pacemaker order constraint - Trinity-fs then Trinity-secondary
     pcs_constraint_order:
       resource1: Trinity-fs
       resource2: Trinity-secondary
       state: present
-      
+
   - name: Add pacemaker colocation constraint - Trinity-drbd with Trinity
     pcs_constraint_colocation:
       #resource1: Trinity-drbd
@@ -108,7 +118,7 @@
       resource1_role: Master
       resource2: Trinity
       score: INFINITY
-      state: present  
+      state: present
 
   - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
     pcs_constraint_colocation:
@@ -123,5 +133,9 @@
       resource1_action: promote
       resource2: wait-for-device
       state: present
+
+  - name: Wait for Pacemaker to settle
+    command: /usr/sbin/crm_resource --wait
+
 
   when: primary
