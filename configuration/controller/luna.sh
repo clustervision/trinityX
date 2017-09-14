@@ -95,7 +95,7 @@ function install_luna() {
     echo_info "Download Luna"
     pushd /
         [ -d /luna ] && rm -rf /luna
-        /usr/bin/git clone https://github.com/clustervision/luna -b v1.1
+        /usr/bin/git clone https://github.com/clustervision/luna -b v1.1.3.1
     popd
 
     echo_info "Create symlinks."
