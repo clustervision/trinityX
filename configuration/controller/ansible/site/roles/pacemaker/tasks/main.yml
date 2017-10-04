@@ -73,93 +73,94 @@
       name: '{{ item.key }}'
       value: '{{ item.value }}'
     with_dict: '{{ pacemaker_properties }}'
-  
+
   - name: Setup pacemaker resource defaults
     command: pcs resource defaults '{{ item }}'
+    register: result
+    until: result.rc == 0
+    retries: 5
+    delay: 10
     with_items: '{{ pacemaker_resource_defaults }}'
-  
+
   - name: Add primary dummy resource
     pcs_resource:
       name: 'primary'
-      resource_class: 'ocf'
-      resource_type: 'Dummy'
+      resource_type: 'ocf:pacemaker:Dummy'
       options: 'op monitor interval=179s --group Trinity'
       state: present
-  
+
   - name: Add secondary dummy resource
     pcs_resource:
       name: 'secondary'
-      resource_class: 'ocf'
-      resource_type: 'Dummy'
+      resource_type: 'ocf:pacemaker:Dummy'
       options: 'op monitor interval=181s --group Trinity-secondary'
       state: present
-  
+
   - name: Add floating IP resource
     pcs_resource:
       name: 'trinity-ip'
-      resource_class: 'ocf'
-      resource_type: 'IPaddr2'
+      resource_type: 'ocf:heartbeat:IPaddr2'
       options: 'ip={{ trix_ctrl_ip }} op monitor interval=29s --group Trinity'
       state: present
-  
+
   - name: Add pacemaker order constraint - Trinity then Trinity-secondary
     pcs_constraint_order:
       resource1: 'Trinity'
       resource2: 'Trinity-secondary'
       state: present
-  
+
   - name: Add pacemaker colocation constraint - Trinity-secondary not with Trinity
     pcs_constraint_colocation:
       resource1: 'Trinity-secondary'
       resource2: 'Trinity'
       score: '-INFINITY'
       state: present
-  
+
   - name: Add pacemaker resource group Trinity-fs
     pcs_resource:
       name: 'fs'
-      resource_type: 'Dummy'
+      resource_type: 'ocf:pacemaker:Dummy'
       options: 'op monitor interval=0 --group Trinity-fs'
       state: present
-  
+
   - name: Add pacemaker order constraint - Trinity then Trinity-fs
     pcs_constraint_order:
       resource1: 'Trinity'
       resource2: 'Trinity-fs'
       state: present
-  
+
   - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
     pcs_constraint_colocation:
       resource1: 'Trinity-fs'
       resource2: 'Trinity'
       score: 'INFINITY'
       state: present
-  
+
   - name: Add pacemaker resource group Trinity-stack
     pcs_resource:
       name: 'stack'
-      resource_type: 'Dummy'
+      resource_type: 'ocf:pacemaker:Dummy'
       options: 'op monitor interval=0 --group Trinity-stack'
       state: present
-  
+
   - name: Add pacemaker colocation constraint - Trinity-stack with Trinity
     pcs_constraint_colocation:
       resource1: 'Trinity-stack'
       resource2: 'Trinity'
       score: 'INFINITY'
       state: present
-  
+
   - name: Add pacemaker order constraint - Trinity-fs then Trinity-stack
     pcs_constraint_order:
       resource1: 'Trinity-fs'
       resource2: 'Trinity-stack'
       state: present
-  
+
   - name: Toggle pacemaker stonith property
     pcs_property:
       name: stonith-enabled
       value: '{{ fence_ipmilan_enabled }}'
-    
+
   - name: Configure fencing resourcesusing the ipmilan fencing agent
     pcs_resource:
       name: 'fence-{{ item.0 }}'
@@ -172,7 +173,7 @@
       - ['{{ trix_ctrl1_bmcip }}', '{{ trix_ctrl2_bmcip }}']
     when: fence_ipmilan_enabled == 'true'
     tags: fencing
-  
+
   - name: Add fencing location constraints
     pcs_constraint_location:
       resource1: 'fence-{{ item }}'
