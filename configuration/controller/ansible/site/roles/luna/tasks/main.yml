@@ -131,10 +131,7 @@
     command: "mongo luna --authenticationDatabase admin --eval \"try {db.updateUser('luna', {pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})} catch(err) {db.createUser({user: 'luna', pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})}\""
 
   - name: Init cluster
-    command: "luna cluster init --path {{ luna_data_path }}"
-
-  - name: Set frontend
-    command: "luna cluster change --frontend_address {{ trix_ctrl_ip }}"
+    command: "luna cluster init --path {{ luna_data_path }} --frontend_address {{ trix_ctrl_ip }}"
 
   - name: Create network
     command: "luna network add --name {{ trix_domain }} --network {{ trix_cluster_net }} --prefix {{ trix_cluster_netprefix }}"
