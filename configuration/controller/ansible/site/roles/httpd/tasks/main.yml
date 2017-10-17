@@ -1,0 +1,39 @@
+---
+- name: Install Apache package
+  yum:
+   name: httpd
+   state: present
+  notify: restart httpd
+
+- name: Enable and start httpd
+  systemd:
+    name: httpd
+    state: started
+    enabled: yes
+  when: not ha
+
+- block:
+  - name: Disable httpd as we have pacemaker
+    systemd:
+      name: httpd.service
+      enabled: no
+
+  - name: Add httpd to pacemaker
+    pcs_resource:
+      name: httpd
+      resource_class: 'systemd'
+      resource_type: 'systemd:httpd'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: primary | default(True)
+    tags: pcs
+
+  - name: Make sure httpd is started
+    systemd:
+      name: httpd.service
+      state: started
+    when: primary | default(True)
+
+  when: ha
+
+- meta: flush_handlers
