@@ -3,6 +3,7 @@
 - name: Set controller's hostname
   hostname: 
     name: "{{ trix_ctrl_hostname if not ha else trix_ctrl1_hostname if primary else trix_ctrl2_hostname }}"
+  when: "'controller' in group_names"
 
 - name: Set HA controllers' domain name
   blockinfile:
@@ -11,14 +12,14 @@
       {{trix_ctrl1_ip}}    {{trix_ctrl1_hostname}}.{{trix_domain}} {{trix_ctrl1_hostname}}
       {{trix_ctrl2_ip}}    {{trix_ctrl2_hostname}}.{{trix_domain}} {{trix_ctrl2_hostname}}
       {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
-  when: ha
+  when: ha|default(False)
 
 - name: Set non-HA controller's domain name
   blockinfile:
     path: /etc/hosts
     block: |
       {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
-  when: not ha
+  when: not ha|default(False)
 
 - name: Re-gather facts
   action: setup
