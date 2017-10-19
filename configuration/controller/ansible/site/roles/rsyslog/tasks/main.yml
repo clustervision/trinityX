@@ -38,13 +38,19 @@
     setype: syslogd_port_t
     state: present
   with_items: '{{ syslog_forwarding_rules }}'
+  when: selinux_enabled|default(True)
 
-- name: Enable rsyslog daemon
-  service:
-    name: rsyslog
-    enabled: yes
+- name: Enable rsyslog service
+  file:
+# service:
+#   name: rsyslog
+#   enabled: yes
+    src: '/usr/lib/systemd/system/rsyslog.service'
+    dest: '/etc/systemd/system/multi-user.target.wants/rsyslog.service'
+    state: link
 
 - name: Start rsyslog daemon
   service:
     name: rsyslog
     state: started
+  when: ansible_connection not in 'lchroot'
