@@ -17,7 +17,7 @@
   user:
     name: luna
     uid: '{{ luna_user_id }}'
-    home: '{{ luna_data_path }}'
+    home: '{{ luna.cluster.path }}'
     group: luna
     shell: /sbin/nologin
     system: yes
@@ -58,7 +58,7 @@
 - name: Include luna's DNS zone file in named conf
   lineinfile:
     path: '/etc/named.conf'
-    line: 'include "{{ trix_local }}/etc/named.luna.zones";'
+    line: 'include "{{ luna.cluster.named_include_file }}";'
   notify: restart named
 
 - name: Add luna's server configuration to nginx
@@ -85,15 +85,15 @@
 
 - block:
 
-  - name: Ensure {{ dhcp_conf_path }} exists
+  - name: Ensure {{ luna.dhcp.conf_path }} exists
     file:
-      path: '{{ dhcp_conf_path }}'
+      path: '{{ luna.dhcp.conf_path }}'
       state: directory
 
-  - name: Copy default dhcp configuraion to {{ dhcp_conf_path }}
-    shell: rsync -raW /etc/dhcp/* {{ dhcp_conf_path }}
+  - name: Copy default dhcp configuraion to {{ luna.dhcp.conf_path }}
+    shell: rsync -raW /etc/dhcp/* {{ luna.dhcp.conf_path }}
     args:
-      creates: '{{ dhcp_conf_path }}/dhclient.d'
+      creates: '{{ luna.dhcp.conf_path }}/dhclient.d'
     when: primary|default(True)
 
   - name: Delete default configuration
@@ -101,23 +101,24 @@
       path: '/etc/dhcp'
       state: absent
 
-  - name: Replace default dhcp configuration path with symlink to {{ dhcp_conf_path }}
+  - name: Replace default dhcp configuration path with symlink to {{ luna.dhcp.conf_path }}
     file:
-      src: '{{ dhcp_conf_path }}'
+      src: '{{ luna.dhcp.conf_path }}'
       dest: '/etc/dhcp'
       state: link
       force: yes
 
-  when: dhcp_conf_path|string not in '/etc/dhcp'
+  when: luna.dhcp.conf_path|string not in '/etc/dhcp'
         and default_dhcp_path.stat.isdir
 
 - block:
 
-  - name: Ensure {{ luna_data_path }} exists
+  - name: Ensure {{ luna.cluster.path }} exists
     file:
-      path: '{{ luna_data_path }}'
+      path: '{{ luna.cluster.path }}'
       owner: luna
       group: luna
+      mode: 0755
       state: directory
 
   - name: Add a placeholder for luna's DNS zone file
@@ -130,14 +131,29 @@
   - name: Create a user for luna in mongodb
     command: "mongo luna --authenticationDatabase admin --eval \"try {db.updateUser('luna', {pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})} catch(err) {db.createUser({user: 'luna', pwd: '{{ luna_db_pwd }}', roles: [{role: 'dbOwner', db: 'luna'}]})}\""
 
-  - name: Init cluster
-    command: "luna cluster init --path {{ luna_data_path }} --frontend_address {{ trix_ctrl_ip }}"
-
-  - name: Create network
-    command: "luna network add --name {{ trix_domain }} --network {{ trix_cluster_net }} --prefix {{ trix_cluster_netprefix }}"
-
-  - name: Create dhcpd config
-    command: "luna cluster makedhcp -N {{ trix_domain }} -s {{ trix_cluster_dhcp_start }} -e {{ trix_cluster_dhcp_end }}"
+  - name: Initialize luna cluster
+    luna_cluster:
+      frontend_address: "{{ luna.cluster.frontend_address }}"
+      path: "{{ luna.cluster.path }}" 
+      named_include_file: '{{ luna.cluster.named_include_file }}'
+      named_zone_dir: '{{ luna.cluster.named_zone_dir }}'
+      state: present 
+  
+  - name: Create luna networks
+    luna_network:
+      name: "{{ item.name }}"
+      network: "{{ item.ip }}"
+      prefix: "{{ item.prefix }}"
+      ns_ip: "{{ item.ns_ip  | default(None) }}"
+      state: present
+    with_items: "{{ luna.networks }}"
+  
+  - name: Run luna cluster makedhcp
+    luna_cluster:
+      makedhcp: true
+      dhcp_net: "{{ luna.dhcp.network }}" 
+      dhcp_range_start: "{{ luna.dhcp.start_ip }}" 
+      dhcp_range_end: "{{ luna.dhcp.end_ip }}"
 
   - name: Start luna services
     service:
