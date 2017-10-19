@@ -17,18 +17,23 @@
   notify: restart sssd
 
 - name: Enable sssd service
+# service:
+#   name: sssd
+#   enabled: yes
+  file:
+    src: '/usr/lib/systemd/system/sssd.service'
+    dest: '/etc/systemd/system/multi-user.target.wants/sssd.service'
+    state: link
+  when: not ha|default(False)
+
+- name: Start sssd service
   service:
     name: sssd
-    enabled: yes
-  when: not ha|default(False)
+    state: started
+  when: not ha|default(False) and ansible_connection not in 'lchroot'
 
 - block:
 
-  - name: Start sssd service
-    service:
-      name: sssd
-      state: started
-  
   - name: Adding access controler groups to the system
     shell: 'obol group list | grep {{ item }} || obol group add {{ item }}'
     register: obol_result
@@ -42,10 +47,10 @@
       resource_type: 'systemd:sssd'
       options: 'op monitor interval=0 --group Trinity-stack'
       state: present
-    when: ha | default(False)
+    when: ha|default(False)
     tags: pcs
 
-  when: primary | default(True)
+  when: primary|default(False)
 
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
