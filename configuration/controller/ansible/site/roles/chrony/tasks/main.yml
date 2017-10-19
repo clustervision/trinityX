@@ -16,8 +16,19 @@
     mode: 0644
   notify: restart chrony
 
-- name: Start and enable chrony service
+#- name: Enable chrony service
+#  systemd:
+#    name: 'chronyd.service'
+#    enabled: yes
+
+- name: Enable chrony service
+  file:
+    src: '/usr/lib/systemd/system/chronyd.service'
+    dest: '/etc/systemd/system/multi-user.target.wants/chronyd.service'
+    state: link
+
+- name: Start chrony service
   service:
     name: chronyd
     state: started
-    enabled: yes
+  when: ansible_connection not in "lchroot"
