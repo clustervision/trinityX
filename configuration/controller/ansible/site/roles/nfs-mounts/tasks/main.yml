@@ -1,0 +1,17 @@
+---
+# tasks file for nfs-mounts
+
+- name: Install nfs packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ nfs_packages }}'
+
+- name: Setup NFS mounts
+  mount:
+    path: '{{ item.path }}'
+    src: '{{ item.remote }}'
+    fstype: 'nfs'
+    opts: '{{ item.options }},proto={{ "rdma" if nfs_enable_rdma else "tcp" }}'
+    state: present
+  with_items: '{{ nfs_mounts }}'
