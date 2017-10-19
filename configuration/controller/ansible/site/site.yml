@@ -1,43 +1,8 @@
 ---
 - hosts: controllers
 
-  vars:
-    ha: True
-
-    project_id: '000000'
-
-    trix_domain: cluster
-    trix_cluster_net: 10.141.0.0
-    trix_cluster_netprefix: 16
-    trix_cluster_dhcp_start: 10.141.128.0
-    trix_cluster_dhcp_end: 10.141.140.0
-
-    trix_ctrl_ip: 10.141.255.252
-    trix_ctrl1_ip: 10.141.255.254
-    trix_ctrl2_ip: 10.141.255.253
-    trix_ctrl1_bmcip: 10.148.255.254
-    trix_ctrl2_bmcip: 10.148.255.253
-    trix_ctrl_hostname: controller
-    trix_ctrl1_hostname: controller1
-    trix_ctrl2_hostname: controller2
-
-    trix_root: '/trinity'
-    trix_images: '{{ trix_root }}/images'
-    trix_shared: '{{ trix_root }}/shared'
-    trix_local: '{{ trix_root }}/local'
-    trix_home: '{{ trix_root }}/home'
-
-    osimage_name: 'default'
-
-    shared_fs_type: 'drbd'
-    shared_fs_device: '/dev/sdb'
-
-    ssl_cert_path: '{{ trix_local }}/etc/ssl'
-    ssl_cert_group: 'ssl'
-
   roles:
     - role: init
-      selinux_enabled: false
       tags: init
 
     - role: cv_support
@@ -65,6 +30,9 @@
     - role: chrony
       tags: chrony
 
+    - role: rdma-centos
+      tags: rdma-centos
+
     - role: ssh
       tags: ssh
 
@@ -81,6 +49,9 @@
     - role: drbd
       when: ha
       tags: drbd
+
+    - role: trix-tree
+      tags: trix-tree
 
     - role: nfs
       nfs_rpccount: 256
@@ -123,6 +94,9 @@
       tags: mariadb
 
     - role: slurm
+      slurm_ctrl: '{{ trix_ctrl_hostname }}'
+      slurm_ctrl_ip: '{{ trix_ctrl_ip }}'
+      slurm_ctrl_list: '{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }}'
       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
       slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
       munge_conf_path: '{{ trix_shared }}/etc/munge'
@@ -146,8 +120,21 @@
       tags: nginx
 
     - role: luna
-      luna_data_path: '{{ trix_local }}/luna'
-      dhcp_conf_path: '{{ trix_local }}/etc/dhcp'
+      luna:
+        cluster:
+          frontend_address: '{{ trix_ctrl_ip }}'
+          path: '{{ trix_local }}/luna'
+          named_include_file: '{{ trix_local }}/etc/named.luna.zones'
+          named_zone_dir: '{{ trix_local }}/var/lib/named'
+        dhcp:
+          conf_path: '{{ trix_local }}/etc/dhcp'
+          network: '{{ trix_domain }}'
+          start_ip: '{{ trix_cluster_dhcp_start }}'
+          end_ip:  '{{ trix_cluster_dhcp_end }}'
+        networks:
+          - name: '{{ trix_domain }}'
+            ip: '{{ trix_cluster_net }}'
+            prefix: '{{ trix_cluster_netprefix }}'
       tags: luna
 
     - role: rsyslog
@@ -169,8 +156,3 @@
       zabbix_path: '{{ trix_local }}/usr/lib/zabbix/'
       zabbix_sql_db: 'zabbix'
       tags: zabbix
-
-
-    - role: osimage_create
-      when: primary
-      tags: osimage
