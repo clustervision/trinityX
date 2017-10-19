@@ -1,0 +1,80 @@
+---
+- name: Set compute=true
+  set_fact:
+    compute: True
+  when: ansible_connection not in "lchroot"
+
+- name: Remove NetworkManager
+  yum:
+    name: "NetworkManager"
+    state: removed
+
+- name: Disable firewalld
+# service:
+#   name: firewalld
+#   enabled: yes
+  file:
+    src: '/usr/lib/systemd/system/firewalld.service'
+    dest: '/etc/systemd/system/multi-user.target.wants/firewalld.service'
+    state: link
+
+#- name: Setup the root user's password
+
+#- name: Save the root password into the image's shadow file
+#  when: ansible_connection in "lchroot"
+#  delegate_to: localhost
+
+#- name: Generate ssh keys for the root user
+#  user:
+#    name: root
+#    generate_ssh_key: yes
+#    ssh_key_bits: 4096
+#    ssh_key_type: rsa
+
+- name: Disable host key check between nodes
+  blockinfile:
+    path: "/etc/ssh/ssh_config"
+    block: |
+      # Names without domain, such as node001
+      host  * !*.*
+              ForwardX11 yes
+              CheckHostIP no
+              HostbasedAuthentication no
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+      
+      # Our local domains
+      Host  *.cluster *.ib
+              ForwardX11 yes
+              CheckHostIP no
+              HostbasedAuthentication no
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+
+- name: Toggle SELinux
+  selinux:
+    state: '{{ "enforcing" if selinux_enabled else "disabled" }}'
+
+- name: Use the controller as a DNS resolver
+  template:
+    src: "resolv.conf"
+    dest: "/etc/resolv.conf"
+
+- name: Use the controller as default gateway
+  lineinfile:
+    path: "/etc/sysconfig/network"
+    line: "GATEWAY={{ trix_ctrl_ip }}"
+    state: present
+    create: yes
+
+- name: Get the controller's timezone
+  stat:
+    path: "/etc/localtime"
+  register: tz
+  delegate_to: localhost
+
+- name: Set the image/node's timezone
+  file:
+    src: "{{ tz.stat.lnk_source }}"
+    dest: "/etc/localtime"
+    state: link
