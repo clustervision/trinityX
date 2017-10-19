@@ -96,16 +96,36 @@
   when: slurm_conf_path|string not in '/etc/slurm'
         and default_slurm_path.stat.isdir
 
-- name: Enable slurm services
+- name: Enable slurm controller services
   service:
     daemon_reload: yes
     name: '{{ item }}'
     enabled: yes
-  when: not ha|default(False)
+  when: not ha|default(False) and primary|default(False)
   with_items:
     - munge
     - slurmdbd
     - slurmctld
+
+- name: Enable slurm compute services
+  file:
+    src: '{{ item.src }}'
+    dest: '{{ item.dest }}'
+    state: link
+  with_items:
+    - { src: '/usr/lib/systemd/system/munge.service', dest: '/etc/systemd/system/multi-user.target.wants/munge.service' }
+    - { src: '/usr/lib/systemd/system/slurmd.service', dest: '/etc/systemd/system/multi-user.target.wants/slurmd.service' }
+  when: ansible_connection in 'lchroot' or compute|default(False)
+
+- name: Start slurm compute services
+  service:
+    daemon_reload: yes
+    name: '{{ item }}'
+    state: started
+  with_items:
+    - munge
+    - slurmd
+  when: compute|default(False)
 
 - block:
 
@@ -175,7 +195,7 @@
       - slurm.conf
     notify: restart slurm
   
-  - name: Start slurm services
+  - name: Start slurm controller services
     service:
       daemon_reload: yes
       name: '{{ item }}'
@@ -192,7 +212,7 @@
       resource_type: 'systemd:{{ item }}'
       options: 'op monitor interval=0 --group Trinity-stack'
       state: present
-    when: ha | default(True)
+    when: ha|default(False)
     with_items:
       - slurmdbd
       - slurmctld
@@ -206,4 +226,4 @@
     retries: 6
     delay: 5
 
-  when: primary | default(True)
+  when: primary|default(False)
