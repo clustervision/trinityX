@@ -22,5 +22,10 @@
 systemctl enable haveged
 flag_is_unset POST_CHROOT && systemctl restart haveged || true
 
+echo_info "Only cache the hosts db in ncsd"
+for db in passwd group services netgroup; do
+    sed -i "s|\(^\s*enable-cache\s*${db}\s*\)yes$|\1no|" /etc/nscd.conf
+done
+
 systemctl enable nscd.service
 flag_is_unset POST_CHROOT && systemctl restart nscd.service || true
