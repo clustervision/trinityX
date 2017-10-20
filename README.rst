@@ -5,7 +5,7 @@ Welcome to TrinityX!
 
 TrinityX is the new generation of ClusterVision's open-source HPC platform. It is designed from the ground up to provide all services required in a modern HPC system, and to allow full customization of the installation. Also it includes optional modules for specific needs, such as an OpenStack cloud, Docker on the compute nodes and the ability to partition a cluster.
 
-The full documentation is available in the ``doc`` subdirectory.
+The full documentation is available in the ``doc`` subdirectory. See the instructions how to build it below.
 
 
 Quick start
@@ -148,4 +148,27 @@ A custom configuration file would look similar to the following::
 Documentation
 =============
 
-*Steps how to build TrinityX administration guide and links to other documents will be added later.*
+  To build the full set of the documentation included with TrinityX:
+
+  1. Install ``git``::
+
+      # yum install git
+
+  2. Clone TrinityX repository into your working directory and go to the directory containing the documentation::
+
+      # git clone http://github.com/clustervision/trinityx
+      # cd trinityX/doc
+
+  3. Install ``pip``, e.g. from EPEL repository::
+
+      # yum install python34-pip.noarch
+
+  4. Install ``sphinx`` and ``Rinohtype``::
+
+      # pip3.4 install sphinx Rinohtype
+
+  6. Build the PDF version of the TrinityX guides::
+
+     # sphinx-build -b rinoh . _build/
+
+  If everything goes well, the documentation will be saved as ``_build/TrinityX.pdf``
