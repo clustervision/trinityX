@@ -130,15 +130,16 @@ function configure_luna() {
 
     LPATH=$(get_lpath)
 
+    /usr/bin/chown luna:luna $LPATH
+
     create_luna_db_backup
     echo -e "use luna\ndb.dropDatabase()" | /usr/bin/mongo -u "root" -p${MONGODB_ROOT_PASS} --authenticationDatabase admin --host ${MONGO_HOST}
-    if ! /usr/sbin/luna cluster init --path $LPATH; then
+    if ! /usr/sbin/luna cluster init --path $LPATH --frontend_address ${LUNA_FRONTEND}; then
         echo_error "Luna is unable to initialize cluster"
         exit 1
     fi
-    /usr/sbin/luna cluster change --frontend_address ${LUNA_FRONTEND}
     /usr/sbin/luna network add -n ${LUNA_NETWORK_NAME} -N ${LUNA_NETWORK} -P ${LUNA_PREFIX}
-    /usr/sbin/luna network change -n ${LUNA_NETWORK_NAME} --ns_ip ${LUNA_FRONTEND} --ns_hostname ${TRIX_CTRL_HOSTNAME}
+    /usr/sbin/luna network change ${LUNA_NETWORK_NAME} --ns_ip ${LUNA_FRONTEND} --ns_hostname ${TRIX_CTRL_HOSTNAME}
 }
 
 function create_luna_db_backup() {

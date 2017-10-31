@@ -21,7 +21,7 @@ display_var TRIX_CTRL_HOSTNAME {CTRL,COMPUTE}_ALLOWED_GROUPS
 
 echo_info 'Creating the SSSD configuration file'
 
-sed "s,{{ controller }},${TRIX_CTRL_HOSTNAME}," "${POST_FILEDIR}"/sssd.conf > /etc/sssd/sssd.conf
+sed "s,{{ controller }},${TRIX_CTRL_HOSTNAME}.${TRIX_DOMAIN}," "${POST_FILEDIR}"/sssd.conf > /etc/sssd/sssd.conf
 chmod 600 /etc/sssd/sssd.conf
 
 
