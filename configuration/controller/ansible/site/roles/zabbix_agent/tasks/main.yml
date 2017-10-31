@@ -1,0 +1,24 @@
+---
+# tasks for zabbix_agent role
+#
+- name: Install Zabbix agent packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ zabbix_agent_packages }}'
+  notify:
+  - restart zabbix-agent
+
+- name: Create config for zabbix-agent
+  template:
+    src: zabbix_agentd.conf.j2
+    dest: /etc/zabbix/zabbix_agentd.conf
+    backup: yes
+  notify:
+  - restart zabbix-agent
+
+- name: Enable zabbix-agent
+  service:
+    name: zabbix-agent
+    enabled: yes
+
