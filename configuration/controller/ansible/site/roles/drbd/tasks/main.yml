@@ -1,13 +1,4 @@
 ---
-- name: Import rpm_key for elrepo
-  rpm_key:
-    key: https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
-    state: present
-
-- name: Configure elrepo
-  template:
-    src: elrepo.repo
-    dest: /etc/yum.repos.d/elrepo.repo
 
 - name: Install DRBD packages
   yum:
@@ -15,6 +6,12 @@
     enablerepo: elrepo
     state: present
   with_items: '{{drbd_packages}}'
+
+- name: Disable elrepo repository
+  replace:
+    path: /etc/yum.repos.d/elrepo.repo
+    regexp: enabled=1
+    replace: enabled=0
 
 - name: Set up DRBD common settings configuration file
   template:
@@ -31,27 +28,64 @@
   ignore_errors: yes
 
 - block:
-  - name: Temporarily start DRBD up
-    service:
-      name:  drbd
-      state: started
+  
+  - name: Check if DRBD is already mounted at trix_root
+    command: 
+      '/usr/bin/findmnt -S /dev/drbd/by-res/{{ drbd_shared_resource_name }}
+      -T {{ trix_root }}'
+    register: drbd_mounted
+    changed_when: false
+    failed_when: false
 
-  - name: Promote shared resource
-    shell: '/usr/sbin/drbdadm --force primary {{ drbd_shared_resource_name }}'
+  - block:
 
-  - name: Creating a file system on shared resource
-    filesystem:
-      fstype: xfs
-      dev: '/dev/drbd/by-res/{{ drbd_shared_resource_name }}'
-      force: yes
-      opts: -b size=4096 -s size=4096
-    ignore_errors: yes
+    - name: Temporarily start DRBD up
+      service:
+        name:  drbd
+        state: started
+  
+    - name: Promote shared resource
+      shell: '/usr/sbin/drbdadm --force primary {{ drbd_shared_resource_name }}'
+  
+    - name: Creating a file system on shared resource
+      filesystem:
+        fstype: xfs
+        dev: '/dev/drbd/by-res/{{ drbd_shared_resource_name }}'
+        force: yes
+        opts: -b size=4096 -s size=4096
+      ignore_errors: yes
+  
+    - name: Create a fake fstab for the next step
+      tempfile:
+        path: /tmp
+        prefix: fstab.
+        state: file
+      register: drbd_fake_fstab
+  
+    - name: Temporarily mount DRBD disk
+      mount:
+        src: "/dev/drbd/by-res/{{ drbd_shared_resource_name }}"
+        path: "{{ trix_root }}-temp"
+        fstype: xfs
+        state: mounted
+        fstab: "{{ drbd_fake_fstab.path }}"
+  
+    - name: Copy contents of {{ trix_root }} from local drives to DRBD
+      copy:
+        src: "{{ trix_root }}/"
+        dest: "{{ trix_root }}-temp"
+  
+    - name: Temporarily umount DRBD disk
+      mount:
+        path: "{{ trix_root }}-temp"
+        state: unmounted
+  
+    - name: Temporarily shut DRBD down
+      service:
+        name:  drbd
+        state: stopped
 
-  - name: Temporarily shut DRBD down
-    service:
-      name:  drbd
-      state: stopped
-
+    when:  drbd_mounted.rc != 0
 # TODO: with pcs_resource one cannot pass master/slave id, so it defaults to
 # DRBD-master instead of Trinity-drbd
   - name: Add pacemaker resource DRBD

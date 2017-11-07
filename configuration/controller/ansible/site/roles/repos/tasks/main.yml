@@ -1,0 +1,117 @@
+---
+
+- name: Ensure "{{ trix_repos }}" exists
+  file:
+    path: "{{ trix_repos }}"
+    owner: root
+    group: root
+    state: directory
+
+- name: Fetch remote .repo definitions
+  get_url:
+    url: "{{ item.repo }}"
+    dest: /etc/yum.repos.d
+  with_items: "{{ repos }}"
+  when: item.repo|match('^http[s]*://.*\\.repo$')
+
+- name: Copy local .repo definitions
+  copy:
+    src: "{{ item.repo }}"
+    dest: /etc/yum.repos.d
+  with_items: "{{ repos }}"
+  when: 
+    - item.repo|search('\\.repo$')
+    - not item.repo|search('^http[s]*://')
+
+- name: Install repo RPMs from repository
+  yum:
+    name: "{{ item.repo }}"
+    state: installed
+  with_items: "{{ repos }}"
+  when:
+    - not item.repo|search('\\.rpm$')
+    - not item.repo|search('\\.repo$')
+    - not item.repo|search('^http[s]*://')
+    - not item.repo|search('^/')
+
+- name: Install repo RPMs
+  yum:
+    name: "{{ item.repo }}"
+    state: installed
+  with_items: "{{ repos }}"
+  when: item.repo|search('\\.rpm$')
+
+- name: Copy local repos to "{{ trix_repos }}"
+  copy:
+    src: "{{ item.repo }}"
+    dest: "{{ trix_repos }}"
+  with_items: "{{ repos }}"
+  when: 
+    - item.repo|search('^/') 
+    - not item.repo|search('^'+trix_repos)
+
+- name: Import GPG keys
+  rpm_key:
+    key: "{{ item.key }}"
+    state: present
+  with_items: "{{ repos }}"
+  when: item.key|default([])
+
+- name: Install nginx 
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ repos_nginx_packages }}"
+
+- name: Add repos folder to nginx configuration
+  template:
+    src: repos.conf
+    dest: /etc/nginx/conf.d/
+  notify: reload nginx
+
+- name: Create list of local repos
+  set_fact:
+    repos_local: >-
+                 {{ repos_local|default([]) + [{
+                   'repo': item.repo if item.repo|search('^'+trix_repos) else
+                    trix_repos+'/'+item.repo|basename,
+                   'key': item.key|default([])}] }}
+  with_items: "{{ repos }}"
+  when: item.repo|search('^/')
+
+- name: Define remote repos 
+  yum_repository:
+    file: "{{ item.name if item.name|default([]) else 
+              item.repo|regex_replace('^http[s]*://([^/]*)/.*','\\1') }}"
+    name: "{{ item.name if item.name|default([]) else
+              item.repo|regex_replace('^http[s]*://','')|
+              regex_replace('/$','')|replace('/','-') }}"
+    description: "Remote repo at {{ item.repo }}"
+    baseurl: "{{ item.repo }}"
+    enabled: yes
+    gpgcheck: "{{ 'yes' if item.key|default([]) else 'no' }}"
+    gpgkey: "{{ item.key|default([]) }}"
+    state: present
+  with_items: "{{ repos }}"
+  when:
+    - item.repo|search('^http[s]*://')
+    - not (item.repo|search('\\.rpm$') or item.repo|search('\\.repo$'))
+
+- name: Define local repos 
+  yum_repository:
+    name: >- 
+          {{ item.name if item.name|default([]) else 
+             item.repo|regex_replace('^'+trix_repos+'/','')|
+             regex_replace('/$','')|replace('/','-') }}-local
+    description: >-
+                 Local repo in {{ item.repo|
+                 regex_replace('^'+trix_repos+'/','') }}
+    baseurl: >-
+             http://{{trix_ctrl_hostname}}:{{ repos_port }}/repos/{{ item.repo|
+             regex_replace('^'+trix_repos+'/','') }}
+    enabled: yes
+    gpgcheck: "{{ 'yes' if item.key|default([]) else 'no' }}"
+    gpgkey: "{{ item.key|default([]) }}"
+    state: present
+  with_items: "{{ repos_local|default([]) }}"
+
