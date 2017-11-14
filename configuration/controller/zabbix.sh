@@ -356,4 +356,4 @@ else
     fi
 fi
 
-flag_is_set SELINUX && setsebool zabbix_can_network 1 -P
+(flag_is_set SELINUX && setsebool zabbix_can_network 1 -P) || true
