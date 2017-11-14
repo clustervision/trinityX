@@ -25,6 +25,10 @@ echo_info "Excluding selected packages from yum"
 
 store_system_variable /etc/yum.conf exclude 'NetworkManager* plymouth*'
 
+echo_info "Make sure NetworkManager is stopped"
+
+systemctl stop NetworkManager.service
+
 if flag_is_unset SELINUX ; then
     # We can't remove SELinux, but we can disable it
 
