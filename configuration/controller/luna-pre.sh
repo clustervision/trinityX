@@ -17,15 +17,23 @@
 ######################################################################
 
 
-# Setup for the additional package list
+display_var LUNA_{GROUP,USER}_ID
 
-systemctl enable haveged
-flag_is_unset POST_CHROOT && systemctl restart haveged || true
+echo_info "Delete luna user if exists."
 
-echo_info "Only cache the hosts db in ncsd"
-for db in passwd group services netgroup; do
-    sed -i "s|\(^\s*enable-cache\s*${db}\s*\)yes$|\1no|" /etc/nscd.conf
-done
+if /usr/bin/id -u luna >/dev/null 2>&1; then
+    /usr/sbin/userdel luna
 
-systemctl enable nscd.service
-flag_is_unset POST_CHROOT && systemctl restart nscd.service || true
+fi
+if /usr/bin/grep -q -E "^luna:" /etc/group ; then
+    /usr/sbin/groupdel luna
+fi
+
+echo_info "Add users and create folders."
+
+/usr/sbin/groupadd -r ${LUNA_GROUP_ID:+"-g $LUNA_GROUP_ID"} luna
+store_variable "${TRIX_SHFILE}" LUNA_GROUP_ID $(/usr/bin/getent group | /usr/bin/awk -F\: '$1=="luna"{print $3}')
+
+/usr/sbin/useradd -r ${LUNA_USER_ID:+"-u $LUNA_USER_ID"} -g luna -d ${TRIX_LOCAL}/luna luna
+store_variable "${TRIX_SHFILE}" LUNA_USER_ID $(/usr/bin/id -u luna)
+

@@ -73,6 +73,8 @@ function setup_galera_creds {
 
 # Setup mariadb server
 
+cp "${POST_FILEDIR}"/trinity.cnf /etc/my.cnf.d/
+
 if flag_is_unset HA || flag_is_set PRIMARY_INSTALL; then
 
     echo_info "Starting MariaDB server"

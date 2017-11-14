@@ -23,11 +23,8 @@ NEUTRON_PW="$(get_password "$NEUTRON_PW")"
 OS_RMQ_PW="$(get_password "$OS_RMQ_PW")"
 
 echo_info "Setting up neutron configuration files"
-openstack-config --set /etc/neutron/neutron.conf DEFAULT rpc_backend rabbit
-openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_host $OS_CTRL_HOSTNAME
-openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_userid openstack
-openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit rabbit_password $OS_RMQ_PW
-openstack-config --set /etc/neutron/neutron.conf DEFAULT auth_strategy keystone
+openstack-config --set /etc/neutron/neutron.conf DEFAULT transport_url rabbit://openstack:${OS_RMQ_PW}@${TRIX_CTRL_HOSTNAME}
+openstack-config --set /etc/neutron/neutron.conf api auth_strategy keystone
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken auth_uri http://${OS_CTRL_HOSTNAME}:5000
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken auth_url http://${OS_CTRL_HOSTNAME}:35357
 openstack-config --set /etc/neutron/neutron.conf keystone_authtoken memcached_servers ${OS_CTRL_HOSTNAME}:11211

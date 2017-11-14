@@ -53,27 +53,25 @@ def make_secret(password):
 def exists(key, value):
     try:
         if key == 'uid':
-            pwd.getpwuid(int(value))
+            return pwd.getpwuid(int(value)).pw_uid
         elif key == 'username':
-            pwd.getpwnam(value)
+            return pwd.getpwnam(value).pw_uid
         elif key == 'gid':
-            grp.getgrgid(int(value))
+            return grp.getgrgid(int(value)).gr_gid
         elif key == 'groupname':
-            grp.getgrnam(value)
-
-        return True
+            return grp.getgrnam(value).gr_gid
 
     except KeyError:
         return False
 
 
 def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
-             shell, groups, expire):
+             shell, group, groups, expire):
     """Add a user to the LDAP directory"""
 
     if uid:
         # Ensure uid's uniqueness
-        if exists('uid', uid):
+        if exists('uid', uid) is not False:
             raise Exception('UID %s already exists' % uid)
 
         uidNumber = uid
@@ -81,15 +79,20 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
     else:
         uidNumber = increment_id(b, 'uid')
 
-    if gid:
+    if group:
+        gidNumber = exists('groupname', group)
+        if gidNumber is False:
+            raise Exception('The group "%s" does not exist' % group)
+
+    elif gid:
         # Ensure gid's uniqueness
-        if exists('gid', gid):
+        if exists('gid', gid) is not False:
             raise Exception('GID %s already exists' % gid)
 
         gidNumber = gid
 
     else:
-        gidNumber = gid if gid else uidNumber
+        gidNumber = uidNumber
 
     # Add the user
     dn = 'uid=%s,ou=People,%s' % (username, b)
@@ -114,13 +117,13 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
      ('cn', [cn]),
      ('sn', [sn]),
      ('loginShell', [shell]),
-     ('uidNumber', [uidNumber]),
-     ('gidNumber', [gidNumber]),
+     ('uidNumber', [str(uidNumber)]),
+     ('gidNumber', [str(gidNumber)]),
      ('homeDirectory', [home]),
      ('shadowMin', ['0']),
      ('shadowMax', ['99999']),
      ('shadowWarning', ['7']),
-     ('shadowExpire', [expire]),
+     ('shadowExpire', [str(expire)]),
      ('shadowLastChange', ['%d' % (time.time() / 86400)])
     ]
 
@@ -139,16 +142,20 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
 
     conn.add_s(dn, add_record)
 
-    # Add the group
-    dn = 'cn=%s,ou=Group,%s' % (username, b)
-    add_record = [
-        ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
-        ('cn', [username]),
-        ('member', ['uid=%s,ou=People,%s' % (username, b)]),
-        ('gidNumber', [gidNumber])
-    ]
+    if exists('gid', gidNumber) is False:
+        # Add the group
+        dn = 'cn=%s,ou=Group,%s' % (username, b)
+        add_record = [
+            ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
+            ('cn', [username]),
+            ('member', ['uid=%s,ou=People,%s' % (username, b)]),
+            ('gidNumber', [gidNumber])
+        ]
 
-    conn.add_s(dn, add_record)
+        conn.add_s(dn, add_record)
+
+    else:
+        group_addusers(b, grp.getgrgid(gidNumber).gr_name, [username])
 
     if groups:
         for group in groups:
@@ -179,10 +186,14 @@ def user_delete(b, username):
     except Exception, e:
         print e
 
-    # Delete the group
+    # Delete the default group if it exists and has no other members
     try:
         dn = 'cn=%s,ou=Group,%s' % (username, b)
-        conn.delete_s(dn)
+        [(group_dn, members)] = conn.search_s(dn, ldap.SCOPE_SUBTREE, attrlist=['member'])
+
+        if not members:
+            conn.delete_s(dn)
+
     except ldap.NO_SUCH_OBJECT:
         pass
 
@@ -218,14 +229,14 @@ def user_modify(b, username, **kwargs):
             key = 'uidNumber'
 
             # Ensure uid's uniqueness
-            if exists('uid', value):
+            if exists('uid', value) is not False:
                 raise Exception('UID %s already exists' % value)
 
         elif key == 'gid':
             key = 'gidNumber'
 
             # Ensure gid's uniqueness
-            if exists('gid', value):
+            if exists('gid', value) is not False:
                 raise Exception('GID %s already exists' % value)
 
         elif key == 'phone':
@@ -291,7 +302,7 @@ def group_add(b, groupname, gid):
     if gid:
 
         # Ensure gid's uniqueness
-        if exists('gid', uid):
+        if exists('gid', gid) is not False:
             raise Exception('GID %s already exists' % gid)
 
         gidNumber = gid
@@ -318,7 +329,7 @@ def group_addusers(b, groupname, username):
     for name in username:
         try:
             # Check if user exists
-            if not exists('username', name):
+            if exists('username', name) is False:
                 print "User '%s' does not exist" % name
                 continue
 
@@ -437,8 +448,9 @@ command.add_argument('--password', '-p')
 command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
-command.add_argument('--uid', '-u', metavar='USER ID')
-command.add_argument('--gid', '-g', metavar='GROUP ID')
+command.add_argument('--group', '-g', metavar='PRIMARY GROUP')
+command.add_argument('--uid', metavar='USER ID')
+command.add_argument('--gid', metavar='GROUP ID')
 command.add_argument('--mail', metavar="EMAIL ADDRESS")
 command.add_argument('--phone', metavar="PHONE NUMBER")
 command.add_argument('--shell')
@@ -460,8 +472,8 @@ command.add_argument('--password', '-p')
 command.add_argument('--cn', metavar="COMMON NAME")
 command.add_argument('--sn', metavar="SURNAME")
 command.add_argument('--givenName')
-command.add_argument('--uid', '-u', metavar='USER ID')
-command.add_argument('--gid', '-g', metavar='GROUP ID')
+command.add_argument('--uid', metavar='USER ID')
+command.add_argument('--gid', metavar='GROUP ID')
 command.add_argument('--shell')
 command.add_argument('--mail', metavar="EMAIL ADDRESS")
 command.add_argument('--phone', metavar="PHONE NUMBER")
@@ -474,7 +486,7 @@ command = user_commands.add_parser('list', help='List users')
 # Group commands
 command = group_commands.add_parser('add', help='Add a group')
 command.add_argument('groupname')
-command.add_argument('--gid', '-g', metavar='GROUP ID')
+command.add_argument('--gid', metavar='GROUP ID')
 
 command = group_commands.add_parser('show', help='Show group details')
 command.add_argument('groupname')

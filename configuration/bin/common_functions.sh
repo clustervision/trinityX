@@ -390,8 +390,8 @@ function display_var {
             value="${!i:-(empty)}"
         fi
 
-        echo "${i}¦=¦${value}"
-    done | column -t -s '¦'
+        echo "${i}^=^${value}"
+    done | column -t -s '^'
     echo
 }
 
