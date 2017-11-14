@@ -1,0 +1,47 @@
+---
+# tasks file for nginx
+
+- name: Install nginx packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ nginx_packages }}'
+
+- name: Ensure /etc/nginx/conf.d exists
+  file:
+    path: '/etc/nginx/conf.d'
+    owner: root
+    group: root
+    state: directory
+
+- name: Copy configuration file
+  copy:
+    src: "nginx.conf"
+    dest: "/etc/nginx/nginx.conf"
+    backup: yes
+  notify: reload nginx
+
+- name: Enable nginx service
+  service:
+    name: nginx
+    enabled: yes
+  when: not ha|default(False)
+
+- block:
+
+  - name: Start nginx service
+    service:
+      name: nginx
+      state: started
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'nginx'
+      resource_class: 'systemd'
+      resource_type: 'systemd:nginx'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: ha | default(False)
+    tags: pcs
+
+  when: primary | default(True) 

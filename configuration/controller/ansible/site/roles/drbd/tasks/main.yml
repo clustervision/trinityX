@@ -1,0 +1,140 @@
+---
+- name: Import rpm_key for elrepo
+  rpm_key:
+    key: https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+    state: present
+
+- name: Configure elrepo
+  template:
+    src: elrepo.repo
+    dest: /etc/yum.repos.d/elrepo.repo
+
+- name: Install DRBD packages
+  yum:
+    name: '{{ item }}'
+    enablerepo: elrepo
+    state: present
+  with_items: '{{drbd_packages}}'
+
+- name: Set up DRBD common settings configuration file
+  template:
+    src: global_common.conf
+    dest: /etc/drbd.d/
+
+- name: Set up DRBD shared resource configuration file
+  template:
+    src: '{{ drbd_shared_resource_name }}.res'
+    dest: /etc/drbd.d/
+
+- name: Initialize DRBD shared resource
+  shell: '/usr/sbin/drbdadm --force create-md {{ drbd_shared_resource_name }}'
+  ignore_errors: yes
+
+- block:
+  - name: Temporarily start DRBD up
+    service:
+      name:  drbd
+      state: started
+
+  - name: Promote shared resource
+    shell: '/usr/sbin/drbdadm --force primary {{ drbd_shared_resource_name }}'
+
+  - name: Creating a file system on shared resource
+    filesystem:
+      fstype: xfs
+      dev: '/dev/drbd/by-res/{{ drbd_shared_resource_name }}'
+      force: yes
+      opts: -b size=4096 -s size=4096
+    ignore_errors: yes
+
+  - name: Temporarily shut DRBD down
+    service:
+      name:  drbd
+      state: stopped
+
+# TODO: with pcs_resource one cannot pass master/slave id, so it defaults to
+# DRBD-master instead of Trinity-drbd
+  - name: Add pacemaker resource DRBD
+    pcs_resource:
+      name: DRBD
+      resource_class: ocf
+      resource_type: drbd
+      options: 'drbd_resource={{ drbd_shared_resource_name }} op monitor interval=59s promote
+          interval=67s --master meta master-max=1 master-node-max=1 clone-max=2
+          clone-node-max=1 notify=true'
+      state: present
+
+  - name: Add pacemaker resource wait-for-device
+    pcs_resource:
+      name: wait-for-device
+      resource_class: ocf
+      resource_type: Delay
+      options: startdelay=10 stopdelay=3 --group=Trinity-fs
+      state: present
+
+  - name: Add pacemaker resource trinity-fs
+    pcs_resource:
+      name: trinity-fs
+      resource_class: ocf
+      resource_type: Filesystem
+      options: 'device=/dev/drbd/by-res/{{ drbd_shared_resource_name }}
+          directory="{{ trix_root }}" fstype=xfs options="nodiscard,inode64"
+          run_fsck=force force_unmount=safe op monitor interval=31s op
+          monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs'
+      state: present
+
+  - name: Add pacemaker resource fs-ready
+    pcs_resource:
+      name: fs-ready
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: op monitor interval=183s --group=Trinity-fs
+      state: present
+
+  - name: Add pacemaker order constraint - Trinity then Trinity-drbd
+    pcs_constraint_order:
+      resource1: Trinity
+      #resource2: Trinity-drbd
+      resource2: DRBD-master
+      state: present
+
+  - name: Add pacemaker order constraint - Trinity-drbd then Trinity-fs
+    pcs_constraint_order:
+      #resource1: Trinity-drbd
+      resource1: DRBD-master
+      resource2: Trinity-fs
+      state: present
+
+  - name: Add pacemaker order constraint - Trinity-fs then Trinity-secondary
+    pcs_constraint_order:
+      resource1: Trinity-fs
+      resource2: Trinity-secondary
+      state: present
+
+  - name: Add pacemaker colocation constraint - Trinity-drbd with Trinity
+    pcs_constraint_colocation:
+      #resource1: Trinity-drbd
+      resource1: DRBD-master
+      resource1_role: Master
+      resource2: Trinity
+      score: INFINITY
+      state: present
+
+  - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
+    pcs_constraint_colocation:
+      resource1: Trinity-fs
+      resource2: Trinity
+      state: present
+
+  - name: Add pacemaker order constraint - promote Trinity-drbd then wait-for-device
+    pcs_constraint_order:
+      #resource1: Trinity-drbd
+      resource1: DRBD-master
+      resource1_action: promote
+      resource2: wait-for-device
+      state: present
+
+  - name: Wait for Pacemaker to settle
+    command: /usr/sbin/crm_resource --wait
+
+
+  when: primary

@@ -1,0 +1,46 @@
+---
+# tasks file for environment-modules
+
+# Contents of the shared modulefiles directory:
+# /modulefiles_path/
+#   |-- cv-advanced       advanced CV modules, not available by default
+#   ¦-- cv-standard       standard CV modules, available by default
+#   |-- site-local        site-local modules, available by default
+#    -- modulegroups      modulefiles to load groups (advanced, local, etc)
+
+- name: Install environment-modules packages
+  yum:
+   name: '{{ item }}'
+   state: present
+  with_items: '{{ environment_modules_packages }}'
+
+- name: Add the group paths to the default configuration
+  lineinfile:
+    path: '/usr/share/Modules/init/.modulespath'
+    line: '{{ modulefiles_path }}/{{ item }}'
+  with_items:
+    - '/modulegroups'
+    - '/cv-standard'
+    - '/site-local'
+    - '' 
+
+- block:
+
+  - name: Create the shared modules directories
+    file:
+      dest: '{{ modulefiles_path }}/{{ item }}'
+      owner: root
+      group: root
+      state: directory
+    with_items:
+      - 'modulegroups'
+      - 'cv-standard'
+      - 'cv-advanced'
+      - 'site-local'
+  
+  - name: Copy cv-advanced to shared modules location
+    template:
+      src: cv-advanced
+      dest: '{{ modulefiles_path }}/modulegroups'
+
+  when: primary | default(True)

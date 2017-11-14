@@ -1,0 +1,97 @@
+---
+- name: Get image path
+  set_fact:
+    image_path: "{{ trix_images }}/{{ image_name }}"
+
+- name: Create dir for compute image
+  file:
+    name: "{{ image_path }}"
+    state: directory
+
+- name: Install yum-utils
+  yum:
+    name: yum-utils
+    state: present
+
+- name: Init rpm DB {{ image_path }}/var/lib/rpm
+  command: "/usr/bin/rpm --root {{ image_path }} --initdb"
+  args:
+    creates: "{{ image_path }}/var/lib/rpm"
+
+- name: Install centos-release to {{ image_path }}
+  shell: >
+    /usr/bin/yumdownloader --destdir {{ image_path }} centos-release &&
+    /usr/bin/rpm --root {{ image_path }} -ivh {{ image_path }}/centos-release-*.rpm &&
+    /usr/bin/rm -rf {{ image_path }}/centos-release-*.rpm
+  args:
+    creates: "{{ image_path }}/etc/os-release"
+
+- name: Create {{ image_path }}/dev
+  file:
+    path: "{{ image_path }}/dev/"
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Create basic /dev files
+  command: "/usr/bin/mknod {{ image_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates={{ image_path }}/dev/{{ item.dev }}"
+  args:
+    creates: "{{ image_path }}/dev/{{ item.dev }}"
+  with_items:
+    - { dev: "null",    mo: "666", t: 'c', ma: 1, mi: 3 } # device, mode, type, major, minor
+    - { dev: "zero",    mo: "666", t: 'c', ma: 1, mi: 5 }
+    - { dev: "random",  mo: "666", t: 'c', ma: 1, mi: 8 }
+    - { dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9 }
+    - { dev: "console", mo: "600", t: 'c', ma: 5, mi: 1 }
+    - { dev: "ptmx",    mo: "666", t: 'c', ma: 5, mi: 2 }
+    - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
+
+- name: Copy local yum.conf
+  copy:
+    src: "/etc/yum.conf"
+    dest: "{{ image_path }}/etc/"
+
+- name: Install core packages - @core, kernel and grub2
+  yum:
+    name: "{{ item }}"
+    state: present
+    installroot: "{{ image_path }}"
+  with_items:
+    - "{{ image_core_packages }}"
+
+- name: Install luna-client
+  yum:
+    name: "{{ item }}"
+    state: present
+    installroot: "{{ image_path }}"
+  with_items:
+    - "{{ image_luna_packages }}"
+
+#- name: Copy gpg keys
+#  copy:
+#    src: "/etc/pki/rpm-gpg"
+#    dest: "{{ image_path }}/etc/pki/"
+
+- name: Make .ssh root directory
+  file:
+    path: "{{ image_path }}/root/.ssh"
+    mode: 0700
+    owner: root
+    group: root
+    state: directory
+
+- name: Add controller's key to authorized keys
+  authorized_key:
+    user: root
+    state: present
+    key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
+    path: "{{ image_path }}/root/.ssh/authorized_keys"
+
+- name: Add the image to luna
+  luna_osimage:
+    name: "{{ image_name }}"
+    path: "{{ image_path }}"
+
+- name: Refresh the list of hosts in the inventory
+  meta: refresh_inventory

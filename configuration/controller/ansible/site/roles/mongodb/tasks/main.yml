@@ -1,0 +1,64 @@
+---
+
+- name: Aquire root password for MongoDB (generate or use one from /etc/trinity/passwords)
+  set_fact:
+    mongo_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mongo/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Install MongoDB packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ mongo_packages }}'
+
+- name: Ensure {{ mongo_db_path }} exists
+  file:
+    path: '{{ mongo_db_path }}'
+    owner: mongodb
+    group: mongodb
+    state: directory
+
+- name: Update mongod configuration
+  lineinfile:
+    path: "/etc/mongod.conf"
+    line: "dbpath = {{ mongo_db_path }}"
+    regexp: "^dbpath ="
+    backup: yes
+  notify: restart mongod
+
+- name: Render /root/.mongorc.js
+  template:
+    src: "mongorc.js.j2"
+    dest: "/root/.mongorc.js"
+    backup: yes
+
+- name: Enable MongoDB service
+  service:
+    name: mongod
+    enabled: yes
+  when: not ha|default(False)
+
+- block:
+
+  - name: Start MongoDB service
+    service:
+      name: mongod
+      state: started
+  
+  - name: Create root user
+    command: "mongo --eval \"db.createUser({user: 'root', pwd: '{{ mongo_root_pwd }}', roles: [ { role: 'root', db: 'admin' } ]})\" admin"
+    args:
+      creates: "/root/.mongorc.js"
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'mongod'
+      resource_class: 'systemd'
+      resource_type: 'systemd:mongod'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: ha | default(False)
+    tags: pcs
+
+  when: primary | default(True)

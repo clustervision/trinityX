@@ -1,0 +1,100 @@
+---
+# tasks file for bind
+
+- name: Install bind packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ bind_packages }}'
+
+- name: Ensure {{ bind_db_path }} exists
+  file:
+    path: '{{ bind_db_path }}'
+    owner: named
+    group: named
+    state: directory
+
+- name: Update named data path
+  replace:
+    path: /etc/named.conf
+    regexp: '/var/named'
+    replace: '{{ bind_db_path }}'
+    backup: yes
+  notify: restart named
+
+- name: Configure named to listen on all ports
+  replace:
+    path: /etc/named.conf
+    regexp: '{{ item }}'
+    replace: ' any; '
+  with_items:
+    - ' localhost; '
+    - ' 127\.0\.0\.1; '
+    - ' ::1; '
+  notify: restart named
+ 
+- name: Toggle DNSSEC
+  lineinfile:
+    path: /etc/named.conf
+    line: 'dnssec-enable {{ "yes" if bind_dnssec_enable else "no"}};'
+    regexp: 'dnssec-enable'
+  notify: restart named
+
+- name: Configure named forwarders
+  blockinfile:
+    path: /etc/named.conf
+    insertafter: 'recursion yes;'
+    marker: '// {mark} forwarders'
+    block: |
+      {% if ansible_dns['nameservers'] is defined or bind_dns_forwarders %}
+          forwarders {
+            {% if bind_dns_forwarders %}
+              {% for f in bind_dns_forwarders %}{{ f }}; {% endfor %}
+            {% else %}
+              {% for f in ansible_dns['nameservers'] %}{% if f not in ansible_all_ipv4_addresses%}{{ f }};{% endif %} {% endfor %}
+            {% endif %}
+          };
+      {% endif %}
+  notify: restart named
+
+- name: Render /etc/resolv.conf
+  template:
+    src: "resolv.conf"
+    dest: "/etc/resolv.conf"
+    backup: yes
+
+- name: Preserve resolv.conf from being overwriten
+  copy:
+    src: dhclient-enter-hooks
+    dest: /etc/dhcp/dhclient-enter-hooks
+    backup: yes
+
+- name: Enable named service
+  service:
+    name: named
+    enabled: yes
+  when: not ha|default(False)
+
+- block:
+
+  - name: Copy default zones to {{ bind_db_path }}
+    shell: rsync -raW /var/named/* {{ bind_db_path }}
+    args:
+      creates: '{{ bind_db_path }}/named.empty'
+
+  - name: Start named service
+    service:
+      name: named
+      state: started
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'named'
+      resource_class: 'systemd'
+      resource_type: 'systemd:named'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    tags: pcs
+    when: ha | default(False)
+
+  when: primary | default(True)

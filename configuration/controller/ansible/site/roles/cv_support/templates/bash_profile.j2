@@ -1,0 +1,21 @@
+{{ ansible_managed | comment }}
+# .bash_profile
+
+# Get the aliases and functions
+if [ -f ~/.bashrc ]; then
+        . ~/.bashrc
+fi
+
+# User specific environment and startup programs
+
+PATH=$PATH:$HOME/bin
+
+export PATH
+
+export HISTTIMEFORMAT="%d/%m/%y %T "
+{% if ha %}
+CLUSTERIP={{ trix_ctrl_ip }}
+export PS1="\$(hostname -I | tr ' ' '\n' | grep -q ${CLUSTERIP} && echo || echo '\[\e[1;31m\](passive) \[\e[0m\]'){{ project_id }} \D{{ '{%' }}T} $PS1"
+{% else %}
+export PS1="{{ project_id }} \D{{ '{%' }}T} $PS1"
+{% endif %}

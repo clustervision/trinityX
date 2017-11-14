@@ -1,0 +1,457 @@
+---
+# tasks for zabbix role
+
+- name: Aquire mysql root password (generate or use one from /etc/trinity/passwords)
+  set_fact:
+    zabbix_sql_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mysql/zabbix.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Install Zabbix packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ zabbix_packages }}'
+  notify:
+  - restart zabbix-server
+  - restart httpd
+
+- name: Figure out timezone name
+  shell: >
+    readlink /etc/localtime | sed "s/..\/usr\/share\/zoneinfo\///"
+  register: timezone_link
+  changed_when: false
+
+- name: Set zabbix_timezone var
+  set_fact:
+    zabbix_timezone: "{{ timezone_link.stdout }}"
+
+- name: Create httpd config for zabbix
+  template:
+    src: httpd_zabbix.conf.j2
+    dest: /etc/httpd/conf.d/zabbix.conf
+    backup: yes
+  notify:
+  - restart zabbix-server
+  - restart httpd
+
+- name: Create web-config for zabbix
+  template:
+    src: zabbix.conf.php.j2
+    dest: "/etc/zabbix/web/zabbix.conf.php"
+    backup: yes
+  notify:
+  - restart zabbix-server
+  - restart httpd
+
+- name: Create zabbix_server config
+  template:
+    src: zabbix_server.conf.j2
+    dest: /etc/zabbix/zabbix_server.conf
+    backup: yes
+  notify:
+  - restart zabbix-server
+
+- block:
+
+  - name: Create scripts directories
+    file:
+      path: '{{ zabbix_script_path }}/{{ item }}'
+      owner: zabbix
+      group: zabbix
+      state: directory
+    with_items:
+    - alertscripts
+    - externalscripts
+    - userparameters
+
+  - name: Create DB for zabbix
+    mysql_db:
+      name: '{{ zabbix_sql_db }}'
+      state: present
+
+  - name: Create user for zabbix
+    mysql_user:
+      name: '{{ zabbix_sql_user }}'
+      password: '{{ zabbix_sql_pwd }}'
+      priv: '{{ zabbix_sql_db }}.*:ALL'
+      state: present
+    notify:
+    - restart zabbix-server
+    - restart httpd
+
+  - name: Get dump file
+    shell: >
+      rpm -ql zabbix-server-mysql | grep create.sql.gz
+    register: zabbix_sql_dump
+    changed_when: false
+
+  # FIXME see https://github.com/ansible/ansible/issues/20196
+  - name: Check if zabbix DB was imported already
+    shell: >
+      echo "select mandatory from {{ zabbix_sql_db }}.dbversion;" | mysql
+    register: zabbix_db_exists
+    changed_when: false
+    ignore_errors: true
+
+  - name: Restore initial zabbix DB dump
+    mysql_db:
+      state: import
+      name: '{{ zabbix_sql_db }}'
+      target: '{{ zabbix_sql_dump.stdout }}'
+    when: zabbix_db_exists.rc != 0
+    notify:
+    - restart zabbix-server
+    - restart httpd
+
+  when: primary | default(True)
+
+- name: Enable and start zabbix
+  systemd:
+    name: zabbix-server
+    state: started
+    enabled: yes
+  when: not ha
+
+- block:
+  - name: Disable zabbix as we have pacemaker
+    systemd:
+      name: zabbix-server
+      enabled: no
+
+  - name: Add zabbix to pacemaker
+    pcs_resource:
+      name: zabbix-server
+      resource_class: 'systemd'
+      resource_type: 'systemd:zabbix-server'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: primary | default(True)
+    tags: pcs
+
+  - name: Enable and start zabbix
+    systemd:
+      name: zabbix-server
+      state: started
+    when: primary | default(True)
+
+  when: ha
+
+- meta: flush_handlers
+
+###############################################################################
+#  Check if server online
+
+- block:
+  - name: Check if zabbix server is online
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{}'
+    register: result
+    until: result.status == 200
+    retries: 5
+    delay: 10
+
+  - name: Aquire zabbix Admin password (generate or use one from /etc/trinity/passwords)
+    set_fact:
+      zabbix_admin_pwd: "{{ lookup('password',
+                            '/etc/trinity/passwords/zabbix/admin.txt
+                             chars=ascii_letters,digits,hexdigits') }}"
+
+###############################################################################
+#  Check password
+
+  - name: Check if we can use default password
+    uri:
+      url: "http://localhost/zabbix/api_jsonrpc.php"
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "user.login",
+            "auth": null,
+            "id": 1,
+            "params": {
+                "user": "{{ zabbix_login }}",
+                "password": "{{ zabbix_admin_pwd }}"
+            }
+        }'
+    register: res
+
+  - name: Update password value
+    set_fact:
+      zabbix_runtime_password: '{{ zabbix_admin_pwd }}'
+    when: res.json.result is defined
+
+###############################################################################
+#  Get token
+
+  - name: Aquire token
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "user.login",
+            "auth": null,
+            "id": 1,
+            "params": {
+                "user": "{{ zabbix_login }}",
+                "password": "{{ zabbix_runtime_password }}"
+            }
+        }'
+    register: res
+
+  - name: Parse token
+    set_fact:
+      zabbix_auth_token: '{{ res.json.result }}'
+
+###############################################################################
+#  Update password
+
+  - name: Update Admin password
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "user.update",
+            "auth": "{{ zabbix_auth_token }}",
+            "id": 2,
+            "params": {
+                "userid": "1",
+                "passwd": "{{ zabbix_admin_pwd }}"
+            }
+        }'
+    register: res
+
+  - name: Check for error
+    fail:
+      msg: 'Error on previos step: {{ res.json.error }}'
+    when: res.json.error is defined
+
+###############################################################################
+#  Node auto registration
+
+  - name: Fetch status of auto registration
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "action.get",
+            "auth": "{{ zabbix_auth_token }}",
+            "id": 3,
+            "params": {
+                "filter": {
+                    "name": "Auto registration"
+                }
+            }
+        }'
+    ignore_errors: true
+    register: auto_reg_exists
+
+  # 10102 Template App SSH Service
+  # 10186 Template ICMP Ping
+  # 10001 Template OS Linux
+  - name: Enable automatic registration of zabbix agents
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "action.create",
+            "auth": "{{ zabbix_auth_token }}",
+            "id": 3,
+            "params": {
+                "name": "Auto registration",
+                "eventsource": 2,
+                "evaltype": 0,
+                "def_shortdata": "Auto registration: {HOST.HOST}",
+                "def_longdata": "Host name: {HOST.HOST}\nHost IP: {HOST.IP}\nAgent port: {HOST.PORT}",
+                "conditions": [
+                    {
+                        "conditiontype": 22,
+                        "operator": 2,
+                        "value": ""
+                    }
+                ],
+                "operations": [
+                    {
+                        "operationtype": 2
+                    },
+                    {
+                        "operationtype": 4,
+                        "opgroup": [
+                            {"groupid": "5"},
+                            {"groupid": "2"}
+                        ]
+                    },
+                    {
+                        "operationtype": 6,
+                        "optemplate": [
+                            {"templateid": "10102"},
+                            {"templateid": "10186"},
+                            {"templateid": "10001"}
+                        ]
+                    }
+                ]
+            }
+        }'
+    register: res
+    changed_when: res.json.result != {}
+    when:
+      - auto_reg_exists.json.result is defined
+      - auto_reg_exists.json.result == []
+
+  - name: Check for error
+    fail:
+      msg: 'Error on previos step: {{ res.json.error }}'
+    when:
+      - res.skipped is not defined
+      - res.json.error is defined
+
+###############################################################################
+#  Send notifications
+
+  - name: Enable default trigger action Send notifications
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "action.update",
+            "auth": "{{ zabbix_auth_token }}",
+            "id": 4,
+            "params": {
+                "actionid": "3",
+                "status": "0",
+            }
+        }'
+    register: res
+
+  - name: Check for error
+    fail:
+      msg: 'Error on previos step: {{ res.json.error }}'
+    when: res.json.error is defined
+
+###############################################################################
+#  Mediatype
+
+  - name: Get status of mediatype
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "mediatype.get",
+            "auth": "{{ zabbix_auth_token }}",
+            "id": 5,
+            "params": {
+                "filter": {
+                    "description": "Local e-mail"
+                }
+            }
+        }'
+    ignore_errors: true
+    register: mediatype_exists
+
+  - name: Add a local email mediatype which zabbix will use to send notifications
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "mediatype.create",
+            "auth": "{{ zabbix_auth_token }}",
+            "id": 6,
+            "params": {
+                "description": "Local e-mail",
+                "type": 0,
+                "smtp_server": "{{ zabbix_mail_server }}",
+                "smtp_helo": "{{ trix_ctrl_hostname }}",
+                "smtp_email": "zabbix@{{ trix_ctrl_hostname }}"
+            }
+        }'
+    register: res
+    changed_when: res.json.result != {}
+    when:
+      - mediatype_exists.json.result is defined
+      - mediatype_exists.json.result == []
+
+  - name: Check for error
+    fail:
+      msg: 'Error on previos step: {{ res.json.error }}'
+    when:
+      - res.skipped is not defined
+      - res.json.error is defined
+
+###############################################################################
+#  Add media to root
+
+  - name: Get status of mediatype
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "mediatype.get",
+            "auth": "{{ zabbix_auth_token }}",
+            "id": 5,
+            "params": {
+                "filter": {
+                    "description": "Local e-mail"
+                }
+            }
+        }'
+    register: mediatype
+
+  - name: Setup notifications to be sent to the root user on the controller
+    uri:
+      url: 'http://localhost/zabbix/api_jsonrpc.php'
+      body_format: json
+      body: '{
+            "jsonrpc": "2.0",
+            "method": "user.addmedia",
+            "auth": "{{ zabbix_auth_token }}",
+            "id": 7,
+            "params": {
+                "users": [{"userid": 1}],
+                "medias": {
+                    "mediatypeid": "{{ mediatype.json.result[0].mediatypeid }}",
+                    "sendto": "root@{{ trix_ctrl_hostname }}",
+                    "active": 0,
+                    "severity": 63,
+                    "period": "1-7,00:00-24:00"
+                }
+            }
+        }'
+    register: res
+
+  - name: Check for error
+    fail:
+      msg: 'Error on previos step: {{ res.json.error }}'
+    when:
+      - res.skipped is not defined
+      - res.json.error is defined
+
+###############################################################################
+#  Change trends
+
+  - name: Get status of trends and history
+    shell: >
+      echo "select hk_trends_global,hk_history_global from {{ zabbix_sql_db }}.config\G" | mysql -N | tail -2
+    register: hk
+    changed_when: false
+
+  - name: Set trends houskeeping
+    shell: >
+      echo "update {{ zabbix_sql_db }}.config set hk_trends_global=1" | mysql
+    when: hk.stdout_lines[0] == '0'
+
+  - name: Set history houskeeping
+    shell: >
+      echo "update {{ zabbix_sql_db }}.config set hk_history_global=1" | mysql
+    when: hk.stdout_lines[1] == '0'
+
+  when: primary | default(True)

@@ -1,0 +1,56 @@
+---
+# tasks file for sssd
+
+- name: Install sssd packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ sss_packages }}'
+
+- name: Add configuration file to /etc/sssd/sssd.conf
+  template:
+    src: 'sssd.conf'
+    dest: '/etc/sssd/sssd.conf'
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+  notify: restart sssd
+
+- name: Enable sssd service
+# service:
+#   name: sssd
+#   enabled: yes
+  file:
+    src: '/usr/lib/systemd/system/sssd.service'
+    dest: '/etc/systemd/system/multi-user.target.wants/sssd.service'
+    state: link
+  when: not ha|default(False)
+
+- name: Start sssd service
+  service:
+    name: sssd
+    state: started
+  when: not ha|default(False) and ansible_connection not in 'lchroot'
+
+- block:
+
+  - name: Adding access controler groups to the system
+    shell: 'obol group list | grep {{ item }} || obol group add {{ item }}'
+    register: obol_result
+    with_items: '{{ sss_allowed_groups }}'
+    changed_when: item not in obol_result.stdout
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'sssd'
+      resource_class: 'systemd'
+      resource_type: 'systemd:sssd'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+    when: ha|default(False)
+    tags: pcs
+
+  when: primary|default(False)
+
+- name: Setting up the system to use sssd for authentication
+  command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
