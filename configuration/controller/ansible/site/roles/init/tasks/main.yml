@@ -1,6 +1,12 @@
 ---
 # Initialize required variables
 
+- name: Install init packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ init_packages }}'
+
 - name: Check if this node is the primary controller
   set_fact:
     primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses else False }}'
