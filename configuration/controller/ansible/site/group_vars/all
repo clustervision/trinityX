@@ -1,27 +1,81 @@
+---
+# This file contains variables that are global to all playbooks
+# in this repository.
+
+
+# A domain name to be assigned to the controller(s) and nodes
+# on the internal network.
+# Luna's provisioning network name will be set to the same value.
+
 trix_domain: cluster
+
+# Default hostname and IP for the controller
+# In an HA pair, those are the hostname and IP for the first controller.
+# Those variables are required, with or without HA.
+
+trix_ctrl1_ip: 10.141.255.254
+trix_ctrl1_bmcip: 10.148.255.254
+trix_ctrl1_hostname: controller1
+
+# In a non-HA setup, all of the following variables will be ignored:
+# - the variables for CTRL will be set to the same as CTRL1;
+# - the variables for CTRL2 will be ignored.
+
+# Hostname and IP of the second controller
+
+trix_ctrl2_ip: 10.141.255.253
+trix_ctrl2_bmcip: 10.148.255.253
+trix_ctrl2_hostname: controller2
+
+# Floating hostname and IP
+
+trix_ctrl_ip: 10.141.255.252
+trix_ctrl_hostname: controller
+
+# Internal network definitions and the DHCP range used to to PXE boot
+# the compute nodes.
+
 trix_cluster_net: 10.141.0.0
 trix_cluster_netprefix: 16
 trix_cluster_dhcp_start: 10.141.128.0
 trix_cluster_dhcp_end: 10.141.140.0
 
-trix_ctrl_ip: 10.141.255.252
-trix_ctrl1_ip: 10.141.255.254
-trix_ctrl2_ip: 10.141.255.253
-trix_ctrl1_bmcip: 10.148.255.254
-trix_ctrl2_bmcip: 10.148.255.253
-trix_ctrl_hostname: controller
-trix_ctrl1_hostname: controller1
-trix_ctrl2_hostname: controller2
+
+# Path to which the standard TrinityX files will be installed.
+# If not set, it will default to /trinity
 
 trix_root: '/trinity'
+
+# The TrinityX root contains multiple subdirectories for different uses:
+# - trix_images For the compute node images
+# - trix_shared for everything shared by the controllers to the nodes
+# - trix_local for configuration files specific to each machine
+# - trix_home for the user home directories
+#
+# By default those exist under trix_root. There are some cases where this is not
+# desirable; the following variables allow you to override the default paths.
+# WARNING: use with caution! It's not well tested and there may be some issues
+# here and there...
+
 trix_images: '{{ trix_root }}/images'
 trix_shared: '{{ trix_root }}/shared'
 trix_local: '{{ trix_root }}/local'
 trix_home: '{{ trix_root }}/home'
 
+
+# Path in which the generated certificates for the cluster will be installed.
+# ssl_cert_group refers to the UNIX group that has read access to the certs.
+
 ssl_cert_path: '{{ trix_local }}/etc/ssl'
 ssl_cert_group: 'ssl'
 
+
+# Whether or not to enable SELinux throughout the cluster
+
 selinux_enabled: false
 
+
+# The default name to use when creating a compute image
+
 image_name: 'compute'
+

@@ -4,36 +4,40 @@ TrinityX installation procedure
 
 This document describes the installation of a TrinityX controller, as well as the creation and configuration of an image for the compute nodes of a TrinityX cluster.
 
-Both procedures run on the machine that will be used as the controller. The requirements for this system, as well as for the compute nodes, are decribed in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machine is ready for the TrinityX configuration.
+Starting with the 11th release, Ansible is fully integrated into TrinityX. This allows for a lot of flexibility when installing a cluster.
+While the procedure to create compute images needs to be run from the cluster controller (the primary controller when in HA mode) the installation procedure of the controllers themselves can be run from any arbitrary machine (including your laptop).
+
+The requirements for this system, as well as for the compute nodes, are decribed in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machines are ready for the TrinityX configuration.
 
 
 Controller installation
 -----------------------
 
-The TrinityX configuration script will install and configure all packages required for setting up a working TrinityX controller.
+The TrinityX configuration tool will install and configure all packages required for setting up a working TrinityX controller.
 
-The configuration for a default controller installation is described in the file called ``controller.cfg``, located in the ``configuration`` subdirectory of the TrinityX tree::
+The configuration for a default controller installation is described in the file called ``site.yml``, as well as the files located in the ``group_vars/`` subdirectory of the TrinityX tree, while the list of machines to which the configuration needs to be applied is described in the file called ``hosts``::
 
     # pwd
     ~/trinityX
     
-    # cd configuration
+    # ls hosts site.yml group_vars/
+    hosts  site.yml
     
-    # ls controller.cfg 
-    controller.cfg
+    group_vars/:
+    all  controllers
 
 
-This file can be edited to reflect the user's own installation choices. All configuration parameters are included and described Once the configuration file is ready, the script ``configure.sh`` will apply the configuration to the controller::
+These files can be edited to reflect the user's own installation choices. All configuration parameters are included and described. Once the configuration file is ready, the ``site.yml`` ansible playbook  will apply the configuration to the controller::
 
     # pwd
-    ~/trinityX/configuration
+    ~/trinityX
     
-    # ls controller.cfg configure.sh
-    configure.sh  controller.cfg
+    # ls hosts site.yml
+    hosts  site.yml
     
-    # ./configure.sh controller.cfg
+    # ansible-playbook -i hosts site.yml
 
-For further details about the use of the configuration script, including its command line options, please see :doc:`config_tool`.
+For further details about the use of ansible, including its command line options, please consult the `official ansible documentation <https://docs.ansible.com/>`_.
 
 For further details about the configuration files, please see :doc:`config_cfg_files`.
 
@@ -41,35 +45,29 @@ For further details about the configuration files, please see :doc:`config_cfg_f
 Compute node image creation
 ---------------------------
 
-The creation and configuration of an OS image for the compute nodes uses the same script and and a similar configuration file than for the controller. While the controller configuration applies its setting to the machine on which it runs, the image configuration does so in a directory that will contain the whole image of the compute node.
+The creation and configuration of an OS image for the compute nodes uses the same tool and a similar configuration file than for the controller. While the controller configuration applies its setting to the machine on which it runs, the image configuration does so in a directory that will contain the whole image of the compute node.
 
-.. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified, then added to the provisioning tool. Creating a new image is only useful for an initial installation, or when starting from a clean image.
+.. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified, then added to the provisioning tool. Creating a new image is only useful for an initial installation, or when desiring to start from a clean image.
 
 
-Again, the setup of the image is defined in configuration scripts. Each image requires two scripts:
-
-- ``images-create-compute.cfg``, which controls the creation of the directory and the base setup, *including calling the second script*;
-
-- ``images-setup-compute.cfg``, which controls the installation and setup inside that directory.
-
-.. note:: You do not need to call the second script (``images-setup-compute.cfg``) by hand. This is done automatically by the creation script, which passes additional parameters to the setup script.
+Again, the setup of the image is defined in the playbook ``images.yml``, which controls the creation of the directory and running the configuration.
 
 
 In the vast majority of cases, changing the configuration of the default image is not required. Creating it is done as simply as when setting up the controller::
 
-    # ./configure.sh images-create-compute.cfg
+    # ansible-playbook image.yml
 
 .. note:: The location of the new image is displayed as one of the last messages from the creation and setup process.
 
-After the configuration has completed, the node image is ready but not yet integrated into any provisioning system. The steps required for that operation are described in the documentation of the provisioning system installed on your site.
+After the configuration has completed, the node image is ready and integrated into the provisioning system. No further steps are required.
 
 
 Offline installation
 --------------------
 
-The configuration script relies on the built-in package management commands of the operating system: ``yum`` and ``rpm`` in the case of CentOS. By default those commands pull the packages that they require from online repositories. For the rare cases where an offline installation is required, the TrinityX configuration tool provides support for using local repositories.
+The configuration tool relies on the built-in package management commands of the operating system: ``yum`` and ``rpm`` in the case of CentOS. By default those commands pull the packages that they require from online repositories. For the rare cases where an offline installation is required, the TrinityX configuration tool provides support for using local repositories.
 
-.. note:: When doing an offline installation, you may want to enable the option ``REPOS_DISABLE_REMOTE`` in the configuration file. This will save time as ``yum`` won't try to connect to remote repositories. Make sure to read all documentation and READMEs before, and remember that all required packages must be available in one of the local repositories.
+.. note:: When doing an offline installation, you may want to disable all remote repositories. This will save time as ``yum`` won't try to connect to remote repositories. Make sure to read all documentation and READMEs before, and remember that all required packages must be available in one of the local repositories.
 
 Local repositories
 ~~~~~~~~~~~~~~~~~~
@@ -79,18 +77,12 @@ The TrinityX configuration tool copies the whole ``packages`` folder over to the
     # pwd
     ~/trinityX
     
-    # ls -l packages
-    total 16
-    drwxr-xr-x 2 root root 4096 Sep 13 09:13 local-repo
-    drwxr-xr-x 3 root root 4096 Aug  5 11:16 luna
-    -rw-r--r-- 1 root root 2878 Aug  5 11:16 README.rst
-    drwxr-xr-x 3 root root 4096 Aug  5 11:16 slurm
+    # ls -F packages
+    local-repo/  pacemaker/  README.rst
     
     # ls -l configuration/controller/local-repos
     total 12
     -rw-r--r-- 1 root root 120 Aug 11 14:47 local-repo.repo
-    -rw-r--r-- 1 root root 110 Aug  5 11:16 luna.repo
-    -rw-r--r-- 1 root root 113 Aug  5 11:16 slurm.repo
 
 .. note:: The repo file base names must be the same as the folder names.
 

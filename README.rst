@@ -33,25 +33,26 @@ Default installation
 
 Running TrinityX installer with the default configuration file will:
 
-* in case of a single-controller setup, i.e. non-HA:
+* In case of a single-controller setup, i.e. non-HA:
   
-  - set the controller's name to ``controller``
+  - Set the controller's name to ``controller``
     
-    **Note**: the provisioning interface is expected to be assigned ``10.141.255.254`` *prior* to the installation
+    **Note**: The provisioning interface is expected to be assigned ``10.141.255.254`` *prior* to the installation
     
-* in case of a dual-controller setup, i.e. HA: 
+* In case of a dual-controller setup, i.e. HA: 
   
-  - set controllers' names to ``controller1`` and ``controller2``, respectively
-  - create a floating IP address ``10.141.255.252`` and associate the hostname ``controller`` with it
+  - Set controllers' names to ``controller1`` and ``controller2``, respectively
+  - Create a floating IP address ``10.141.255.252`` and associate the hostname ``controller`` with it
     
-    **Note**: the provisioning interfaces are expected to be assigned ``10.141.255.254`` and ``10.141.255.253``, respectively, *prior* to the installation
-  - create an XFS filesystem on a specified block device, which is assumed to be shared between the controllers, and mount it as /trinity
+    **Note**: The provisioning interfaces are expected to be assigned ``10.141.255.254`` and ``10.141.255.253``, respectively, *prior* to the installation
+  - Create an XFS filesystem on a specified block device, which is assumed to be shared between the controllers, and mount it as /trinity
   
-* in both cases:
+* In both cases:
 
-  - define a provisioning network 10.141.0.0/16 and associate a domain name ``cluster`` with it
-  - create shared directories under /trinity
-  - generate a random password for each service that requires it
+  - Define a provisioning network 10.141.0.0/16 and associate a domain name ``cluster`` with it
+  - Create shared directories under /trinity
+  - Generate a random password for each service that requires it
+
 
 Steps to install TrinityX
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -60,90 +61,61 @@ Steps to install TrinityX
 
 2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks
 
-3. Install ``git``::
+3. Install ``git``, ``ansible`` and ``luna-ansible``::
 
-    # yum install git
+    # yum install git ansible luna-ansible
 
-4. Clone TrinityX repository into your working directory and go to the configuration directory::
+4. Clone TrinityX repository into your working directory and go to the site directory::
 
     # git clone http://github.com/clustervision/trinityx
-    # cd trinityX/configuration
+    # cd trinityX/site
 
-5. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to check one of the configuration files:
+5. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
        
-   * ``controller-nonHA.cfg``
-   * ``controller-HA.cfg``
+   * ``group_vars/controllers``
+   * ``group_vars/all``
 
-   to see if the default firewall parameters apply to your situation::
+   **Note**: In the case of an HA setup you will most probably need to change the default name of the shared block device set by ``shared_fs_device``.
+
+   You might also want to check if the default firewall parameters apply to your situation in the firewalld role in ``site.yml``::
    
-     FWD_PUBLIC_IF="eth2"
-     FWD_TRUSTED_IF="eth0 eth1"
+      firewalld_public_interfaces:
+        - eth2
+      firewalld_trusted_interfaces:
+        - eth0
+        - eth1
 
-   Moreover, in the case of an HA setup you will most probably need to change the default name of the shared block device set by ``SHARED_FS_DEVICE``.
+6. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
 
-6. Start TrinityX installation
+    # ansible-galaxy install OndrejHome.pcs-modules-2
 
-   **Note**: In the case of HA, complete the installation on the first controller first, then run it on the second one::
+6. Start TrinityX installation::
 
-     # ./configure.sh <target_configuration_file> |& tee -a install.log
+     # ansible-playbook site.yml |& tee -a install.log
     
-   **Note**: If the installer pauses with a prompt for the next action, analyze the error(s) in the output above and try to fix it in another console *without* cancelling the installation.
+   **Note**: If errors are encoutered during the installation process, analyze the error(s) in the output and try to fix it then re-run the installer.
     
 7. Create a default OS image::
 
-    # ./configure.sh images-create-compute.cfg |& tee -a image.log
+    # ansible-playbook image.yml |& tee -a image.log
 
 Now you have your controller(s) installed and the default OS image created!
+
 
 Customizing your installation
 -----------------------------
 
-Now, if you want to tailor TrinityX to your needs, you can modify the configuration file, or better yet, create a custom configuration file that imports all the default configuration and only overrides what's neccessary.
+Now, if you want to tailor TrinityX to your needs, you can modify the ansible playbooks and variable files.
 
-Descriptions to configuration options are given inside ``controller-HA.cfg``. Options that might be changed include:
+Descriptions to configuration options are given inside ``site.yml`` and ``group_vars/*``. Options that might be changed include:
 
-* controller's hostnames and IP addresses
-* shared storage backing device
+* Controller's hostnames and IP addresses
+* Shared storage backing device
 * DHCP dynamic range
-* firewall settings
-* passwords
+* Firewall settings
 
-You can also choose which components to exclude from the installation by modifying ``POSTLIST``.
+You can also choose which components to exclude from the installation by modifying the ``site.yml`` playbook.
 
-A custom configuration file would look similar to the following::
-
-     # vim my.cfg
-     #!/bin/bash
-     
-     . controller-HA.cfg
-   
-     # Controller network settings
-     CTRL1_HOSTNAME=controller1
-     CTRL1_IP=192.168.10.254
-     
-     CTRL2_HOSTNAME=controller2
-     CTRL2_IP=192.168.10.253
-     
-     CTRL_HOSTNAME=controller
-     CTRL_IP=192.168.10.252
-     
-     DOMAIN=cluster
-     
-     COROSYNC_CTRL1_IP=192.168.50.254
-     COROSYNC_CTRL2_IP=192.168.50.253
-     
-     # Shared FS options
-     SHARED_FS_TYPE=drbd
-     SHARED_FS_DEVICE=/dev/rootvg/drbd
-     
-     #Firewalld
-     FWD_PUBLIC_IF="eth0"
-     FWD_TRUSTED_IF="eth1 eth2"
-   
-     # Luna network
-     LUNA_NETWORK=192.168.10.0
-     LUNA_DHCP_RANGE_START=192.168.10.150
-     LUNA_DHCP_RANGE_END=192.168.10.200
 
 Documentation
 =============
