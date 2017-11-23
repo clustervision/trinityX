@@ -81,6 +81,23 @@
     group: root
     state: directory
 
+- name: Ensure /etc/trinity/passwords/images/{{ image_name }} exists
+  file:
+    path: '/etc/trinity/passwords/images/{{ image_name }}'
+    state: directory
+
+- name: Store root password if defined
+  template:
+    src: root.txt
+    dest: '/etc/trinity/passwords/images/{{ image_name }}/root.txt'
+  when: image_passwd|default([])
+
+- name: Generate SSH keys
+  user:
+    name: root
+    generate_ssh_key: yes
+    ssh_key_file: "{{ image_path }}/root/.ssh/id_rsa"
+
 - name: Add controller's key to authorized keys
   authorized_key:
     user: root

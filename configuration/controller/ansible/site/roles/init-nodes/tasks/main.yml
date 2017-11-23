@@ -18,18 +18,21 @@
     dest: '/etc/systemd/system/multi-user.target.wants/firewalld.service'
     state: link
 
-#- name: Setup the root user's password
+- name: Get image name
+  set_fact:
+    image_name: '{{ inventory_hostname.split(".")|first }}'
 
-#- name: Save the root password into the image's shadow file
-#  when: ansible_connection in "lchroot"
-#  delegate_to: localhost
+- name: Setup the root user's password
+  user:
+    name: root
+    password: '{{ lookup("password","/etc/trinity/passwords/images/" +image_name
+              + "/root.txt")|password_hash("sha512","SaltToTaste") }}'
+    state: present
 
-#- name: Generate ssh keys for the root user
-#  user:
-#    name: root
-#    generate_ssh_key: yes
-#    ssh_key_bits: 4096
-#    ssh_key_type: rsa
+- name: Generate host SSH keys
+  shell: ssh-keygen -A
+  args:
+    creates: /etc/ssh/ssh_host_rsa_key
 
 - name: Disable host key check between nodes
   blockinfile:
