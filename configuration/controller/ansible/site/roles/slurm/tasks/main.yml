@@ -195,6 +195,12 @@
       - slurm.conf
     notify: restart slurm
   
+  - name: Set UsePAM to 1 in slurm-user.conf
+    lineinfile:
+      path: '{{ slurm_conf_path }}/slurm-user.conf'
+      line: 'UsePAM=1'
+    when: slurm_pam_enabled
+
   - name: Start slurm controller services
     service:
       daemon_reload: yes
