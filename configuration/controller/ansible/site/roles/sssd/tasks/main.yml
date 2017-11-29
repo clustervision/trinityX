@@ -51,6 +51,8 @@
     tags: pcs
 
   when: primary|default(True)
+        and ansible_connection not in 'lchroot'
+        and not compute|default(False)
 
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
