@@ -96,20 +96,38 @@
     daemon_reload: yes
     name: '{{ item }}'
     enabled: yes
-  when: not ha|default(False) and primary|default(False)
+  when: not ha|default(False)
+        and primary|default(True)
+        and ansible_connection not in 'lchroot'
+        and not compute|default(False)
   with_items:
     - munge
     - slurmdbd
     - slurmctld
 
-- name: Enable slurm compute services
-  file:
-    src: '{{ item.src }}'
-    dest: '{{ item.dest }}'
-    state: link
-  with_items:
-    - { src: '/usr/lib/systemd/system/munge.service', dest: '/etc/systemd/system/multi-user.target.wants/munge.service' }
-    - { src: '/usr/lib/systemd/system/slurmd.service', dest: '/etc/systemd/system/multi-user.target.wants/slurmd.service' }
+- block:
+
+  - name: Enable slurm compute services
+    file:
+      src: '{{ item.src }}'
+      dest: '{{ item.dest }}'
+      state: link
+    with_items:
+      - { src: '/usr/lib/systemd/system/munge.service', dest: '/etc/systemd/system/multi-user.target.wants/munge.service' }
+      - { src: '/usr/lib/systemd/system/slurmd.service', dest: '/etc/systemd/system/multi-user.target.wants/slurmd.service' }
+  
+  - name: Update PAM configuration to enable slurm pam controls
+    copy:
+      src: '{{ item.0 }}'
+      dest: '/etc/pam.d/{{ item.1 }}'
+      owner: root
+      group: root
+      mode: 0644
+    with_together:
+      - [ 'pam-sshd', 'pam-slurm']
+      - [ 'sshd', 'slurm' ]
+    when: slurm_pam_enabled
+
   when: ansible_connection in 'lchroot' or compute|default(False)
 
 - name: Start slurm compute services
@@ -191,6 +209,12 @@
       - ['0644', '0640']
     notify: restart slurm
   
+  - name: Set UsePAM to 1 in slurm-user.conf
+    lineinfile:
+      path: '{{ slurm_conf_path }}/slurm-user.conf'
+      line: 'UsePAM=1'
+    when: slurm_pam_enabled
+
   - name: Start slurm controller services
     service:
       daemon_reload: yes
