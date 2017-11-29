@@ -61,17 +61,12 @@
     mode: 0750
     state: directory
 
-- name: Ensure {{ slurm_conf_path }} exists
-  file:
-    path: '{{ slurm_conf_path }}'
-    state: directory
-
-- name: Ensure {{ slurm_conf_path }} has the correct permissions
+- name: Ensure {{ slurm_conf_path }} exists and has the correct permissions
   file:
     path: '{{ slurm_conf_path }}'
     owner: slurm
     group: slurm
-    mode: 0750
+    mode: 0755
     state: directory
 
 - name: Get /etc/slurm status
@@ -187,12 +182,13 @@
   
   - name: Render slurm.conf and slurmdbd.conf
     template:
-      src: '{{ item }}'
-      dest: '{{ slurm_conf_path }}/{{ item }}'
+      src: '{{ item.0 }}'
+      dest: '{{ slurm_conf_path }}/{{ item.0 }}'
+      mode: '{{ item.1 }}'
       backup: yes
-    with_items:
-      - slurmdbd.conf
-      - slurm.conf
+    with_together:
+      - ['slurm.conf', 'slurmdbd.conf']
+      - ['0644', '0640']
     notify: restart slurm
   
   - name: Start slurm controller services
