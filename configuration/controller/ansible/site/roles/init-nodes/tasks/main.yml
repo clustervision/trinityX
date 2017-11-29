@@ -4,19 +4,19 @@
     compute: True
   when: ansible_connection not in "lchroot"
 
-- name: Remove NetworkManager
-  yum:
-    name: "NetworkManager"
-    state: removed
+- name: Stop firewalld
+  service:
+    name: firewalld
+    state: stopped
+  when: compute|default(False)
 
 - name: Disable firewalld
 # service:
 #   name: firewalld
-#   enabled: yes
+#   enabled: no
   file:
-    src: '/usr/lib/systemd/system/firewalld.service'
-    dest: '/etc/systemd/system/multi-user.target.wants/firewalld.service'
-    state: link
+    path: '/etc/systemd/system/multi-user.target.wants/firewalld.service'
+    state: absent
 
 - name: Get image name
   set_fact:
@@ -53,10 +53,6 @@
               HostbasedAuthentication no
               StrictHostKeyChecking no
               UserKnownHostsFile /dev/null
-
-- name: Toggle SELinux
-  selinux:
-    state: '{{ "enforcing" if selinux_enabled else "disabled" }}'
 
 - name: Use the controller as a DNS resolver
   template:
