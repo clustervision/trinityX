@@ -27,12 +27,11 @@
     creates: '/etc/corosync/authkey'
 
 - name: Copy corosync's authentication key to the secondary controller
-  fetch:
-    dest: '/etc/corosync/authkey'
-    src: '/etc/corosync/authkey'
-    flat: yes
+  synchronize:
+    dest: /etc/corosync/authkey
+    src: /etc/corosync/authkey
+    archive: yes
   when: not primary|default(True)
-  delegate_to: '{{ play_hosts[0] }}'
 
 - name: Add colouring to pcs status
   copy:
