@@ -7,11 +7,14 @@
 - name: Ensure '{{ ssl_cert_owner }}' user exists
   user:
     name: '{{ ssl_cert_owner }}'
+    uid: '{{ ssl_cert_owner_id }}'
     system: yes
+  when: ssl_cert_owner not in 'root'
 
 - name: Ensure '{{ ssl_cert_group }}' group exists
   group:
     name: '{{ ssl_cert_group }}'
+    gid: '{{ ssl_cert_group_id }}'
     system: yes
 
 - name: Generate a certificate authority for the cluster
