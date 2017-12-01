@@ -28,12 +28,19 @@
   args:
     creates: '{{ ssl_cert_path }}/cluster-ca.crt'
 
+- name: Render subjectAltName configuration
+  template:
+    src: 'san.conf'
+    dest: '{{ ssl_cert_path }}/san.conf'
+    mode: '0660'
+
 - name: Create a certificate request for each controller
   command: >
     openssl req -new -nodes -sha512
       -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ hostvars[item]["ansible_fqdn"] }}'
       -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
       -keyout '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.key'
+      -config '{{ ssl_cert_path }}/san.conf'
   args:
     creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
   with_items: '{{ groups["controllers"] }}'
@@ -46,6 +53,8 @@
       -CA '{{ ssl_cert_path }}/cluster-ca.crt'
       -CAkey '{{ ssl_cert_path }}/cluster-ca.key'
       -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
+      -extensions req_ext
+      -extfile '{{ ssl_cert_path }}/san.conf'
       -set_serial {{ 2 | random }}
   args:
     creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
