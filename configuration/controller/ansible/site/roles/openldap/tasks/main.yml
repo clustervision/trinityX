@@ -50,7 +50,7 @@
       owner: '{{ openldap_default_user }}'
       group: '{{ openldap_default_group }}'
     when: primary | default(False)
-  
+
   - name: Copy default configuration to {{ openldap_server_conf_path }}
     shell: rsync -raW /etc/openldap/slapd.d/* {{ openldap_server_conf_path|quote }}
     args:
@@ -61,7 +61,7 @@
     file:
       path: '/etc/openldap/slapd.d'
       state: absent
-  
+
   - name: Replace default configuration path with symlink to {{ openldap_server_conf_path }}
     file:
       src: '{{ openldap_server_conf_path }}'
@@ -72,13 +72,12 @@
   when: openldap_server_conf_path|string not in '/etc/openldap/slapd.d'
         and default_openldap_path.stat.isdir
 
-- block:
+- name: Add cluster CA certificate to /etc/openldap/certs
+  copy:
+    src: '{{ openldap_tls_cacrt }}'
+    dest: '/etc/openldap/certs/'
 
-  - name: Add cluster CA certificate to /etc/openldap/certs
-    copy:
-      src: '{{ openldap_tls_cacrt }}'
-      dest: '/etc/openldap/certs/'
-      remote_src: yes
+- block:
 
   - name: Ensure OpenLDAP data directory exists
     file:
@@ -86,17 +85,17 @@
       state: directory
       owner: '{{ openldap_default_user }}'
       group: '{{ openldap_default_group }}'
-  
+
   - name: Ensure OpenLDAP has access to the ssl certificates
     user:
       name: '{{ openldap_default_user }}'
       groups: '{{ ssl_cert_group }}'
-  
+
   - name: Start OpenLDAP service
     service:
       name: slapd
       state: started
-  
+
   - name: Copy OpenLDAP schemas
     copy:
       src: '{{ item }}'
@@ -108,7 +107,7 @@
       - rfc2307bis.ldif
       - autoinc.ldif
       - local_schema.ldif
-  
+
   - name: Load OpenLDAP schemas
     command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/openldap/schema/{{ item }}.ldif
     args:
@@ -147,10 +146,10 @@
 
   - name: Load OpenLDAP local schema
     command: >
-      ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }} 
+      ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
                              -f /etc/openldap/schema/local_schema.ldif
     ignore_errors: yes
-  
+
   - name: Add pacemaker resource
     pcs_resource:
       name: 'openldap'
