@@ -77,6 +77,11 @@
     src: '{{ openldap_tls_cacrt }}'
     dest: '/etc/openldap/certs/'
 
+- name: Ensure OpenLDAP has access to the ssl certificates
+  user:
+    name: '{{ openldap_default_user }}'
+    groups: '{{ ssl_cert_group }}'
+
 - block:
 
   - name: Ensure OpenLDAP data directory exists
@@ -85,11 +90,6 @@
       state: directory
       owner: '{{ openldap_default_user }}'
       group: '{{ openldap_default_group }}'
-
-  - name: Ensure OpenLDAP has access to the ssl certificates
-    user:
-      name: '{{ openldap_default_user }}'
-      groups: '{{ ssl_cert_group }}'
 
   - name: Start OpenLDAP service
     service:
