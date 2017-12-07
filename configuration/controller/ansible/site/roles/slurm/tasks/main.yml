@@ -1,7 +1,13 @@
 ---
 # tasks file for slurm
 
-- name: Aquire password for DB user (generate or use one from /etc/trinity/passwords)
+- name: Generate password for DB user and save it to /etc/trinity/passwords
+  set_fact:
+    tmp_pwd: '{{ lookup("password",
+                           "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt  
+                            chars=ascii_letters,digits,hexdigits") }}'
+
+- name: Get password for DB user from /etc/trinity/passwords)
   set_fact:
     slurmdbd_sql_pwd: '{{ lookup("password",
                            "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt  
