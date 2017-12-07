@@ -1,7 +1,13 @@
 ---
 # tasks for zabbix role
 
-- name: Aquire mysql root password (generate or use one from /etc/trinity/passwords)
+- name: Generate mysql password for zabbix user and save it to  /etc/trinity/passwords
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mysql/zabbix.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get mysql password for zabbix from /etc/trinity/passwords
   set_fact:
     zabbix_sql_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/mysql/zabbix.txt

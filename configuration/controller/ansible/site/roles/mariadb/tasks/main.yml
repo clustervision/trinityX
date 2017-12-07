@@ -1,7 +1,13 @@
 ---
 # tasks for mariadb role
 
-- name: Aquire root password (generate or use one from /etc/trinity/passwords)
+- name: Generate password for DB root and save it to /etc/trinity/passwords 
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mysql/root.txt  
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get root password from /etc/trinity/passwords
   set_fact:
     mysql_root_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/mysql/root.txt  
