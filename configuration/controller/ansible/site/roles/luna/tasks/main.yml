@@ -1,11 +1,17 @@
 ---
 # tasks file for luna
 
-- name: Acquire password for DB user (generate or use one from /etc/trinity/passwords)
+- name: Generate root password for MongoDB and save it to /etc/trinity/passwords
   set_fact:
-    luna_db_pwd: '{{ lookup("password",
-                           "/etc/trinity/passwords/mongo/luna.txt
-                            chars=ascii_letters,digits,hexdigits") }}'
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mongo/luna.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get root password for MongoDB from /etc/trinity/passwords
+  set_fact:
+    luna_db_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mongo/luna.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
 
 - name: Create a group for luna
   group:

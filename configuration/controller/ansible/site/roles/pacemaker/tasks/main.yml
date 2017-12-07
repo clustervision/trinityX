@@ -1,7 +1,13 @@
 ---
 # tasks file for pacemaker
 
-- name: Aquire hacluster password (generate or use one from /etc/trinity/passwords)
+- name: Generate hacluster password and save it to  /etc/trinity/passwords
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/hacluster.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get hacluster password from /etc/trinity/passwords
   set_fact:
     pacemaker_user_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/hacluster.txt
