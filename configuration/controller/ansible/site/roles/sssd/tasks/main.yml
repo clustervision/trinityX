@@ -16,6 +16,11 @@
     mode: '0600'
   notify: restart sssd
 
+- name: Copy CA certificate
+  copy:
+    src: "{{ openldap_tls_cacrt }}"
+    dest: /etc/openldap/certs/cluster-ca.crt
+
 - name: Enable sssd service
 # service:
 #   name: sssd
@@ -39,7 +44,7 @@
     register: obol_result
     with_items: '{{ sss_allowed_groups }}'
     changed_when: item not in obol_result.stdout
-  
+
   - name: Add pacemaker resource
     pcs_resource:
       name: 'sssd'
