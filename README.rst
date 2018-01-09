@@ -61,20 +61,22 @@ Steps to install TrinityX
 
 2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks
 
-3. Setup luna repository::
+3. Configure passwordless authentication to the controller itself or/and for both controllers in the HA case
+
+4. Setup luna repository::
 
     # curl http://rpmbuild.clustervision.com/luna/1.2/centos/7/x86_64/luna-1.2.repo > /etc/yum.repos.d/luna-1.2.repo
 
-4. Install ``git``, ``ansible`` and ``luna-ansible``::
+5. Install ``git``, ``ansible`` and ``luna-ansible``::
 
     # yum install git ansible luna-ansible
 
-5. Clone TrinityX repository into your working directory and go to the site directory::
+6. Clone TrinityX repository into your working directory and go to the site directory::
 
     # git clone http://github.com/clustervision/trinityx
     # cd trinityX/site
 
-6. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
+7. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
 
    * ``group_vars/controllers``
    * ``group_vars/all``
@@ -89,17 +91,17 @@ Steps to install TrinityX
         - eth0
         - eth1
 
-7. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
+8. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
 
     # ansible-galaxy install OndrejHome.pcs-modules-2
 
-8. Start TrinityX installation::
+9. Start TrinityX installation::
 
      # ansible-playbook site.yml |& tee -a install.log
 
    **Note**: If errors are encoutered during the installation process, analyze the error(s) in the output and try to fix it then re-run the installer.
 
-9. Create a default OS image::
+10. Create a default OS image::
 
     # ansible-playbook image.yml |& tee -a image.log
 
@@ -124,27 +126,27 @@ You can also choose which components to exclude from the installation by modifyi
 Documentation
 =============
 
-  To build the full set of the documentation included with TrinityX:
+To build the full set of the documentation included with TrinityX:
 
-  1. Install ``git``::
+1. Install ``git``::
 
-      # yum install git
+    # yum install git
 
-  2. Clone TrinityX repository into your working directory and go to the directory containing the documentation::
+2. Clone TrinityX repository into your working directory and go to the directory containing the documentation::
 
-      # git clone http://github.com/clustervision/trinityx
-      # cd trinityX/doc
+    # git clone http://github.com/clustervision/trinityx
+    # cd trinityX/doc
 
-  3. Install ``pip``, e.g. from EPEL repository::
+3. Install ``pip``, e.g. from EPEL repository::
 
-      # yum install python34-pip.noarch
+    # yum install python34-pip.noarch
 
-  4. Install ``sphinx`` and ``Rinohtype``::
+4. Install ``sphinx`` and ``Rinohtype``::
 
-      # pip3.4 install sphinx Rinohtype
+    # pip3.4 install sphinx Rinohtype
 
-  6. Build the PDF version of the TrinityX guides::
+6. Build the PDF version of the TrinityX guides::
 
-     # sphinx-build -b rinoh . _build/
+   # sphinx-build -b rinoh . _build/
 
-  If everything goes well, the documentation will be saved as ``_build/TrinityX.pdf``
+If everything goes well, the documentation will be saved as ``_build/TrinityX.pdf``
