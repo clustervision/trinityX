@@ -34,19 +34,19 @@ Default installation
 Running TrinityX installer with the default configuration file will:
 
 * In case of a single-controller setup, i.e. non-HA:
-  
+
   - Set the controller's name to ``controller``
-    
+
     **Note**: The provisioning interface is expected to be assigned ``10.141.255.254`` *prior* to the installation
-    
-* In case of a dual-controller setup, i.e. HA: 
-  
+
+* In case of a dual-controller setup, i.e. HA:
+
   - Set controllers' names to ``controller1`` and ``controller2``, respectively
   - Create a floating IP address ``10.141.255.252`` and associate the hostname ``controller`` with it
-    
+
     **Note**: The provisioning interfaces are expected to be assigned ``10.141.255.254`` and ``10.141.255.253``, respectively, *prior* to the installation
   - Create an XFS filesystem on a specified block device, which is assumed to be shared between the controllers, and mount it as /trinity
-  
+
 * In both cases:
 
   - Define a provisioning network 10.141.0.0/16 and associate a domain name ``cluster`` with it
@@ -61,41 +61,45 @@ Steps to install TrinityX
 
 2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks
 
-3. Install ``git``, ``ansible`` and ``luna-ansible``::
+3. Setup luna repository::
+
+    # curl http://rpmbuild.clustervision.com/luna/1.2/centos/7/x86_64/luna-1.2.repo > /etc/yum.repos.d/luna-1.2.repo
+
+4. Install ``git``, ``ansible`` and ``luna-ansible``::
 
     # yum install git ansible luna-ansible
 
-4. Clone TrinityX repository into your working directory and go to the site directory::
+5. Clone TrinityX repository into your working directory and go to the site directory::
 
     # git clone http://github.com/clustervision/trinityx
     # cd trinityX/site
 
-5. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
-       
+6. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
+
    * ``group_vars/controllers``
    * ``group_vars/all``
 
    **Note**: In the case of an HA setup you will most probably need to change the default name of the shared block device set by ``shared_fs_device``.
 
    You might also want to check if the default firewall parameters apply to your situation in the firewalld role in ``site.yml``::
-   
+
       firewalld_public_interfaces:
         - eth2
       firewalld_trusted_interfaces:
         - eth0
         - eth1
 
-6. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
+7. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
 
     # ansible-galaxy install OndrejHome.pcs-modules-2
 
-6. Start TrinityX installation::
+8. Start TrinityX installation::
 
      # ansible-playbook site.yml |& tee -a install.log
-    
+
    **Note**: If errors are encoutered during the installation process, analyze the error(s) in the output and try to fix it then re-run the installer.
-    
-7. Create a default OS image::
+
+9. Create a default OS image::
 
     # ansible-playbook image.yml |& tee -a image.log
 
