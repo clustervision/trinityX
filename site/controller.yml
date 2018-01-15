@@ -6,28 +6,28 @@
 #       directory.
 
   roles:
-    - role: init
+    - role: trinity/init
       tags: init
 
-    - role: repos
+    - role: trinity/repos
       repos:
       - repo: epel-release
       - repo: http://rpmbuild.clustervision.com/trinity/tr17/centos/7/clustervision-master-repo-1.0-tr17.el7.centos.x86_64.rpm
       tags: repos
 
-    - role: cv_support
+    - role: trinity/cv_support
       tags: cv_support
 
-    - role: packages
+    - role: trinity/packages
       tags: packages
 
-    - role: tunables
+    - role: trinity/tunables
       tags: tunables
 
-    - role: hostname
+    - role: trinity/hostname
       tags: hostname
 
-    - role: firewalld
+    - role: trinity/firewalld
       firewalld_public_interfaces:
         - eth2
       firewalld_trusted_interfaces:
@@ -37,33 +37,33 @@
         - 443
       tags: firewalld
 
-    - role: chrony
+    - role: trinity/chrony
       tags: chrony
 
-    - role: rdma-centos
+    - role: trinity/rdma-centos
       tags: rdma-centos
 
-    - role: ssh
+    - role: trinity/ssh
       tags: ssh
 
-    - role: fail2ban
+    - role: trinity/fail2ban
       tags: fail2ban
 
-    - role: pacemaker
+    - role: trinity/pacemaker
       when: ha
       fence_ipmilan_enabled: 'false'
       fence_ipmilan_login: 'user'
       fence_ipmilan_passwd: 'password'
       tags: pcs
 
-    - role: drbd
+    - role: trinity/drbd
       when: ha
       tags: drbd
 
-    - role: trix-tree
+    - role: trinity/trix-tree
       tags: trix-tree
 
-    - role: nfs
+    - role: trinity/nfs
       nfs_rpccount: 256
       nfs_enable_rdma: false
       nfs_export_shared: true
@@ -71,11 +71,11 @@
       nfs_exports_path: '{{ trix_local }}/etc/exports.d'
       tags: nfs
 
-    - role: environment-modules
+    - role: trinity/environment-modules
       modulefiles_path: '{{ trix_shared }}/modulefiles'
       tags: environment-modules
 
-    - role: ssl-cert
+    - role: trinity/ssl-cert
       ssl_cert_country: 'NL'
       ssl_cert_locality: 'Amsterdam'
       ssl_cert_organization: 'ClusterVision B.V.'
@@ -84,7 +84,7 @@
       ssl_cert_days: '3650'
       tags: ssl-cert
 
-    - role: bind
+    - role: trinity/bind
       bind_db_path: '{{ trix_local }}/var/lib/named'
       bind_dnssec_enable: no
       bind_dns_forwarders:
@@ -92,28 +92,28 @@
         - '8.8.4.4'
       tags: bind
 
-    - role: openldap
+    - role: trinity/openldap
       openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
       openldap_server_conf_path: '{{ trix_local }}/etc/openldap/slapd.d'
       tags: openldap
 
-    - role: obol
+    - role: trinity/obol
       users_home_path: '{{ trix_home }}'
       ldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       tags: obol
 
-    - role: sssd
+    - role: trinity/sssd
       sss_allowed_groups:
         - 'admins'
       sss_ldap_hosts:
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       tags: sssd
 
-    - role: mariadb
+    - role: trinity/mariadb
       mariadb_db_path: '{{ trix_local }}/var/lib/mysql'
       tags: mariadb
 
-    - role: slurm
+    - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'
       slurm_ctrl_ip: '{{ trix_ctrl_ip }}'
       slurm_ctrl_list: '{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }}'
@@ -124,7 +124,7 @@
       slurmdbd_sql_db: 'slurm_accounting'
       tags: slurm
 
-    - role: luna
+    - role: trinity/luna
       luna:
         cluster:
           frontend_address: '{{ trix_ctrl_ip }}'
@@ -143,7 +143,7 @@
             ns_ip: '{{ trix_ctrl_ip }}'
       tags: luna
 
-    - role: rsyslog
+    - role: trinity/rsyslog
       syslog_listeners:
         - name: default
           proto: tcp
@@ -157,13 +157,13 @@
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
       tags: rsyslog
 
-    - role: zabbix
+    - role: trinity/zabbix
       zabbix_path: '{{ trix_local }}/usr/lib/zabbix/'
       zabbix_sql_db: 'zabbix'
       tags: zabbix
 
-    - role: zabbix_agent
+    - role: trinity/zabbix_agent
       tags: zabbix_agent
 
-    - role: wrapup
+    - role: trinity/wrapup
       tags: wrapup
