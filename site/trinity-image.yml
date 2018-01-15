@@ -2,10 +2,10 @@
 - hosts: controllers
 
   roles:
-  - role: init
+  - role: trinity/init
     tags: init
 
-  - role: image-create
+  - role: trinity/image-create
     tags: image-create
     when: primary
 
@@ -13,30 +13,30 @@
   - "{{ image_name }}.osimages.luna"
 
   roles:
-  - role: init-nodes
+  - role: trinity/init-nodes
     tags: init-nodes
 
-  - role: packages
+  - role: trinity/packages
     tags: packages
 
-  - role: tunables
+  - role: trinity/tunables
     tags: tunables
 
-  - role: hostname
+  - role: trinity/hostname
     tags: hostname
 
-  - role: chrony
+  - role: trinity/chrony
     chrony_upstream_servers:
     - '{{ trix_ctrl_ip }}'
     tags: chrony
 
-  - role: rdma-centos
+  - role: trinity/rdma-centos
     tags: rdma-centos
 
-  - role: trix-tree
+  - role: trinity/trix-tree
     tags: trix-tree
 
-  - role: nfs-mounts
+  - role: trinity/nfs-mounts
     nfs_enable_rdma: false
     nfs_mounts:
     - path: '{{ trix_shared }}'
@@ -47,14 +47,14 @@
       options: 'defaults,nfsvers=4,rw,retrans=4,noatime'
     tags: nfs-mounts
 
-  - role: environment-modules
+  - role: trinity/environment-modules
     modulefiles_path: '{{ trix_shared }}/modulefiles'
     tags: environment-modules
 
-  #- role: openldap-nodes
+  #- role: trinity/openldap-nodes
   #  tags: openldap-nodes
 
-  - role: sssd
+  - role: trinity/sssd
     sss_allowed_groups:
     - 'admins'
     sss_ldap_hosts:
@@ -62,13 +62,13 @@
     sss_filter_enabled: '{{ not slurm_pam_enabled }}'
     tags: sssd
 
-  - role: slurm
+  - role: trinity/slurm
     slurm_conf_path: '{{ trix_shared }}/etc/slurm'
     slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
     munge_conf_path: '{{ trix_shared }}/etc/munge'
     tags: slurm
 
-  - role: rsyslog
+  - role: trinity/rsyslog
     syslog_forwarding_rules:
     - name: default
       proto: 'tcp'
@@ -78,5 +78,5 @@
       level: '*'
     tags: rsyslog
 
-  - role: zabbix_agent
+  - role: trinity/zabbix_agent
     tags: zabbix_agent
