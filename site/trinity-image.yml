@@ -1,0 +1,82 @@
+---
+- hosts: controllers
+
+  roles:
+  - role: init
+    tags: init
+
+  - role: image-create
+    tags: image-create
+    when: primary
+
+- hosts:
+  - "{{ image_name }}.osimages.luna"
+
+  roles:
+  - role: init-nodes
+    tags: init-nodes
+
+  - role: packages
+    tags: packages
+
+  - role: tunables
+    tags: tunables
+
+  - role: hostname
+    tags: hostname
+
+  - role: chrony
+    chrony_upstream_servers:
+    - '{{ trix_ctrl_ip }}'
+    tags: chrony
+
+  - role: rdma-centos
+    tags: rdma-centos
+
+  - role: trix-tree
+    tags: trix-tree
+
+  - role: nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: '{{ trix_shared }}'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
+      options: 'defaults,nfsvers=4,ro,retrans=4'
+    - path: '{{ trix_home }}'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
+      options: 'defaults,nfsvers=4,rw,retrans=4,noatime'
+    tags: nfs-mounts
+
+  - role: environment-modules
+    modulefiles_path: '{{ trix_shared }}/modulefiles'
+    tags: environment-modules
+
+  #- role: openldap-nodes
+  #  tags: openldap-nodes
+
+  - role: sssd
+    sss_allowed_groups:
+    - 'admins'
+    sss_ldap_hosts:
+    - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+    sss_filter_enabled: '{{ not slurm_pam_enabled }}'
+    tags: sssd
+
+  - role: slurm
+    slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+    slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+    munge_conf_path: '{{ trix_shared }}/etc/munge'
+    tags: slurm
+
+  - role: rsyslog
+    syslog_forwarding_rules:
+    - name: default
+      proto: 'tcp'
+      port: 514
+      host: '{{ trix_ctrl_ip }}'
+      facility: '*'
+      level: '*'
+    tags: rsyslog
+
+  - role: zabbix_agent
+    tags: zabbix_agent
