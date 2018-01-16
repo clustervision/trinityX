@@ -28,32 +28,6 @@ It will also set up:
 * and more
 
 
-Default installation
---------------------
-
-Running TrinityX installer with the default configuration file will:
-
-* In case of a single-controller setup, i.e. non-HA:
-
-  - Set the controller's name to ``controller``
-
-    **Note**: The provisioning interface is expected to be assigned ``10.141.255.254`` *prior* to the installation
-
-* In case of a dual-controller setup, i.e. HA:
-
-  - Set controllers' names to ``controller1`` and ``controller2``, respectively
-  - Create a floating IP address ``10.141.255.252`` and associate the hostname ``controller`` with it
-
-    **Note**: The provisioning interfaces are expected to be assigned ``10.141.255.254`` and ``10.141.255.253``, respectively, *prior* to the installation
-  - Create an XFS filesystem on a specified block device, which is assumed to be shared between the controllers, and mount it as /trinity
-
-* In both cases:
-
-  - Define a provisioning network 10.141.0.0/16 and associate a domain name ``cluster`` with it
-  - Create shared directories under /trinity
-  - Generate a random password for each service that requires it
-
-
 Steps to install TrinityX
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -78,7 +52,6 @@ Steps to install TrinityX
 
 7. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
 
-   * ``group_vars/controllers``
    * ``group_vars/all``
 
    **Note**: In the case of an HA setup you will most probably need to change the default name of the shared block device set by ``shared_fs_device``.
@@ -95,15 +68,29 @@ Steps to install TrinityX
 
     # ansible-galaxy install OndrejHome.pcs-modules-2
 
-9. Start TrinityX installation::
+9. Configure ``hosts`` file to allow ansible to address controllers.
 
-     # ansible-playbook site.yml |& tee -a install.log
+
+    Example for non-HA setup::
+
+        [controllers]
+        controller ansible_host=10.141.255.254
+
+    Example for HA setup::
+
+        [controllers]
+        controller1 ansible_host=10.141.255.254
+        controller2 ansible_host=10.141.255.253
+
+10. Start TrinityX installation::
+
+     # ansible-playbook controller.yml |& tee -a install.log
 
    **Note**: If errors are encoutered during the installation process, analyze the error(s) in the output and try to fix it then re-run the installer.
 
-10. Create a default OS image::
+11. Create a default OS image::
 
-    # ansible-playbook image.yml |& tee -a image.log
+    # ansible-playbook compute.yml |& tee -a image.log
 
 Now you have your controller(s) installed and the default OS image created!
 
@@ -113,14 +100,14 @@ Customizing your installation
 
 Now, if you want to tailor TrinityX to your needs, you can modify the ansible playbooks and variable files.
 
-Descriptions to configuration options are given inside ``site.yml`` and ``group_vars/*``. Options that might be changed include:
+Descriptions to configuration options are given inside ``controller.yml`` and ``group_vars/*``. Options that might be changed include:
 
 * Controller's hostnames and IP addresses
 * Shared storage backing device
 * DHCP dynamic range
 * Firewall settings
 
-You can also choose which components to exclude from the installation by modifying the ``site.yml`` playbook.
+You can also choose which components to exclude from the installation by modifying the ``controller.yml`` playbook.
 
 
 Documentation
