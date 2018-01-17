@@ -1,18 +1,18 @@
 ---
 - block:
- - name: Cleanup the image
-   command: yum clean all
+  - name: Cleanup the image
+    command: yum clean all
 
- - block:
-   - name: Pack the image
-     run_once: true
-     luna_osimage:
-       name: '{{ image_name }}'
-       pack: true
+  - block:
+    - name: Pack the image
+      run_once: true
+      luna_osimage:
+        name: '{{ image_name }}'
+        pack: true
 
-   - name: Reload ltorrent
-     service:
-       name: ltorrent
-       state: reloaded
-  delegate_to: localhost
-when: ansible_connection in 'lchroot'
+    - name: Reload ltorrent
+      service:
+        name: ltorrent
+        state: reloaded
+    delegate_to: localhost
+  when: ansible_connection in 'lchroot'
