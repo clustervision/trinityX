@@ -55,10 +55,16 @@
     enabled: yes
     state: started
 
+- name: Generate salt for the hacluster password
+  set_fact:
+    password_salt: "{{ lookup('password',
+                          '/etc/trinity/passwords/hacluster-salt.txt
+                           chars=ascii_letters,digits,hexdigits length=16') }}"
+
 - name: Set a passwd for the user hacluster
   user:
     name: hacluster
-    password: '{{ pacemaker_user_pwd | password_hash("sha512", ansible_hostname) }}'
+    password: '{{ pacemaker_user_pwd | password_hash("sha512", password_salt) }}'
 
 - name: Authenticate the controllers
   command: pcs cluster auth --all -u 'hacluster' -p '{{ pacemaker_user_pwd }}'
