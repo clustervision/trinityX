@@ -1,0 +1,19 @@
+---
+
+- name: Clear yum cache
+  shell: yum clean all
+  args:
+    warn: false
+  changed_when: False
+
+- name: Get latest available kernel
+  shell: yum --show-duplicates list kernel | awk '$1=="kernel.x86_64"{print $2}' | sort -V | tail -1
+  register: yum_kernel_ver
+  args:
+    warn: false
+  changed_when: False
+
+- name: Check if we running latest kernel
+  fail:
+    msg: "You are not running the latest kernel. Please update and reboot."
+  when: yum_kernel_ver.stdout + "." + ansible_architecture !=  ansible_kernel
