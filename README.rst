@@ -56,7 +56,7 @@ Steps to install TrinityX
 
    **Note**: In the case of an HA setup you will most probably need to change the default name of the shared block device set by ``shared_fs_device``.
 
-   You might also want to check if the default firewall parameters apply to your situation in the firewalld role in ``site.yml``::
+   You might also want to check if the default firewall parameters apply to your situation in the firewalld role in ``controller.yml``::
 
       firewalld_public_interfaces:
         - eth2
