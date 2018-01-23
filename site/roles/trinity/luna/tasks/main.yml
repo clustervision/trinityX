@@ -103,6 +103,25 @@
     path: '/etc/dhcp'
   register: default_dhcp_path
 
+# Some PXE ROMs in some NICs do not send tftp replies using the FIP
+# of the controllers. This workaround ensures that we SNAT those replies.
+# TODO: delete workaround when no longer required.
+- name: Get provisioning interface name
+  shell: "ip -o addr | grep {{ luna.cluster.frontend_address }} | awk '{ print $2 }'"
+  register: luna_prov_nic
+  changed_when: False
+
+- name: Workaround PXE boot issue when doing HA and masquerading is enabled
+  template:
+    src: 'firewalld_direct.xml'
+    dest: '/etc/firewalld/direct.xml'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+  when: ha|default(False)
+  notify: reload firewalld
+###
+
 - block:
 
   - name: Ensure {{ luna.dhcp.conf_path }} exists
