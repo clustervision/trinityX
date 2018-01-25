@@ -197,24 +197,34 @@
     when: fence_ipmilan_enabled == 'true'
     tags: fencing
 
-  - name: Get IB device name
-    shell: ibstatus | awk '/Infiniband device/ { print $3 }' | tr -d "'"
-    register: ib_device
-    changed_when: False
-    tags: ibmon
-
-  - name: Add ibmon resource
-    pcs_resource:
-      name: 'ibmon'
-      resource_type: 'ocf:pacemaker:ethmonitor'
-      options: 'interface=ib0 infiniband_device={{ ib_device.stdout }} link_status_only=true --clone'
-      state: present
-    when: ib_device.stdout
-    tags: ibmon
-
-  - name: Add ibmon location constraint
-    shell: pcs constraint location Trinity rule score=-INFINITY ethmonitor-ib0 ne 1
-    when: ib_device.stdout
-    tags: ibmon
+#  - name: Get IB interface names
+#    shell: ip l | awk '/ib.:/ { print $2 }' | tr -d ':'
+#    register: ib_interfaces
+#    changed_when: False
+#    tags: ibmon
+#
+#  - name: Get IB devices names
+#    shell: ibstatus | awk '/Infiniband device/ { print $3 }' | tr -d "'"
+#    register: ib_devices
+#    changed_when: False
+#    tags: ibmon
+#
+#  - name: Add ibmon resources
+#    pcs_resource:
+#      name: '{{ item.0 }}-mon'
+#      resource_type: 'ocf:heartbeat:ethmonitor'
+#      options: 'interface={{ item.0 }} infiniband_device={{ item.1 }} link_status_only=true --clone'
+#      state: present
+#    with_together:
+#      - '{{ ib_interfaces.stdout_lines | default([]) }}'
+#      - '{{ ib_devices.stdout_lines | default([]) }}'
+#    when: ib_interfaces.stdout
+#    tags: ibmon
+#
+#  - name: Add ibmon location constraints
+#    shell: 'pcs constraint location Trinity rule score=-INFINITY ethmonitor-{{ item }} ne 1'
+#    with_items: '{{ ib_devices.stdout_lines | default([]) }}'
+#    when: ib_interfaces.stdout
+#    tags: ibmon
 
   when: primary|default(True)
