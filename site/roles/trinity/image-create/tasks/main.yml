@@ -20,9 +20,9 @@
 
 - name: Install centos-release to {{ image_path }}
   shell: >
-    /usr/bin/yumdownloader --destdir {{ image_path }} centos-release &&
-    /usr/bin/rpm --root {{ image_path }} -ivh {{ image_path }}/centos-release-*.rpm &&
-    /usr/bin/rm -rf {{ image_path }}/centos-release-*.rpm
+    /usr/bin/yumdownloader --destdir {{ image_path }} $(rpm -qf /etc/os-release --qf '%{NAME}') &&
+    /usr/bin/rpm --root {{ image_path }} -ivh {{ image_path }}/$(rpm -qf /etc/os-release --qf '%{NAME}')-*.rpm &&
+    /usr/bin/rm -rf {{ image_path }}/$(rpm -qf /etc/os-release --qf '%{NAME}')-*.rpm
   args:
     creates: "{{ image_path }}/etc/os-release"
 
