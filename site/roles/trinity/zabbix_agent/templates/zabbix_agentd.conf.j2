@@ -3,7 +3,12 @@
 PidFile=/var/run/zabbix/zabbix_agentd.pid
 LogFile=/var/log/zabbix/zabbix_agentd.log
 LogFileSize=0
+{% if ha %}
+Server={{ trix_ctrl_ip }},{{ trix_ctrl1_ip }},{{ trix_ctrl2_ip }}
+ServerActive={{ trix_ctrl_ip }},{{ trix_ctrl1_ip }},{{ trix_ctrl2_ip }}
+{% else %}
 Server={{ trix_ctrl_ip }}
 ServerActive={{ trix_ctrl_ip }}
+{% endif %}
 Include=/etc/zabbix/zabbix_agentd.d/*.conf
 UnsafeUserParameters=1
