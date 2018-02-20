@@ -39,7 +39,7 @@ Steps to install TrinityX
 
 4. Setup luna repository::
 
-    # curl http://rpmbuild.clustervision.com/luna/1.2/centos/7/x86_64/luna-1.2.repo > /etc/yum.repos.d/luna-1.2.repo
+    # curl http://updates.clustervision.com/luna/luna.repo > /etc/yum.repos.d/luna.repo
 
 5. Install ``git``, ``ansible`` and ``luna-ansible``::
 
