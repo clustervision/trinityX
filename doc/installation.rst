@@ -38,7 +38,48 @@ Once the configuration files are ready, the ``controller.yml`` ansible playbook 
 
 For further details about the use of ansible, including its command line options, please consult the `official ansible documentation <https://docs.ansible.com/>`_.
 
-For further details about the configuration files, please see :doc:`config_cfg_files`.
+`controller.yml` playbook
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When running this playbook for the first time, you will see some initial warning that some luna inventory could no be parsed. What these warnings mean is that `luna` could not not be queried for a list of nodes and osimages which is normal at this point of the installation since luna has not been configured yet::
+
+    [WARNING]:  * Failed to parse /etc/ansible/hosts/luna with script plugin: Inventory script
+    (/etc/ansible/hosts/luna) had an execution error: Traceback (most recent call last):   File
+    "/etc/ansible/hosts/luna", line 3, in <module>     from luna_ansible.inventory import LunaInventory
+    File "/usr/lib/python2.7/site-packages/luna_ansible/inventory.py", line 15, in <module>     raise
+    AnsibleError("luna is not installed") ansible.errors.AnsibleError: luna is not installed
+    
+    [...]
+
+
+The rest of the ouput would be a list of all the tasks that ansible is running on controller(s)::
+
+    [...] 
+
+    TASK [trinity/init : Update the trix_ctrl_* variables in case of non-HA setup] **************************
+    ok: [controller]
+    
+    TASK [trinity/init : Toggle selinux state] **************************************************************
+     [WARNING]: SELinux state temporarily changed from 'enforcing' to 'permissive'. State change will take
+    effect next reboot.
+    
+    changed: [controller]
+    
+    [...] 
+    
+    TASK [trinity/repos : Ensure "/trinity/repos" exists] ***************************************************
+    changed: [controller]
+    
+    [...] 
+
+
+Then at the end, if everything was successful. you will be able to see a summary of all the actions that ansible has performed including how many changes and how many failures::
+
+    PLAY RECAP **********************************************************************************************
+    controller                 : ok=270  changed=197  unreachable=0    failed=0
+
+
+Do keep in mind that if some of the tasks fails during the installation ansible won't stop untill it finishes running all the other tasks. If this happens, then you can use ansible to only re-apply the failing task, the full role containing it or the entire playbook after the cause of the failure has been fixed.
 
 
 Compute node image creation
