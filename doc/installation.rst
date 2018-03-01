@@ -5,10 +5,10 @@ TrinityX installation procedure
 This document describes the installation of a TrinityX controller, as well as the creation and configuration of an image for the compute nodes of a TrinityX cluster.
 
 Starting with the 11th release, Ansible is fully integrated into TrinityX. This allows for a lot of flexibility when installing a cluster.
-While the procedure to create compute images needs to be run from the cluster controller (the primary controller when in HA mode) the installation procedure of the controllers themselves can be run from any arbitrary machine (including your laptop).
 
-The requirements for this system, as well as for the compute nodes, are decribed in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machines are ready for the TrinityX configuration.
+The requirements for all the components of a TriniryX cluster are decribed in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machines are ready for the TrinityX configuration.
 
+.. note:: While the procedure to create compute images needs to be run from the cluster controller (the primary controller when in HA mode) the installation procedure of the controllers themselves can be run from any arbitrary machine (including your laptop).
 
 Controller installation
 -----------------------
@@ -27,13 +27,12 @@ The configuration for a default controller installation is described in the file
     all
 
 
-These files can be edited to reflect the user's own installation choices. All configuration parameters are included and described. Once the configuration file is ready, the ``controller.yml`` ansible playbook  will apply the configuration to the controller::
+These files can be edited to reflect the user's own installation choices. For a full list of the configuration options that TrinityX supports refer to :doc:`configuration`.
+
+Once the configuration files are ready, the ``controller.yml`` ansible playbook can be run to apply the configuration to the controller(s)::
 
     # pwd
     ~/trinityX
-
-    # ls hosts controller.yml
-    hosts  controller.yml
 
     # ansible-playbook controller.yml
 
@@ -45,7 +44,7 @@ For further details about the configuration files, please see :doc:`config_cfg_f
 Compute node image creation
 ---------------------------
 
-The creation and configuration of an OS image for the compute nodes uses the same tool and a similar configuration file than for the controller. While the controller configuration applies its setting to the machine on which it runs, the image configuration does so in a directory that will contain the whole image of the compute node.
+The creation and configuration of an OS image for the compute nodes uses the same tool and a similar configuration file as for the controller. While the controller configuration applies its setting to the machine on which it runs, the image configuration does so in a directory that will contain the whole image of the compute node.
 
 .. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified. Creating a new image is only useful for an initial installation, or when desiring to start from a clean image. Another scenario is a setup fully controlled by ansible - in this case to create the image it is possible to copy ``compute.yml`` and set up image name accordingly.
 
