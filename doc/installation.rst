@@ -6,7 +6,7 @@ This document describes the installation of a TrinityX controller, as well as th
 
 Starting with the 11th release, Ansible is fully integrated into TrinityX. This allows for a lot of flexibility when installing a cluster.
 
-The requirements for all the components of a TriniryX cluster are decribed in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machines are ready for the TrinityX configuration.
+The requirements for all the components of a TriniryX cluster are described in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machines are ready for the TrinityX configuration.
 
 .. note:: While the procedure to create compute images needs to be run from the cluster controller (the primary controller when in HA mode) the installation procedure of the controllers themselves can be run from any arbitrary machine (including your laptop).
 
@@ -52,7 +52,7 @@ When running this playbook for the first time, you will see some initial warning
     [...]
 
 
-The rest of the ouput would be a list of all the tasks that ansible is running on controller(s)::
+The rest of the output would be a list of all the tasks that ansible is running on controller(s)::
 
     [...] 
 
@@ -73,13 +73,19 @@ The rest of the ouput would be a list of all the tasks that ansible is running o
     [...] 
 
 
-Then at the end, if everything was successful. you will be able to see a summary of all the actions that ansible has performed including how many changes and how many failures::
+Then at the end, if everything was successful. You will be able to see a summary of all the actions that ansible has performed including how many changes and how many failures::
 
     PLAY RECAP **********************************************************************************************
     controller                 : ok=270  changed=197  unreachable=0    failed=0
 
 
-Do keep in mind that if some of the tasks fails during the installation ansible won't stop untill it finishes running all the other tasks. If this happens, then you can use ansible to only re-apply the failing task, the full role containing it or the entire playbook after the cause of the failure has been fixed.
+Do keep in mind that if some of the tasks fails during the installation ansible won't stop until it finishes running all the other tasks. If this happens, then you can use ansible to only re-apply the failing task, the full role containing it or the entire playbook after the cause of the failure has been fixed.
+
+
+What are the passwords?
+~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, the TrinityX installer will generate random passwords for all services that require one. You can find all of the generated passwords on the controller(s) at `/etc/trinity/passwords/` where every password lives in its own file that's named after the service that uses it.
 
 
 Compute node image creation
@@ -87,16 +93,26 @@ Compute node image creation
 
 The creation and configuration of an OS image for the compute nodes uses the same tool and a similar configuration file as for the controller. While the controller configuration applies its setting to the machine on which it runs, the image configuration does so in a directory that will contain the whole image of the compute node.
 
-.. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified. Creating a new image is only useful for an initial installation, or when desiring to start from a clean image. Another scenario is a setup fully controlled by ansible - in this case to create the image it is possible to copy ``compute.yml`` and set up image name accordingly.
+.. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified. Creating a new image is only useful for an initial installation, or when desiring to start from a clean one. Another scenario is a setup fully controlled by ansible - in this case to create the image it is possible to copy ``compute.yml`` and update ``image_name`` variable to reflect the new image's name.
 
 
-Again, the setup of the default image is defined in the playbook ``compute.yml``, which controls the creation of the directory and running the configuration. ``compute.yml`` file includes ``trinity-image.yml`` file as a dependency. Latter is a playbook which is applying standard Trinity configuration.
+The setup of the default image is defined in the playbook ``compute.yml``, which controls the creation of a new filesystem directory and applies the image configuration. The ``compute.yml`` file includes the ``trinity-image.yml`` playbook as a dependency. This latter is a playbook that applies a standard Trinity image configuration.
 
 
-In the vast majority of cases, changing the configuration of the default image is not required. Creating it is done as simply as when setting up the controller::
+In the vast majority of cases, changing the configuration of the default image is not required. It may be desired, however, to setup a custom root password, in which case the variable ``image_password`` can be set to the desired password.
+
+Creating a new image is as simple as setting up the controller(s)::
 
     # ansible-playbook compute.yml
 
-.. note:: The location of the new image is displayed as one of the last messages from the creation and setup process.
+.. note:: Any newly created image will reside in the directory defined by the configuration variable ``trix_image`` which points to `/trinity/images/` by default.
 
 After the configuration has completed, the node image is ready and integrated into the provisioning system. No further steps are required.
+
+
+Updating images and nodes
+-------------------------
+
+It is worth pointing out that the ``compute.yml`` or any copy thereof can be applied to both existing images and/or live nodes without issues. All that needs to be done is updating the list of hosts to which it applies.
+
+By default ``compute.yml`` applies to the host `compute.osimages.luna` which means it only applies to the image called `compute`. Therefore, it can either be changed to `osimages.luna`, in which case it will apply to all osimages, or to `new_image.osimages.luna` in which case it will apply to the image called `new_image`. Alternatively, the construct `*.nodes.luna` which refers to the nodes managed by luna can be used. Similarly, it can either be used to refer to all nodes: `nodes.luna`, or to a single node: `node001.nodes.luna`.
