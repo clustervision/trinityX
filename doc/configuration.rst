@@ -407,6 +407,18 @@ zabbix_mail_server      Hostname      'localhost'                  Default mail 
 Compute specific variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Global variables
+^^^^^^^^^^^^^^^^^
+
+======================= ============= ================== =============
+     Variable               value        default          description
+======================= ============= ================== =============
+image_name              String        compute            The name of the OS image to create or apply the playbook to
+image_password          String                           The password to set up for the root user in the image.
+                                                         If empty, it will be set to a randomly generated one.
+
+======================= ============= ================== =============
+
 `nfs-mounts` role
 ^^^^^^^^^^^^^^^^^^
 
