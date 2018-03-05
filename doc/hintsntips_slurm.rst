@@ -1,4 +1,4 @@
-Hinte and tips for SLURM
+Hints and tips for SLURM
 ========================
 
 Basic operations
@@ -107,7 +107,7 @@ Srun and mpirun in job scripts
 Usually you don't need to use srun in job scripts. Spawning multiple copies of binary is usually performed by mpi library. To get the idea of how things are working in sbatch context you can can check of the following output::
 
     #!/bin/bash
-    #SBATCH --partition=defq
+    #SBATCH --partitio=defq
     #SBATCH --nodes=2
 
     echo "======= hostname: ======="
@@ -139,3 +139,68 @@ And the output will be similar to::
     node002.cluster
 
 The number of mpirun hostnames depends of the number of cores in the nodes.
+
+Running MPI application. Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To be concrete, let's take MPI Hello Word from `MPI Tutorial <http://mpitutorial.com/tutorials/mpi-hello-world>`_ and put it to mpi-hello.c::
+
+	#include <mpi.h>
+	#include <stdio.h>
+
+	int main(int argc, char** argv) {
+		// Initialize the MPI environment
+		MPI_Init(NULL, NULL);
+
+		// Get the number of processes
+		int world_size;
+		MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
+		// Get the rank of the process
+		int world_rank;
+		MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
+		// Get the name of the processor
+		char processor_name[MPI_MAX_PROCESSOR_NAME];
+		int name_len;
+		MPI_Get_processor_name(processor_name, &name_len);
+
+		// Print off a hello world message
+		printf("Hello world from processor %s, rank %d"
+			   " out of %d processors\n",
+			   processor_name, world_rank, world_size);
+
+		// Finalize the MPI environment.
+		MPI_Finalize();
+	}
+
+Now we need to compile application with one of the MPI version you have installed on your cluster::
+
+    $ module load openmpi/2.0.1
+    $ mpicc -o mpi-hello.bin mpi-hello.c
+
+Create job file::
+
+    #!/bin/bash
+    #SBATCH --partition=defq
+    #SBATCH --nodes=2
+
+    module load openmpi/2.0.1
+    mpirun mpi-hello.bin
+
+And run it::
+
+    $ sbatch test03.job
+
+In output file you will see something like::
+
+    Hello world from processor node001.cluster, rank 2 out of 4 processors
+    Hello world from processor node001.cluster, rank 1 out of 4 processors
+    Hello world from processor node001.cluster, rank 0 out of 4 processors
+    Hello world from processor node001.cluster, rank 3 out of 4 processors
+    Hello world from processor node002.cluster, rank 1 out of 4 processors
+    Hello world from processor node002.cluster, rank 3 out of 4 processors
+    Hello world from processor node002.cluster, rank 0 out of 4 processors
+    Hello world from processor node002.cluster, rank 2 out of 4 processors
+
+You are done. Here you created and run our first MPI application on HPC cluster.
