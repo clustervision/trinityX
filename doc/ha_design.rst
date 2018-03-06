@@ -55,7 +55,7 @@ The TrinityX Corosync configuration is extremely basic:
 
 - IPMI based fencing is configured.
 
-This is not a very good configuration in itself, as it is difficult to impossible to detect a split brain situation with only two nodes; a quorum device or a third node is required. That extra configuration is highly dependant on the hardware available for a given deployment, and is left to be done by the engineer.
+This is not a very good configuration in itself, as it is difficult to impossible to detect a split brain situation with only two nodes; a quorum device or a third node is required. That extra configuration is highly dependent on the hardware available for a given deployment, and is left to be done by the engineer.
 
 
 
@@ -199,7 +199,7 @@ HA-pair management
 
 A fully configured TrinityX HA cluster will automatically perform a failover upon a critical failure. There are however a few guidelines that should be kept in mind when managing the cluster. These include bringing a failing secondary controller up, bringing the cluster up from a cold state (a state in which both the primary and secondary controllers were down such us a power failure) or recovering the new secondary node after a successful failover.
 
-Upon a failure of the secondary node or a successful failover the system adminstraors should be notified in order for them to either fix the issues on the secondary node in the first case, or to recover the new secondary node in the second case. Otherwise, if these failures remain unhandled, they will interfere with the proper execution of a failover in a case where the primary controller encounters another issue.
+Upon a failure of the secondary node or a successful failover the system administrators should be notified in order for them to either fix the issues on the secondary node in the first case, or to recover the new secondary node in the second case. Otherwise, if these failures remain unhandled, they will interfere with the proper execution of a failover in a case where the primary controller encounters another issue.
 
 As such, the monitoring system should include checks to monitor the state of the HA cluster.
 
@@ -226,7 +226,7 @@ Maintenance
 
 During the lifetime of the cluster a sysadmin might need to change configuration files, update packages or restart services. Doing so, however can have a negative impact on the cluster as it might trigger a failover. To avoid such behaviour and temporarily prevent pacemaker from interfering with the state of the cluster it is advised that the maintenance mode be activated before applying any changes. 
  
-This way, the admins can take full control of the cluster to perform any required operations without having to worry about the state of the cluster. maintenance mode in pacemaker can be enabled by running the following command:: 
+This way, the admins can take full control of the cluster to perform any required operations without having to worry about the state of the cluster. Maintenance mode in pacemaker can be enabled by running the following command:: 
  
     pcs property set maintenance-mode=true 
  
@@ -239,7 +239,7 @@ It is expected that this mode be deactivated once the maintenance operations are
 Conclusion
 ----------
 
-With few carefuly chosen resources and constraints, the TrinityX HA configuration reaches all the design goals that were specified earlier:
+With few carefully chosen resources and constraints, the TrinityX HA configuration reaches all the design goals that were specified earlier:
 
 - It is correct (barring bugs in the underlying software), as proven by repetitive testing of failover between controller nodes;
 
