@@ -18,7 +18,7 @@ The TrinityX configuration tool will install and configure all packages required
 The configuration for a default controller installation is described in the file called ``controller.yml``, as well as the files located in the ``group_vars/`` subdirectory of the TrinityX tree, while the list of machines to which the configuration needs to be applied is described in the file called ``hosts``::
 
     # pwd
-    ~/trinityX
+    ~/trinityX/site/
 
     # ls hosts controller.yml group_vars/
     hosts  controller.yml
@@ -32,16 +32,20 @@ These files can be edited to reflect the user's own installation choices. For a 
 Once the configuration files are ready, the ``controller.yml`` ansible playbook can be run to apply the configuration to the controller(s)::
 
     # pwd
-    ~/trinityX
+    ~/trinityX/site/
 
     # ansible-playbook controller.yml
 
+.. note:: By default, high availability is enabled in the installer, so it expects to have access to two machines which will become the controllers. To install a non-HA version you need to update the ``ha`` variable in ``group_vars/all``. For more details on the high availability configuration you can consult :doc:`ha_design`.
+
+If more verbose output is desired during the installation process, you can use `ansible-playbook`'s `-v` option. The verbosity level will increase according to the number of `v`s.
 For further details about the use of ansible, including its command line options, please consult the `official ansible documentation <https://docs.ansible.com/>`_.
+
 
 `controller.yml` playbook
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When running this playbook for the first time, you will see some initial warning that some luna inventory could no be parsed. What these warnings mean is that `luna` could not not be queried for a list of nodes and osimages which is normal at this point of the installation since luna has not been configured yet::
+When running this playbook for the first time, you will see some initial warning that some luna inventory could no be parsed (luna is the cluster provisioning tool included in TrinityX). What these warnings mean is that `luna` could not not be queried for a list of nodes and osimages which is normal at this point of the installation since luna has not been configured yet::
 
     [WARNING]:  * Failed to parse /etc/ansible/hosts/luna with script plugin: Inventory script
     (/etc/ansible/hosts/luna) had an execution error: Traceback (most recent call last):   File
@@ -93,7 +97,7 @@ Compute node image creation
 
 The creation and configuration of an OS image for the compute nodes uses the same tool and a similar configuration file as for the controller. While the controller configuration applies its setting to the machine on which it runs, the image configuration does so in a directory that will contain the whole image of the compute node.
 
-.. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified. Creating a new image is only useful for an initial installation, or when desiring to start from a clean one. Another scenario is a setup fully controlled by ansible - in this case to create the image it is possible to copy ``compute.yml`` and update ``image_name`` variable to reflect the new image's name.
+.. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified. Creating a new image is only useful for an initial installation, or when desiring to start from a clean one. Another scenario might be a cluster where all configuration (creation, deletion, ...) must be fully controlled by ansible - in this case to create the image it is possible to copy ``compute.yml`` and update ``image_name`` variable to reflect the new image's name.
 
 
 The setup of the default image is defined in the playbook ``compute.yml``, which controls the creation of a new filesystem directory and applies the image configuration. The ``compute.yml`` file includes the ``trinity-image.yml`` playbook as a dependency. This latter is a playbook that applies a standard Trinity image configuration.
