@@ -84,9 +84,11 @@ Steps to install TrinityX
 
 10. Start TrinityX installation::
 
-     # ansible-playbook controller.yml |& tee -a install.log
+     # ansible-playbook controller.yml
 
    **Note**: If errors are encoutered during the installation process, analyze the error(s) in the output and try to fix it then re-run the installer.
+
+   **Note**: By default, the installation logs will be available at ``/var/log/ansible.log``
 
 11. Create a default OS image::
 
