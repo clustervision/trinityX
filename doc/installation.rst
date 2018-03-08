@@ -38,7 +38,7 @@ Once the configuration files are ready, the ``controller.yml`` ansible playbook 
 
 .. note:: By default, high availability is enabled in the installer, so it expects to have access to two machines which will become the controllers. To install a non-HA version you need to update the ``ha`` variable in ``group_vars/all``. For more details on the high availability configuration you can consult :doc:`ha_design`.
 
-If more verbose output is desired during the installation process, you can use `ansible-playbook`'s `-v` option. The verbosity level will increase according to the number of `v`s.
+If more verbose output is desired during the installation process, you can use ``ansible-playbook``'s ``-v`` option. The verbosity level will increase according to the number of ``v``.
 For further details about the use of ansible, including its command line options, please consult the `official ansible documentation <https://docs.ansible.com/>`_.
 
 
@@ -119,4 +119,9 @@ Updating images and nodes
 
 It is worth pointing out that the ``compute.yml`` or any copy thereof can be applied to both existing images and/or live nodes without issues. All that needs to be done is updating the list of hosts to which it applies.
 
-By default ``compute.yml`` applies to the host `compute.osimages.luna` which means it only applies to the image called `compute`. Therefore, it can either be changed to `osimages.luna`, in which case it will apply to all osimages, or to `new_image.osimages.luna` in which case it will apply to the image called `new_image`. Alternatively, the construct `*.nodes.luna` which refers to the nodes managed by luna can be used. Similarly, it can either be used to refer to all nodes: `nodes.luna`, or to a single node: `node001.nodes.luna`.
+By default ``compute.yml`` applies to the host `compute.osimages.luna` which means it only applies to the image called `compute`. It is, therefore, possible to apply the same playbook to all images, a compute node or all nodes if so desired. To do so, the hosts definitions in both ``trinity-image.yml`` and ``compute.yml`` will need to be updated to either of the following:
+
+    - "osimages.luna" which will cover all osimages defined in Luna.
+    - "nodes.luna" which will cover all nodes defined in Luna.
+    - "node001.nodes.luna" which will only cover node001 as is defined in Luna.
+
