@@ -88,11 +88,11 @@ Steps to install TrinityX
 
    **Note**: If errors are encoutered during the installation process, analyze the error(s) in the output and try to fix it then re-run the installer.
 
-   **Note**: By default, the installation logs will be available at ``/var/log/ansible.log``
+   **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
 
 11. Create a default OS image::
 
-    # ansible-playbook compute.yml |& tee -a image.log
+    # ansible-playbook compute.yml
 
 Now you have your controller(s) installed and the default OS image created!
 
