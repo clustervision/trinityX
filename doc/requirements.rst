@@ -87,7 +87,7 @@ Also, these installer dependencies need to be available on that machine:
 
 - luna-ansible::
 
-    # curl https://updates.clustervision.com/luna/luna.repo > /etc/yum.repos.d/luna.repo
+    # curl https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo > /etc/yum.repos.d/luna-1.2.repo
     # yum install luna-ansible
 
 Lastly, since Ansible uses ssh to deploy the configuration, the machine running the installer (whether it be one of the controllers or a third one) should have passwordless access to the controller(s)-to-be. As such, care must be taken to put its key in ``/root/.ssh/authorized_keys`` on the controller(s)-to-be.
