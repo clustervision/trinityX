@@ -107,7 +107,7 @@ Srun and mpirun in job scripts
 Usually you don't need to use srun in job scripts. Spawning multiple copies of binary is usually performed by mpi library. To get the idea of how things are working in sbatch context you can can check of the following output::
 
     #!/bin/bash
-    #SBATCH --partitio=defq
+    #SBATCH --partition=defq
     #SBATCH --nodes=2
 
     echo "======= hostname: ======="
