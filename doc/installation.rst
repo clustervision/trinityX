@@ -6,7 +6,7 @@ This document describes the installation of a TrinityX controller, as well as th
 
 Starting with the 11th release, Ansible is fully integrated into TrinityX. This allows for a lot of flexibility when installing a cluster.
 
-The requirements for all the components of a TriniryX cluster are described in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machines are ready for the TrinityX configuration.
+The requirements for all the components of a TrinityX cluster are described in the :doc:`requirements`. It is assumed that the guidelines included in this document have been followed, and that the controller machines are ready for the TrinityX configuration.
 
 .. note:: While the procedure to create compute images needs to be run from the cluster controller (the primary controller when in HA mode) the installation procedure of the controllers themselves can be run from any arbitrary machine (including your laptop).
 
