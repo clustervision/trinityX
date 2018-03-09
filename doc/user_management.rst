@@ -2,33 +2,62 @@
 User management in a TrinityX cluster
 =====================================
 
-User management in TrinityX is handled by a utility called obol. obol is a simple wrapper around LDAP commands to update the local LDAP directory that is installed by default. It supports both user and group management almost the same way those would be handled by the default linux utilities.
+User management in TrinityX is handled by a utility called obol. obol is a simple wrapper around LDAP commands to update the local LDAP directory that is installed by default. It supports both user and group management almost the same way those would be handled by the default Linux utilities.
 
 
 
 obol
 ----
 
-For the full list of the operations supported by obol, you can run::
+obol can manage users and groups on the local LDAP directory and it supports the following attributes for users:
+    
+============= =============
+ Attribute     Description
+============= =============
+``password``  User's password
+``cn``        User's name (common name)
+``sn``        User's surname
+``givenName`` User's given name
+``group``     The primary group the user belongs to
+``uid``       The user's ID
+``gid``       The primary group's ID
+``mail``      Email address of the user
+``phone``     Phone number
+``shell``     Default shell
+``groups``    A comma separated list of additional group names to add the user to.
+``expire``    Number of days after which the account expires. If set to -1, the account will never expire
+
+============= =============
+
+To create or modify a user you can run::
+    # obol user add|modify ...
+
+.. note:: Please note that running obol commands requires root privileges.
+
+Managing group is similarly achieved using::
+    # obol group [command] ....
+Where command can either be ``add``, ``show``, ``delete``, ``list``, ``addusers`` or ``delusers``
+
+For the full list of the commands supported by obol, you can run::
 
     obol user -h
-    obol user [op] -h
+    obol user [command] -h
 
     obol group -h
-    obol group [op] -h
+    obol group [command] -h
 
 
 
 Cluster access
 --------------
 
-When configured, TrinityX can setup a group based access control system (GBAC) so as to allow or deny access based on the groups a user belongs to.
+TrinityX supports both a group based access control system as a Slurm PAM based one where only users with running jobs can access the resources allocated to them.
 
-By default TrinityX only allows access to the cluster nodes for users that belong to either of ther groups: ``admins`` or ``users``.
+When group based access control (GBAC) is used, TrinityX will allow or deny access to the compute nodes based on the groups a user belongs to. By default TrinityX only allows access to users that belong to the group ``admins``.
 
-This is managed by the configuration option ``CTRL_ALLOWED_GROUPS="admins users"`` in the controller-HA.cfg file.
+The configuration option that allows choosing either of the two described access modes is ``slurm_pam_enabled`` in the installer configuration. If set to `true`, Slurm PAM will be used, otherwise, group based filtering will be used.
 
-If for some reason we need to update the list of groups that have access or disable this control all together, we can do so by updating sssd.conf on each of the nodes. We need to change ``ldap_access_order`` from ``filter,expire`` to ``expire``
+.. note:: If for some reason the need to update the list of groups that have access to the nodes or disable this control all together, ``sssd.conf`` will need to be updated on each of the nodes. You will want to change ``ldap_access_filter`` or ``ldap_access_order`` from ``filter,expire`` to ``expire``.
 
 
 
@@ -68,7 +97,7 @@ The local one `dn: dc=local` is already accounted for in the proxy with a `dn: d
     olcDbURI: "ldapi:///dc=remote,dc=cluster" ldap://ldap.university.edu
     olcDbRewrite: {0}suffixmassage "dc=remote,dc=cluster" "dc=university,dc=edu"
 
-Then sssd configuration must updated to point to the proxy database:
+Then sssd configuration must be updated to point to the proxy database:
 
 - `ldap_search_base` has to refer to `dc=cluster`
 

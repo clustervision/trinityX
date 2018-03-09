@@ -3,7 +3,8 @@ Running docker apps on a cluster
 ================================
 
 TrinityX comes with the ability to run arbitrary dockerized MPI jobs on a cluster.
-Please consult the `official docker documentation <https://docs.docker.com/>`_ for more information.
+
+.. note:: Please consult the `official docker documentation <https://docs.docker.com/>`_ for more information on docker and how it works.
 
 The only requirement to be able to run such jobs is to have openssh-server running in the container and listening on the non-standard port 2222.
 
@@ -21,7 +22,7 @@ Building on the controller
 A TrinityX controller comes pre-installed with docker and docker-registry (assuming that the docker option was selected at install time).
 This makes it possible for an administrator to create a docker image that can subsequently be run on the cluster.
 
-It is worth repeating here, in other words, that regular users cannot issue docker commands and that it is up to the admins to do so.
+It is worth mentioning here that regular users cannot issue docker commands unless they are allowed to by the admins.
 
 With that cleared-up, let's build a docker image that we can then use to run an OSU MPI benchmark:
 
@@ -54,13 +55,13 @@ It also installs all the dependencies required to run the OSU benchmarks.
 
 3. We then can build our image using `docker build`::
 
-    docker build -t <controller-hostname>:5000/osu .
+    # docker build -t <controller-hostname>:5000/osu .
 
 Make sure to replace <controller-hostname> with the correct hostname.
 
 4. Lastly, we need to publish our image so that the compute nodes can fetch it when required::
 
-    docker push <controller-hostname>:5000/osu
+    # docker push <controller-hostname>:5000/osu
 
 
 Using a remote docker registry
