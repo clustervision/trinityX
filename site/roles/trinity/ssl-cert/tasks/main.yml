@@ -1,16 +1,21 @@
 ---
-- name: Ensure '{{ ssl_cert_owner }}' user exists
-  user:
-    name: '{{ ssl_cert_owner }}'
-    uid: '{{ ssl_cert_owner_id }}'
-    system: yes
-  when: ssl_cert_owner not in 'root'
+- block:
 
-- name: Ensure '{{ ssl_cert_group }}' group exists
-  group:
-    name: '{{ ssl_cert_group }}'
-    gid: '{{ ssl_cert_group_id }}'
-    system: yes
+  - name: Ensure '{{ ssl_cert_owner }}' user exists
+    user:
+      name: '{{ ssl_cert_owner }}'
+      uid: '{{ ssl_cert_owner_id }}'
+      system: yes
+    when: ssl_cert_owner not in 'root'
+  
+  - name: Ensure '{{ ssl_cert_group }}' group exists
+    group:
+      name: '{{ ssl_cert_group }}'
+      gid: '{{ ssl_cert_group_id }}'
+      system: yes
+
+  when: ansible_connection not in 'lchroot'
+        and not compute|default(False)
 
 - block:
 
@@ -77,3 +82,15 @@
       recurse: yes
 
   when: primary|default(True)
+        and ansible_connection not in 'lchroot'
+        and not compute|default(False)
+
+- name: Add CA certificate to default trust store
+  copy:
+    src: '{{ ssl_cert_path }}/cluster-ca.crt'
+    dest: '/etc/pki/ca-trust/source/anchors/cluster-ca.crt'
+  register: cert_copy
+
+- name: Update certificate trust store
+  shell: update-ca-trust
+  changed_when: cert_copy.changed
