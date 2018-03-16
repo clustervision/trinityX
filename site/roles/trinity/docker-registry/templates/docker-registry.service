@@ -1,0 +1,19 @@
+[Unit]
+Description=Docker private registry
+After=docker.service
+
+[Service]
+ExecStartPre=-/usr/bin/docker stop registry
+ExecStartPre=-/usr/bin/docker rm registry
+ExecStart=/usr/bin/docker run --name registry -p 0.0.0.0:5000:5000 \
+                              -v {{ docker_ssl_path }}:/certs:ro \
+                              -v {{ docker_registry_path }}:/var/lib/registry \
+                              -e 'REGISTRY_HTTP_TLS_CERTIFICATE=/certs/{{ docker_ssl_cert }}' \
+                              -e 'REGISTRY_HTTP_TLS_KEY=/certs/{{ docker_ssl_key }}' \
+                              registry
+ExecStop=-/usr/bin/docker stop registry
+Restart=always
+RestartSec=15s
+
+[Install]
+WantedBy=multi-user.target
