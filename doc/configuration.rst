@@ -21,7 +21,7 @@ trix_version            -             -                  The TrinityX version nu
 project_id              string        000000             Project ID or string that'll show up in the default shell prompt on the controllers.
                                                          A pure esthetical configuration option that gives to shell prompts of the format `000000 hh:mm:ss [root@hostname ~]#`
 
-ha                      boolean       true               This options allows to choose whether to do a highly available setup on two controllers or a single controller setup.
+ha                      boolean       true               This option allows to choose whether to do a highly available setup on two controllers or a single controller setup.
                                                          Set to 'False' to disable HA.
 
 trix_domain             hostname      'cluster'          A domain name to be assigned to the controller(s) and nodes on the internal network.
@@ -43,7 +43,7 @@ trix_ctrl2_ip           IP address    '10.141.255.253'   This option is ignored 
                                                          In HA setups, this is the IP address of the second controller.
 
 trix_ctrl_ip            IP address    '10.141.255.252'   This option is set by the installer to the value of `trix_ctrl1_ip` in a single controller setup.
-                                                         In HA setups, this the controllers' floating IP address that will always point to the controller with the primary role.
+                                                         In HA setups, this is the controllers' floating IP address that will always point to the controller with the primary role.
 
 trix_ctrl1_bmcip        IP address    '10.148.255.254'   Only useful in HA setups for fencing purposes.
                                                          This is the IP address of the BMC on the first controller that will be used to enable IPMI LAN fencing.
@@ -88,7 +88,7 @@ shared_fs_device        Path          '/dev/vdb'         A path to the device th
 Role specific variables
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Listed bellow is a list of options that each ansible role in TrinityX supports.
+Below is a list of options that each ansible role in TrinityX supports.
 
 The default values for each variable are set in `site/controller.yml`. For the sake of simplicity, not all variables appear in that file. You can find those missing variables and their defaults in the ansible role itself, in defaults directory (`site/roles/trinity/*/defaults/main.yml`).
 
@@ -152,8 +152,8 @@ modulefiles_path    Path          `trix_shared`/modulefiles Path where modulefil
 ============================ ============= ================ =============
 firewalld_public_interfaces  List          ['eth2']         A list of network interfaces that are considered to be public. i.e. used to access networks that are external to the cluster.
 firewalld_trusted_interfaces List          ['eth0', 'eth1'] A list of network interfaces that are considered to be trusted. i.e. used to access networks that are interal to the cluster.
-firewalld_public_tcp_ports   List          [443]            A list of TCP ports that will be allowd on the the public interfaces defined in `firewalld_public_interfaces`
-firewalld_public_udp_ports   List          []               A list of UDP ports that will be allowd on the the public interfaces defined in `firewalld_public_interfaces`
+firewalld_public_tcp_ports   List          [443]            A list of TCP ports that will be allowd on the public interfaces defined in `firewalld_public_interfaces`
+firewalld_public_udp_ports   List          []               A list of UDP ports that will be allowd on the public interfaces defined in `firewalld_public_interfaces`
 ============================ ============= ================ =============
 
 `luna` role
@@ -413,9 +413,9 @@ Global variables
 ======================= ============= ================== =============
      Variable               value        default          description
 ======================= ============= ================== =============
-image_name              String        compute            The name of the OS image to create or apply the playbook to
+image_name              String        compute            The name of the OS image to create or to which to apply the playbook
 image_password          String                           The password to set up for the root user in the image.
-                                                         If empty, it will be set to a randomly generated one.
+                                                         If empty, it will be randomly generated.
 
 ======================= ============= ================== =============
 
