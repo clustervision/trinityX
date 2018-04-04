@@ -36,7 +36,7 @@ The script only makes use of Linux utilities that are available at provisioning 
 	mkdir /sysroot/boot
 	mount /dev/sda1 /sysroot/boot
 
-Sometimes, it might be desired to format the compute disks using a different filesystem that is not included in initial ramdisk in which the partitioning script is called. In such cases it is required to update the ``dracut`` configuration in the osimage to include the desired filesystem support and utilities then pack it up.
+It may be necessary to format the compute disks using a different filesystem not included in the initial ramdisk called by the partitioning script. In such cases, update the ``dracut`` configuration in the osimage to include the desired filesystem support and utilities and then pack it up.
 
 
 LVM based scheme
@@ -44,7 +44,7 @@ LVM based scheme
 
 Sometimes, it might be useful to have an LVM based disk layout on the compute nodes, either for the root filesystem or for scratch storage.
 
-Following, is an example of a simple LVM partitioning scheme that uses the logical volume ``storage/root`` for the root filesystem on the compute nodes::
+The following is an example of a simple LVM partitioning scheme that uses the logical volume ``storage/root`` for the root filesystem on the compute nodes::
 
     # Partition the sda disk
 	parted /dev/sda -s 'mklabel msdos'
