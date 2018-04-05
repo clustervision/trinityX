@@ -29,7 +29,7 @@ The configuration for a default controller installation is described in the file
 
 These files can be edited to reflect the user's own installation choices. For a full list of configuration options supported by TrinityX, refer to :doc:`configuration`.
 
-Once the configuration files are ready, the ``controller.yml`` ansible playbook can be run to apply the configuration to the controller(s)::
+Once the configuration files are ready, the ``controller.yml`` Ansible playbook can be run to apply the configuration to the controller(s)::
 
     # pwd
     ~/trinityX/site/
@@ -39,7 +39,7 @@ Once the configuration files are ready, the ``controller.yml`` ansible playbook 
 .. note:: By default, high availability is enabled in the installer, so it expects to have access to two machines which will become the controllers. To install a non-HA version, you need to update the ``ha`` variable in ``group_vars/all``. For more details on the high availability configuration you can consult :doc:`ha_design`.
 
 If more verbose output is desired during the installation process, you can use ``ansible-playbook``'s ``-v`` option. The verbosity level will increase according to the number of ``v``.
-For further details about the use of ansible, including its command line options, please consult the `official ansible documentation <https://docs.ansible.com/>`_.
+For further details about the use of Ansible, including its command line options, please consult the `official Ansible documentation <https://docs.ansible.com/>`_.
 
 
 `controller.yml` playbook
@@ -56,7 +56,7 @@ When running this playbook for the first time, you will see initial warnings tha
     [...]
 
 
-The rest of the output would be a list of all the tasks that ansible is running on controller(s)::
+The rest of the output would be a list of all the tasks that Ansible is running on controller(s)::
 
     [...] 
 
@@ -97,7 +97,7 @@ Compute node image creation
 
 The creation and configuration of an OS image for the compute nodes uses the same tool and a similar configuration file as for the controller. While the controller configuration applies its setting to the machine on which it runs, the image configuration does so in a directory that will contain the whole image of the compute node.
 
-.. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified. Creating a new image is only useful for an initial installation, or when desiring to start from a clean one. Another scenario might be a cluster where all configuration (creation, deletion, ...) must be fully controlled by ansible - in this case to create the image it is possible to copy ``compute.yml`` and update ``image_name`` variable to reflect the new image's name.
+.. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified. Creating a new image is only useful for an initial installation, or when desiring to start from a clean one. Another scenario might be a cluster where all configuration (creation, deletion, ...) must be fully controlled by Ansible - in this case to create the image it is possible to copy ``compute.yml`` and update ``image_name`` variable to reflect the new image's name.
 
 
 The setup of the default image is defined in the playbook ``compute.yml``, which controls the creation of a new filesystem directory and applies the image configuration. The ``compute.yml`` file includes the ``trinity-image.yml`` playbook as a dependency. The latter is a playbook that applies a standard Trinity image configuration.
