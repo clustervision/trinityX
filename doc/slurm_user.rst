@@ -4,33 +4,33 @@ Hints and tips for SLURM
 Basic operations
 ~~~~~~~~~~~~~~~~
 
-Slurm is an open source, fault-tolerant, and highly scalable cluster management and job scheduling system for large and small Linux clusters. Good starting point to learn more about SLURM is official site::
+Slurm is an open source, fault-tolerant, and highly scalable cluster management and job scheduling system for large and small Linux clusters. A good starting point to learn more about SLURM is the official site::
 
     https://slurm.schedmd.com/quickstart.html
 
-Paired with munge (for secure communication) SLURM provides scheduling facilities in TrinityX. It allows to use cluster simultaneously for multiple users without affecting each other jobs. The simplest way of getting access to node in SLURM is to issue the following::
+Paired with munge (for secure communication), SLURM provides scheduling facilities in TrinityX. It allows use of the cluster simultaneously by multiple users without affecting each others' jobs. The simplest way of getting access to node in SLURM is to issue the following::
 
     $ srun --nodelist=node001 hostname
     node001.cluster
 
-List of all available nodes and partitions can be inspected in ``sinfo`` output.
+A list of all available nodes and partitions can be inspected in ``sinfo`` output.
 
-In this quick example node001 was allocated, ssh client  connected to node001 and ``hostname`` command was issued on node001. Another way of running commands is to allocate resources first and then execte srun::
+In this quick example, node001 was allocated, the ssh client connected to node001, and the ``hostname`` command was issued on node001. Another way of running commands is to allocate resources first and then execute srun::
 
     $ sallocate --nodelist=node001,node002
     $ srun hostname
     node001.cluster
     node002.cluster
 
-During the allocation status of the nodes can be viewed in ``squeue`` output::
+During allocation, the status of nodes can be viewed in the ``squeue`` output::
 
     $ squeue
     JOBID PARTITION     NAME        USER ST       TIME  NODES NODELIST(REASON)
      3439      defq     bash   cvsupport  R       0:02      2 node[001-002]
 
-In most of the cases output above means that nodes are being exclusively 'owned' by user and no other job or user within SLURM will be not unable to use these nodes to compute their jobs. However it might be not true if SLURM cluster is configured in shared mode.
+In most cases, the output above means that nodes are exclusively 'owned' by a user and no other job or user within SLURM can use these nodes to compute their jobs. However, it might be not true if a SLURM cluster is configured in shared mode.
 
-If SLURM is unable to allocate resources it put requestir to a waiting line::
+If SLURM is unable to allocate resources, it will queue requestir to wait::
 
     $ salloc --nodelist=node001,node002
     salloc: Pending job allocation 3440
@@ -40,50 +40,51 @@ If SLURM is unable to allocate resources it put requestir to a waiting line::
     JOBID PARTITION     NAME        USER ST       TIME  NODES NODELIST(REASON)
      3440      defq     bash   cvsupport PD       0:00      2 (Resources)
 
-``ST`` column show the status of job allocation. For example ``R`` is for running and ``PD`` is for pending. Other codes can be found in ``man squeue``.
+The ``ST`` column shows the status of job allocation. For example, ``R`` is for running and ``PD`` is for pending. Other codes can be found in ``man squeue``.
 
-Specifying the list of the nodes for jobs is not a good practice, as you need to be sure nodes are available. Better approach is to specify partition to run and amount of nodes::
+Specifying the list of nodes for jobs is not good practice, as one must be sure the nodes are available. A better approach is to specify a partition to run and a quantity of nodes::
 
     $ srun --partition=defq --nodes=2 hostname
     node004.cluster
     node005.cluster
 
-Partitions is a way to organize nodes in cluster. Usually all nodes in partition is homogeneous, i.e. have the same hardware configuration, same software installed and have access to same resources, like shared filesystems.
+Partitioning is a method of organizing nodes in cluster. Usually all nodes in a given partition are homogeneous, i.e. have the same hardware configuration, same software installed, and access to the same resources, like shared filesystems.
 
 Using sbatch
 ~~~~~~~~~~~~
 
-``srun`` and ``salloc`` comandsa are great if it needs to run interactive jobs. For long-running tasks ``sbatch`` comes into play. ``sbatch`` allows to submit job file into the queuing system. Job file usually is the ordinary shell script file with directives for SLURM. Directives are starting with ``#SBATCH`` and usually located in the beginning of the job file. You can submit job file without any directives and SLURM will consider some defaults: i.e. sallocate single node, put job to default partition, etc. Usually it is worth to change such behaviour. Here is the example of basic script::
+``srun`` and ``salloc`` commands are useful when running interactive jobs. For long-running tasks, ``sbatch`` comes into play. ``sbatch`` allows a user to submit a job file into the queuing system. A job file is usually the ordinary shell script file with directives for SLURM. Directives start with ``#SBATCH`` and are usually located in the beginning of the job file. A job file may be submitted without any directives and SLURM will apply some defaults: i.e. allocate single node, put the job to a default partition, etc. Usually it is worthwhile to change such behaviour. Here is an example of a basic script::
 
     #!/bin/bash
     #SBATCH --partition=defq
     #SBATCH --nodes=2
     hostname
 
-To submit job put content above to ``test01.job`` file and simpy run::
+To submit a job, set content above to the ``test01.job`` file and simpy run::
 
     $ sbatch test01.job
 
-Please note that you might not have defq partition confugured in your cluster. Please check ``sinfo`` output.
+Please note that you might not have defq partition configured in your cluster. Check ``sinfo`` output.
 
-After job finishes output of the job will appear in your home directory. It  will be called ``slurm-3443.out`` where 3443 is a job number.
-If job failed for some reason, file ``slurm-3443.err`` will be created. First file - ``.out`` - contains STDOUT from job script, and ``.err`` have STDERR content. You can customize path and name of these files::
+After a job finishes, output of the job will appear in the home directory, titled ``slurm-3443.out``, in which 3443 is a job number.
+
+If the job failed for some reason, the file ``slurm-3443.err`` will be created. The first file - ``.out`` - contains STDOUT from job script and ``.err`` has STDERR content. The path and name of these files can be customized::
 
     #SBATCH --output=/path/to/store/outputs/myjob-%J.out
     #SBATCH --error=/path/to/store/outputs/myjob-%J.err
 
-Where job number will be substituted instead of %J variable. For more variables please have a look to ``man sbatch``.
+The job number will be substituted instead of the %J variable. For more variables, please have a look at ``man sbatch``.
 
-By default job assumes that current working direrctory is a home dir of the user. You can customize it, specifying ``--workdir=``::
+By default, a job assumes that the current working direrctory is a home dir of the user. It can be customized, specifying ``--workdir=``::
 
     #SBATCH --workdir=/new/home/dir/
 
-In addition you can specify number of nodes, dependencies, starting time and change many other tunables. All of them are described in ``man sbatch``.
+In addition, you can specify the number of nodes, dependencies, starting time, and change many other tunables. All are described in ``man sbatch``.
 
 Variables in job scripts
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-During job execution SLURM provides several environmental variables. It might be handy for logging purposes of job can tune its behaviour based on them::
+During job execution, SLURM provides several environmental variables. A job is capable of tuning its behavior based on these variables, something handy for logging purposes::
 
     #!/bin/bash
     #SBATCH --partition=defq
@@ -92,19 +93,19 @@ During job execution SLURM provides several environmental variables. It might be
     echo "Job is running on ${SLURM_JOB_NUM_NODES} nodes"
     echo "Allocated nodes are: ${SLURM_JOB_NODELIST}"
 
-Output will contain::
+The output will contain::
 
     $ cat slurm-3444.out
     Job is running on 2 nodes
     Allocated nodes are: node[001-002]
 
-In addition more than 100 variables are available. For reference, please run ``man sbatch``.
+In addition, more than 100 variables are available. For reference, please run ``man sbatch``.
 
 
 Srun and mpirun in job scripts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Usually you don't need to use srun in job scripts. Spawning multiple copies of binary is usually performed by mpi library. To get the idea of how things are working in sbatch context you can can check of the following output::
+Usually, it is unnecessary to use srun in job scripts. Spawning multiple copies of a binary is usually performed by mpi library. To get an idea of how things are working in sbatch context you can can check on the following output::
 
     #!/bin/bash
     #SBATCH --partition=defq
@@ -118,9 +119,9 @@ Usually you don't need to use srun in job scripts. Spawning multiple copies of b
     module load openmpi/2.0.1
     mpirun hostname
 
-Please note that ``module load`` line might differ in your environment.
+Please note that the ``module load`` line might differ in your environment.
 
-And the output will be similar to::
+The output will be similar to::
 
     $ cat slurm-3447.out
     ======= hostname: =======
@@ -138,7 +139,7 @@ And the output will be similar to::
     node002.cluster
     node002.cluster
 
-The number of mpirun hostnames depends of the number of cores in the nodes.
+The number of mpirun hostnames depends on the number of cores in the nodes.
 
 Running MPI application. Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -174,7 +175,7 @@ To be concrete, let's take MPI Hello Word from `MPI Tutorial <http://mpitutorial
 		MPI_Finalize();
 	}
 
-Now we need to compile application with one of the MPI version you have installed on your cluster::
+Now we need to compile the application with one of the MPI versions installed on the cluster::
 
     $ module load openmpi/2.0.1
     $ mpicc -o mpi-hello.bin mpi-hello.c
@@ -192,7 +193,7 @@ And run it::
 
     $ sbatch test03.job
 
-In output file you will see something like::
+In the output file, something like the following will appear::
 
     Hello world from processor node001.cluster, rank 2 out of 4 processors
     Hello world from processor node001.cluster, rank 1 out of 4 processors
@@ -203,4 +204,4 @@ In output file you will see something like::
     Hello world from processor node002.cluster, rank 0 out of 4 processors
     Hello world from processor node002.cluster, rank 2 out of 4 processors
 
-You are done. Here you created and run our first MPI application on HPC cluster.
+You are done! You have now created and run your first MPI application on the HPC cluster.
