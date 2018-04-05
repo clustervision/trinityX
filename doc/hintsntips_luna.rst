@@ -6,9 +6,9 @@ Hints and tips for a Luna installation
 Setting up a compute node image
 -------------------------------
 
-.. note:: This chapter assumes that you are familiar with the TrinityX configuration tool and the configuration files that it uses. If not, please refer to the general :doc:`index` first.
+.. note:: This chapter assumes familiarity with the TrinityX configuration tool and the configuration files that it uses. If not, please refer to the general :doc:`index` first.
 
-TrinityX includes configuration files to automatically create a basic compute node image. Upon delivery of a new cluster, this will have been completed by our engineers and the image will be integrated in your provisioning system, in this case Luna.
+TrinityX includes configuration files to automatically create a basic compute node image. Upon delivery of a new cluster, this will have been completed by ClusterVision engineers and the image will be integrated into the provisioning system, in this case Luna.
 
 
 Cloning an existing image
@@ -37,16 +37,16 @@ The easiest way to get a new image for modifications is to clone an existing one
 Creating a new image
 ~~~~~~~~~~~~~~~~~~~~
 
-In some other cases you may prefer to start from a fresh image. In that case copy the existing playbook and change name of the image (``image_name`` variable and ``hosts`` target)::
+In some cases it may be preferable to start from a fresh image. In that case, copy the existing playbook and change the name of the image (``image_name`` variable and ``hosts`` target)::
 
     # cp compute.yml new-compute.yml
     # sed -i -e 's/compute/new-compute/' new-compute.yml
 
-You might also want to customize your new image to add more roles. When done, run ``ansible-playbook``::
+In the event an image has been customized/more roles added, run ``ansible-playbook`` once finished::
 
     # ansible-playbook new-compute.yml
 
-To speed up creation time, it is possible to disable packing of the image. This is handy when testing your changes::
+To speed up creation time, it is possible to disable packing of the image. This is handy when testing changes::
 
     # ansible-playbook --skip-tags=wrapup-images  new-compute.yml
 
@@ -58,7 +58,7 @@ There are two approaches to creating new images in TrinityX: manually and via An
 
 In the manual approach, first clone the image with ``luna osimage clone`` and modify as a regular set of files or in chrooted environment.
 
-Regarding the manual modification of an image's content: Luna has a tool called ``lchroot``. It is a wrapper around the good old ``chroot`` tool, but with some additions and integration with Luna. In particular, it mounts /dev, /proc, /sys filesystems on start and unmounts on exit. Please don't try to pack the image if you have an ``lchroot`` session running. Packing the image at this point will pack the content of the mentioned service filesystems and this is probably not what you want.
+Regarding the manual modification of an image's content: Luna has a tool called ``lchroot``. It is a wrapper around the good old ``chroot`` tool, but with some additions and integration with Luna. In particular, it mounts /dev, /proc, /sys filesystems on start and unmounts on exit. Don't try to pack the image if an ``lchroot`` session is running. Packing the image at this point will pack the content of the mentioned service filesystems and this is probably not desired.
 
 The tool can also mock the kernel version allowing to install software which requires particular release::
 
@@ -70,7 +70,7 @@ The tool can also mock the kernel version allowing to install software which req
     chroot [root@new-compute /]$ uname -r
     3.10.0-693.5.2.el7.x86_64
 
-Before packing the image, you might want to change kernel options or the kernel version if you have several installed::
+Before packing the image, it may be desirable to change kernel options or the kernel version if several are installed::
 
     # luna osimage change new-compute --kernopts "console=ttyS1,115200n8 console=tty0 intel_pstate=disable"
 
@@ -215,7 +215,7 @@ Configuring interfaces
 
 In simple cases, networking will just work. But sometimes a non-trivial configuration is necessary, in cases where bonding, bridging, or a VLAN config is required. This can be done with Luna.
 
-First you might need to rename the interfaces::
+First, it may be necessary to rename the interfaces::
 
     # luna group change new-compute-group --interface BOOTIF --rename bond0
     INFO:group.new-compute-group:No boot interface for nodes in the group configured. DHCP will be used during provisioning.
@@ -225,11 +225,11 @@ And add two more interfaces::
     # luna group change new-compute-group --interface eth0 --add
     # luna group change new-compute-group --interface eth1 --add
 
-Then, change the configuration of the interfaces, as you would configure ``/etc/sysconfig/network-scripts/ifcfg-*`` files. To do so, specify the ``--edit`` argument::
+Then, change the configuration of the interfaces, as one would configure ``/etc/sysconfig/network-scripts/ifcfg-*`` files. To do so, specify the ``--edit`` argument::
 
     # luna group change new-compute-group --interface bond0 --edit
 
-This will open an editor for your convenience where you can type the config with regular ``ifcfg-*`` syntax. Optionally, the ``--edit`` flag accepts piping from STDIN::
+This will open an editor in which the configuration can be typed with regular ``ifcfg-*`` syntax. Optionally, the ``--edit`` flag accepts piping from STDIN::
 
     # cat << EOF | luna group change new-compute-group --interface bond0 --edit
     > TYPE=Bond
@@ -247,7 +247,7 @@ This will open an editor for your convenience where you can type the config with
     > SLAVE=yes
     > EOF
 
-Please note that you don't need to specify ``NAME=`` and ``DEVICE=`` for interfaces; ``IPADDR=`` and ``PREFIX=`` will be added automatically on a per-node basis.
+Please note that it is unnecessary to specify ``NAME=`` and ``DEVICE=`` for interfaces; ``IPADDR=`` and ``PREFIX=`` will be added automatically on a per-node basis.
 
 
 Scripts in groups
@@ -276,9 +276,9 @@ By default, every group is created with the default partscript where the osimage
 	mkdir /sysroot/boot
 	mount /dev/sda1 /sysroot/boot
 
-Please note that it is not necessary to change the osimage in order to make a node diskful. You can use the same image, but instead of mounting the ramdisk to ``/sysroot`` we put /dev/sda2 there.
+Please note that it is not necessary to change the osimage in order to make a node diskful. The same image can be used, but instead of mounting the ramdisk to ``/sysroot``, /dev/sda2 is placed there.
 
-To make a node self-contained, we still need to add bootloader and change fstab to tell systemd where to find ``/``::
+To make a node self-contained, bootloader should be added and fstab changed to communiate to systemd where to find ``/``::
 
     mount -o bind /proc /sysroot/proc
     mount -o bind /dev /sysroot/dev
@@ -296,7 +296,7 @@ To edit the script, simply run::
 
     # luna group change new-compute --partscript --edit
 
-It will open the editor for you. In addition, it supports piping::
+It will open the editor. In addition, it supports piping::
 
     # cat compute-part.txt | luna group change compute --partscript --edit
 
@@ -330,7 +330,7 @@ IP address for a node is always configured from the network defined in the corre
 
 It is possible to change the group for a node and Luna does its best to preserve configured IP addresses. It can be tricky as the set of interfaces on the destination group might be different from that of the source group.
 
-Further individual settings for node are ``--setupbmc`` and ``--service``. These are mostly relevant for debugging. The first allows you to disable attempts to configure BMC, as it is known this configuration might be flaky. ``--service`` tunable can be handy if an engineer needs to debug boot issues. Nodes in this mode will not try to run the install script, but will stay in the initrd stage, configure 2 consoles (Alt+F1, Alt+F2), and try to set up IP addresses and run ssh daemon. In addition, it can be used to inspect the hardware configuration of the node before setup and wiping of data on disks.
+Further individual settings for node are ``--setupbmc`` and ``--service``. These are mostly relevant for debugging. The first allows disabling of attempts to configure BMC, as it is known this configuration might be flaky. ``--service`` tunable can be handy if an engineer needs to debug boot issues. Nodes in this mode will not try to run the install script, but will stay in the initrd stage, configure 2 consoles (Alt+F1, Alt+F2), and try to set up IP addresses and run ssh daemon. In addition, it can be used to inspect the hardware configuration of the node before setup and wiping of data on disks.
 
 Another debug feature is a flag ``luna node show --script`` which accepts two options: ``boot`` and ``script``.
 
@@ -358,18 +358,18 @@ First check the status of ``node show`` to get an idea of where the issue is. If
 
 For PXE/iPXE issues, the first suspect is usually the firewall. Then, check if the node is able to get an IP address from the DHCP range: check ``/var/log/messages`` on the controller, lease file, and DHCP range in ``luna cluster show`` and ``/etc/dhcpd.conf``. Check if the node is able to download the ``luna_undionly.kpxe`` binary from the TFTP server using ``tftp get``.
 
-If a node is able to show the boot menu (blue one), but refuses to go further, check if the node has a proper MAC address configured. If the node has the switch/port configured, you can check ``luna cluster listmacs`` output to make sure Luna is able to acquire MAC addresses from the switches. Sometimes it takes several minutes to download all MAC addresses from all switches. Once this is done, check nginx logs in ``/var/log/nginx``, ``/var/log/luna/lweb_tornado.log``, and ``--script boot`` script. Then, check permissions and content in the ``~luna/boot`` folder. Be sure you ran ``osimage pack`` before trying to boot the node.
+If a node is able to show the boot menu (blue one), but refuses to go further, check if the node has a proper MAC address configured. If the node has the switch/port configured, check ``luna cluster listmacs`` output to make sure Luna is able to acquire MAC addresses from the switches. Sometimes it takes several minutes to download all MAC addresses from all switches. Once this is done, check nginx logs in ``/var/log/nginx``, ``/var/log/luna/lweb_tornado.log``, and ``--script boot`` script. Then, check permissions and content in the ``~luna/boot`` folder. Be sure ``osimage pack`` has been run before trying to boot the node.
 
 If the node is able to fetch the kernel and initrd (this will be visible in nginx logs), the next step in debugging is to be sure the kernel is able to boot. This usually has no issues; those which may arise are typically limited to general Lunux issues - incompatible hardware, for example.
 
-At this step you can get access to the console by pressing Alt+F1 or Alt+F2. Check if the node is pingable and accessible via ssh.
+At this step, access to the console can be gained by pressing Alt+F1 or Alt+F2. Check if the node is pingable and accessible via ssh.
 
 If Luna is unable to configure IP addresses, please check that the nodes have interfaces visible in ``ip a`` output. It might be a driver issue in this case. To fix it, add drivers to dracut. This can be done in ``/etc/dracut.conf.d`` in the osimage (don't forget to repack after changes!). In ``man dracut``, pay special attention to ``dracutmodules+=``, ``add_drivers+=`` and ``install_items+=``.
 
 If the network is working but the node is unable to proceed with installation, check the nginx logs to be sure the node is trying to download the installation script. Check the output of ``--script install`` to see the script. Check ``journalctl -xe`` on the node and search for occurrences of ``Luna``. Check the content of the ``/luna`` folder on the node. It should at least contain the ``install.sh`` script. Later, it will contain ``*.torrent`` file. The next step is to check the tarball in ``/sysroot`` on the node. It should exist and be the same size as in ``~luna/torrents``. Inspect nginx logs for ``announce`` URLs. Pay attention to the ``peer_id=`` and ``downloaded=`` section. Records with ``peer_id=lunalunalunalunaluna`` are originating from the controller.
 
-At this point, partscript should prepare ``/sysroot``, i.e. format and mount disks or mount ramdisk. If some issues arise here, be sure you have the desired filesystem in ``/proc/filesystems`` on the node. Otherwise, use ``filesystems+=`` for dracut in the osimage (and pack again).  Be sure you have enough space - 4G is absolute minimum. At some point during installation, the tarball itself and unpacked tarball will be present on the same filesystem, so a capacity of 2x the size of the osimage is required.
+At this point, partscript should prepare ``/sysroot``, i.e. format and mount disks or mount ramdisk. If some issues arise here, be sure the desired filesystem appears in ``/proc/filesystems`` on the node. Otherwise, use ``filesystems+=`` for dracut in the osimage (and pack again).  Be sure there is enough space - 4G is absolute minimum. At some point during installation, the tarball itself and unpacked tarball will be present on the same filesystem, so a capacity of 2x the size of the osimage is required.
 
-On this step, ``/sysroot`` should contain the same set of files as osimage configured for node. After ``postscript`` Luna dracut module is ready to exit and give control to systemd boot procedures. If boot gets stuck, check that the filesystem was configured in the previous step. A common error is the failure to mount any filesystem to ``/sysroot`` and unpack content just in memory.
+On this step, ``/sysroot`` should contain the same set of files as osimage configured for node. After ``postscript``, the Luna dracut module is ready to exit and give control to systemd boot procedures. If boot gets stuck, check that the filesystem was configured in the previous step. A common error is the failure to mount any filesystem to ``/sysroot`` and unpack content just in memory.
 
 For more details about Luna boot internals, read ``doc/hints-n-tips/boot-process.md`` in Luna's repository.
