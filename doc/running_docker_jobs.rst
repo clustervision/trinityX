@@ -4,30 +4,30 @@ Running docker apps on a cluster
 
 TrinityX comes with the ability to run arbitrary dockerized MPI jobs on a cluster.
 
-.. note:: Please consult the `official docker documentation <https://docs.docker.com/>`_ for more information on docker and how it works.
+.. note:: Please consult the `official docker documentation <https://docs.docker.com/>`_ for more information on Docker and how it works.
 
 The only requirement to be able to run such jobs is to have openssh-server running in the container and listening on the non-standard port 2222.
 
-It must also be kept in mind that the application that is to be run as an MPI job needs to be installed or pre-compiled in the container image.
+Keep in mind that the application to be run as an MPI job must be installed or pre-compiled in the container image.
 All of its dependencies need to be installed/pre-compiled as well.
 
-Building a docker image
+Building a Docker image
 -----------------------
 
-To be able to run the dockerized MPI job you need first to provide it to the cluster as a docker image. To do so, two options are available:
+To be able to run the dockerized MPI job you need first to provide it to the cluster as a Docker image. To do so, two options are available:
 
 Building on the controller
 ``````````````````````````
 
-A TrinityX controller comes pre-installed with docker and docker-registry (assuming that the docker option was selected at install time).
-This makes it possible for an administrator to create a docker image that can subsequently be run on the cluster.
+A TrinityX controller comes pre-installed with Docker and Docker-registry (assuming that the docker option was selected at install time).
+This makes it possible for an administrator to create a Docker image that can subsequently be run on the cluster.
 
-It is worth mentioning here that regular users cannot issue docker commands unless they are allowed to by the admins.
+It is worth mentioning here that regular users cannot issue Docker commands unless permitted by the admins.
 
-With that cleared-up, let's build a docker image that we can then use to run an OSU MPI benchmark:
+With that cleared up, let's build a Docker image that we can then use to run an OSU MPI benchmark:
 
-1. First we need to create an empty directory to serve as our workdir.
-2. We need to create a special file called `Dockerfile` that we will use to build the docker image; an example is provided below::
+1. First, create an empty directory to serve as the workdir.
+2. Create a special file called `Dockerfile` that will be used to build the Docker image; an example is provided below::
 
     FROM centos:latest
 
@@ -51,7 +51,7 @@ With that cleared-up, let's build a docker image that we can then use to run an 
 
 
 As you can see, this Dockerfile satisfies the TrinityX requirements as it sets up openssh-server correctly.
-It also installs all the dependencies required to run the OSU benchmarks.
+It also installs all of the dependencies required to run the OSU benchmarks.
 
 3. We then can build our image using `docker build`::
 
@@ -64,24 +64,24 @@ Make sure to replace <controller-hostname> with the correct hostname.
     # docker push <controller-hostname>:5000/osu
 
 
-Using a remote docker registry
+Using a remote Docker registry
 ``````````````````````````````
 
-If you prefer to build your images elsewhere and store them on a docker registry other than the one provided by TrinityX then you need to update your compute images.
+If you prefer to build your images elsewhere and store them on a Docker registry other than the one provided by TrinityX, then it will be necessary to update the compute images.
  
-Since compute nodes will need to query a remote docker registry for docker images, this one needs to be decalred in `/etc/sysconfig/docker` in your compute images.
+Since compute nodes will need to query a remote Docker registry for Docker images, this one needs to be declared in `/etc/sysconfig/docker` in your compute images.
 
-You can update it using `lchroot`.
+It can be updated using `lchroot`.
 
 
 Job scripts
 -----------
 
-Now that our image is ready, we need to create a job script that we will use to run our dockerized OSU benchmarks.
+Now that the image is ready, we need to create a job script to run our dockerized OSU benchmarks.
 
-A job script would need to include, the following commands (besides the usual directives):
+A job script would need to include the following commands (besides the usual directives):
 
-- A docker image name::
+- A Docker image name::
 
     export DOCKER_IMAGE="<docker_image_to_run>"
 
@@ -108,7 +108,7 @@ Then finally:
 - The ``mpi-drun`` command
 
 
-Following is an example that we can use to run our previous OSU image::
+Following is an example that can be used to run our previous OSU image::
 
     #!/bin/bash
 
