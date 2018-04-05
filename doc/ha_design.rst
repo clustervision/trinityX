@@ -232,11 +232,11 @@ Maintenance
 
 During the lifetime of the cluster a sysadmin might need to change configuration files, update packages, or restart services. Doing so may trigger a failover event, which could have negative consequences for the cluster. To avoid such behaviour and temporarily prevent pacemaker from interfering with the state of the cluster, it is essential to activate maintenance mode before applying any changes. 
  
-By entering maintenance mode, admins can take full control of the cluster to perform any required operations without worrying about the state of the cluster. Maintenance mode in pacemaker can be enabled by running the following command: 
+By entering maintenance mode, admins can take full control of the cluster to perform any required operations without worrying about the state of the cluster. Maintenance mode in pacemaker can be enabled by running the following command:: 
  
     pcs property set maintenance-mode=true 
  
-Maintenance mode should be deactivated once maintenance is complete and the cluster is brought back to its previous state. Maintenance mode is disabled by running the following command:
+Maintenance mode should be deactivated once maintenance is complete and the cluster is brought back to its previous state. Maintenance mode is disabled by running the following command::
  
     pcs property set maintenance-mode=false 
  
