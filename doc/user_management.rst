@@ -9,7 +9,7 @@ User management in TrinityX is handled by a utility called obol. Obol is a simpl
 Obol
 ----
 
-obol can manage users and groups on the local LDAP directory and it supports the following attributes for users:
+Obol can manage users and groups on the local LDAP directory and it supports the following attributes for users:
     
 ============= =============
  Attribute     Description
@@ -38,7 +38,7 @@ Managing groups is similarly achieved using::
     # obol group [command] ....
 Where a command can either be ``add``, ``show``, ``delete``, ``list``, ``addusers``, or ``delusers``
 
-For the full list of the commands supported by obol, run::
+For the full list of the commands supported by Obol, run::
 
     obol user -h
     obol user [command] -h
