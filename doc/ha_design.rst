@@ -11,7 +11,7 @@ The TrinityX installation playbooks can set up either of the following configura
 
 In the stand-alone setup (also called non-HA in the TrinityX documentation), the various services are set up intuitively. The configuration will be similar to what can be achieved by setting up the services by hand, and it should not present any surprise to an experienced systems administrator.
 
-When the ``ha`` variable in ``group_vars/all`` is set to ``true``, the TrinityX playbook .i.e ``controller.yml`` will set up an HA controller pair. Please note that installation playbook will only need to run once on the controller selected to become primary, the other controller will also be setup in parallel.
+When the ``ha`` variable in ``group_vars/all`` is set to ``true``, the TrinityX playbook .i.e ``controller.yml`` will set up an HA controller pair. Please note that the installation playbook will only need to run once on the controller selected to become primary, the other controller will also be set up in parallel.
 
 This document will cover the design and implementation of the HA configuration in TrinityX.
 
