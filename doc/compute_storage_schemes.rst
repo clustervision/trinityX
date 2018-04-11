@@ -36,7 +36,7 @@ The script only makes use of Linux utilities that are available at provisioning 
 	mkdir /sysroot/boot
 	mount /dev/sda1 /sysroot/boot
 
-It may be necessary to format the compute disks using a different filesystem not included in the initial ramdisk called by the partitioning script. In such cases, update the ``dracut`` configuration in the osimage to include the desired filesystem support and utilities and then pack it up.
+It may be necessary to format the compute disks using a different filesystem which is not included in the partitioning script run within the ramdisk. In such cases, update the ``dracut`` configuration in the osimage to include the desired filesystem support and utilities and then pack it up.
 
 
 LVM based scheme
