@@ -5,7 +5,9 @@ TrinityX HA design and implementation
 Introduction
 ------------
 
-The TrinityX installation playbooks can set up the controller, or the controller pair, either as a regular stand-alone system, or as part of a High-Availability pair with failover of services between the two controllers.
+The TrinityX installation playbooks can set up either of the following configurations:
+- one controller as a standalone system
+- a pair of controllers as part of a High Availability pair with failover of services between the two
 
 In the stand-alone setup (also called non-HA in the TrinityX documentation), the various services are set up intuitively. The configuration will be similar to what can be achieved by setting up the services by hand, and it should not present any surprise to an experienced systems administrator.
 
