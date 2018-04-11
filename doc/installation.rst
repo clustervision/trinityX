@@ -45,7 +45,7 @@ For further details about the use of Ansible, including its command line options
 `controller.yml` playbook
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When running this playbook for the first time, you will see initial warnings that some luna inventory could not be parsed. Luna is the cluster provisioning tool included in TrinityX. What these warnings mean is that `luna` could not not be queried for a list of nodes and osimages. This is normal at this point of the installation, since luna has not been configured yet::
+When running this playbook for the first time, you will see initial warnings that some luna inventory could not be parsed. Luna is the cluster provisioning tool included in TrinityX. What these warnings mean is that `luna` could not be queried for a list of nodes and osimages. This is normal at this point of the installation, since luna has not been configured yet::
 
     [WARNING]:  * Failed to parse /etc/ansible/hosts/luna with script plugin: Inventory script
     (/etc/ansible/hosts/luna) had an execution error: Traceback (most recent call last):   File
@@ -119,7 +119,7 @@ Updating images and nodes
 
 It is worth pointing out that ``compute.yml`` or any copy thereof can be applied to both existing images and/or live nodes without issues. All that needs to be done is updating the list of hosts to which it applies.
 
-By default ``compute.yml`` applies to the host `compute.osimages.luna` which means it only applies to the image called `compute`. It is, therefore, possible to apply the same playbook to all images, a compute node, or all nodes if so desired. To do so, the host definitions in both ``trinity-image.yml`` and ``compute.yml`` will need to be updated to either of the following:
+By default ``compute.yml`` applies to the host `compute.osimages.luna` which means it only applies to the image called `compute`. It is, therefore, possible to apply the same playbook to all images, a compute node, or all nodes if so desired. To do so, the hosts definitions in both ``trinity-image.yml`` and ``compute.yml`` will need to be updated to either of the following:
 
     - "osimages.luna" which will cover all osimages defined in Luna.
     - "nodes.luna" which will cover all nodes defined in Luna.
