@@ -75,7 +75,7 @@ The TrinityX standard configuration makes the following assumptions:
 
 The resources defined in Pacemaker are separated into two broad groups, which are called primary and secondary. The node on which the resources of the primary group are running at any given time has the primary role, the other one has the secondary role.
 
-.. note:: Although the terms are identical, the primary role and the primary installation (and their respective secondary counterparts) are different. The *primary installation* is simply the one that happens on the node chosen to have the *primary role*, and during which the configuration of the shared hardware resources is done. The *primary role* is an arbitraty name for the node that is currently running the essential services. After the installation is done, the node with the primary role might change, as a failover can happen and the nodes switch roles.
+.. note:: Although the terms are identical, the primary role and the primary installation (and their respective secondary counterparts) are different. The *primary installation* is simply the one that happens on the node chosen to have the *primary role*, and during which the configuration of the shared hardware resources is done. The *primary role* is an arbitrary name for the node that is currently running the essential services. After the installation is done, the node with the primary role might change, as a failover can happen and the nodes switch roles.
 
 
 The resources defined by the TrinityX installer are grouped together in resource groups. Resource groups are:
