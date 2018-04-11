@@ -8,7 +8,7 @@ Slurm is an open source, fault-tolerant, and highly scalable cluster management 
 
     https://slurm.schedmd.com/quickstart.html
 
-Paired with munge (for secure communication), SLURM provides scheduling facilities in TrinityX. It allows use of the cluster simultaneously by multiple users without affecting each others' jobs. The simplest way of getting access to node in SLURM is to issue the following::
+Paired with munge (for secure communication), SLURM provides scheduling facilities in TrinityX. It allows use of the cluster simultaneously by multiple users without affecting each others' jobs. The simplest way of getting access to a node in SLURM is to issue the following::
 
     $ srun --nodelist=node001 hostname
     node001.cluster
@@ -30,7 +30,7 @@ During allocation, the status of nodes can be viewed in the ``squeue`` output::
 
 In most cases, the output above means that nodes are exclusively 'owned' by a user and no other job or user within SLURM can use these nodes to compute their jobs. However, it might be not true if a SLURM cluster is configured in shared mode.
 
-If SLURM is unable to allocate resources, it will queue requestir to wait::
+If SLURM is unable to allocate resources, it will queue the request to wait::
 
     $ salloc --nodelist=node001,node002
     salloc: Pending job allocation 3440
@@ -60,13 +60,13 @@ Using sbatch
     #SBATCH --nodes=2
     hostname
 
-To submit a job, set content above to the ``test01.job`` file and simpy run::
+To submit a job, set content above to the ``test01.job`` file and simply run::
 
     $ sbatch test01.job
 
-Please note that you might not have defq partition configured in your cluster. Check ``sinfo`` output.
+Please note that you might not have a defq partition configured in your cluster. Check the ``sinfo`` output.
 
-After a job finishes, output of the job will appear in the home directory, titled ``slurm-3443.out``, in which 3443 is a job number.
+After a job finishes, its output will appear in the home directory, titled ``slurm-3443.out``, in which 3443 is a job number.
 
 If the job failed for some reason, the file ``slurm-3443.err`` will be created. The first file - ``.out`` - contains STDOUT from job script and ``.err`` has STDERR content. The path and name of these files can be customized::
 
@@ -75,7 +75,7 @@ If the job failed for some reason, the file ``slurm-3443.err`` will be created. 
 
 The job number will be substituted instead of the %J variable. For more variables, please have a look at ``man sbatch``.
 
-By default, a job assumes that the current working direrctory is a home dir of the user. It can be customized, specifying ``--workdir=``::
+By default, a job assumes that the current working directory is a home dir of the user. It can be customized, specifying ``--workdir=``::
 
     #SBATCH --workdir=/new/home/dir/
 
@@ -84,7 +84,7 @@ In addition, you can specify the number of nodes, dependencies, starting time, a
 Variables in job scripts
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-During job execution, SLURM provides several environmental variables. A job is capable of tuning its behavior based on these variables, something handy for logging purposes::
+During job execution, SLURM provides several environment variables. For logging purposes, it can be useful to tune a job to render those valuables in its output.::
 
     #!/bin/bash
     #SBATCH --partition=defq
@@ -105,7 +105,7 @@ In addition, more than 100 variables are available. For reference, please run ``
 Srun and mpirun in job scripts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Usually, it is unnecessary to use srun in job scripts. Spawning multiple copies of a binary is usually performed by mpi library. To get an idea of how things are working in sbatch context you can can check on the following output::
+Usually, it is unnecessary to use srun in job scripts. Spawning multiple copies of a binary is usually performed by mpi library. To get an idea of how things are working in an sbatch context you can check on the following output::
 
     #!/bin/bash
     #SBATCH --partition=defq
@@ -175,7 +175,7 @@ To be concrete, let's take MPI Hello Word from `MPI Tutorial <http://mpitutorial
 		MPI_Finalize();
 	}
 
-Now we need to compile the application with one of the MPI versions installed on the cluster::
+Now, compile the application with one of the MPI versions installed on the cluster::
 
     $ module load openmpi/2.0.1
     $ mpicc -o mpi-hello.bin mpi-hello.c
