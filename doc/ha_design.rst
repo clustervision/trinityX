@@ -179,11 +179,11 @@ A few additional constraints are defined to locate and order groups between them
 
 Notes:
 
-- The two essential constraints that are always present are #05 and #13. #05 is a constraint which serializes the two groups. It means that ``Trinity-secondary`` will only start after ``Trinity`` has started successfully. As most, if not all, secondary resources depend on services that are started in the primary group, this is again the most intuitive strategy.
+- The two essential constraints, which are always present, are #05 and #13. #05 is a constraint which serializes the two groups. It means that ``Trinity-secondary`` will only start after ``Trinity`` has started successfully. As most, if not all, secondary resources depend on services that are started in the primary group, this is again the most intuitive strategy.
 
 - #13 is a colocation constraint, which says that ``Trinity-secondary`` cannot run on the same node as ``Trinity``, and that ``Trinity`` comes first. In other words: pick a node to run the primary, and if there is another one available, run the secondary on it, otherwise don't run the secondary. This is the rule that allows for failover of the primary resources, and makes sure that primary services are always up.
 
-- #14-16 means that the primary group serves as an anchor for all other services that must run on the primary controller.
+- #14-16 mean that the primary group serves as an anchor for all other services that must run on the primary controller.
 
 - #11 is there to make sure that the device-related resources (``wait-for-device`` and ``trinity-fs``) only start after the promotion of the DRBD resource, which is to say, after it becomes master on the local node. This is needed due to the way Pacemaker starts resources and the difference between starting and promoting a resource.
 
@@ -211,7 +211,7 @@ Upon a failure of the secondary node or a successful failover, the system admini
 
 As such, the monitoring system should include checks to monitor the state of the HA cluster.
 
-.. note:: TrinityX does not configue pacemaker and corosync to start when a controller starts up. It is left at the discretion of the sysadmin to manually start it up using ``pcs cluster start`` on the newly booted controller.
+.. note:: TrinityX does not configure pacemaker and corosync to start when a controller starts up. It is left at the discretion of the sysadmin to manually start it up using ``pcs cluster start`` on the newly booted controller.
 
 
 Booting the controllers
