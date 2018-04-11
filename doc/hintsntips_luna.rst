@@ -153,7 +153,7 @@ Groups in Luna
 
 A key concept in Luna is that of groups. Most (after osimage) of the customizations in Luna are performed here. A group is a homogeneous set of nodes. They usually have the same role within the cluster, with a similar hardware configuration, software set, and are connected to the same networks. Usually, they are logically grouped to the same queue (or partition) in the scheduling system. It is possible to specify the same osimage for several groups and perform additional customizations on install.
 
-Creating a group requires the osimage to be specified. A group can't exist without an image or connection to a network node. It is assumed that nodes need to be installed via the network, as we are using a network provisioning tool::
+Creating a group requires the osimage to be specified. A group can't exist without an image or connection to a network. It is assumed that nodes need to be installed via the network, as we are using a network provisioning tool::
 
     # luna group add --name new-compute-group --osimage new-compute --network cluster
 
@@ -253,7 +253,7 @@ Please note that it is unnecessary to specify ``NAME=`` and ``DEVICE=`` for inte
 Scripts in groups
 ~~~~~~~~~~~~~~~~~
 
-Sometimes the installation procedure needs to be altered to perform some tasks before or after creating the tarball where the osimage will be placed. Customization scripts come into play here. Each group has 3: prescript, partscript, and postscript.
+Sometimes the installation procedure needs to be altered to perform some tasks before or after the osimage is deployed. Customization scripts come into play here. Each group has 3: prescript, partscript, and postscript.
 
 - ``prescript`` is performed before any other task of the installation procedure. Can be handy if we need to insert a non-standard kernel module for later use or check some hardware status.
 
@@ -313,7 +313,7 @@ It should list something like::
 
 The last 6 numbers is a MAC address in decimal format. See ``man luna`` for more information on how to decrypt it.
 
-When Luna is able to get MAC addresses from switches, it can display them in ``luna cluster listmacs``.
+When Luna is able to get MAC addresses from switches, it will display them in ``luna cluster listmacs``.
 
 Other devices present as ``otherdev`` in Luna. This class of configurable items will fill DNS records. For example, it is handy to resolve PDUs' hostnames.
 
@@ -332,7 +332,7 @@ It is possible to change the group for a node and Luna does its best to preserve
 
 Further individual settings for node are ``--setupbmc`` and ``--service``. These are mostly relevant for debugging. The first allows disabling of attempts to configure BMC, as it is known this configuration might be flaky. ``--service`` tunable can be handy if an engineer needs to debug boot issues. Nodes in this mode will not try to run the install script, but will stay in the initrd stage, configure 2 consoles (Alt+F1, Alt+F2), and try to set up IP addresses and run ssh daemon. In addition, it can be used to inspect the hardware configuration of the node before setup and wiping of data on disks.
 
-Another debug feature is a flag ``luna node show --script`` which accepts two options: ``boot`` and ``script``.
+Another debug feature is a flag ``luna node show --script`` which accepts two options: ``boot`` and ``install``.
 
 - ``--script boot`` shows the exact boot options node will use to fetch and run kernel and initrd.
 
