@@ -16,6 +16,10 @@
     set_fact:
       primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses else False }}'
   
+  - name: Check if running on a controller
+    set_fact:
+      on_controller: '{{ True if ansible_connection not in "lchroot" and not compute|default(False) else False }}'
+
   - name: Update the trix_ctrl_* variables in case of non-HA setup
     set_fact:
       trix_ctrl_hostname: '{{ trix_ctrl1_hostname }}'
