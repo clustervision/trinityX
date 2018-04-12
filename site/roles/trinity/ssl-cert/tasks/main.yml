@@ -14,8 +14,7 @@
       gid: '{{ ssl_cert_group_id }}'
       system: yes
 
-  when: ansible_connection not in 'lchroot'
-        and not compute|default(False)
+  when: on_controller|default(False)
 
 - block:
 
@@ -82,8 +81,7 @@
       recurse: yes
 
   when: primary|default(True)
-        and ansible_connection not in 'lchroot'
-        and not compute|default(False)
+        and on_controller|default(False)
 
 - name: Add CA certificate to default trust store
   copy:
