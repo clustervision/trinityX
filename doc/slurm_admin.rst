@@ -5,26 +5,26 @@ Basic administrative tasks
 Daemons and files
 ~~~~~~~~~~~~~~~~~
 
-SLURM functionality in TrinityX relies on 3 daemons: munged, slurmctld and slurmdbd running on controller. Every compute node has slurmd running.
+SLURM functionality in TrinityX relies on 3 daemons: munged, slurmctld and slurmdbd running on the controller. Every compute node has slurmd running.
 
     * ``munged`` is handling security communication between slurmd and slurmctld
     * ``slurmctld`` main service doing heavy-lifting of a proper job scheduling
     * ``slurmdbd`` SLURM accounting
     * ``slurmd`` daemon running on compute nodes and spawning user executables
 
-In addition ``slurndbd`` need to have mysql daemon running to store accounting data.
+In addition, ``slurmdbd`` must have the mysql daemon running to store accounting data.
 
-By default your SLURM config consist of several files located in ``/etc/slurm`` which is symlinked to ``/trinity/shared/etc/slurm``.
+By default, the SLURM config consists of several files located in ``/etc/slurm``, which is symlinked to ``/trinity/shared/etc/slurm``.
 
     * ``slurm.conf`` main config
     * ``slurm-nodes.conf`` nodes' definitions
     * ``slurm-partitions.conf`` definitions of queue
-    * ``slurm-user.conf`` customisationss
+    * ``slurm-user.conf`` customizations
     * ``slurmdbd.conf`` configuration file of slurmdbd daemon
 
-In addition ``mongod`` daemon relies on its config located at ``/etc/mongod.conf``.
+In addition, the ``mongod`` daemon relies on the corresponding config located at ``/etc/mongod.conf``.
 
-TrinityX has several ``systemd`` customization located in /etc/systemd/system::
+TrinityX has several ``systemd`` customizations located in /etc/systemd/system::
 
     # ls /etc/systemd/system/{munge*,slurm*}
     /etc/systemd/system/munge.service.d:
@@ -41,15 +41,15 @@ Log files can be found in ``/var/log/slurm`` on both controllers and compute nod
 Commands
 ~~~~~~~~
 
-Most popular commands from administrator prospective are usually ``sinfo``, ``squeue`` and scontrol.
+The most popular commands from an administrator perspective are usually ``sinfo``, ``squeue``, and ``scontrol``.
 
     * ``sinfo`` show status of the nodes and queues
     * ``squeue`` list of jobs running on the cluster
     * ``scontrol`` manage SLURM configuration and state
 
-For ``sinfo`` plase take special attention to "NODE STATE CODES" section in man pages.
+For ``sinfo``, pay special attention to the "NODE STATE CODES" section in the man pages.
 
-``controls`` allows reconfigure SLURM on-the-fly. For example we can drain (bring it offline in SLURM for maintenance purposes) and un-drain the node the following way::
+``scontrol`` allows SLURM to be reconfigured on the fly. For example, we can drain (bring it offline in SLURM for maintenance purposes) and un-drain the node in the following way::
 
     # sinfo
     PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST
@@ -79,11 +79,11 @@ For ``sinfo`` plase take special attention to "NODE STATE CODES" section in man 
        ExtSensorsJoules=n/s ExtSensorsWatts=0 ExtSensorsTemp=n/s
        Reason=Heavily broken [root@2018-03-09T16:04:43]
 
-To make node available for user jobs::
+To make the node available for user jobs::
 
     # scontrol update node=node001 state=undrain
 
-With ``scontrol`` it is possible to check status of the running jobs::
+With ``scontrol``, it is possible to check the status of the running jobs::
 
    # squeue
              JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
@@ -115,4 +115,4 @@ With ``scontrol`` it is possible to check status of the running jobs::
        Power=
 
 
-For more information about SLURM commands and slurm config please have a look to `official documentation <https://slurm.schedmd.com/documentation.html>`_
+For more information about SLURM commands and slurm config please have a look at `official documentation <https://slurm.schedmd.com/documentation.html>`_

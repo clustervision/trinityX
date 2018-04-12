@@ -6,7 +6,7 @@ TrinityX pre-installation requirements
 Hardware
 --------
 
-TrinityX has very few hardware requirements, which are summarized in the following paragraphs.
+TrinityX has very few hardware requirements, summarized in the following paragraphs.
 
 
 Controllers
@@ -18,7 +18,7 @@ The machines that will be used as TrinityX controllers are expected to have a mi
 
 - one NIC for the private (internal) interface, used for compute node provisioning and general cluster communications.
 
-.. note:: A third NIC that serves as a dedicated heartbeat link between a pair of HA controllers would provide a redundant communication link between them which would go a long way in reducing the risk of encountering a split-brain situation. 
+.. note:: A third NIC that serves as a dedicated heartbeat link between a pair of HA controllers would provide a redundant communication link which would go a long way in reducing the risk of encountering a split-brain situation. 
 
 .. note:: When installing the controllers in a high availability configuration it is required to have an IPMI interface properly configured on both controllers. This allows for IPMI based fencing functionality to be implemented for safer failovers.
 
@@ -51,7 +51,7 @@ The OpenStack optional module adds another network requirement:
 - a second Ethernet NIC used for the traffic between OpenStack VMs.
 
 
-The compute nodes can be provisioned with or without local storage. When not configured for local storage a ramdisk will be used to store the base image. In that case, make sure to take into account the space of the OS image (which depends on the exact configuration of the image) in your memory calculations.
+The compute nodes can be provisioned with or without local storage. When not configured for local storage a ramdisk will be used to store the base image. In that case, make sure to take into account the space of the OS image (which depends on its exact configuration) in your memory calculations.
 
 
 Software and configuration
@@ -60,7 +60,7 @@ Software and configuration
 Controllers
 ~~~~~~~~~~~
 
-The TrinityX installer requires the operating system of the controllers to be already installed. As of TrinityX release 11, the supported OS versions are:
+The TrinityX installer requires the operating system of the controllers to be installed already. As of TrinityX release 11, the supported OS versions are:
 
 - CentOS 7 **Minimal**
 - Scientific Linux 7 **Minimal**
@@ -81,7 +81,7 @@ Next, the following software packages must also be present on the machine used t
 
 - ansible
 
-Also, these installer dependencies need to be available on that machine:
+Also, the following installer dependencies need to be available on that machine:
 
 - OndrejHome.pcs-modules-2 from the ansible galaxy: ``ansible-galaxy install OndrejHome.pcs-modules-2``
 
