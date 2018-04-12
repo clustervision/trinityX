@@ -44,13 +44,9 @@
   notify: restart docker-registry
 
 - name: Enable docker-registry service
-  file:
-# service:
-#   name: docker-registry
-#   enabled: yes
-    src: '/usr/lib/systemd/system/docker-registry.service'
-    dest: '/etc/systemd/system/multi-user.target.wants/docker-registry.service'
-    state: link
+  service:
+    name: docker-registry
+    enabled: yes
   when: not ha | default(False)
 
 - name: Start docker-registry service
