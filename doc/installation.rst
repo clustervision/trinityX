@@ -1,3 +1,6 @@
+.. index::
+       controller.yml
+       site.yml
 
 TrinityX installation procedure
 ================================

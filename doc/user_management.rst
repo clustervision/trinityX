@@ -2,7 +2,7 @@
 User management in a TrinityX cluster
 =====================================
 
-User management in TrinityX is handled by a utility called obol. Obol is a simple wrapper around LDAP commands to update the local LDAP directory installed by default. It supports both user and group management almost the same way those would be handled by the default Linux utilities.
+User management in TrinityX is handled by a utility called *obol*. Obol is a simple wrapper around LDAP commands to update the local LDAP directory installed by default. It supports both user and group management almost the same way those would be handled by the default Linux utilities.
 
 
 
@@ -83,7 +83,7 @@ For the changes to take effect, sssd.service will need to be restarted on all th
 Using the local and a remote directory at the same time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In cases where an administrator prefers to use the local directory in combination with a remote one then (s)he will need to update both sssd's and openldap's configurations.
+In cases where an administrator prefers to use the local directory in combination with a remote one then one will need to update both sssd's and openldap's configurations.
 
 The local openldap installation has a special proxy database `dn: dc=cluster` that can serve as an aggregator for multiple ldap directories. 
 The local one, `dn: dc=local`, is already accounted for in the proxy with a `dn: dc=local,dc=cluster`. So the administrator only needs to add a reference to the remote directory::
