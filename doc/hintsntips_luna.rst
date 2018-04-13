@@ -14,7 +14,9 @@ TrinityX includes configuration files to automatically create a basic compute no
 Cloning an existing image
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The easiest way to get a new image for modifications is to clone an existing one. For example::
+The easiest way to get a new image for modifications is to clone an existing one. For example:
+
+.. code-block:: console
 
     # luna osimage list
     +------------+----------------------------+-------------------------------+
