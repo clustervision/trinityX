@@ -1,5 +1,5 @@
-Basic administrative tasks
-==========================
+Basic administrative tasks in Slurm
+===================================
 
 
 Daemons and files
