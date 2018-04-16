@@ -55,7 +55,7 @@ TrinityX supports both a group-based access control system and a SLURM PAM-based
 
 When group-based access control (GBAC) is used, TrinityX will allow or deny access to the compute nodes based on the groups to which a user belongs. By default, TrinityX only allows access to users that belong to the group ``admins``.
 
-Choosing between the two described access modes is allowed by the ``slurm_pam_enabled`` variable in trinityX/site/group_vars/all. If set to `true`, SLURM PAM will be used, otherwise, group-based filtering will be used.
+Choosing between the two described access modes is allowed by the ``enable_slurm_pam`` variable in trinityX/site/group_vars/all. If set to `true`, SLURM PAM will be used, otherwise, group-based filtering will be used.
 
 .. note:: If for some reason there is a need to update the list of groups that have access to the nodes or disable this control altogether, ``sssd.conf`` should be updated on each node. Change ``ldap_access_filter`` or ``ldap_access_order`` from ``filter,expire`` to ``expire``.
 

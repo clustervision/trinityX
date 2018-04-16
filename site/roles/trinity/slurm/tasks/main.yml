@@ -137,7 +137,7 @@
     with_together:
       - [ 'pam-sshd', 'pam-slurm']
       - [ 'sshd', 'slurm' ]
-    when: slurm_pam_enabled
+    when: enable_slurm_pam
 
   when: ansible_connection in 'lchroot' or compute|default(False)
 
@@ -224,7 +224,7 @@
     lineinfile:
       path: '{{ slurm_conf_path }}/slurm-user.conf'
       line: 'UsePAM=1'
-    when: slurm_pam_enabled
+    when: enable_slurm_pam
 
   - name: Start slurm controller services
     service:
