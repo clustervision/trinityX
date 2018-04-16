@@ -73,10 +73,12 @@ trix_home               Path          `trix_root`/home   The default path where 
 
 trix_repos              Path          `trix_root`/repos  The default path where the local TrinityX rpm repository will be located.
 
-selinux_enabled         boolean       false              Whether or not to enable SELinux throughout the cluster.
+enable_selinux          boolean       false              Whether or not to enable SELinux throughout the cluster.
 
-slurm_pam_enabled       boolean       true               Whether or not to enable Slurm PAM module by default.
+enable_slurm_pam        boolean       true               Whether or not to enable Slurm PAM module by default.
                                                          If enabled, sssd's ldap filters will be disabled on the compute nodes.
+
+enable_docker           boolean       false              Whether or not to install docker tools on the cluster
 
 shared_fs_type          String        'drbd'             The type of shared storage used on the controllers in TrinityX.
                                                          Currently the only type supported by the installer is 'drbd'. Other types are planned for future releases.
@@ -338,7 +340,7 @@ slurm_ctrl          Hostname      `trix_ctrl_hostname`                        Ho
 slurm_ctrl_ip       IP address    `trix_ctrl_ip`                              IP address of the slurm controller
 slurm_ctrl_list     Hostname list `trix_ctrl1_hostname`,`trix_ctrl2_hostname` Comma separated list of the machines that serve as slurm controller.
 
-slurm_pam_enabled   Boolean       true                                        Enable or disable slurm's PAM module that denies user access to nodes where they don't have a running job.
+enable_slurm_pam   Boolean       true                                        Enable or disable slurm's PAM module that denies user access to nodes where they don't have a running job.
 
 slurmdbd_sql_user   String        'slurm_accounting'                          Name to use for slurmdbs's SQL user.
 slurmdbd_sql_db     String        'slurm_accounting'                          Name to use for slurmdbd's database.
