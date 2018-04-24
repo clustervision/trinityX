@@ -70,25 +70,24 @@ Steps to install TrinityX
 
 9. Configure ``hosts`` file to allow ansible to address controllers.
 
+   Example for non-HA setup::
 
-    Example for non-HA setup::
+       [controllers]
+       controller ansible_host=10.141.255.254
 
-        [controllers]
-        controller ansible_host=10.141.255.254
+   Example for HA setup::
 
-    Example for HA setup::
-
-        [controllers]
-        controller1 ansible_host=10.141.255.254
-        controller2 ansible_host=10.141.255.253
+       [controllers]
+       controller1 ansible_host=10.141.255.254
+       controller2 ansible_host=10.141.255.253
 
 10. Start TrinityX installation::
 
      # ansible-playbook controller.yml
 
-   **Note**: If errors are encoutered during the installation process, analyze the error(s) in the output and try to fix it then re-run the installer.
+    **Note**: If errors are encoutered during the installation process, analyze the error(s) in the output and try to fix it then re-run the installer.
 
-   **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
+    **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
 
 11. Create a default OS image::
 
