@@ -4,6 +4,15 @@
 # Keep in mind that this role applies to the controllers
 # as well as compute nodes and images
 
+# https://github.com/ansible/ansible-modules-extras/issues/2384
+- name: Enable CentOS-CR
+  ini_file:
+    dest: /etc/yum.repos.d/CentOS-CR.repo
+    section: cr
+    option: enabled
+    value: 1
+  when: testing_repos
+
 - name: Install init packages
   yum:
     name: '{{ item }}'
@@ -15,7 +24,7 @@
   - name: Check if this node is the primary controller
     set_fact:
       primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses else False }}'
-  
+
   - name: Check if running on a controller
     set_fact:
       on_controller: '{{ True if ansible_connection not in "lchroot" and not compute|default(False) else False }}'
