@@ -1,5 +1,14 @@
 ---
 
+# https://github.com/ansible/ansible-modules-extras/issues/2384
+- name: Enable elrepo-testing
+  ini_file:
+    dest: /etc/yum.repos.d/elrepo.repo
+    section: elrepo-testing
+    option: enabled
+    value: 1
+  when: testing_repos
+
 - name: Install DRBD packages
   yum:
     name: '{{ item }}'
@@ -12,6 +21,13 @@
     path: /etc/yum.repos.d/elrepo.repo
     regexp: enabled=1
     replace: enabled=0
+
+- name: Disable elrepo-testing
+  ini_file:
+    dest: /etc/yum.repos.d/elrepo.repo
+    section: elrepo-testing
+    option: enabled
+    value: 0
 
 - name: Set up DRBD common settings configuration file
   template:
@@ -28,9 +44,9 @@
   ignore_errors: yes
 
 - block:
-  
+
   - name: Check if DRBD is already mounted at trix_root
-    command: 
+    command:
       '/usr/bin/findmnt -S /dev/drbd/by-res/{{ drbd_shared_resource_name }}
       -T {{ trix_root }}'
     register: drbd_mounted
@@ -43,10 +59,10 @@
       service:
         name:  drbd
         state: started
-  
+
     - name: Promote shared resource
       shell: '/usr/sbin/drbdadm --force primary {{ drbd_shared_resource_name }}'
-  
+
     - name: Creating a file system on shared resource
       filesystem:
         fstype: xfs
@@ -54,14 +70,14 @@
         force: yes
         opts: -b size=4096 -s size=4096
       ignore_errors: yes
-  
+
     - name: Create a fake fstab for the next step
       tempfile:
         path: /tmp
         prefix: fstab.
         state: file
       register: drbd_fake_fstab
-  
+
     - name: Temporarily mount DRBD disk
       mount:
         src: "/dev/drbd/by-res/{{ drbd_shared_resource_name }}"
@@ -69,17 +85,17 @@
         fstype: xfs
         state: mounted
         fstab: "{{ drbd_fake_fstab.path }}"
-  
+
     - name: Copy contents of {{ trix_root }} from local drives to DRBD
       copy:
         src: "{{ trix_root }}/"
         dest: "{{ trix_root }}-temp"
-  
+
     - name: Temporarily umount DRBD disk
       mount:
         path: "{{ trix_root }}-temp"
         state: unmounted
-  
+
     - name: Temporarily shut DRBD down
       service:
         name:  drbd

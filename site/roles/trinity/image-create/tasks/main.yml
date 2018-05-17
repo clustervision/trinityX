@@ -57,6 +57,14 @@
     src: "/etc/yum/vars"
     dest: "{{ image_path }}/etc/yum/"
 
+- name: Enable CentOS-CR
+  ini_file:
+    dest: "{{ image_path }}/etc/yum.repos.d/CentOS-CR.repo"
+    section: cr
+    option: enabled
+    value: 1
+  when: testing_repos
+
 - name: Install core packages - @core, kernel and grub2
   yum:
     name: "{{ item }}"
