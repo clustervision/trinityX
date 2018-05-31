@@ -1,0 +1,109 @@
+Name: trinityx
+Version: __VERSION__
+%define build_ver __BUILD__
+Release: %{build_ver}%{?dist}
+
+Summary: TrinityX
+Packager: ClusterVision
+License: GNU GPLv3
+
+Source: https://github.com/clustervision/%{name}/archive/v%{version}-%{build_ver}.tar.gz
+URL: https://github.com/clustervision/%{name}
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{build_ver}
+
+# Disable debuginfo package
+%define debug_package %{nil}
+%define trinity_path /opt/clustervision/%{name}
+
+# ///////////////////////////////////////////////
+# BUILD REQUIREMENTS
+# ///////////////////////////////////////////////
+BuildRequires: bash
+BuildRequires: ansible
+BuildRequires: python34
+BuildRequires: python34-virtualenv
+
+# ///////////////////////////////////////////////
+# INSTALL REQUIREMENTS
+# ///////////////////////////////////////////////
+Requires: bash
+Requires: ansible
+Requires(post): yum-plugin-versionlock
+
+# ///////////////////////////////////////////////
+# DESCRIPTION
+# ///////////////////////////////////////////////
+%description
+TrinityX is the new generation of ClusterVision's open-source HPC platform.
+
+# ///////////////////////////////////////////////
+# PREPARATION SECTION
+# ///////////////////////////////////////////////
+%prep
+%setup -n %{name}-%{version}-%{build_ver}
+
+# ///////////////////////////////////////////////
+# BUILD SECTION
+# ///////////////////////////////////////////////
+%build
+ansible-galaxy install --roles-path ./site/roles OndrejHome.pcs-modules-2
+
+mkdir -p ./virtenv
+pushd ./virtenv
+virtualenv-3 sphinx
+source sphinx/bin/activate
+pip install Sphinx RinohType sphinx_rtd_theme
+popd
+
+pushd doc
+make html
+make singlehtml
+popd
+
+# ///////////////////////////////////////////////
+# POST INSTALLATION PHASE
+# ///////////////////////////////////////////////
+%post
+echo "0:%{name}-%{version}-%{release}.*" >> /etc/yum/pluginconf.d/versionlock.list
+# ///////////////////////////////////////////////
+# POST REMOVE PHASE
+# ///////////////////////////////////////////////
+%postun
+sed -i -e '/0:trinityx/d' /etc/yum/pluginconf.d/versionlock.list
+
+# ///////////////////////////////////////////////
+# INSTALL SECTION
+# ///////////////////////////////////////////////
+%install
+# Install files for main package
+# Executable
+%{__install} -m 770 -D -d %{buildroot}%{trinity_path}
+%{__cp} -pr site/*                              %{buildroot}%{trinity_path}
+# Docs
+%{__install} -m 770 -D -d %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}
+%{__cp} -pr doc/_build/{html,singlehtml}        %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/
+
+
+# ///////////////////////////////////////////////
+# CLEAN SECTION
+# ///////////////////////////////////////////////
+%clean
+rm -rf %{buildroot}
+
+# ///////////////////////////////////////////////
+# PRE REMOVE PHASE MAIN
+# ///////////////////////////////////////////////
+%preun
+
+# ///////////////////////////////////////////////
+# LIST FILES SECTION
+# ///////////////////////////////////////////////
+%files
+%defattr(-, root, root)
+%config(noreplace) %attr(0640, root, root) %{trinity_path}
+%doc %{_defaultdocdir}/%{name}-%{version}-%{release}
+
+# ///////////////////////////////////////////////
+# CHANGELOG
+# ///////////////////////////////////////////////
+%changelog
