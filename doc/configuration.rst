@@ -80,6 +80,8 @@ enable_slurm_pam        boolean       true               Whether or not to enabl
 
 enable_docker           boolean       false              Whether or not to install docker tools on the cluster
 
+enable_heartbeat_link   boolean       true               Whether or not to configure the secondary corosync heartbeat link between the controllers.
+
 shared_fs_type          String        'drbd'             The type of shared storage used on the controllers in TrinityX.
                                                          Currently the only type supported by the installer is 'drbd'. Other types are planned for future releases.
 
