@@ -10,12 +10,11 @@
   when: primary
 
 - name: Install ssh keys on the secondary controller
-  fetch:
+  synchronize:
     dest: '/root/.ssh/{{ item }}'
     src: '/root/.ssh/{{ item }}'
-    flat: yes
+    archive: yes
   when: ha and not primary
-  delegate_to: '{{ play_hosts[0] }}'
   with_items:
     - id_rsa
     - id_rsa.pub
