@@ -129,10 +129,13 @@
       - local.ldif
       - proxy.ldif
 
-  - name: Copy OpenLDAP memberof configuration
+  - name: Copy OpenLDAP overlay configurations
     copy:
-      src: memberof.ldif
-      dest: /tmp/memberof.ldif
+      src: '{{ item }}'
+      dest: '/tmp/'
+    with_items:
+      - ppolicy.ldif
+      - memberof.ldif
 
   - name: Load OpenLDAP global configuration
     command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
@@ -146,6 +149,7 @@
       - config.ldif
       - local.ldif
       - proxy.ldif
+      - ppolicy.ldif
       - memberof.ldif
     notify: restart openldap
 
