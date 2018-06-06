@@ -1,7 +1,7 @@
 all: rpm
 
 rpm:
-	/bin/bash packaging/rpmbuild.sh
+	/bin/bash packaging/rpm/rpmbuild.sh
 
 clean:
-	rm -rf packaging/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+	rm -rf packaging/rpm/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
