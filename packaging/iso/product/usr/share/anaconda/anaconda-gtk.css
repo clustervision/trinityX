@@ -1,0 +1,204 @@
+/* Anaconda gtk style overrides */
+
+/* Define styles to apply to the GtkLevelBar widgets for different values.
+ *
+ * This stylesheet defines properties for "low", "medium" and "high" level bar
+ * levels. The level bars themselves need to define what style applies at what
+ * value using gtk_level_bar_add_offset_value. Gtk defines "low" and "high" by
+ * default, but it defines them for level bars using a continuous value between
+ * 0 and 1, so our discrete level bars are effectively always at the "high"
+ * level.
+ *
+ * Fun surprises that might change in future versions:
+ *
+ *  - Defining properties for a level will set properties on both the filled
+ *    portion and the empty portion of the level bar. So if all of the display
+ *    properties are set, which we do, the level bar effectively becomes 100%
+ *    filled with whatever properties are set. Copying the .empty-fill-block
+ *    properties from the theme so that they apply at the application level
+ *    works around this.
+ *
+ *  - There's a bug in the handling of the maximum offset in that it only
+ *    applies when value == max-value, rather than when it's between
+ *    max-value and the next lower offset. For example, consider a
+ *    discrete-mode level bar with a max-value of 4 and offsets defined as
+ *    "low": 2.0, "medium": 3.0 and "high": 4.0. Value 1 will be low,
+ *    value 2 will be medium, value 3 will be in an undefined no-man's land,
+ *    and value 4 will be high. To get around this we re-define the default
+ *    fill-block values as the same as fill-block.level-high.
+ *
+ *  - The GNOME Adwaita theme applies a gradient to the progress bar when the
+ *    window is focused. It does this by redefining the colors in a
+ *    background-image property, so unless we reset background-image our colors
+ *    will only apply when the window is out of focus, which uses the :backdrop
+ *    selector.
+ */
+
+@define-color anaconda_level_bar_low        red;
+@define-color anaconda_level_bar_medium     orange;
+@define-color anaconda_level_bar_high       green;
+
+.level-bar.fill-block.level-low {
+    border-color: darker(@anaconda_level_bar_low);
+    background-color: @anaconda_level_bar_low;
+    background-image: none;
+}
+
+.level-bar.fill-block.level-medium {
+    border-color: darker(@anaconda_level_bar_medium);
+    background-color: @anaconda_level_bar_medium;
+    background-image: none;
+}
+
+.level-bar.fill-block,
+.level-bar.fill-block.level-high {
+    border-color: darker(@anaconda_level_bar_high);
+    background-color: @anaconda_level_bar_high;
+    background-image: none;
+}
+
+.level-bar.fill-block.empty-fill-block {
+    background-color: transparent;
+    background-image: none;
+    border-color: alpha(#000000, 0.1);
+}
+
+/* As of gnome-themes-standard 3.9.90, the Adwaita theme uses the same color
+ * for all GtkInfoBars regardless of the MessageType.
+ * (https://bugzilla.gnome.org/show_bug.cgi?id=704266, commit 6bfa3aa0). The
+ * colors were actually kind of ok, and also the new colors are borderline
+ * unreadable, so these rules revert that change and set different colors.
+ */
+
+@define-color info_fg_color black;
+@define-color info_bg_color rgb (252, 252, 189);
+@define-color warning_fg_color black;
+@define-color warning_bg_color rgb (250, 173, 61);
+@define-color question_fg_color white;
+@define-color question_bg_color rgb (138, 173, 212);
+@define-color error_fg_color white;
+@define-color error_bg_color rgb (237, 54, 54);
+
+.info {
+    background-color: @info_bg_color;
+    color: @info_fg_color;
+    border-color: darker(@info_bg_color);
+}
+
+.warning {
+    background-color: @warning_bg_color;
+    color: @warning_fg_color;
+    border-color: darker(@warning_bg_color);
+}
+
+.question {
+    background-color: @question_bg_color;
+    color: @question_fg_color;
+    border-color: darker(@question_bg_color);
+}
+
+.error {
+    background-color: @error_bg_color;
+    color: @error_fg_color;
+    border-color: darker(@error_bg_color);
+}
+
+.info,
+.warning,
+.question,
+.error {
+    text-shadow: none;
+}
+
+/* vendor-specific colors/images */
+
+@define-color redhat #021519;
+@define-color fedora #006eb4;
+
+/* logo and sidebar classes for RHEL */
+
+/* The sidebar consists of three parts: a background, a logo, and a product logo,
+ * rendered in that order. The product logo is empty by default and is intended
+ * to be overridden by a stylesheet in product.img.
+ */
+.logo-sidebar {
+    background-image: url('/usr/share/anaconda/pixmaps/sidebar-bg.png');
+    background-color: @redhat;
+    background-repeat: no-repeat;
+}
+
+/* Add a logo to the sidebar */
+.logo {
+    background-image: url('/usr/share/anaconda/pixmaps/sidebar-logo.png');
+    background-position: 50% 20px;
+    background-repeat: no-repeat;
+    background-color: transparent;
+}
+
+/* This is a placeholder to be filled by a product-specific logo. */
+.product-logo {
+    background-image: url('/usr/share/anaconda/pixmaps/trix-logo.png');
+    background-position: 50% 120px;
+    background-repeat: no-repeat;
+    background-color: transparent;
+}
+
+AnacondaSpokeWindow #nav-box {
+    background-color: @redhat;
+    background-image: url('/usr/share/anaconda/pixmaps/topbar-bg.png');
+    background-repeat: no-repeat;
+    color: white;
+}
+
+AnacondaSpokeWindow #layout-indicator {
+    color: black;
+}
+
+/* Remove the box-shadow from buttons in the nav-box because it adds a white stripe
+ * below the buttons and makes them look dumb */
+AnacondaSpokeWindow #nav-box GtkButton {
+    box-shadow: none;
+}
+
+/* These rules were removed when the Adwaita theme moved from
+ * gnome-themes-standard to gtk. The selectors had been wildcards, but after
+ * the move they were replaced with more specific selectors, because gtk is
+ * maintained by garbage people who don't care about how anyone else's
+ * applications look. We need to apply the old style to anconda's custom
+ * widgets in order for the selection highlight and insensitive shading to
+ * appear.
+ */
+@define-color anaconda_selected_bg_color #4a90d9;
+@define-color anaconda_selected_fg_color #ffffff;
+
+AnacondaMountpointSelector:selected,
+AnacondaDiskOverview:selected,
+AnacondaSpokeSelector:selected,
+AnacondaMountpointSelector:selected:focus,
+AnacondaDiskOverview:selected:focus,
+AnacondaSpokeSelector:selected:focus {
+    background-color: @anaconda_selected_bg_color;
+    color: @anaconda_selected_fg_color;
+}
+
+@define-color anaconda_insensitive_bg_color #f4f4f2;
+@define-color anaconda_insensitive_fg_color #a7aba7;
+@define-color anaconda_internal_element_color #888a85;
+@define-color anaconda_insensitive_borders shade(@anaconda_internal_element_color, 1.37);
+
+AnacondaMountpointSelector:disabled,
+AnacondaDiskOverview:disabled,
+AnacondaSpokeSelector:disabled {
+    background-color: @anaconda_insensitive_bg_color;
+    color: @anaconda_insensitive_fg_color;
+    border-color: @anaconda_insensitive_borders;
+}
+
+/* When multi-column GtkTreeViews set a row separator, the horizontal-separator
+ * style property is still applied to the row separator, breaking the row
+ * separator up for each column. It looks kind of dumb. Provide a way to not do
+ * that.
+ */
+treeview.solid-separator {
+    -GtkTreeView-horizontal-separator: 0;
+}
