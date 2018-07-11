@@ -3,24 +3,11 @@
 set -e
 set -x
 
-# To download packages
-# From one of the controlelrs in HA config
-# mkdir -p /root/Packages; rpm -qa | paste -d " " $(printf " -%.0s" {1..50}) | while read L; do yumdownloader --enablerepo="elrepo" --destdir /root/Packages ${L}; done
-# for G in base core debugging development hardware-monitoring network-tools performance system-admin-tools system-management; do
-#    yumdownloader @${G} --setopt=group_package_types=mandatory,default,optional --resolve --destdir /root/Packages
-# done
-#
-
-CENTOS_CONTENT=$1
-TRIX_PACKAGES=$2
+PLAYBOOKS="../../site/controller.yml ../../site/compute.yml"
 
 if [ "x${CENTOS_CONTENT}" = "x" ]; then
-    echo "Centos content dir should be specified"
-    exit 1
-fi
-
-if [ "x${TRIX_PACKAGES}" = "x" ]; then
-    echo "ThinityX packages source should be specified"
+    echo "Centos content dir should be specifiedi."
+    echo "Please do 'export CENTOS_CONTENT=/path/to/unpacked/iso'"
     exit 1
 fi
 
@@ -44,9 +31,48 @@ ISO_DIR=${SCRIPTDIR}/ISO
 
 mkdir -p ${ISO_DIR}/Packages
 
+TRINITY_RPM=trinityx-${VERSION}-${BUILD}.el7.x86_64.rpm
+for PLB in ${PLAYBOOKS}; do
+    ${SCRIPTDIR}/parse-playbook.py --playbook ${SCRIPTDIR}/${PLB}; \
+done \
+    | sort \
+    | uniq > ${ISO_DIR}/pkg.list; \
+
+cat ${SCRIPTDIR}/additional-packages.lst >> ${ISO_DIR}/pkg.list
+
+# download all the packages installed not from the repo
+cat ${ISO_DIR}/pkg.list \
+    | grep -E '^http[s]?://' \
+    | while read L; do wget -N -P ${ISO_DIR}/Packages ${L}; done
+
+# download all the packages from YAMLs
+cat ${ISO_DIR}/pkg.list \
+    | paste -d " " $(printf " -%.0s" {1..50}) \
+    | while read P; do \
+        yumdownloader --installroot ${ISO_DIR}/Packages \
+            --setopt=releasever=7 \
+            --destdir ${ISO_DIR}/Packages --resolve ${P}; \
+      done
+
+rm -rf ${ISO_DIR}/Packages/var
+
+# compare desired list and actual downloaded packages
+ORPHANED_PACKAGES=$(comm -23 \
+    <(cat ${ISO_DIR}/pkg.list | grep -v -E '^http[s]?://|^@' | sort | uniq) \
+    <(rpm -qp ${ISO_DIR}/Packages/*.rpm --provides \
+        | awk '{print $1}' | sort | uniq)
+)
+
+if [[ ! -z ${ORPHANED_PACKAGES} ]]; then
+    echo "Packages were not downloaded:"
+    echo "${ORPHANED_PACKAGES}"
+    exit 1
+fi
+
+cp ${SCRIPTDIR}/../rpm/RPMS/x86_64/${TRINITY_RPM} ${ISO_DIR}/Packages/
+
 cp -pr ${CENTOS_CONTENT}/{EFI,GPL,images,isolinux,LiveOS} ${ISO_DIR}/
 
-cp -pr ${TRIX_PACKAGES}/* ${ISO_DIR}/Packages/
 echo '<?xml version="1.0" encoding="UTF-8"?>' > ${ISO_DIR}/comps.xml
 echo '<!DOCTYPE comps PUBLIC "-//CentOS//DTD Comps info//EN" "comps.dtd">' >> ${ISO_DIR}/comps.xml
 echo '<comps>' >> ${ISO_DIR}/comps.xml
@@ -59,7 +85,8 @@ echo '</comps>' >> ${ISO_DIR}/comps.xml
 
 pushd ${ISO_DIR}
 createrepo --groupfile ./comps.xml .
-repoclosure --repofrompath=0,. -r 0
+# for reference, some packages are not really good in tracking dependencies
+repoclosure --repofrompath=0,. -r 0 || true
 rmdir 0
 popd
 
