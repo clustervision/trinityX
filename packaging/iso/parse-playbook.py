@@ -1,5 +1,7 @@
 #!/usr/bin/python2
 
+import sys
+import traceback
 from ansible.playbook import Playbook
 from ansible.vars.manager import VariableManager
 from ansible.parsing.dataloader import DataLoader
@@ -44,7 +46,10 @@ def get_package_names(ser):
     parm_search = {}
     parm_search.update(ser['role']['_default_vars'])
     parm_search.update(ser['role']['_role_params'])
-    loop_args = ser['loop_args']
+    if 'loop_args' in ser:
+        loop_args = ser['loop_args']
+    else:
+        loop_args = ser['loop']
     if not isinstance(loop_args, AnsibleSequence):
         loop_args = [loop_args]
     for arg in loop_args:
@@ -112,7 +117,13 @@ def get_packages(tasks):
             continue
 
         # pkg_name could be 'package' '{{ item }}' or '{{ item.key }}'
+        # ansible 2.4
         if 'loop_args' in ser and ser['loop_args'] is not None:
+            # handle '{{ item }}' or '{{ item.key }}'
+            pkg_names = get_package_names(ser)
+            packages.update(pkg_names)
+        # ansible 2.5
+        if 'loop' in ser and ser['loop'] is not None:
             # handle '{{ item }}' or '{{ item.key }}'
             pkg_names = get_package_names(ser)
             packages.update(pkg_names)
