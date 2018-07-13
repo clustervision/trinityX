@@ -1,0 +1,53 @@
+- name: Download luna repo file
+  get_url:
+    url: "https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo"
+    dest: "/etc/yum.repos.d/luna-1.2.repo"
+
+- name: Install additional packages
+  yum:
+    name: "{{ item.name }}"
+    state: "{{ item.state }}"
+  with_items: "{{ packages }}"
+
+- name: Mask all packages except drbd in elrepo
+  ini_file:
+    path: /etc/yum.repos.d/elrepo.repo
+    section: elrepo
+    option: includepkgs
+    value: "*drbd90*"
+    no_extra_spaces: yes
+
+- name: Get all available keys
+  shell: "ls /etc/pki/rpm-gpg/*"
+  register: gpg_keys
+  changed_when: false
+
+- name: Import keys
+  rpm_key:
+    key: "{{ item }}"
+    state: present
+  with_items:
+    "{{ gpg_keys.stdout_lines }}"
+
+- name: Install Ansible galaxy packages
+  shell: "ansible-galaxy install -p /etc/ansible/roles OndrejHome.pcs-modules-2"
+  args:
+    creates: "/etc/ansible/roles/OndrejHome.pcs-modules-2/library/pcs_cluster.py"
+
+- name: Mount DVD
+  mount:
+    src: "{{ lookup('env', 'DVD_DEV') }}"
+    path: "{{ lookup('env', 'DVD_PATH') }}"
+    opts: ro,relatime
+    fstype: iso9660
+    state: mounted
+
+- name: Check if proper images is mounted
+  stat:
+    path: "/mnt/CentOS_BuildTag"
+  register: cos_tag_file
+
+- name: Exit if no tagfile exist
+  fail:
+    msg: "No Centos DVD available"
+  when: not cos_tag_file.stat.exists
