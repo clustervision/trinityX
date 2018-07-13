@@ -134,4 +134,8 @@ def main():
         print p
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except:
+        sys.stderr.write(traceback.format_exc(limit=10))
+        sys.exit(1)
