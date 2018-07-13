@@ -1,0 +1,50 @@
+- name: Create ~/.ssh
+  file:
+    path: /root/.ssh
+    state: directory
+    mode: 0700
+
+- name: Generate SSH id_rsa key
+  command: /usr/bin/ssh-keygen -t rsa -b 4096 -N "" -f /root/.ssh/id_rsa
+  args:
+    creates: /root/.ssh/id_rsa
+
+- name: Generate SSH id_ecdsa key
+  command: /usr/bin/ssh-keygen -t ecdsa -b 521 -N "" -f /root/.ssh/id_ecdsa
+  args:
+    creates: /root/.ssh/id_ecdsa
+
+- name: Generate SSH id_ed25519 key
+  command: /usr/bin/ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519
+  args:
+    creates: /root/.ssh/id_ed25519
+
+- name: Create /root/.ssh/authorized_keys
+  copy:
+    content: ""
+    dest: /root/.ssh/authorized_keys
+    force: no
+    group: root
+    owner: root
+    mode: 0600
+
+- name: Add keys to /root/.ssh/authorized_keys
+  lineinfile:
+    dest: /root/.ssh/authorized_keys
+    line: "{{ item }}"
+  with_lines: /usr/bin/cat ~/.ssh/*.pub
+
+- name: Configure /etc/ssh/ssh_config
+  template:
+    src: ssh_config.j2
+    dest: /etc/ssh/ssh_config
+    backup: yes
+
+- name: Configure /etc/ssh/sshd_config
+  template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    backup: yes
+  notify: Restart sshd
+
+- meta: flush_handlers

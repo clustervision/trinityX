@@ -1,0 +1,13 @@
+- name: Configure interfaces
+  template:
+    src: "ifcfg.j2"
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item.DEVICE }}"
+    backup: yes
+  with_items:
+    - "{{ interfaces }}"
+  notify: "Restart network"
+
+- meta: flush_handlers
+
+- name: Gather updated facts
+  setup:
