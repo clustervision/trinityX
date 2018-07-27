@@ -14,9 +14,7 @@ TrinityX includes configuration files to automatically create a basic compute no
 Cloning an existing image
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The easiest way to get a new image for modifications is to clone an existing one. For example:
-
-.. code-block:: console
+The easiest way to get a new image for modifications is to clone an existing one. For example::
 
     # luna osimage list
     +------------+----------------------------+-------------------------------+
@@ -107,7 +105,7 @@ In TrinityX's playbook, this task is done by the ``wrapup-images`` role::
     changed: [new-compute.osimages.luna -> localhost]
 
 Grabbing an image from a live node
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This method is handy when some software requires hardware to be physically present on a node to run its installation procedure. After installation is complete, it is possible to sync files back to the image. Before doing so, it is worthwhile to inspect ``--grab_exclude_list`` and ``--grab_filesystems`` options in order to limit the amount of data to be synced. To check what needs to be synced, ``--dry_run`` can be specified::
 
@@ -213,7 +211,7 @@ To add nodes to the group simply run::
 
 
 Configuring interfaces
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 In simple cases, networking will just work. But sometimes a non-trivial configuration is necessary, in cases where bonding, bridging, or a VLAN config is required. This can be done with Luna.
 
