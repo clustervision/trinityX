@@ -30,12 +30,15 @@ Obol can manage users and groups on the local LDAP directory and it supports the
 ============= =============
 
 To create or modify a user, run::
+
     # obol user add|modify ...
 
 .. note:: Please note that running obol commands requires root privileges.
 
 Managing groups is similarly achieved using::
+
     # obol group [command] ....
+
 Where [command] can either be ``add``, ``show``, ``delete``, ``list``, ``addusers``, or ``delusers``
 
 For the full list of the commands supported by Obol, run::
