@@ -7,37 +7,17 @@ Introduction
 
 The TrinityX installation playbooks can set up either of the following configurations:
 - one controller as a standalone system
-- a pair of controllers as part of a High Availability pair with failover of services between the two
+- a pair of controllers as a High Availability (HA) pair with failover of services between the two
 
 In the stand-alone setup (also called non-HA in the TrinityX documentation), the various services are set up intuitively. The configuration will be similar to what can be achieved by setting up the services by hand, and it should not present any surprise to an experienced systems administrator.
 
-When the ``ha`` variable in ``group_vars/all`` is set to ``true``, the TrinityX playbook .i.e ``controller.yml`` will set up an HA controller pair. Please note that the installation playbook will only need to run once on the controller selected to become primary, the other controller will also be set up in parallel.
+When the ``ha`` variable in ``group_vars/all`` is set to ``true``, the TrinityX playbook i.e. ``controller.yml`` will set up an HA controller pair. Please note that the installation playbook will only need to run once on the controller selected to become primary, the other controller will also be set up in parallel.
 
-This document will cover the design and implementation of the HA configuration in TrinityX.
+This section will cover the design and implementation of the HA configuration in TrinityX.
 
-.. note:: In the following paragraphs we will reference the standard (or core) configuration. This is the base configuration that is set up by the TrinityX playbooks. As such, any later manual changes are not covered by this document.
+.. note:: In the following paragraphs we will reference the standard configuration. This is the base configuration that is set up by the TrinityX playbook.
 
-.. note:: This document assumes that the reader is already familiar with the storage configuration options of a new TrinityX installation. Please refer to the :ref:`ps_controller_storage` for more details.
-
-
-
-Design goals
-------------
-
-The goals of the standard TrinityX HA configuration are the following:
-
-- Correctness
-
-  Above all else, the configuration must be correct. It must behave as designed, and barring any bug in the underlying software, must provide failover for all the services included.
-
-- Genericity
-
-  As the configuration will be deployed on very different systems, both in hardware design and in the software that will eventually run on them, it must be as generic as possible. Amongst other things, it most not make hidden assumptions about the software or hardware, nor can it place hidden constraints on the software or hardware design.
-
-- Simplicity
-
-  While a TrinityX system is typically deployed by experienced engineers, it may be managed by administrators unfamiliar with the peculiarities of HA administration. The configuration must be as simple as possible in order to effect ease of use and administration, facilitate understanding of the setup, and limit potential for errors.
-
+.. note:: This document assumes that the reader is already familiar with the storage configuration options set by ``shared_fs_type`` in the table :ref:`tab_global_variables`.
 
 
 Corosync and fencing
@@ -45,9 +25,9 @@ Corosync and fencing
 
 `Corosync <https://corosync.github.io/corosync/>`_ is the group communication system used to keep track of the machines present in the cluster. It is used to detect node and communication failure, and passes that information up to Pacemaker for further action.
 
-.. note:: The term "cluster" used in the context of Corosync means the group of machines known to Corosync, and for which failover is required. It does not mean the whole cluster with compute nodes, storage, etc. Typically a Corosync cluster will include the HA pair (or group of machines that can run the resources), and possibly one or more quorum devices used to detect node failure in order to avoid split brain scenarios.
+.. note:: The term *cluster* used in the context of Corosync means the group of machines known to Corosync, and for which failover is required. It does not mean the whole cluster with compute nodes, storage, etc. Typically a Corosync cluster will include the HA pair (or group of machines that can run the resources), and possibly one or more quorum devices used to detect node failure in order to avoid split brain scenarios.
 
-The TrinityX Corosync configuration is extremely basic:
+The Corosync configuration in TrinityX is fairly basic:
 
 - the Corosync cluster includes only the two controllers;
 
@@ -55,16 +35,16 @@ The TrinityX Corosync configuration is extremely basic:
 
 - quorum is disabled;
 
-- IPMI based fencing is configured.
+- IPMI based fencing is configured in `Pacemaker`_;
 
-This is not a very good configuration in itself, as it is difficult if not impossible to detect a split brain situation with only two nodes; a quorum device or a third node is required. That extra configuration is highly dependent on the hardware available for a given deployment, and is left to be done by the engineer.
+.. note:: This is not an ideal configuration in itself, as it is difficult if not impossible to reliably handle a split brain situation with only two nodes; setting up a *quorum device* or a third node is recommended for that.
 
 
 
 Pacemaker
 ---------
 
-The management of computing resources is done by `Pacemaker <http://wiki.clusterlabs.org/wiki/Pacemaker>`_. Pacemaker relies on Corosync to determine the availability of nodes within an HA cluster (same definition as for Corosync), and follows a set of rules and constraints to determine where to run sets of resources.
+The management of computing resources is done by `Pacemaker (cluster resource manager) <http://wiki.clusterlabs.org/wiki/Pacemaker>`_. Pacemaker relies on Corosync to determine the availability of nodes within an HA cluster (same definition as for Corosync), and follows a set of rules and constraints to determine where to run sets of resources.
 
 The TrinityX standard configuration makes the following assumptions:
 
