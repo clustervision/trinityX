@@ -1,12 +1,20 @@
 ---
 # tasks file for environment-modules
 
-# Contents of the shared modulefiles directory:
-# /modulefiles_path/
-#   |-- cv-advanced       advanced CV modules, not available by default
-#   ¦-- cv-standard       standard CV modules, available by default
-#   |-- site-local        site-local modules, available by default
-#    -- modulegroups      modulefiles to load groups (advanced, local, etc)
+# The structure of the shared modules:
+# modulefiles_path/
+#  ├── groups
+#  │   └── userspace
+#  │       ├── all          - Loads all the installed versions
+#  │       └── tr17.10      - Loads a particular version
+#  └── tr17.10
+#      └── x86_64
+#          ├── compiler
+#          │   ├── gcc
+#          │   ├── python2
+#          │   └── python3
+#          └── libraries
+#              └── intel-runtime
 
 - name: Install environment-modules packages
   yum:
@@ -15,21 +23,10 @@
   with_items: '{{ environment_modules_packages }}'
 
 - name: Add the group paths to the default configuration
-  lineinfile:
-    path: '/usr/share/Modules/init/.modulespath'
-    line: '{{ modulefiles_path }}/{{ item }}'
-  with_items:
-    - '/groups'
-
-- block:
-
-  - name: Create the shared modules directories
-    file:
-      dest: '{{ modulefiles_path }}/{{ item }}'
-      owner: root
-      group: root
-      state: directory
-    with_items:
-      - 'groups'
-  
-  when: primary | default(True)
+  blockinfile:
+    path: /usr/share/Modules/init/.modulespath
+    block: |
+      {% for dir in modulefiles_subdirs -%} 
+      {{ modulefiles_path }}/{{ dir }}
+      {% endfor %}
+    state: present
