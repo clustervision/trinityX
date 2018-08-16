@@ -1,0 +1,22 @@
+---
+
+# Configure nscd daemon
+
+- name: Install nscd
+  yum:
+    name: nscd
+    state: present
+  notify:
+  - restart nscd
+
+- name: Put config file in place
+  template:
+    src: "nscd.conf.j2"
+    dest: "/etc/nscd.conf"
+  notify:
+  - restart nscd
+
+- name: Enable nscd service
+  service:
+    name: nscd
+    enabled: yes
