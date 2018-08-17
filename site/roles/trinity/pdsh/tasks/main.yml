@@ -1,0 +1,34 @@
+---
+
+# Configure pdsh
+
+- name: Install pdsh packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  with_items: '{{ pdsh_packages }}'
+
+- name: Ensure {{ pdsh_conf_path }} exists
+  file:
+    path: '{{ pdsh_conf_path }}'
+    state: directory
+  when: primary|default(True)
+
+- name: Get /etc/dsh status
+  stat:
+    path: '/etc/dsh'
+  register: default_pdsh_path
+
+- name: Replace default configuration path with symlink to {{ pdsh_conf_path }}
+  file:
+    src: '{{ pdsh_conf_path }}'
+    dest: '/etc/dsh'
+    state: link
+    force: yes
+  when: not default_pdsh_path.stat.exists
+
+- name: Create {{ pdsh_conf_path }}/group dir
+  file:
+    path: '{{ pdsh_conf_path }}/group'
+    state: directory
+  when: primary|default(True)
