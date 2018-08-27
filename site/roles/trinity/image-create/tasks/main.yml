@@ -67,10 +67,15 @@
   with_items:
     - "{{ image_core_packages }}"
 
-- name: Add luna repo
-  copy:
-    src: luna-1.2.repo
-    dest: "{{ image_path }}/etc/yum.repos.d/luna-1.2.repo"
+- name: Add local repos
+  yum_repository:
+    name: "{{ item.name }}"
+    description: "{{ item.description }}"
+    baseurl: "{{ item.baseurl }}"
+    gpgcheck: "{{ item.gpgcheck | default('no') }}"
+    reposdir: "{{ image_path }}/etc/yum.repos.d/"
+  with_items: "{{ image_repos }}"
+  tags: repos
 
 - name: Install luna-client
   yum:
