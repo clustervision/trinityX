@@ -1,0 +1,163 @@
+---
+- name: Install zabbix checks
+  yum:
+    name: trix-zabbix-checks
+    state: present
+
+- block:
+  - name: MySQL-python
+    yum:
+      name: MySQL-python
+      state: present
+
+  - name: Aquire zabbix SQL password (generate or use one from /etc/trinity/passwords)
+    set_fact:
+      zabbix_sql_pwd: "{{ lookup('password',
+                        '/etc/trinity/passwords/mysql/zabbix.txt
+                         chars=ascii_letters,digits,hexdigits') }}"
+  - name: Aquire zabbix Admin password (generate or use one from /etc/trinity/passwords)
+    set_fact:
+      zabbix_admin_pwd: "{{ lookup('password',
+                        '/etc/trinity/passwords/zabbix/admin.txt
+                         chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Create cmdline to access sql
+    set_fact:
+      cmd_sql: >
+        mysql --user=zabbix --password={{ zabbix_sql_pwd }}
+        --database=zabbix --host=localhost --batch --skip-column-names
+
+  - name: Check if regexp exist in zabbix DB
+    command: >
+      {{ cmd_sql }}
+      --execute="SELECT * FROM regexps WHERE \
+                 regexpid={{ zabbix_checks_sql_regexpid }};"
+    register: zabb_select_regexp_out
+    changed_when: False
+
+  - name: Add record for regexp
+    command: >
+      {{ cmd_sql }}
+      --execute="DELETE FROM regexps WHERE \
+                    regexpid={{ zabbix_checks_sql_regexpid }}; \
+                 INSERT INTO regexps VALUES \
+                    ( {{ zabbix_checks_sql_regexpid }}, \"Mounts\", \"\");"
+    when: zabb_select_regexp_out.stdout != "1000\tMounts\t"
+
+  - name: Check if expression exist in zabbix DB
+    command: >
+      {{ cmd_sql }}
+      --execute="SELECT * FROM expressions WHERE \
+                 expressionid={{ zabbix_checks_sql_expressionid }};"
+    register: zabb_select_expression_out
+    changed_when: False
+
+  - name: Add record for expression
+    command: >
+      {{ cmd_sql }}
+      --execute="DELETE FROM expressions WHERE \
+                    expressionid={{ zabbix_checks_sql_expressionid }}; \
+                 INSERT INTO expressions VALUES \
+                    ( 1000, 1000, \".*\", 3, \",\", 0 );"
+    when: zabb_select_expression_out.stdout != "1000\t1000\t.*\t3\t,\t0"
+
+  - name: Import all templates
+    zabbix_conf:
+      username: "Admin"
+      password: "{{ zabbix_admin_pwd  }}"
+      hostname: "localhost"
+      proto: "https"
+      validate_certs: no
+      object:   "configuration"
+      action:   "set"
+      params:
+        format: "xml"
+        rules:
+          hosts:
+            createMissing: true
+            updateExisting: false
+          templates:
+            createMissing: true
+            updateExisting: false
+          applications:
+            createMissing: true
+          discoveryRules:
+            createMissing: true
+            updateExisting: false
+          graphs:
+            createMissing: true
+            updateExisting: false
+          triggers:
+            createMissing: true
+            updateExisting: false
+          items:
+            createMissing: true
+            updateExisting: false
+            deleteMissing: true
+          templateLinkage:
+            createMissing: true
+          httptests:
+            createMissing: true
+        source: "{{ lookup('file', item )}}"
+    with_fileglob:
+      - "/usr/lib/zabbix/templates/*.xml"
+
+  - name: Get template IDs
+    zabbix_conf:
+      username: "Admin"
+      password: "{{ zabbix_admin_pwd  }}"
+      hostname: "localhost"
+      validate_certs: no
+      proto: "https"
+      object:   "{{item.object}}"
+      action:   "{{item.action}}"
+      filter:   "{{item.filter}}"
+    with_items:
+      - {object: "template", action: "get", filter: { host: "CV Controller" }   }
+      - {object: "template", action: "get", filter: { host: "Template App SSH Service" }   }
+      - {object: "template", action: "get", filter: { host: "Template ICMP Ping" }   }
+    register: templates
+
+  - name: Configuring mail forwarding, creating host groups
+    zabbix_conf:
+      username: "Admin"
+      password: "{{ zabbix_admin_pwd  }}"
+      hostname: "localhost"
+      proto: "https"
+      validate_certs: no
+      object:   "{{item.object}}"
+      action:   "{{item.action}}"
+      filter:   "{{item.filter}}"
+      params:   "{{item.params}}"
+    with_items:
+      - {object: "mediatype", action: "set", filter: { description: "Local e-mail" } , params: { smtp_server: "127.0.0.1" } }
+      - {object: "hostgroup", action: "set", filter: { }, params: { name: "Compute" } }
+      - {object: "hostgroup", action: "set", filter: { }, params: { name: "Controller" } }
+      - {object: "hostgroup", action: "set", filter: { }, params: { name: "Login" } }
+      - {object: "hostgroup", action: "set", filter: { }, params: { name: "Storage" } }
+
+  - name: Configure auto-registration
+    zabbix_conf:
+      username: "Admin"
+      password: "{{ zabbix_admin_pwd  }}"
+      hostname: "localhost"
+      proto: "https"
+      validate_certs: no
+      object: "action"
+      action: "set"
+      filter:
+        name: "Auto registration"
+      params:
+        operations:
+          - actionid: 7
+            operationid: 13
+            operationtype: 6
+            optemplate:
+              - operationid: 13
+                templateid:  "{{ templates.results.1.result.0.templateid }}"
+              - operationid: 13
+                templateid:  "{{ templates.results.2.result.0.templateid }}"
+            recovery: 0
+
+  when: primary|default(True)
+        and ansible_connection not in 'lchroot'
