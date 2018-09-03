@@ -1,11 +1,4 @@
 ---
-- name: Ensure "{{ trix_repos }}" exists
-  file:
-    path: "{{ trix_repos }}"
-    owner: root
-    group: root
-    state: directory
-
 - name: Fetch remote .repo definitions
   get_url:
     url: "{{ item.repo }}"
@@ -48,6 +41,13 @@
   when: item.key|default([])
 
 - block:
+  - name: Ensure "{{ trix_repos }}" exists
+    file:
+      path: "{{ trix_repos }}"
+      owner: root
+      group: root
+      state: directory
+
   - name: Copy local repos to "{{ trix_repos }}"
     copy:
       src: "{{ item.repo }}"
