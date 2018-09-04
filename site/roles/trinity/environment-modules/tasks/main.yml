@@ -19,10 +19,7 @@
     path: '/usr/share/Modules/init/.modulespath'
     line: '{{ modulefiles_path }}/{{ item }}'
   with_items:
-    - '/modulegroups'
-    - '/cv-standard'
-    - '/site-local'
-    - '' 
+    - '/groups'
 
 - block:
 
@@ -33,14 +30,6 @@
       group: root
       state: directory
     with_items:
-      - 'modulegroups'
-      - 'cv-standard'
-      - 'cv-advanced'
-      - 'site-local'
+      - 'groups'
   
-  - name: Copy cv-advanced to shared modules location
-    template:
-      src: cv-advanced
-      dest: '{{ modulefiles_path }}/modulegroups'
-
   when: primary | default(True)
