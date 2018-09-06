@@ -1,8 +1,8 @@
 ---
 # tasks file for environment-modules
 
-# The structure of the shared modules:
-# modulefiles_path/
+# An example of the structure of shared modules:
+# envmodules_files_path/
 #  ├── groups
 #  │   └── userspace
 #  │       ├── all          - Loads all the installed versions
@@ -20,13 +20,13 @@
   yum:
    name: '{{ item }}'
    state: present
-  with_items: '{{ environment_modules_packages }}'
+  with_items: '{{ envmodules_packages }}'
 
 - name: Add the group paths to the default configuration
   blockinfile:
     path: /usr/share/Modules/init/.modulespath
     block: |
-      {% for dir in modulefiles_subdirs -%} 
-      {{ modulefiles_path }}/{{ dir }}
+      {% for dir in envmodules_files_subdirs -%} 
+      {{ envmodules_files_path }}/{{ dir }}
       {% endfor %}
     state: present
