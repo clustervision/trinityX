@@ -30,3 +30,28 @@
       {{ envmodules_files_path }}/{{ dir }}
       {% endfor %}
     state: present
+
+- name: Get a list of dependencies 
+  shell: >
+    repoquery --requires --resolve --nvr {{ envmodules_list | join( ' ') }} |
+    sort -u | grep -v {{ envmodules_version }}
+  register: repoquery
+  changed_when: False
+
+- name: Install dependencies on controller(s)
+  yum:
+    name: '{{ repoquery.stdout_lines }}'
+    state: present
+    disablerepo: userspace-shared-*
+
+- name: Set --justdb option for yum on passive controller or node/image
+  set_fact:
+    justdb_option: '{{ "" if primary else "--setopt=tsflags=justdb" }}'
+
+- name: Install environment modules
+  command: yum install -y {{ justdb_option }} {{ item }}
+  args:
+    warn: no
+  with_items: '{{ envmodules_list }}'
+  register: yum_result
+  changed_when: '"Nothing to do" not in yum_result.stdout_lines'
