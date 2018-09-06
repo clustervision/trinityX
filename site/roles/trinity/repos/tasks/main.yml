@@ -49,55 +49,6 @@
   with_items: "{{ repos }}"
   when: item.key|default([])
 
-- block:
-  - name: Ensure "{{ trix_repos }}" exists
-    file:
-      path: "{{ trix_repos }}"
-      owner: root
-      group: root
-      state: directory
-
-  - name: Copy local repos to "{{ trix_repos }}"
-    copy:
-      src: "{{ item.repo }}"
-      dest: "{{ trix_repos }}"
-    with_items: "{{ repos }}"
-    when:
-      - item.repo|search('^/')
-      - not item.repo|search('^'+trix_repos)
-      - not item.repo|search('\\.rpm$')
-      - not item.repo|search('\\.repo$')
-
-
-  - name: Install nginx
-    yum:
-      name: "{{ item }}"
-      state: present
-    with_items: "{{ repos_nginx_packages }}"
-
-  - name: Add repos folder to nginx configuration
-    template:
-      src: repos.conf
-      dest: /etc/nginx/conf.d/
-    notify: reload nginx
-  when: primary|default(True)
-        and ansible_connection not in 'lchroot'
-        and not compute|default(False)
-
-- name: Create list of local repos
-  set_fact:
-    repos_local: >-
-                 {{ repos_local|default([]) + [{
-                   'repo': item.repo if item.repo|search('^'+trix_repos) else
-                    trix_repos+'/'+item.repo|basename,
-                   'key': item.key|default([])}] }}
-  with_items: "{{ repos }}"
-  when:
-    - item.repo|search('^/')
-    - not item.repo|search('\\.rpm$')
-    - not item.repo|search('\\.repo$')
-
-
 - name: Define remote repos
   yum_repository:
     file: "{{ item.name if item.name|default([]) else
@@ -116,20 +67,32 @@
     - item.repo|search('^http[s]*://')
     - not (item.repo|search('\\.rpm$') or item.repo|search('\\.repo$'))
 
-- name: Define local repos
-  yum_repository:
-    name: >-
-          {{ item.name if item.name|default([]) else
-             item.repo|regex_replace('^'+trix_repos+'/','')|
-             regex_replace('/$','')|replace('/','-') }}-local
-    description: >-
-                 Local repo in {{ item.repo|
-                 regex_replace('^'+trix_repos+'/','') }}
-    baseurl: >-
-             http://{{trix_ctrl_hostname}}:{{ repos_port }}/repos/{{ item.repo|
-             regex_replace('^'+trix_repos+'/','') }}
-    enabled: "{{ item.enabled|default('yes') }}"
-    gpgcheck: "{{ 'yes' if item.key|default([]) else 'no' }}"
-    reposdir: "{{ repos_reposdir }}"
-    state: present
-  with_items: "{{ repos_local|default([]) }}"
+# Disable all remote repost (without *-local suffix)
+# If we have local install
+#
+- block:
+
+  # FIXME
+  # Was trying to do it via yum_repos, lineinfile or ini_file
+  # modules. Got monstrous construction at the end.
+  - name: Install yum-utils to make yum-config-manager available
+    yum:
+      name: yum-utils
+      state: installed
+
+  - name: Diable all repo without '*-local' suffix
+    shell: >
+      yum repolist -q \
+      | awk '
+        /-local[^/-]/{next}
+        NR==1{next}
+        {
+          gsub("^!", "", $1);
+          gsub("/.*", "", $1);
+          print $1
+        }' \
+      | xargs yum-config-manager --disable {}
+    args:
+      warn: no
+
+  when: local_install
