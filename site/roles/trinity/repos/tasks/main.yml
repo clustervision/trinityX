@@ -35,7 +35,7 @@
 
 - name: Import GPG keys
   rpm_key:
-    key: "{{ item.key }}"
+    key: "{{ item.key | regex_replace('^file://') }}"
     state: present
   with_items: "{{ repos }}"
   when: item.key|default([])
@@ -91,9 +91,10 @@
               regex_replace('/$','')|replace('/','-') }}"
     description: "Remote repo at {{ item.repo }}"
     baseurl: "{{ item.repo }}"
-    enabled: yes
+    enabled: "{{ item.enabled|default('yes') }}"
     gpgcheck: "{{ 'yes' if item.key|default([]) else 'no' }}"
     gpgkey: "{{ item.key|default([]) }}"
+    reposdir: "{{ repos_reposdir }}"
     state: present
   with_items: "{{ repos }}"
   when:
@@ -112,8 +113,9 @@
     baseurl: >-
              http://{{trix_ctrl_hostname}}:{{ repos_port }}/repos/{{ item.repo|
              regex_replace('^'+trix_repos+'/','') }}
-    enabled: yes
+    enabled: "{{ item.enabled|default('yes') }}"
     gpgcheck: "{{ 'yes' if item.key|default([]) else 'no' }}"
     gpgkey: "{{ item.key|default([]) }}"
+    reposdir: "{{ repos_reposdir }}"
     state: present
   with_items: "{{ repos_local|default([]) }}"
