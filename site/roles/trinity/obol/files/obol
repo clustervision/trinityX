@@ -66,7 +66,7 @@ def exists(key, value):
 
 
 def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
-             shell, group, groups, expire):
+             shell, group, groups, expire, home):
     """Add a user to the LDAP directory"""
 
     if uid:
@@ -102,7 +102,7 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
     if not sn:
         sn = username
 
-    home = load_param("users", "home") + '/' + username
+    home = home if home else load_param("users", "home") + '/' + username
     shell = shell if shell else load_param("users", "shell")
 
     if expire and expire != '-1':
@@ -250,6 +250,8 @@ def user_modify(b, username, **kwargs):
 
             if value != '-1':
                 value = str(int(value) + int(time.time() / 86400))
+        elif key == 'home':
+            key = 'homeDirectory'
 
         if append:
             mod_attrs.append((ldap.MOD_REPLACE, key, value))
@@ -459,6 +461,7 @@ command.add_argument('--groups', type=csep,
 command.add_argument('--expire', metavar="DAYS",
                      help=('Number of days after which the account expires. '
                            'Set to -1 to disable'))
+command.add_argument('--home', metavar="HOME")
 
 command = user_commands.add_parser('delete', help='Delete a user')
 command.add_argument('username')
@@ -480,6 +483,7 @@ command.add_argument('--phone', metavar="PHONE NUMBER")
 command.add_argument('--expire', metavar="DAYS",
                      help=('Number of days after which the account expires. '
                            'Set to -1 to disable'))
+command.add_argument('--home', metavar="HOME")
 
 command = user_commands.add_parser('list', help='List users')
 
