@@ -138,3 +138,13 @@ To build the full set of the documentation included with TrinityX:
    # sphinx-build -b rinoh . _build/
 
 If everything goes well, the documentation will be saved as ``_build/TrinityX.pdf``
+
+
+Contributing
+============
+
+To contribute to TrinityX:
+
+1. Get familiar with our `code guidelines <Guidelines.rst>`_
+2. Clone TrinityX repository
+3. Commit your changes in your repository and create a pull request to the ``dev`` branch in ours.
