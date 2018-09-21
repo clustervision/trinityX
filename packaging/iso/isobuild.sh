@@ -45,6 +45,10 @@ cat ${ISO_DIR}/pkg.list \
     | grep -E '^http[s]?://' \
     | while read L; do wget -N -P ${ISO_DIR}/Packages ${L}; done
 
+# download additional files
+cat ${SCRIPTDIR}/additional-files.lst \
+    | while read L; do wget -N -P ${ISO_DIR}/Packages ${L}; done
+
 # download all the packages from YAMLs
 cat ${ISO_DIR}/pkg.list \
     | paste -d " " $(printf " -%.0s" {1..50}) \
