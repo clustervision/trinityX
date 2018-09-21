@@ -53,6 +53,9 @@ def get_package_names(ser):
     if not isinstance(loop_args, AnsibleSequence):
         loop_args = [loop_args]
     for arg in loop_args:
+        # more likely some local packages
+        if arg.startswith("/"):
+            continue
         a = arg[2:-2].strip()
         sep = ser['args']['name'].find('.')
         # handle '{{ item }}' case
