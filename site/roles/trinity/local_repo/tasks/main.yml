@@ -109,4 +109,37 @@
       dest: /etc/nginx/conf.d/trinityx-repo.conf
     notify: restart nginx
 
+  - name: Get interface for temporary floating IP
+    shell: >
+      ip -o -br -4 addr | awk '/{{ trix_ctrl1_ip }}/{print $1}'
+    changed_when: false
+    register: interface_to_assign
+
+  - name: Check if we have interface to assign
+    fail:
+      msg: Interface for floaing IP not found
+    when: interface_to_assign.stdout_lines|length != 1
+
+  - name: Is floating IP already assigned
+    shell: >
+      ip -o -br -4 addr | awk '/{{ trix_ctrl_ip }}/{print $1}'
+    changed_when: false
+    register: interface_w_floating_ip
+
+  - name: Assign floating IP
+    shell: |
+      MASK=$(ip -o -br -4 addr | awk -F/ '/{{ trix_ctrl1_ip }}/{print $NF}')
+      ip a add {{ trix_ctrl_ip }}/${MASK} dev {{ interface_to_assign.stdout }}
+    when: interface_w_floating_ip.stdout_lines|length == 0
+
+  - name: Assign interfaces to the trusted zone
+    firewalld:
+      zone: trusted
+      interface: "{{ interface_to_assign.stdout }}"
+      state: enabled
+      permanent: false
+      immediate: true
+
+  - meta: flush_handlers
+
   when: primary|default(True)
