@@ -1,71 +1,18 @@
 ---
-
-# This is needed when using the role as a dependency
-# and the target repos directory might not yet exist
-- name: Create reposdir if it does not exist
-  file:
-    path: "{{ repos_reposdir }}"
-    state: directory
-  when: repos_reposdir != "/etc/yum.repos.d"
-
-- name: Fetch remote .repo definitions
-  get_url:
-    url: "{{ item.repo }}"
-    dest: "{{ repos_reposdir }}"
+- name: Debug
+  debug:
+    msg: "{{ item.repo }}"
   with_items: "{{ repos }}"
-  when: item.repo|match('^http[s]*://.*\\.repo$')
 
-- name: Copy local .repo definitions
-  copy:
-    src: "{{ item.repo }}"
-    dest: "{{ repos_reposdir }}"
+- name: Configure repo
+  trix_repos:
+    remote_repo: "{{ item.repo }}"
+    remote_key:  "{{ item.key | default(None)}}"
+    local_repo:  "{{ local_repo | default(default_local_repo) }}"
+    local_key:   "{{ local_key | default(None) }}"
+    name:        "{{ item.name | default(None) }}"
+    use_local:   "{{ local_install | default(False) }}"
   with_items: "{{ repos }}"
-  when:
-    - item.repo|search('\\.repo$')
-    - not item.repo|search('^http[s]*://')
-
-- name: Install repo RPMs from repository
-  yum:
-    name: "{{ item.repo }}"
-    state: installed
-  with_items: "{{ repos }}"
-  when:
-    - not item.repo|search('\\.rpm$')
-    - not item.repo|search('\\.repo$')
-    - not item.repo|search('^http[s]*://')
-    - not item.repo|search('^/')
-
-- name: Install repo RPMs
-  yum:
-    name: "{{ item.repo }}"
-    state: installed
-  with_items: "{{ repos }}"
-  when: item.repo|search('\\.rpm$')
-
-- name: Import GPG keys
-  rpm_key:
-    key: "{{ item.key }}"
-    state: present
-  with_items: "{{ repos }}"
-  when: item.key|default([])
-
-- name: Define remote repos
-  yum_repository:
-    file: "{{ item.name if item.name|default([]) else
-              item.repo|regex_replace('^http[s]*://([^/]*)/.*','\\1') }}"
-    name: "{{ item.name if item.name|default([]) else
-              item.repo|regex_replace('^http[s]*://','')|
-              regex_replace('/$','')|replace('/','-') }}"
-    description: "Remote repo at {{ item.repo }}"
-    baseurl: "{{ item.repo }}"
-    enabled: "{{ item.enabled|default('yes') }}"
-    gpgcheck: "{{ 'yes' if item.key|default([]) else 'no' }}"
-    reposdir: "{{ repos_reposdir }}"
-    state: present
-  with_items: "{{ repos }}"
-  when:
-    - item.repo|search('^http[s]*://')
-    - not (item.repo|search('\\.rpm$') or item.repo|search('\\.repo$'))
 
 # Disable all remote repost (without *-local suffix)
 # If we have local install
@@ -80,19 +27,14 @@
       name: yum-utils
       state: installed
 
-  - name: Diable all repo without '*-local' suffix
+  - name: Disable all repo without '*-local' suffix
     shell: >
-      yum repolist -q \
-      | awk '
-        /-local[^/-]/{next}
-        NR==1{next}
-        {
-          gsub("^!", "", $1);
-          gsub("/.*", "", $1);
-          print $1
-        }' \
+      yum-config-manager  \
+      | sed -n 's/^\[\(.*\)\]$/\1/p' \
+      | egrep -v "\-local$" \
       | xargs yum-config-manager --disable {}
+
     args:
       warn: no
 
-  when: local_install
+  when: local_install | default(False)
