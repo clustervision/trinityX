@@ -3,9 +3,9 @@
 - name: Install DRBD packages
   yum:
     name: '{{ item }}'
-    enablerepo: elrepo
+    enablerepo: "{{ trinityx_local_reponame if local_install else 'elrepo' }}"
     state: present
-  with_items: '{{drbd_packages}}'
+  with_items: '{{ drbd_packages }}'
 
 - name: Disable elrepo repository
   replace:
@@ -28,9 +28,9 @@
   ignore_errors: yes
 
 - block:
-  
+
   - name: Check if DRBD is already mounted at trix_root
-    command: 
+    command:
       '/usr/bin/findmnt -S /dev/drbd/by-res/{{ drbd_shared_resource_name }}
       -T {{ trix_root }}'
     register: drbd_mounted
@@ -43,10 +43,10 @@
       service:
         name:  drbd
         state: started
-  
+
     - name: Promote shared resource
       shell: '/usr/sbin/drbdadm --force primary {{ drbd_shared_resource_name }}'
-  
+
     - name: Creating a file system on shared resource
       filesystem:
         fstype: xfs
@@ -54,14 +54,14 @@
         force: yes
         opts: -b size=4096 -s size=4096
       ignore_errors: yes
-  
+
     - name: Create a fake fstab for the next step
       tempfile:
         path: /tmp
         prefix: fstab.
         state: file
       register: drbd_fake_fstab
-  
+
     - name: Temporarily mount DRBD disk
       mount:
         src: "/dev/drbd/by-res/{{ drbd_shared_resource_name }}"
@@ -69,17 +69,17 @@
         fstype: xfs
         state: mounted
         fstab: "{{ drbd_fake_fstab.path }}"
-  
+
     - name: Copy contents of {{ trix_root }} from local drives to DRBD
       copy:
         src: "{{ trix_root }}/"
         dest: "{{ trix_root }}-temp"
-  
+
     - name: Temporarily umount DRBD disk
       mount:
         path: "{{ trix_root }}-temp"
         state: unmounted
-  
+
     - name: Temporarily shut DRBD down
       service:
         name:  drbd
