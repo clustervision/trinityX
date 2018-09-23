@@ -57,6 +57,12 @@ def get_package_names(ser):
         if arg.startswith("/"):
             continue
         a = arg[2:-2].strip()
+        if ser['action'] == 'trix_repos':
+            pkgs = [e['repo'] for e in parm_search[a]]
+            for p in pkgs:
+                if p.endswith('.repo') or p.endswith('.rpm') or '://' not in p:
+                    packages.add(p)
+            continue
         sep = ser['args']['name'].find('.')
         # handle '{{ item }}' case
         if sep == -1:
@@ -113,11 +119,12 @@ def get_packages(tasks):
     for task in tasks:
         ser = task.serialize()
         # we need only yum-related tasks
-        if ser['action'] != 'yum':
+        if ser['action'] != 'yum' and ser['action'] != 'trix_repos':
             continue
         # skip tasks which remove packages
-        if ser['args']['state'] == 'absent':
+        if ser['action'] == 'yum' and ser['args']['state'] == 'absent':
             continue
+
 
         # pkg_name could be 'package' '{{ item }}' or '{{ item.key }}'
         # ansible 2.4
