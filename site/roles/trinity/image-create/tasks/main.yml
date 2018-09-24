@@ -59,6 +59,45 @@
     src: "/etc/yum/vars"
     dest: "{{ image_path }}/etc/yum/"
 
+- name: Add luna repo
+  copy:
+    src: luna-1.2.repo
+    dest: "{{ image_path }}/etc/yum.repos.d/luna-1.2.repo"
+
+- block:
+
+  - name: Set up local repository
+    yum_repository:
+      name: "{{ trinityx_local_reponame }}"
+      baseurl: "http://{{ trix_ctrl_ip }}:{{ repos_port }}/repos/trinityx/"
+      description: "{{ trinityx_local_reponame }}"
+      gpgcheck: no
+      enabled: yes
+      reposdir: "{{ image_path }}/etc/yum.repos.d"
+
+  - name: Disable all repo without '*-local' suffix
+    shell: >
+      yum-config-manager --installroot={{ image_path }} \
+      | sed -n 's/^\[\(.*\)\]$/\1/p' \
+      | egrep -v "\-local$" \
+      | xargs yum-config-manager --installroot={{ image_path }} --disable {}
+    args:
+      warn: no
+
+  - name: Install epel manually
+    yum:
+      name: epel-release
+      installroot: "{{ image_path }}"
+      state: present
+
+  - name: Disable epel repo
+    shell: >
+      yum-config-manager --installroot={{ image_path }} --disable epel
+    args:
+      warn: no
+
+  when: local_install | default(False)
+
 - name: Install core packages - @core, kernel and grub2
   yum:
     name: "{{ item }}"
@@ -66,14 +105,6 @@
     installroot: "{{ image_path }}"
   with_items:
     - "{{ image_core_packages }}"
-
-- name: Install luna-client
-  yum:
-    name: "{{ item }}"
-    state: present
-    installroot: "{{ image_path }}"
-  with_items:
-    - "{{ image_luna_packages }}"
 
 #- name: Copy gpg keys
 #  copy:
