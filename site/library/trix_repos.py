@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.urls import fetch_url
 from ansible.module_utils._text import to_native
-from ansible.modules.packaging.os.rpm_key import RpmKey
+
 from inspect import cleandoc
 import tempfile
 import os
@@ -14,7 +14,7 @@ import shutil
 BUFSIZE = 65536
 
 
-class BuildRepo(RpmKey):
+class BuildRepo(object):
 
     def __init__(self, module):
         self.module = module
@@ -28,7 +28,8 @@ class BuildRepo(RpmKey):
             # remote_repo: epel-release
             # local_repo:  http://some-local-server/path
             # will be converted to local-repo: epel-release
-            if '/' not in params['remote_repo'] and '/' in params['local_repo']:
+            if ('/' not in params['remote_repo']
+                    and '/' in params['local_repo']):
                 self.repo = params['remote_repo']
             # we can use something like
             # remote_repo: http://some.server/full/path/file.repo
@@ -123,7 +124,8 @@ class BuildRepo(RpmKey):
         stdout, _ = self.execute_command(cmd)
         lines = stdout.splitlines()
         if len(lines) == 0:
-            msg = "Unable to find package name for {}; {}; {}".format(url, cmd, lines)
+            msg = "Unable to find package name for {}; {}; {}".format(
+                url, cmd, lines)
             self.module.fail_json(msg=msg)
         if len(lines) > 1:
             msg = "Several package names returned for {}".format(url)
@@ -155,7 +157,6 @@ class BuildRepo(RpmKey):
         if not self.module.params['name']:
             msg = "No name specified for the repo"
             self.module.fail_json(msg=msg)
-        changed_key = self.put_gpgkey()
         repo_name = self.module.params['name']
         fmt = {
             'name': repo_name,
@@ -182,11 +183,49 @@ class BuildRepo(RpmKey):
             try:
                 tmp_file.write(repo_data)
             except Exception as e:
-                msg = "Unable to write data to {}".format(tmp_file_name)
+                msg = "Unable to write data to {}: {}".format(
+                    tmp_file_name, to_native(e))
                 self.module.fail_json(msg=msg)
 
         self.repo = tmp_file_name
         self.put_repofile()
+
+    def normalize_keyid(self, keyid):
+        """Ensure a keyid doesn't have a leading 0x,
+        has leading or trailing whitespace, and make sure is uppercase"""
+        ret = keyid.strip().upper()
+        if ret.startswith('0x'):
+            return ret[2:]
+        elif ret.startswith('0X'):
+            return ret[2:]
+        else:
+            return ret
+
+    def execute_command(self, cmd):
+        rc, stdout, stderr = self.module.run_command(
+            cmd, use_unsafe_shell=True)
+        if rc != 0:
+            self.module.fail_json(msg=stderr)
+        return stdout, stderr
+
+    def is_key_imported(self, keyid):
+        cmd = self.rpm + ' -q  gpg-pubkey'
+        rc, stdout, stderr = self.module.run_command(cmd)
+        if rc != 0:  # No key is installed on system
+            return False
+        cmd += ' --qf "%{description}" | '
+        cmd += self.gpg
+        cmd += ' --no-tty --batch --with-colons --fixed-list-mode -'
+        stdout, stderr = self.execute_command(cmd)
+        for line in stdout.splitlines():
+            if keyid in line.split(':')[4]:
+                return True
+        return False
+
+    def import_key(self, keyfile):
+        if not self.module.check_mode:
+            self.execute_command([self.rpm, '--import', keyfile])
+
 
 def main():
     module = AnsibleModule(
