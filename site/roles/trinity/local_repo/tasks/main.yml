@@ -43,6 +43,11 @@
         src: /mnt/Packages/
         dest: "{{ trinityx_iso_repo }}"
 
+    - name: Copy comps.xml
+      copy:
+        src: /mnt/comps.xml
+        dest: "{{ trinityx_iso_repo }}"
+
     - name: Unmount TrinityX source
       mount:
         src: "{{ lsblk.stdout }}"
@@ -63,7 +68,7 @@
 
     - name: Create repodb
       shell: >
-        createrepo {{ trinityx_iso_repo }}
+        createrepo --groupfile {{ trinityx_iso_repo }}/comps.xml {{ trinityx_iso_repo }}
 
     when: not trinityx_iso_repodata_status.stat.exists
 
