@@ -84,18 +84,19 @@
     args:
       warn: no
 
-  - name: Install epel manually
-    yum:
-      name: epel-release
-      installroot: "{{ image_path }}"
-      state: present
+  when: local_install | default(False)
 
-  - name: Disable epel repo
-    shell: >
-      yum-config-manager --installroot={{ image_path }} --disable epel
-    args:
-      warn: no
+- name: Install epel manually
+  yum:
+    name: epel-release
+    installroot: "{{ image_path }}"
+    state: present
 
+- name: Disable epel repo for local installation
+  shell: >
+    yum-config-manager --installroot={{ image_path }} --disable epel
+  args:
+    warn: no
   when: local_install | default(False)
 
 - name: Install core packages - @core, kernel and grub2
