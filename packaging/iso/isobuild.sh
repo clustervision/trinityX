@@ -3,7 +3,8 @@
 set -e
 set -x
 
-PLAYBOOKS="../../site/controller.yml ../../site/compute.yml"
+PLAYBOOKS_DIR="../../site/"
+PLAYBOOKS="controller.yml compute.yml"
 
 if [ "x${CENTOS_CONTENT}" = "x" ]; then
     echo "Centos content dir should be specifiedi."
@@ -32,11 +33,17 @@ ISO_DIR=${SCRIPTDIR}/ISO
 mkdir -p ${ISO_DIR}/Packages
 
 TRINITY_RPM=trinityx-${VERSION}-${BUILD}.el7.x86_64.rpm
+
+pushd ${SCRIPTDIR}/${PLAYBOOKS_DIR}
+pwd
 for PLB in ${PLAYBOOKS}; do
-    ${SCRIPTDIR}/parse-playbook.py --playbook ${SCRIPTDIR}/${PLB}; \
+    ${SCRIPTDIR}/parse-playbook.py \
+        --playbook ${PLB} \
+        --host controller1
 done \
     | sort \
-    | uniq > ${ISO_DIR}/pkg.list; \
+    | uniq > ${ISO_DIR}/pkg.list;
+popd
 
 cat ${SCRIPTDIR}/additional-packages.lst >> ${ISO_DIR}/pkg.list
 
