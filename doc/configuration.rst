@@ -92,6 +92,9 @@ What follows is a list of those variables together with their descriptions and d
                                                            Currently the only type supported by the installer is 'drbd'. Other types are planned for future releases.
   
   shared_fs_device        Path          /dev/vdb           A path to the device that will be used as backend for the default 'drbd' storage type.
+
+  additional_env_modules  List          []                 A user-defined list of environment modules to install in addition to the default one.
+                                                           See the table `environment-modules role`_.
   
   ======================= ============= ================== =============
 
@@ -145,14 +148,45 @@ drbd_ctrl2_disk           Disk name     `drbd_ctrl1_disk`     A path to the devi
 drbd_shared_resource_name String        'trinity_disk'        The name that will be given to the DRBD resource on the controllers in an HA setup.
 ========================= ============= ===================== =============
 
+.. _tab_envmodules_role:
+
 `environment-modules` role
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-=================== ============= ========================= =============
-     Variable           value        default                 description
-=================== ============= ========================= =============
-modulefiles_path    Path          `trix_shared`/modulefiles Path where modulefiles for all environment modules should be installed in TrinityX cluster.
-=================== ============= ========================= =============
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+   
+   * - Variable
+     - Value
+     - Default
+     - Description
+
+   * - envmodules_version
+     - String
+     - *current version*
+     - The release name of the userspace packages to install.
+
+   * - envmodules_files_path
+     - Path
+     - `trix_shared`/modules
+     - Path where files for all environment modules should be installed in TrinityX cluster.
+
+   * - envmodules_default_list
+     - List
+     - 
+       - gcc
+       - gdb
+       - hwloc
+       - intel-runtime
+       - iozone
+       - likwid
+       - osu-benchmarks
+       - python2
+       - python3
+       *versions omitted*
+     - List of modules to install by default.
+
 
 `firewalld` role
 ^^^^^^^^^^^^^^^^^
