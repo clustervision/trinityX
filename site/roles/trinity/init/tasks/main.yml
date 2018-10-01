@@ -12,14 +12,14 @@
 
 - block:
 
-  - name: Check if this node is the primary controller
-    set_fact:
-      primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses else False }}'
-  
-  - name: Check if running on a controller
+  - name: Check if this node is a controller
     set_fact:
       on_controller: '{{ True if "controllers" in group_names else False }}'
 
+  - name: Check if this node is the primary controller
+    set_fact:
+      primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses and on_controller else False }}'
+  
   - name: Update the trix_ctrl_* variables in case of non-HA setup
     set_fact:
       trix_ctrl_hostname: '{{ trix_ctrl1_hostname }}'
