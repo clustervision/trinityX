@@ -15,7 +15,7 @@ Ansible Roles overview
 - drbd: creates DRBD filesystem, adds resources to pacemaker
 - trix-tree: just creates /trinity
 - nfs: configures NFS export, adds resources to pacemaker
-- environment-modules: prepares module environment. Does NOT install applications, this remains a manual task
+- environment-modules: prepares module environment and installs a default set of applications, see :ref:`tab_envmodules_role`.
 - ssl-cert: generates SSL certs for HTTPS and LDAPS
 - openldap: installs OpenLDAP and configures schema
 - obol: installs and configures obol (user management tool)
