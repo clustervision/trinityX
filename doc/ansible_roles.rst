@@ -2,6 +2,8 @@ Ansible Roles overview
 ======================
 
 - init: checks if primary controller, disables SElinux, removes NetworkManager
+- local_repo: creates repository from DVD or USB with TrinityX DVD content on the controller
+- repos: role to install repositories on the controller and images. Usually it is used as a dependency in other roles
 - cv_support: installs remote assistance script, trinity health package, updates root's bashrc
 - packages: installs all required diag packages required on a proper HPC head node. See roles/packages/defaults/main.yml
 - tunables: updates limits.conf and sysctl.conf
@@ -28,5 +30,7 @@ Ansible Roles overview
 - luna: installs and configures luna
 - rsyslog: installs and configures syslog
 - zabbix: installs and configures Zabbix (monitoring)
-
-
+- zabbix_agent: installs Zabbix agent on controllers and images
+- zabbix_checks: installs additional check scripts and configures templates on Zabbix server
+- trix-status: installs trix-status - tool for getting TrinityX cluster overview
+- docker-registry: installs and configures docker registry
