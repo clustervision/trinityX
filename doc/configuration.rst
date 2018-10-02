@@ -19,27 +19,27 @@ What follows is a list of those variables together with their descriptions and d
 .. table:: Global variables
   
   ======================= ============= ================== =============
-       Variable               value        default          description
+       Variable               Value        Default          Description
   ======================= ============= ================== =============
   trix_version            -             -                  The TrinityX version number.
                                                            This will be automatically set to the current release version.
   
-  project_id              string        000000             Project ID or string that'll show up in the default shell prompt on the controllers.
+  project_id              String        000000             Project ID or string that'll show up in the default shell prompt on the controllers.
                                                            A pure esthetical configuration option that gives to shell prompts of the format `000000 hh:mm:ss [root@hostname ~]#`
   
-  ha                      boolean       true               This option allows to choose whether to do a highly available setup on two controllers or a single controller setup.
+  ha                      Boolean       true               This option allows to choose whether to do a highly available setup on two controllers or a single controller setup.
                                                            Set to 'False' to disable HA.
   
-  trix_domain             hostname      'cluster'          A domain name to be assigned to the controller(s) and nodes on the internal network.
+  trix_domain             Hostname      'cluster'          A domain name to be assigned to the controller(s) and nodes on the internal network.
                                                            This also serves as luna's default provisioning network name.
   
-  trix_ctrl1_hostname     hostname      'controller1'      Default hostname for the controller in a single controller setup.
+  trix_ctrl1_hostname     Hostname      'controller1'      Default hostname for the controller in a single controller setup.
                                                            In HA setups, this is the hostname of the first controller.
   
-  trix_ctrl2_hostname     hostname      'controller2'      This option is ignored in a single controller setup.
+  trix_ctrl2_hostname     Hostname      'controller2'      This option is ignored in a single controller setup.
                                                            In HA setups, this is the hostname of the second controller.
   
-  trix_ctrl_hostname      hostname      'controller'       This option is set by the installer to the value of `trix_ctrl1_hostname` in a single controller setup.
+  trix_ctrl_hostname      Hostname      'controller'       This option is set by the installer to the value of `trix_ctrl1_hostname` in a single controller setup.
                                                            In HA setups, this the controllers' floating hostname that will always resolve to the controller with the primary role.
   
   trix_ctrl1_ip           IP address    '10.141.255.254'   Default IP address of the controller in a single controller setup.
@@ -79,14 +79,14 @@ What follows is a list of those variables together with their descriptions and d
   
   trix_repos              Path          `trix_root`/repos  The default path where the local TrinityX rpm repository will be located.
   
-  enable_selinux          boolean       false              Whether or not to enable SELinux throughout the cluster.
+  enable_selinux          Boolean       false              Whether or not to enable SELinux throughout the cluster.
   
-  enable_slurm_pam        boolean       true               Whether or not to enable Slurm PAM module by default.
+  enable_slurm_pam        Boolean       true               Whether or not to enable Slurm PAM module by default.
                                                            If enabled, sssd's ldap filters will be disabled on the compute nodes.
   
-  enable_docker           boolean       false              Whether or not to install docker tools on the cluster
+  enable_docker           Boolean       false              Whether or not to install docker tools on the cluster
   
-  enable_heartbeat_link   boolean       true               Whether or not to configure the secondary corosync heartbeat link between the controllers.
+  enable_heartbeat_link   Boolean       true               Whether or not to configure the secondary corosync heartbeat link between the controllers.
   
   shared_fs_type          String        'drbd'             The type of shared storage used on the controllers in TrinityX.
                                                            Currently the only type supported by the installer is 'drbd'. Other types are planned for future releases.
@@ -97,6 +97,7 @@ What follows is a list of those variables together with their descriptions and d
                                                            See the table `environment-modules role`_.
   
   ======================= ============= ================== =============
+
 
 Role specific variables
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,11 +111,11 @@ The default values for each variable are set in `site/controller.yml`. For the s
 ^^^^^^^^^^^^
 
 =================== ============= ====================== =============
-     Variable           value        default              description
+     Variable           Value        Default              Description
 =================== ============= ====================== =============
 bind_dns_forwarders List          - '8.8.8.8'            A list of the default DNS forwarders to use on the controllers.
                                   - '8.8.4.4'
-bind_dnssec_enable  boolean       no                     Whether to enable DNSSEC in Bind9 on the controllers or not.
+bind_dnssec_enable  Boolean       no                     Whether to enable DNSSEC in Bind9 on the controllers or not.
 bind_db_path        Path          `trix_local`/var/named The default path where Bind9 will store is DNS database.
 =================== ============= ====================== =============
 
@@ -122,7 +123,7 @@ bind_db_path        Path          `trix_local`/var/named The default path where 
 ^^^^^^^^^^^^^^
 
 ======================= ============= ========================= =============
-     Variable               value        default                 description
+     Variable               Value        Default                 Description
 ======================= ============= ========================= =============
 chrony_upstream_servers List          - '0.centos.pool.ntp.org' A list of upstream NTP servers that will be used by the controller(s) to keep time on the cluster synchronized.
                                       - '1.centos.pool.ntp.org'
@@ -137,7 +138,7 @@ chrony_allow_networks   List          []                        A list of networ
 ^^^^^^^^^^^^
 
 ========================= ============= ===================== =============
-     Variable                 value        default             description
+     Variable                 Value        Default             Description
 ========================= ============= ===================== =============
 drbd_ctrl1_ip             IP address    `trix_ctrl1_ip`       IP address of the first of controllers in an HA setup.
 drbd_ctrl2_ip             IP address    `trix_ctrl2_ip`       IP address of the second of controllers in an HA setup.
@@ -192,7 +193,7 @@ drbd_shared_resource_name String        'trinity_disk'        The name that will
 ^^^^^^^^^^^^^^^^^
 
 ============================ ============= ================ =============
-     Variable                    value        default        description
+     Variable                    Value        Default        Description
 ============================ ============= ================ =============
 firewalld_public_interfaces  List          ['eth2']         A list of network interfaces that are considered to be public. i.e. used to access networks that are external to the cluster.
 firewalld_trusted_interfaces List          ['eth0', 'eth1'] A list of network interfaces that are considered to be trusted. i.e. used to access networks that are interal to the cluster.
@@ -204,7 +205,7 @@ firewalld_public_udp_ports   List          []               A list of UDP ports 
 ^^^^^^^^^^^^
 
 =============================== ============= ================================== =============
-     Variable                       value        default                          description
+     Variable                       Value        Default                          Description
 =============================== ============= ================================== =============
 luna_user_id                    User ID       880                                The user ID of the luna user on the controller(s).
 luna_group_id                   Group ID      880                                The group ID of the luna group on the controller(s).
@@ -240,7 +241,7 @@ luna.networks.0.ns_ip           IP address    `trix_ctrl_ip`                    
 ^^^^^^^^^^^^^^^
 
 =================== ============= ========================== =============
-     Variable           value        default                  description
+     Variable           Value        Default                  Description
 =================== ============= ========================== =============
 mariadb_db_path     Path          `trix_local`/var/lib/mysql Path where MariaDB data folder will be located in a TrinityX cluster.
 =================== ============= ========================== =============
@@ -249,7 +250,7 @@ mariadb_db_path     Path          `trix_local`/var/lib/mysql Path where MariaDB 
 ^^^^^^^^^^^^^^^
 
 =================== ============= ============================ =============
-     Variable           value        default                    description
+     Variable           Value        Default                    Description
 =================== ============= ============================ =============
 mongo_db_path       Path          `trix_local`/var/lib/mongodb Path where MongoDB data folder will be located in a TrinityX cluster.
 =================== ============= ============================ =============
@@ -258,13 +259,13 @@ mongo_db_path       Path          `trix_local`/var/lib/mongodb Path where MongoD
 ^^^^^^^^^^^
 
 =================== ============= ========================== =============
-     Variable           value        default                  description
+     Variable           Value        Default                  Description
 =================== ============= ========================== =============
 nfs_rpccount        Number        256                        Number of NFS server processes to be started on the controller(s).
-nfs_enable_rdma     boolean       false                      Whether to enable NFS over RDMA by default or not.
+nfs_enable_rdma     Boolean       false                      Whether to enable NFS over RDMA by default or not.
                                                              TCP will be used when this option if set to `false`.
-nfs_export_shared   boolean       true                       If set to true, `trix_shared` directory will be exported to the compute nodes from the controller(s).
-nfs_export_home     boolean       true                       If set to true, `trix_home` directory will be exported to the compute nodes from the controller(s).
+nfs_export_shared   Boolean       true                       If set to true, `trix_shared` directory will be exported to the compute nodes from the controller(s).
+nfs_export_home     Boolean       true                       If set to true, `trix_home` directory will be exported to the compute nodes from the controller(s).
 nfs_exports_path    Path          `trix_local`/etc/exports.d The path where to store NFS exports configuration on the controller(s).
 =================== ============= ========================== =============
 
@@ -272,9 +273,9 @@ nfs_exports_path    Path          `trix_local`/etc/exports.d The path where to s
 ^^^^^^^^^^^^
 
 =================== ============= ================================== =============
-     Variable           value        default                          description
+     Variable           Value        Default                          Description
 =================== ============= ================================== =============
-obol_conf_path      Path          /etc'                              Path where obol's configuration file will be stored on the controller(s).
+obol_conf_path      Path          /etc                               Path where obol's configuration file will be stored on the controller(s).
 users_home_path     Path          `trix_home`                        Default home directory path to use for users created using obol.
 ldap_host           FQDN          `trix_ctrl_hostname.trix_domain`   The FQDN of the ldap servers used to store ldap accounts on the cluster.
 =================== ============= ================================== =============
@@ -283,7 +284,7 @@ ldap_host           FQDN          `trix_ctrl_hostname.trix_domain`   The FQDN of
 ^^^^^^^^^^^^^^^^
 
 ============================= ============= =================================== =============
-     Variable                     value        default                           description
+     Variable                     Value        Default                           Description
 ============================= ============= =================================== =============
 openldap_default_user         String        ldap                                OpenLDAP default user name
 openldap_default_group        String        ldap                                OpenLDAP default group name
@@ -309,7 +310,7 @@ openldap_schemas              List          - cosine                            
 ^^^^^^^^^^^^^^^^^
 
 =========================== ============= ========================= =============
-     Variable                   value        default                 description
+     Variable                   Value        Default                 Description
 =========================== ============= ========================= =============
 pacemaker_properties        Dict          no-quorum-policy: ignore  A list of pacemaker configuration options.
 pacemaker_resource_defaults List          - 'migration-threshold=1' A list of pacemaker resource defaults.
@@ -326,7 +327,7 @@ fence_ipmilan_passwd        String        'password'                Password (if
 ^^^^^^^^^^^^^
 
 =================== ============= ============== =============
-     Variable           value        default      description
+     Variable           Value        Default      Description
 =================== ============= ============== =============
 repos               List                         List of package repositories to install.
 repos_port          Number        8080           Default port to listen on when serving the local package repository on the controller(s).
@@ -336,7 +337,7 @@ repos_port          Number        8080           Default port to listen on when 
 ^^^^^^^^^^^^^^^
 
 ===================================== ============= ========================================================================= =============
-     Variable                             value        default                                                                 description
+     Variable                             Value        Default                                                                 Description
 ===================================== ============= ========================================================================= =============
 syslog_forwarding_rules               List of dicts                                                                           A list of log forwarding rules to use in rsyslog.d/ configuration files.
 
@@ -369,7 +370,7 @@ syslog_file_template_rules.0.rule     String        '{{ trix_cluster_net.split("
 ^^^^^^^^^^^^^
 
 =================== ============= =========================================== =============
-     Variable           value        default                                   description
+     Variable           Value        Default                                   Description
 =================== ============= =========================================== =============
 slurm_conf_path     String        `trix_shared`/etc/slurm                     Path where slurm configuration files are stored.
 slurm_spool_path    Path          `trix_local`/var/spool/slurm                Path for slurm's working data.
@@ -436,7 +437,7 @@ sss_filter_enabled  Boolean       false                                Whether t
 ^^^^^^^^^^^^^^
 
 ======================= ============= ============================ =============
-     Variable               value        default                    description
+     Variable               Value        Default                    Description
 ======================= ============= ============================ =============
 zabbix_script_path      Path          `trix_local`/usr/lib/zabbix/ Location where zabbix can find custom scripts
 zabbix_sql_db           String        'zabbix'                     Name of the zabbix database in MariaDB
@@ -455,7 +456,7 @@ Global variables
 ^^^^^^^^^^^^^^^^^
 
 ======================= ============= ================== =============
-     Variable               value        default          description
+     Variable               Value        Default          Description
 ======================= ============= ================== =============
 image_name              String        compute            The name of the OS image to create or to which to apply the playbook
 image_password          String                           The password to set up for the root user in the image.
@@ -467,7 +468,7 @@ image_password          String                           The password to set up 
 ^^^^^^^^^^^^^^^^^^
 
 ==================== ============= ================================= =============
-     Variable            value        default                         description
+     Variable            Value        Default                         Description
 ==================== ============= ================================= =============
 nfs_mounts           List of dicts see below                         A list of NFS mountpoints and their options
 
