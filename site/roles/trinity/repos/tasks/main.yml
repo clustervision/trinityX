@@ -35,7 +35,7 @@
 
 - name: Import GPG keys
   rpm_key:
-    key: "{{ item.key | regex_replace('^file://') }}"
+    key: "{{ item.key }}"
     state: present
   with_items: "{{ repos }}"
   when: item.key|default([])
@@ -101,7 +101,6 @@
     baseurl: "{{ item.repo }}"
     enabled: "{{ item.enabled|default('yes') }}"
     gpgcheck: "{{ 'yes' if item.key|default([]) else 'no' }}"
-    gpgkey: "{{ item.key|default([]) }}"
     reposdir: "{{ repos_reposdir }}"
     state: present
   with_items: "{{ repos }}"
@@ -123,7 +122,6 @@
              regex_replace('^'+trix_repos+'/','') }}
     enabled: "{{ item.enabled|default('yes') }}"
     gpgcheck: "{{ 'yes' if item.key|default([]) else 'no' }}"
-    gpgkey: "{{ item.key|default([]) }}"
     reposdir: "{{ repos_reposdir }}"
     state: present
   with_items: "{{ repos_local|default([]) }}"
