@@ -1,15 +1,24 @@
 ---
+
+# This is needed when using the role as a dependency
+# and the target repos directory might not yet exist
+- name: Create reposdir if it does not exist
+  file:
+    path: "{{ repos_reposdir }}"
+    state: directory
+  when: repos_reposdir != "/etc/yum.repos.d"
+
 - name: Fetch remote .repo definitions
   get_url:
     url: "{{ item.repo }}"
-    dest: /etc/yum.repos.d
+    dest: "{{ repos_reposdir }}"
   with_items: "{{ repos }}"
   when: item.repo|match('^http[s]*://.*\\.repo$')
 
 - name: Copy local .repo definitions
   copy:
     src: "{{ item.repo }}"
-    dest: /etc/yum.repos.d
+    dest: "{{ repos_reposdir }}"
   with_items: "{{ repos }}"
   when:
     - item.repo|search('\\.repo$')
@@ -82,13 +91,6 @@
   with_items: "{{ repos }}"
   when: item.repo|search('^/')
 
-# This is needed when using the role as a dependency
-# and the target repos directory might not yet exist
-- name: Create reposdir if it does not exist
-  file:
-    path: "{{ repos_reposdir }}"
-    state: directory
-  when: repos_reposdir != "/etc/yum.repos.d"
 
 - name: Define remote repos
   yum_repository:
