@@ -65,6 +65,9 @@
     when:
       - item.repo|search('^/')
       - not item.repo|search('^'+trix_repos)
+      - not item.repo|search('\\.rpm$')
+      - not item.repo|search('\\.repo$')
+
 
   - name: Install nginx
     yum:
@@ -89,7 +92,10 @@
                     trix_repos+'/'+item.repo|basename,
                    'key': item.key|default([])}] }}
   with_items: "{{ repos }}"
-  when: item.repo|search('^/')
+  when:
+    - item.repo|search('^/')
+    - not item.repo|search('\\.rpm$')
+    - not item.repo|search('\\.repo$')
 
 
 - name: Define remote repos
