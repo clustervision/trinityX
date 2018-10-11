@@ -52,12 +52,18 @@ cat ${ISO_DIR}/pkg.list \
     | grep -E '^http[s]?://' \
     | while read L; do wget -N -P ${ISO_DIR}/Packages ${L}; done
 
+# copy all local files
+cat ${ISO_DIR}/pkg.list \
+    | grep -E '^/' \
+    | while read L; do cp ${L} ${ISO_DIR}/Packages/; done
+
 # download additional files
 cat ${SCRIPTDIR}/additional-files.lst \
     | while read L; do wget -N -P ${ISO_DIR}/Packages ${L}; done
 
 # download all the packages from YAMLs
 cat ${ISO_DIR}/pkg.list \
+    | grep -v '/' \
     | paste -d " " $(printf " -%.0s" {1..50}) \
     | while read P; do \
         yumdownloader --installroot ${ISO_DIR}/Packages \
@@ -69,7 +75,7 @@ rm -rf ${ISO_DIR}/Packages/var
 
 # compare desired list and actual downloaded packages
 ORPHANED_PACKAGES=$(comm -23 \
-    <(cat ${ISO_DIR}/pkg.list | grep -v -E '^http[s]?://|^@' | sort | uniq) \
+    <(cat ${ISO_DIR}/pkg.list | grep -v -E '/|^@' | sort | uniq) \
     <(rpm -qp ${ISO_DIR}/Packages/*.rpm --provides \
         | awk '{print $1}' | sort | uniq)
 )
