@@ -26,12 +26,12 @@
   blockinfile:
     path: /usr/share/Modules/init/.modulespath
     block: |
-      {% for dir in envmodules_files_subdirs -%} 
+      {% for dir in envmodules_files_subdirs -%}
       {{ envmodules_files_path }}/{{ dir }}
       {% endfor %}
     state: present
 
-- name: Get a list of dependencies 
+- name: Get a list of dependencies
   shell: >
     repoquery --requires --resolve --nvr {{ envmodules_list | join( ' ') }} |
     sort -u | grep -v {{ envmodules_version }}
@@ -44,14 +44,19 @@
     state: present
     disablerepo: userspace-shared-*
 
-- name: Set --justdb option for yum on passive controller or node/image
-  set_fact:
-    justdb_option: '{{ "" if primary else "--setopt=tsflags=justdb" }}'
+- name: Reuse local /etc/yum.conf
+  copy:
+    src: /etc/yum.conf
+    dest: /tmp/yum.conf
+
+- name: Patch /tmp/yum.conf to use tsflags=justdb on passive controllers or node/image
+  lineinfile:
+    path: /tmp/yum.conf
+    line: tsflags=justdb
+  when: not primary
 
 - name: Install environment modules
-  command: yum install -y {{ justdb_option }} {{ item }}
-  args:
-    warn: no
+  yum:
+    conf_file: /tmp/yum.conf
+    name: "{{ item }}"
   with_items: '{{ envmodules_list }}'
-  register: yum_result
-  changed_when: '"Nothing to do" not in yum_result.stdout_lines'
