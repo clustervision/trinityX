@@ -10,6 +10,8 @@ from ansible.parsing.dataloader import DataLoader
 from ansible.template import Templar
 from ansible.playbook.block import Block
 from collections import Iterable
+from ansible.errors import AnsibleUndefinedVariable
+from ansible.utils.display import Display
 import argparse
 
 #self._inventory = data.get('inventory', None)
@@ -119,8 +121,13 @@ class Parser(object):
             )
         else:
             # handle 'package' case
-            pkg_name = flatten(self.templar.template(task['args']['name']))
-            packages.update(pkg_name)
+            var = task['args']['name']
+            try:
+                pkg_name = flatten(self.templar.template(var))
+                packages.update(pkg_name)
+            except AnsibleUndefinedVariable:
+                Display().warning("Unable to resolve variable: '{}'".format(var))
+
 
         filtered_list = []
         # remove packages started with '/'
