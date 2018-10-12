@@ -54,15 +54,13 @@ Steps to install TrinityX
 
    * ``group_vars/all``
 
+   You might also want to check if the default firewall parameters in the same file apply to your situation::
+
+      firewalld_public_interfaces: [eth0]
+      firewalld_trusted_interfaces: [eth1]
+      firewalld_public_tcp_ports: [22, 443]
+
    **Note**: In the case of an HA setup you will most probably need to change the default name of the shared block device set by ``shared_fs_device``.
-
-   You might also want to check if the default firewall parameters apply to your situation in the firewalld role in ``controller.yml``::
-
-      firewalld_public_interfaces:
-        - eth2
-      firewalld_trusted_interfaces:
-        - eth0
-        - eth1
 
 8. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
 
