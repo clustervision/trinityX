@@ -1,8 +1,8 @@
 ---
-- name: Set compute=true
+- name: Set compute variable
   set_fact:
-    compute: True
-  when: ansible_connection not in "lchroot"
+    compute: '{{ True if ansible_connection not in "lchroot" else False }}'
+  tags: always
 
 - name: Stop firewalld
   service:
