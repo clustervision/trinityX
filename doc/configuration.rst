@@ -332,6 +332,8 @@ firewalld_public_interfaces  List          ['eth2']         A list of network in
 firewalld_trusted_interfaces List          ['eth0', 'eth1'] A list of network interfaces that are considered to be trusted. i.e. used to access networks that are interal to the cluster.
 firewalld_public_tcp_ports   List          [443]            A list of TCP ports that will be allowd on the public interfaces defined in `firewalld_public_interfaces`
 firewalld_public_udp_ports   List          []               A list of UDP ports that will be allowd on the public interfaces defined in `firewalld_public_interfaces`
+firewalld_masquerade_zone    firewall zone public           Firewalld zone to enable masquerading on
+firewalld_update_ifcfg_files Boolean       true             Whether to update ifcfg-* files with zone information
 ============================ ============= ================ =============
 
 `luna` role

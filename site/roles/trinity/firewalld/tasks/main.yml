@@ -29,6 +29,7 @@
     regexp: '^ZONE='
     line: 'ZONE=public'
   with_items: '{{ firewalld_public_interfaces }}'
+  when: firewalld_update_ifcfg_files
 
 - name: Assigne interfaces to the trusted zone
   firewalld:
@@ -45,6 +46,7 @@
     regexp: '^ZONE='
     line: 'ZONE=trusted'
   with_items: '{{ firewalld_trusted_interfaces }}'
+  when: firewalld_update_ifcfg_files
 
 - name: Disable NetworkManager for public and trusted interfaces
   lineinfile:
@@ -54,10 +56,11 @@
   with_flattened:
     - '{{ firewalld_public_interfaces }}'
     - '{{ firewalld_trusted_interfaces }}'
+  when: firewalld_update_ifcfg_files
 
-- name: Enable masquerading on the public zone
+- name: Enable masquerading on the '{{ firewalld_masquerade_zone }}' zone
   firewalld:
-    zone: public
+    zone: '{{ firewalld_masquerade_zone }}'
     masquerade: yes
     state: enabled
     permanent: true
