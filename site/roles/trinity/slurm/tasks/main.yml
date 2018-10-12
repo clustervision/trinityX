@@ -21,6 +21,7 @@
   with_together:
     - ['munge', 'slurm']
     - ['{{ munge_group_id }}', '{{ slurm_group_id }}']
+  tags: install-only
 
 - name: Create users for munge and slurm
   user:
@@ -33,12 +34,14 @@
   with_together:
     - ['munge', 'slurm']
     - ['{{ munge_user_id }}', '{{ slurm_user_id }}']
+  tags: install-only
 
 - name: Install slurm packages
   yum:
     name: '{{ item }}'
     state: present
   with_items: '{{ slurm_packages }}'
+  tags: install-only
 
 - name: Create systemd unit dirs
   file:
