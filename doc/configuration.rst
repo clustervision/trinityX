@@ -240,14 +240,17 @@ The default values for each variable are set in `site/controller.yml`. For the s
 `bind` role
 ^^^^^^^^^^^^
 
-=================== ============= ====================== =============
-     Variable           Value        Default              Description
-=================== ============= ====================== =============
-bind_dns_forwarders List          - '8.8.8.8'            A list of the default DNS forwarders to use on the controllers.
-                                  - '8.8.4.4'
-bind_dnssec_enable  Boolean       no                     Whether to enable DNSSEC in Bind9 on the controllers or not.
-bind_db_path        Path          `trix_local`/var/named The default path where Bind9 will store is DNS database.
-=================== ============= ====================== =============
+===================== ============= ====================== =============
+     Variable             Value        Default              Description
+===================== ============= ====================== =============
+bind_dns_forwarders   List          - '8.8.8.8'            A list of the default DNS forwarders to use on the controllers.
+                                    - '8.8.4.4'
+bind_dnssec_enable    Boolean       no                     Whether to enable DNSSEC in Bind9 on the controllers or not.
+bind_db_path          Path          `trix_local`/var/named The default path where Bind9 will store is DNS database.
+
+resolv_server         IP address    127.0.0.1              Default nameserver to use in /etc/resolv.conf
+resolv_search_domains String        cluster ipmi           Default search domains to use in /etc/resolv.conf
+===================== ============= ====================== =============
 
 `chrony` role
 ^^^^^^^^^^^^^^
