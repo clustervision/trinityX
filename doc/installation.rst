@@ -103,7 +103,7 @@ The creation and configuration of an OS image for the compute nodes uses the sam
 .. note:: Building a new image isn't required for most system administration tasks. One of the images existing on your system can be cloned and modified. Creating a new image is only useful for an initial installation, or when desiring to start from a clean one. Another scenario might be a cluster where all configuration (creation, deletion, ...) must be fully controlled by Ansible - in this case to create the image it is possible to copy ``compute.yml`` and update ``image_name`` variable to reflect the new image's name.
 
 
-The setup of the default image is defined in the playbook ``compute.yml``, which controls the creation of a new filesystem directory and applies the image configuration. The ``compute.yml`` file includes the ``trinity-image.yml`` playbook as a dependency. The latter is a playbook that applies a standard Trinity image configuration.
+The setup of the default image is defined in the playbook ``compute.yml``, which controls the creation of a new filesystem directory and applies the image configuration. The ``compute.yml`` file includes the ``trinity-image-create.yml`` and ``trinity-image-setup.yml`` playbooks as dependencies. These are playbooks that apply a standard Trinity image configuration.
 
 
 In the vast majority of cases, changing the configuration of the default image is not required. It may be desired, however, to set up a custom root password, in which case the variable ``image_password`` can be set to the desired password.
@@ -122,7 +122,7 @@ Updating images and nodes
 
 It is worth pointing out that ``compute.yml`` or any copy thereof can be applied to both existing images and/or live nodes without issues. All that needs to be done is updating the list of hosts to which it applies.
 
-By default ``compute.yml`` applies to the host `compute.osimages.luna` which means it only applies to the image called `compute`. It is, therefore, possible to apply the same playbook to all images, a compute node, or all nodes if so desired. To do so, the hosts definitions in both ``trinity-image.yml`` and ``compute.yml`` will need to be updated to either of the following:
+By default ``compute.yml`` applies to the host `compute.osimages.luna` which means it only applies to the image called `compute`. It is, therefore, possible to apply the same playbook to all images, a compute node, or all nodes if so desired. To do so, the hosts definitions in both ``trinity-image-setup.yml`` and ``compute.yml`` will need to be updated to either of the following:
 
     - "osimages.luna" which will cover all osimages defined in Luna.
     - "nodes.luna" which will cover all nodes defined in Luna.
