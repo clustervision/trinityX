@@ -1,0 +1,151 @@
+---
+- block:
+
+  - name: Check content of the {{ trinityx_iso_repo }}
+    stat:
+      path: "{{ trinityx_iso_repo }}/repodata"
+    register:
+      trinityx_iso_repodata_status
+
+  - block:
+
+    - name: Get device with Trinity packages to mount
+      shell: >
+        blkid | grep 'LABEL="CentOS 7 x86_64"' | awk -F\: '{print $1}'
+      changed_when: no
+      register: lsblk
+
+    - name: Check if we have anything to mount
+      fail:
+        msg: "Controller has no device with TrinityX packages connected"
+      when: lsblk.stdout_lines|length < 1
+
+    - name: Check if we have the only device to mount
+      fail:
+        msg: "Controller has several sources of TrinityX connected"
+      when: lsblk.stdout_lines|length > 1
+
+    - name: Create {{ trinityx_iso_repo }}
+      file:
+        path: "{{ trinityx_iso_repo }}"
+        state: directory
+
+    - name: Mount TrinityX source
+      mount:
+        src: "{{ lsblk.stdout }}"
+        path: /mnt
+        opts: ro,noauto
+        fstype: iso9660
+        state: mounted
+
+    - name: Copy content
+      copy:
+        src: /mnt/Packages/
+        dest: "{{ trinityx_iso_repo }}"
+
+    - name: Copy comps.xml
+      copy:
+        src: /mnt/comps.xml
+        dest: "{{ trinityx_iso_repo }}"
+
+    - name: Unmount TrinityX source
+      mount:
+        src: "{{ lsblk.stdout }}"
+        path: /mnt
+        opts: ro,noauto
+        fstype: iso9660
+        state: unmounted
+
+    - name: Install createrepo
+      yum:
+        name: "{{ item }}"
+        state: present
+        disablerepo: "*"
+      with_fileglob:
+      - "/trinity/repos/trinityx/deltarpm-[0-9]*.rpm"
+      - "/trinity/repos/trinityx/python-deltarpm-[0-9]*.rpm"
+      - "/trinity/repos/trinityx/createrepo-[0-9]*.rpm"
+
+    - name: Create repodb
+      shell: >
+        createrepo --groupfile {{ trinityx_iso_repo }}/comps.xml {{ trinityx_iso_repo }}
+
+    when: not trinityx_iso_repodata_status.stat.exists
+
+  - name: Check if nginx is installed
+    command: rpm -q nginx
+    args:
+      warn: false
+    failed_when: false
+    changed_when: false
+    register: nginx_rpm
+
+  - block:
+
+    - name: Create temporary local repo
+      template:
+        src: tmp_local.repo.j2
+        dest: /etc/yum.repos.d/tmp_local.repo
+
+    - name: Install nginx
+      yum:
+        name: nginx
+        state: present
+        disablerepo: "*"
+        enablerepo: tmp_local
+      notify: reload nginx in local_repo role
+
+    - name: Delete temporary repo
+      file:
+        path: /etc/yum.repos.d/tmp_local.repo
+        state: absent
+
+    when: nginx_rpm.rc != 0
+
+  - name: Enable nginx
+    service:
+      name: nginx
+      state: started
+      enabled: yes
+
+  - name: Add repos folder to nginx configuration
+    template:
+      src: trinityx-repo.conf.j2
+      dest: /etc/nginx/conf.d/trinityx-repo.conf
+    notify: reload nginx
+
+  - name: Get interface for temporary floating IP
+    shell: >
+      ip -o -br -4 addr | awk '/{{ trix_ctrl1_ip }}/{print $1}'
+    changed_when: false
+    register: interface_to_assign
+
+  - name: Check if we have interface to assign
+    fail:
+      msg: Interface for floaing IP not found
+    when: interface_to_assign.stdout_lines|length != 1
+
+  - name: Is floating IP already assigned
+    shell: >
+      ip -o -br -4 addr | awk '/{{ trix_ctrl_ip }}/{print $1}'
+    changed_when: false
+    register: interface_w_floating_ip
+
+  - name: Assign floating IP
+    shell: |
+      MASK=$(ip -o -br -4 addr | awk -F/ '/{{ trix_ctrl1_ip }}/{print $NF}')
+      ip a add {{ trix_ctrl_ip }}/${MASK} dev {{ interface_to_assign.stdout }}
+    when: interface_w_floating_ip.stdout_lines|length == 0
+
+  - name: Assign interfaces to the trusted zone
+    firewalld:
+      zone: trusted
+      interface: "{{ interface_to_assign.stdout }}"
+      state: enabled
+      permanent: false
+      immediate: true
+
+  - meta: flush_handlers
+
+  when: primary|default(True)
+
