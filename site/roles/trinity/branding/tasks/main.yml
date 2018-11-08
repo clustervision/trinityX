@@ -1,4 +1,31 @@
 ---
+- block:
+
+  - name: Install needed packages
+    yum:
+      name: '{{ item }}'
+      state: present
+    with_items: '{{ cv_support_packages }}'
+    tags: install-only
+
+  - name: Install request-remote-assistance to /usr/local/bin
+    copy:
+      src: 'request-remote-assistance'
+      dest: '/usr/local/bin'
+      owner: 'root'
+      group: 'root'
+      mode: '0750'
+
+  - name: Add /trinity/site file to the controllers
+    lineinfile:
+      path: '/trinity/site'
+      line: '{{ project_id }}'
+      state: present
+      create: yes
+    when: primary|default(True)
+
+  when: on_controller
+
 - name: Install packages needed for trix_node_basic_data.sh
   yum:
     name: "{{ item }}"
@@ -21,12 +48,10 @@
     state: present
     line: echo "TrinityX on $(cat /etc/redhat-release)"
 
-- name: Add TrinityX branding in .bash_profile for root
-  blockinfile:
-    path: /root/.bash_profile
-    block: |
-      echo "TrinityX on $(cat /etc/redhat-release)"
-      /usr/local/libexec/trix_node_basic_info.sh
+- name: Render /root/.bash_profile
+  template:
+    src: bash_profile.j2
+    dest: /root/.bash_profile
 
 - name: Put osimage name in /root/osimage
   template:
