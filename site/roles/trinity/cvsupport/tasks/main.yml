@@ -1,0 +1,46 @@
+---
+
+- block:
+
+  - name: Get info about {{ service_user }} user
+    command: /usr/local/bin/obol user show {{ service_user }}
+    args:
+      warn: false
+    register: obol_user
+    changed_when: false
+
+  - name: Generate password for {{ service_user }} user and save it to /etc/trinity/passwords
+    set_fact:
+      tmp_pwd: "{{ lookup('password',
+                        '/etc/trinity/passwords/' + service_user + '.txt
+                         chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Get password for {{ service_user }} user
+    set_fact:
+      service_user_pwd: "{{ lookup('password',
+                        '/etc/trinity/passwords/' + service_user + '.txt
+                         chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Create {{ service_user }} user
+    command: /usr/local/bin/obol user add -p {{ service_user_pwd }} {{ service_user }}
+    args:
+      warn: false
+    when: obol_user.stdout == ""
+
+  - name: Get {{ service_user }} homedir
+    shell: echo ~{{ service_user }}
+    args:
+      warn: false
+    register: service_user_homedir
+    changed_when: false
+
+  - name: Create {{ service_user }} homedir
+    shell: "ls -l"
+    args:
+      creates: "{{ service_user_homedir.stdout_lines[0] }}"
+    become: true
+    become_method: su
+    become_user: "{{ service_user }}"
+
+  when: primary|default(True)
+
