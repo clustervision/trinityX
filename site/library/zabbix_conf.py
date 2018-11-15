@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from ansible.module_utils.basic import AnsibleModule
-from zabbix_api.zabbix_api import ZabbixAPIException, ZabbixAPI
+from zabbix_api import ZabbixAPI,ZabbixAPIException
 import xml.etree.ElementTree as ET
 
 
@@ -47,7 +47,7 @@ def main():
         conf_object = getattr(zapi, module.params["object"])
         msg = []
 
-        # Firt handle objcects witout 'get' method
+        # First handle objects witout 'get' method
 
         # 'configuration'
         if module.params["object"] == "configuration":
