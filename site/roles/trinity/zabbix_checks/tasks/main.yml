@@ -11,12 +11,13 @@
       name: MySQL-python
       state: present
 
-  - name: Aquire zabbix SQL password (generate or use one from /etc/trinity/passwords)
+  - name: Acquire zabbix SQL password (generate or use one from /etc/trinity/passwords)
     set_fact:
       zabbix_sql_pwd: "{{ lookup('password',
                         '/etc/trinity/passwords/mysql/zabbix.txt
                          chars=ascii_letters,digits,hexdigits') }}"
-  - name: Aquire zabbix Admin password (generate or use one from /etc/trinity/passwords)
+
+  - name: Acquire zabbix Admin password (generate or use one from /etc/trinity/passwords)
     set_fact:
       zabbix_admin_pwd: "{{ lookup('password',
                         '/etc/trinity/passwords/zabbix/admin.txt
@@ -28,7 +29,7 @@
         mysql --user=zabbix --password={{ zabbix_sql_pwd }}
         --database=zabbix --host=localhost --batch --skip-column-names
 
-  - name: Check if regexp exist in zabbix DB
+  - name: Check if regexp exists in zabbix DB
     command: >
       {{ cmd_sql }}
       --execute="SELECT * FROM regexps WHERE \
@@ -45,7 +46,7 @@
                     ( {{ zabbix_checks_sql_regexpid }}, \"Mounts\", \"\");"
     when: zabb_select_regexp_out.stdout != "1000\tMounts\t"
 
-  - name: Check if expression exist in zabbix DB
+  - name: Check if expression exists in zabbix DB
     command: >
       {{ cmd_sql }}
       --execute="SELECT * FROM expressions WHERE \
@@ -101,25 +102,9 @@
             createMissing: true
         source: "{{ lookup('file', item )}}"
     with_fileglob:
+      - "/usr/lib/zabbix/templates/00*.xml"
       - "/usr/lib/zabbix/templates/01*.xml"
       - "/usr/lib/zabbix/templates/02*.xml"
-      - "/usr/lib/zabbix/templates/*.xml"
-
-  - name: Get template IDs
-    zabbix_conf:
-      username: "Admin"
-      password: "{{ zabbix_admin_pwd  }}"
-      hostname: "localhost"
-      validate_certs: no
-      proto: "https"
-      object:   "{{item.object}}"
-      action:   "{{item.action}}"
-      filter:   "{{item.filter}}"
-    with_items:
-      - {object: "template", action: "get", filter: { host: "CV Controller" }   }
-      - {object: "template", action: "get", filter: { host: "Template App SSH Service" }   }
-      - {object: "template", action: "get", filter: { host: "Template ICMP Ping" }   }
-    register: templates
 
   - name: Configuring mail forwarding, creating host groups
     zabbix_conf:
@@ -128,16 +113,86 @@
       hostname: "localhost"
       proto: "https"
       validate_certs: no
-      object:   "{{item.object}}"
-      action:   "{{item.action}}"
-      filter:   "{{item.filter}}"
-      params:   "{{item.params}}"
+      object:   "{{ item.object }}"
+      action:   "{{ item.action }}"
+      filter:   "{{ item.filter }}"
+      params:   "{{ item.params }}"
     with_items:
-      - {object: "mediatype", action: "set", filter: { description: "Local e-mail" } , params: { smtp_server: "127.0.0.1" } }
-      - {object: "hostgroup", action: "set", filter: { }, params: { name: "Compute" } }
-      - {object: "hostgroup", action: "set", filter: { }, params: { name: "Controller" } }
-      - {object: "hostgroup", action: "set", filter: { }, params: { name: "Login" } }
-      - {object: "hostgroup", action: "set", filter: { }, params: { name: "Storage" } }
+      - { object: "mediatype", action: "set", filter: { description: "Local e-mail" } , params: { smtp_server: "127.0.0.1" } }
+      - { object: "hostgroup", action: "set", filter: { }, params: { name: "Compute" } }
+      - { object: "hostgroup", action: "set", filter: { }, params: { name: "Controller" } }
+      - { object: "hostgroup", action: "set", filter: { }, params: { name: "Login" } }
+      - { object: "hostgroup", action: "set", filter: { }, params: { name: "Storage" } }
+
+  - name: "Create or update (HA) controller host"
+    local_action: 
+      module: zabbix_host
+      server_url: https://localhost/zabbix
+      login_user: admin
+      login_password: "{{ zabbix_admin_pwd }}"
+      host_name: "{{ trix_ctrl_hostname }}.{{ trix_domain }}"
+      visible_name: "Controller{{ '\ HA' if ha else '' }}"
+      host_groups:
+        - Controller
+      link_templates:
+        - "CV role Controller{{ '\ HA' if ha else '' }}"
+      inventory_mode: disabled
+      interfaces:
+        - dns: "{{ trix_ctrl_hostname }}.{{ trix_domain }}"
+          ip: "{{ trix_ctrl_ip }}"
+          type: agent
+          main: 1
+          useip: 0
+          port: 10050
+      validate_certs: no
+
+  when: primary|default(True)
+        and ansible_connection not in 'lchroot'
+
+- block:
+  - name: Acquire zabbix Admin password (generate or use one from /etc/trinity/passwords)
+    set_fact:
+      zabbix_admin_pwd: "{{ lookup('password',
+                        '/etc/trinity/passwords/zabbix/admin.txt
+                         chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Ensure host group
+    local_action:
+      module: zabbix_group
+      server_url: https://localhost/zabbix
+      login_user: admin
+      login_password: "{{ zabbix_admin_pwd }}"
+      validate_certs: no
+      host_groups: "{{ image_name | capitalize }}"
+
+  - name: Ensure template
+    local_action:
+      module: zabbix_template
+      server_url: https://localhost/zabbix
+      login_user: admin
+      login_password: "{{ zabbix_admin_pwd }}"
+      validate_certs: no
+      template_name: "CV role {{ image_name | capitalize }}"
+     
+  - name: Get ID's
+    zabbix_conf:
+      username: "Admin"
+      password: "{{ zabbix_admin_pwd  }}"
+      hostname: "localhost"
+      validate_certs: no
+      proto: "https"
+      object: "{{ item.object }}"
+      action: "get"
+      filter: "{{ item.filter }}"
+    register: items
+    with_items:
+      - { object: "template", filter:  { host: "CV role {{ image_name | capitalize }}" } }
+      - { object: "hostgroup", filter: { name: "{{ image_name | capitalize }}" } }
+      - { object: "action", filter: { name: "Auto registration {{ image_name | capitalize }}" } }
+
+  - set_fact:
+      eventsource: 2
+    when: items.results.2.result.0 is undefined
 
   - name: Configure auto-registration
     zabbix_conf:
@@ -148,19 +203,20 @@
       validate_certs: no
       object: "action"
       action: "set"
-      filter:
-        name: "Auto registration"
       params:
+        name: "Auto registration {{ image_name | capitalize }}"
+        eventsource: "{{ eventsource | default(omit) }}"
+        filter:
+          evaltype: 0
+          conditions:
+            - conditiontype: 24
+              value: "{{ image_name }}"
         operations:
-          - actionid: 7
-            operationid: 13
-            operationtype: 6
+          - operationtype: 6
             optemplate:
-              - operationid: 13
-                templateid:  "{{ templates.results.1.result.0.templateid }}"
-              - operationid: 13
-                templateid:  "{{ templates.results.2.result.0.templateid }}"
-            recovery: 0
-
-  when: primary|default(True)
-        and ansible_connection not in 'lchroot'
+              - templateid: "{{ items.results.0.result.0.templateid }}"
+          - operationtype: 2
+          - operationtype: 4
+            opgroup:
+              - groupid: "{{ items.results.1.result.0.groupid }}"
+  when: ansible_connection in 'lchroot'

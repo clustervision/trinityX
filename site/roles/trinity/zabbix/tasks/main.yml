@@ -174,7 +174,7 @@
     retries: 5
     delay: 10
 
-  - name: Aquire zabbix Admin password (generate or use one from /etc/trinity/passwords)
+  - name: Acquire zabbix Admin password (generate or use one from /etc/trinity/passwords)
     set_fact:
       zabbix_admin_pwd: "{{ lookup('password',
                             '/etc/trinity/passwords/zabbix/admin.txt
@@ -216,7 +216,7 @@
 ###############################################################################
 #  Get token
 
-  - name: Aquire token
+  - name: Acquire token
     uri:
       url: 'https://localhost/zabbix/api_jsonrpc.php'
       validate_certs: no
@@ -261,89 +261,6 @@
     fail:
       msg: 'Error on previos step: {{ res.json.error }}'
     when: res.json.error is defined
-
-###############################################################################
-#  Node auto registration
-
-  - name: Fetch status of auto registration
-    uri:
-      url: 'https://localhost/zabbix/api_jsonrpc.php'
-      validate_certs: no
-      body_format: json
-      body: '{
-            "jsonrpc": "2.0",
-            "method": "action.get",
-            "auth": "{{ zabbix_auth_token }}",
-            "id": 3,
-            "params": {
-                "filter": {
-                    "name": "Auto registration"
-                }
-            }
-        }'
-    ignore_errors: true
-    register: auto_reg_exists
-
-  # 10102 Template App SSH Service
-  # 10186 Template ICMP Ping
-  # 10001 Template OS Linux
-  - name: Enable automatic registration of zabbix agents
-    uri:
-      url: 'https://localhost/zabbix/api_jsonrpc.php'
-      validate_certs: no
-      body_format: json
-      body: '{
-            "jsonrpc": "2.0",
-            "method": "action.create",
-            "auth": "{{ zabbix_auth_token }}",
-            "id": 3,
-            "params": {
-                "name": "Auto registration",
-                "eventsource": 2,
-                "evaltype": 0,
-                "def_shortdata": "Auto registration: {HOST.HOST}",
-                "def_longdata": "Host name: {HOST.HOST}\nHost IP: {HOST.IP}\nAgent port: {HOST.PORT}",
-                "conditions": [
-                    {
-                        "conditiontype": 22,
-                        "operator": 2,
-                        "value": ""
-                    }
-                ],
-                "operations": [
-                    {
-                        "operationtype": 2
-                    },
-                    {
-                        "operationtype": 4,
-                        "opgroup": [
-                            {"groupid": "5"},
-                            {"groupid": "2"}
-                        ]
-                    },
-                    {
-                        "operationtype": 6,
-                        "optemplate": [
-                            {"templateid": "10102"},
-                            {"templateid": "10186"},
-                            {"templateid": "10001"}
-                        ]
-                    }
-                ]
-            }
-        }'
-    register: res
-    changed_when: res.json.result != {}
-    when:
-      - auto_reg_exists.json.result is defined
-      - auto_reg_exists.json.result == []
-
-  - name: Check for error
-    fail:
-      msg: 'Error on previos step: {{ res.json.error }}'
-    when:
-      - res.skipped is not defined
-      - res.json.error is defined
 
 ###############################################################################
 #  Send notifications
@@ -483,12 +400,12 @@
     register: hk
     changed_when: false
 
-  - name: Set trends houskeeping
+  - name: Set trends housekeeping
     shell: >
       echo "update {{ zabbix_sql_db }}.config set hk_trends_global=1" | mysql
     when: hk.stdout_lines[0] == '0'
 
-  - name: Set history houskeeping
+  - name: Set history housekeeping
     shell: >
       echo "update {{ zabbix_sql_db }}.config set hk_history_global=1" | mysql
     when: hk.stdout_lines[1] == '0'
