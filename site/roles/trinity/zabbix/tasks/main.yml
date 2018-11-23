@@ -15,9 +15,8 @@
 
 - name: Install Zabbix packages
   yum:
-    name: '{{ item }}'
+    name: '{{ zabbix_packages }}'
     state: present
-  with_items: '{{ zabbix_packages }}'
   tags: install-only
 
 - name: Stop and disable httpd
@@ -386,7 +385,7 @@
 
   - name: Check for error
     fail:
-      msg: 'Error on previos step: {{ res.json.error }}'
+      msg: 'Error on previous step: {{ res.json.error }}'
     when:
       - res.skipped is not defined
       - res.json.error is defined

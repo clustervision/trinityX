@@ -3,9 +3,8 @@
 
 - name: Install firewalld packages
   yum:
-    name: '{{ item }}'
+    name: '{{ firewalld_packages }}'
     state: present
-  with_items: '{{ firewalld_packages }}'
   tags: install-only
 
 - name: Start and enable firewalld service
@@ -14,7 +13,7 @@
     state: started
     enabled: yes
 
-- name: Assigne interfaces to the public zone
+- name: Assign interfaces to the public zone
   firewalld:
     zone: public
     interface: '{{ item }}'
@@ -31,7 +30,7 @@
   with_items: '{{ firewalld_public_interfaces }}'
   when: firewalld_update_ifcfg_files
 
-- name: Assigne interfaces to the trusted zone
+- name: Assign interfaces to the trusted zone
   firewalld:
     zone: trusted
     interface: '{{ item }}'
