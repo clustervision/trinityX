@@ -24,9 +24,11 @@
   changed_when: False
 
 - name: Install {{ os_release_rpm.stdout }} RPM in {{ image_path }}
-  command: yum install {{ os_release_rpm.stdout }} --releasever=/ --installroot={{ image_path }} -y
-  args:
-    creates: "{{ image_path }}/etc/os-release"
+  yum:
+    name: "{{ os_release_rpm.stdout }}"
+    releasever: /
+    installroot: "{{ image_path }}"
+    state: present
 
 - name: Create {{ image_path }}/dev
   file:
@@ -101,11 +103,9 @@
 
 - name: Install core packages - @core, kernel and grub2
   yum:
-    name: "{{ item }}"
+    name: "{{ image_core_packages }}"
     state: present
     installroot: "{{ image_path }}"
-  with_items:
-    - "{{ image_core_packages }}"
 
 #- name: Copy gpg keys
 #  copy:
