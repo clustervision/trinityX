@@ -13,20 +13,35 @@
     name: yum-utils
     state: present
 
-- name: Init rpm DB {{ image_path }}/var/lib/rpm
-  command: "/usr/bin/rpm --root {{ image_path }} --initdb"
-  args:
-    creates: "{{ image_path }}/var/lib/rpm"
-
 - name: Check OS release on controller
   command: rpm -qf /etc/os-release --qf '%{NAME}'
   register: os_release_rpm
   changed_when: False
 
-- name: Install {{ os_release_rpm.stdout }} RPM in {{ image_path }}
+- name: Copy local yum.conf
+  copy:
+    src: "/etc/yum.conf"
+    dest: "{{ image_path }}/etc/"
+
+- name: Copy local yum variables
+  copy:
+    src: "/etc/yum/vars"
+    dest: "{{ image_path }}/etc/yum/"
+
+##
+## The new releasever option in the yum module actually doesn't do anything...
+## Workaround until it's fixed.
+##
+
+- name: Add releasever variable
+  copy:
+    content: "{{ ansible_distribution_major_version }}\n"
+    dest: "{{ image_path }}/etc/yum/vars/releasever"
+
+- name: Install {{ os_release_rpm.stdout }} package in {{ image_path }}
   yum:
     name: "{{ os_release_rpm.stdout }}"
-    releasever: /
+    #releasever: "{{ ansible_distribution_major_version }}"
     installroot: "{{ image_path }}"
     state: present
 
@@ -50,16 +65,6 @@
     - { dev: "console", mo: "600", t: 'c', ma: 5, mi: 1 }
     - { dev: "ptmx",    mo: "666", t: 'c', ma: 5, mi: 2 }
     - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
-
-- name: Copy local yum.conf
-  copy:
-    src: "/etc/yum.conf"
-    dest: "{{ image_path }}/etc/"
-
-- name: Copy local yum variables
-  copy:
-    src: "/etc/yum/vars"
-    dest: "{{ image_path }}/etc/yum/"
 
 - name: Add luna repo
   get_url:
