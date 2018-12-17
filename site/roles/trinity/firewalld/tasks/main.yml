@@ -64,6 +64,7 @@
     state: enabled
     permanent: true
     immediate: true
+  when: firewalld_masquerade_zone is defined
 
 - name: Configure open TCP ports on the public zone
   firewalld:
@@ -82,3 +83,11 @@
     permanent: true
     immediate: true
   with_items: '{{ firewalld_public_udp_ports }}'
+
+- name: Add direct rules
+  template:
+    src: 'direct-rules.xml'
+    dest: '/etc/firewalld/direct.xml'
+  when: firewalld_direct_rules
+  notify: reload firewalld
+
