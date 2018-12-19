@@ -1,0 +1,60 @@
+---
+- block:
+
+  - name: Install needed packages
+    yum:
+      name: '{{ item }}'
+      state: present
+    with_items: '{{ cv_support_packages }}'
+    tags: install-only
+
+  - name: Install request-remote-assistance to /usr/local/bin
+    copy:
+      src: 'request-remote-assistance'
+      dest: '/usr/local/bin'
+      owner: 'root'
+      group: 'root'
+      mode: '0750'
+
+  - name: Add /trinity/site file to the controllers
+    lineinfile:
+      path: '/trinity/site'
+      line: '{{ project_id }}'
+      state: present
+      create: yes
+    when: primary|default(True)
+
+  when: on_controller
+
+- name: Install packages needed for trix_node_basic_data.sh
+  yum:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+  - kernel-tools
+  - util-linux
+
+- name: Put diagnosis script to /usr/local/libexec/trix_node_basic_info.sh
+  copy:
+    src: trix_node_basic_info.sh
+    dest: /usr/local/libexec
+    owner: "root"
+    group: "root"
+    mode: '0755'
+
+- name: Add TrinityX branding in skel
+  lineinfile:
+    dest: /etc/skel/.bash_profile
+    state: present
+    line: echo "TrinityX on $(cat /etc/redhat-release)"
+
+- name: Render /root/.bash_profile
+  template:
+    src: bash_profile.j2
+    dest: /root/.bash_profile
+
+- name: Put osimage name in /root/osimage
+  template:
+    src: image.j2
+    dest: /root/osimage
+  when: ansible_connection == 'lchroot' and image_name is defined
