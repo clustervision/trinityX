@@ -75,11 +75,12 @@ The timezone must also be set correctly before installation as it will be propag
 
 If the user homes or the TrinityX installation directory (part of or whole) are to be set up on remote or distributed volume(s) or filesystem(s), all relevant configuration must be done before installing TrinityX. If necessary, remember to disable the NFS and DRBD roles in the ``controller.yml`` playbook.
 
-Next, the following software packages must also be present on the machine used to install the controllers. This machine is usually the controller in non HA configurations or the first of the two controllers in HA configurations.
+On the machine used to install the controllers, the EPEL repository must be enabled and the git and ansible packages must be present.::
 
-- git
+    # yum install epel-release
+    # yum install git ansible
 
-- ansible
+This machine is usually the controller in non HA configurations or the first of the two controllers in HA configurations.
 
 Also, the following installer dependencies need to be available on that machine:
 

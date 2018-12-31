@@ -3,9 +3,8 @@
 
 - name: Install bind packages
   yum:
-    name: '{{ item }}'
+    name: '{{ bind_packages }}'
     state: present
-  with_items: '{{ bind_packages }}'
   tags: install-only
 
 - name: Ensure {{ bind_db_path }} exists
@@ -71,7 +70,7 @@
     dest: "/etc/resolv.conf"
     backup: yes
 
-- name: Preserve resolv.conf from being overwriten
+- name: Preserve resolv.conf from being overwritten
   copy:
     src: dhclient-enter-hooks
     dest: /etc/dhcp/dhclient-enter-hooks
