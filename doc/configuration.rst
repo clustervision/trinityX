@@ -218,11 +218,6 @@ What follows is a list of those variables together with their descriptions and d
      - https://updates.clustervision.com/userspace/userspace-release.x86_64.rpm
      - URL of the repository of the userspace packages
 
-   * - zabbix_repo
-     - URL
-     - https://repo.zabbix.com/zabbix/3.4/rhel/7/x86_64/zabbix-release-3.4-2.el7.noarch.rpm
-     - URL of the Zabbix repository
-
    * - elrepo_repo
      - URL
      - http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
@@ -534,7 +529,7 @@ munge_conf_path     Path          `trix_shared`/etc/munge                     Pa
 ^^^^^^^^^^^^^^^^
 
 ===================== ============= ================================== =============
-     Variable             value        default                          description
+     Variable             Value        Default                          Description
 ===================== ============= ================================== =============
 ssl_cert_path         Path          `trix_local`/etc/ssl               Location where to store cluster certificates and keys.
 
@@ -558,7 +553,7 @@ ssl_cert_group_id     Number        991                                Default g
 ^^^^^^^^^^^^
 
 =================== ============= ==================================== =============
-     Variable           value        default                            description
+     Variable           Value        Default                            Description
 =================== ============= ==================================== =============
 sss_allowed_groups  List          - admins                             List of user groups that are allowed access on the controller(s).
 
@@ -571,16 +566,19 @@ sss_filter_enabled  Boolean       false                                Whether t
 `zabbix` role
 ^^^^^^^^^^^^^^
 
-======================= ============= ============================ =============
-     Variable               Value        Default                    Description
-======================= ============= ============================ =============
-zabbix_script_path      Path          `trix_local`/usr/lib/zabbix/ Location where zabbix can find custom scripts
-zabbix_sql_db           String        'zabbix'                     Name of the zabbix database in MariaDB
-zabbix_sql_user         String        'zabbix'                     SQL user used by zabbix
+======================= ============= ======================================================================================= =============
+     Variable               Value        Default                                                                              Description
+======================= ============= ======================================================================================= =============
+zabbix_script_path      Path          `trix_local`/usr/lib/zabbix/                                                            Location where zabbix can find custom scripts
+zabbix_sql_db           String        'zabbix'                                                                                Name of the zabbix database in MariaDB
+zabbix_sql_user         String        'zabbix'                                                                                SQL user used by zabbix
 
-zabbix_login            String        'Admin'                      Default name of the zabbix admin user
+zabbix_login            String        'Admin'                                                                                 Default name of the zabbix admin user
 
-zabbix_mail_server      Hostname      'localhost'                  Default mail server
+zabbix_mail_server      Hostname      'localhost'                                                                             Default mail server
+zabbix_repo             String        'https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm'  Default Zabbix repository
+zabbix_php_repo:        String        'http://rpms.remirepo.net/enterprise/remi-release-7.rpm'                                Default Zabbix PHP repository
+zabbix_php_version:     String        '73'                                                                                    Default Zabbix PHP version
 
 ======================= ============= ============================ =============
 
