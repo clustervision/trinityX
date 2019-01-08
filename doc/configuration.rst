@@ -223,6 +223,10 @@ What follows is a list of those variables together with their descriptions and d
      - http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
      - URL of elrepo repository
 
+   * - zabbix_repo
+     - URL
+     - https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm
+     - URL of default Zabbix repository
 
 Role specific variables
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -576,9 +580,6 @@ zabbix_sql_user         String        'zabbix'                                  
 zabbix_login            String        'Admin'                                                                                 Default name of the zabbix admin user
 
 zabbix_mail_server      Hostname      'localhost'                                                                             Default mail server
-zabbix_repo             String        'https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm'  Default Zabbix repository
-zabbix_php_repo:        String        'http://rpms.remirepo.net/enterprise/remi-release-7.rpm'                                Default Zabbix PHP repository
-zabbix_php_version:     String        '73'                                                                                    Default Zabbix PHP version
 
 ======================= ============= ============================ =============
 
