@@ -19,12 +19,21 @@
    state: present
   tags: install-only
 
+- name: Update SELinux context for {{ mariadb_db_path }}
+  sefcontext:
+    target: '{{ mariadb_db_path }}(/.*)?'
+    setype: mysqld_db_t
+    seuser: system_u
+    state: present
+
 - name: Ensure {{ mariadb_db_path }} exists
   file:
     path: '{{ mariadb_db_path }}'
     owner: mysql
     group: mysql
     state: directory
+    setype: mysqld_db_t
+    seuser: system_u
   when: primary | default(True)
 
 - name: Render /etc/my.cnf

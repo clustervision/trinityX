@@ -1,0 +1,14 @@
+
+module zabbix_server_tmp 1.0;
+
+require {
+    type tmp_t;
+    type zabbix_t;
+    class sock_file { create write unlink };
+    class unix_stream_socket connectto;
+}
+
+allow zabbix_t self:unix_stream_socket connectto;
+allow zabbix_t tmp_t:sock_file create;
+allow zabbix_t tmp_t:sock_file unlink;
+allow zabbix_t tmp_t:sock_file write;

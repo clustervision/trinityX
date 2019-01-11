@@ -14,6 +14,13 @@
     group: named
     state: directory
 
+- name: Ensure {{ bind_db_path }} has proper selinux permissions
+  file:
+    path: '{{ bind_db_path }}'
+    state: directory
+    setype: named_zone_t
+    seuser: system_u
+
 - name: Update named data path
   replace:
     path: /etc/named.conf
@@ -86,7 +93,7 @@
 - block:
 
   - name: Copy default zones to {{ bind_db_path }}
-    shell: rsync -raW /var/named/* {{ bind_db_path }}
+    shell: rsync -raW -AX /var/named/* {{ bind_db_path }}
     args:
       creates: '{{ bind_db_path }}/named.empty'
 
