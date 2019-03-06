@@ -16,3 +16,13 @@
   when: primary | default(True)
   notify:
     - Export NFS
+
+- name: Add link to the exports file in /etc/exports.d
+  file:
+    src: '{{ nfs_exports_path }}/ohpc.exports'
+    dest: '/etc/exports.d/ohpc.exports'
+    state: link
+    force: yes
+  notify:
+    - Export NFS
+
