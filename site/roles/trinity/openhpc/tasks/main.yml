@@ -8,3 +8,11 @@
   yum:
     name: ohpc-base
     state: installed
+
+- name: Update NFS exports
+  template:
+    src:  OHPC_exports
+    dest: '{{ nfs_exports_path }}/ohpc.exports'
+  when: primary | default(True)
+  notify:
+    - Export NFS
