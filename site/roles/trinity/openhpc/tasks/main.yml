@@ -8,21 +8,32 @@
   yum:
     name: ohpc-base
     state: installed
+  when: ansible_connection not in 'lchroot'
+
+- name: Install ohpc-base-compute
+  yum:
+    name: ohpc-base-compute
+    state: installed
+  when: ansible_connection in 'lchroot'
+
+- name: Install lmod-ohpc
+  yum:
+    name: lmod-ohpc
+    state: installed
 
 - name: Update NFS exports
   template:
     src:  OHPC_exports
     dest: '{{ nfs_exports_path }}/ohpc.exports'
-  when: primary | default(True)
+  when: primary | default(True) and ansible_connection not in 'lchroot'
   notify:
     - Export NFS
 
-- name: Add link to the exports file in /etc/exports.d
-  file:
+- file:
     src: '{{ nfs_exports_path }}/ohpc.exports'
     dest: '/etc/exports.d/ohpc.exports'
     state: link
     force: yes
+  when: ansible_connection not in 'lchroot'
   notify:
     - Export NFS
-
