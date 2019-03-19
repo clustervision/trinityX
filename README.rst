@@ -110,6 +110,11 @@ Descriptions to configuration options are given inside ``controller.yml`` and ``
 
 You can also choose which components to exclude from the installation by modifying the ``controller.yml`` playbook.
 
+OpenHPC Support
+===============
+
+The OpenHPC project provides a framework for building, managing and maintain HPC clusters. This project provides packages for most popular scientific and HPC applications. TrinityX can integrate this effort into it's ecosystem. In order to enable this integration set the flag ``enable_openhpc`` in ``group_vars/all`` to ``true``. 
+Currently when OpenHPC is enabled standart environment modules and pdsh from TrinityX gets disabled, ``slurm`` is used from TrinityX's repositories. 
 
 Documentation
 =============
