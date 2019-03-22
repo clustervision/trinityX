@@ -1,0 +1,794 @@
+Description: 'This template deploys cloudbrusting infrastructure for a TrinityX HPC cluster.'
+
+Parameters:
+  AvailabilityZone:
+    Description: Availability Zone to launch the cluster into
+    Type: String
+    Default: eu-central-1a
+
+  VpcCIDR:
+    Description: The IP range (CIDR notation) for this cluster
+    Type: String
+    Default: 10.15.0.0/16
+
+  CtrlSubnetCIDR:
+    Description: The IP range (CIDR notation) for this cluster
+    Type: String
+    Default: 10.15.255.0/24
+
+  ComputeSubnetCIDR:
+    Description: The IP range (CIDR notation) for this cluster
+    Type: String
+    Default: 10.15.0.0/17
+
+  CtrlPrivateAddress:
+    Description: Private address of the controller
+    Type: String
+    Default: 10.15.255.254
+
+  SharedFsIpAddress:
+    Description: Private address of the shared fileystem
+    Type: String
+    Default: 10.15.255.250
+
+  RemoteCIDR:
+    Description: The IP range from which to accept remote connections (CIDR notation)
+    Type: String
+    Default: 0.0.0.0/0
+
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+      using the root user.
+    Type: AWS::EC2::KeyPair::KeyName
+
+  CtrlInstanceType:
+    Description: EC2 instance type of the TrinityX controller
+    Type: String
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m4.16xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - m5.12xlarge
+      - m5.24xlarge
+      - m5a.large
+      - m5a.xlarge
+      - m5a.2xlarge
+      - m5a.4xlarge
+      - m5a.12xlarge
+      - m5a.24xlarge
+      - m5d.large
+      - m5d.xlarge
+      - m5d.2xlarge
+      - m5d.4xlarge
+      - m5d.12xlarge
+      - m5d.24xlarge
+      - c4.large
+      - c4.xlarge
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - c5.18xlarge
+      - c5d.large
+      - c5d.xlarge
+      - c5d.2xlarge
+      - c5d.4xlarge
+      - c5d.9xlarge
+      - c5d.18xlarge
+      - c5n.large
+      - c5n.xlarge
+      - c5n.2xlarge
+      - c5n.4xlarge
+      - c5n.9xlarge
+      - c5n.18xlarge
+      - p3.2xlarge
+      - p3.8xlarge
+      - p3.16xlarge
+      - p2.xlarge
+      - p2.8xlarge
+      - p2.16xlarge
+      - g3.4xlarge
+      - g3.8xlarge
+      - g3.16xlarge
+      - g3s.xlarge
+      - x1.16xlarge
+      - x1.32xlarge
+      - r4.large
+      - r4.xlarge
+      - r4.2xlarge
+      - r4.4xlarge
+      - r4.8xlarge
+      - r4.16xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r5.12xlarge
+      - r5.24xlarge
+      - r5a.large
+      - r5a.xlarge
+      - r5a.2xlarge
+      - r5a.4xlarge
+      - r5a.12xlarge
+      - r5a.24xlarge
+      - r5d.large
+      - r5d.xlarge
+      - r5d.2xlarge
+      - r5d.4xlarge
+      - r5d.12xlarge
+      - r5d.24xlarge
+    Default: t2.micro
+
+  ComputeInstanceType:
+    Description: EC2 instance type of the TrinityX compute nodes
+    Type: String
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m4.16xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - m5.12xlarge
+      - m5.24xlarge
+      - m5a.large
+      - m5a.xlarge
+      - m5a.2xlarge
+      - m5a.4xlarge
+      - m5a.12xlarge
+      - m5a.24xlarge
+      - m5d.large
+      - m5d.xlarge
+      - m5d.2xlarge
+      - m5d.4xlarge
+      - m5d.12xlarge
+      - m5d.24xlarge
+      - c4.large
+      - c4.xlarge
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - c5.18xlarge
+      - c5d.large
+      - c5d.xlarge
+      - c5d.2xlarge
+      - c5d.4xlarge
+      - c5d.9xlarge
+      - c5d.18xlarge
+      - c5n.large
+      - c5n.xlarge
+      - c5n.2xlarge
+      - c5n.4xlarge
+      - c5n.9xlarge
+      - c5n.18xlarge
+      - p3.2xlarge
+      - p3.8xlarge
+      - p3.16xlarge
+      - p2.xlarge
+      - p2.8xlarge
+      - p2.16xlarge
+      - g3.4xlarge
+      - g3.8xlarge
+      - g3.16xlarge
+      - g3s.xlarge
+      - x1.16xlarge
+      - x1.32xlarge
+      - r4.large
+      - r4.xlarge
+      - r4.2xlarge
+      - r4.4xlarge
+      - r4.8xlarge
+      - r4.16xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r5.12xlarge
+      - r5.24xlarge
+      - r5a.large
+      - r5a.xlarge
+      - r5a.2xlarge
+      - r5a.4xlarge
+      - r5a.12xlarge
+      - r5a.24xlarge
+      - r5d.large
+      - r5d.xlarge
+      - r5d.2xlarge
+      - r5d.4xlarge
+      - r5d.12xlarge
+      - r5d.24xlarge
+    Default: t2.micro
+
+  #ComputeInstancesStartNumber:
+  #  Description: Number of compute instances to create in this cluster
+  #  Type: Number
+  #  Default: 1
+
+  ComputeInstancesMaxNumber:
+    Description: Maximum number of compute instances that can be created in this cluster
+    Type: Number
+    Default: 100
+
+  #ComputeInstancesMinNumber:
+  #  Description: Minimum number of compute instances that can be created in this cluster
+  #  Type: Number
+  #  Default: 0
+
+  UsePlacementGroup:
+    Description: Whether to use a placement group or not
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  EfsPerformanceMode:
+    Description: EFS performance mode
+    Type: String
+    AllowedValues: [generalPurpose, maxIO]
+    Default: generalPurpose
+
+  EfsThroughputMode:
+    Description: EFS throughput mode
+    Type: String
+    AllowedValues: [bursting, provisioned]
+    Default: bursting
+
+  EfsProvisionedThroughputInMibps:
+    Description: (Optional) EFS throughput in Mibps
+    Type: Number
+    MaxValue: 1024
+    MinValue: 0.0
+    Default: 100
+
+  MountPoint:
+    Description: The Linux mount point for the EFS volume
+    Type: String
+    MinLength: '1'
+    Default: shared
+
+  EncryptStorage:
+    Description: Whether to encrypt storage
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  KMSEncryptionKey:
+    Description: KMS key ID
+    Type: String
+    Default: '-'
+
+  VpnServerPrivateAddress:
+    Description: The private IP address to use on the vpn interface on the server
+    Type: String
+    Default: 192.168.1.1
+
+  VpnServerListenPort:
+    Description: The UDP port to accept vpn connections on
+    Type: Number
+    Default: 51820
+
+  VpnClientPublicKey:
+    Description: The vpn client's public key
+    Type: String
+
+  OnPremiseVpnAddress:
+    Description: The private IP address to use on the vpn interface on the client
+    Type: String
+    Default: 192.168.1.2
+
+  OnPremiseCtrlAddress:
+    Description: The IP address of the on-premise trinityX controller
+    Type: String
+    Default: 10.141.255.254
+
+  OnPremiseCtrlHostname:
+    Description: The hostname of the on-premise trinityX controller
+    Type: String
+    Default: controller
+
+  OnPremiseDomain:
+    Description: The domain name used on the on-premise trinityX cluster
+    Type: String
+    Default: cluster
+
+  OnPremiseCidr:
+    Description: The CIDR of the provisioning network on the on-premise cluster
+    Type: String
+    Default: 10.141.0.0/16
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Controller Configuration"
+        Parameters:
+          - CtrlInstanceType
+          - KeyName
+      - Label:
+          default: "Compute Configuration"
+        Parameters:
+          - ComputeInstanceType
+          #- ComputeInstancesMinNumber
+          - ComputeInstancesMaxNumber
+          #- ComputeInstancesStartNumber
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCIDR
+          - CtrlSubnetCIDR
+          - ComputeSubnetCIDR
+          - CtrlPrivateAddress
+          - SharedFsIpAddress
+          - RemoteCIDR
+      - Label:
+          default: "Storage Configuration"
+        Parameters:
+          - EfsPerformanceMode
+          - EfsThroughputMode
+          - EfsProvisionedThroughputInMibps
+      - Label:
+          default: "Global Configuration"
+        Parameters:
+          - AvailabilityZone
+          - MountPoint
+          - UsePlacementGroup
+          - EncryptStorage
+          - KMSEncryptionKey
+      - Label:
+          default: "VPN Configuration"
+        Parameters:
+          - VpnServerPrivateAddress
+          - VpnServerListenPort
+          - OnPremiseVpnAddress
+          - VpnClientPublicKey
+          - OnPremiseCtrlHostname
+          - OnPremiseDomain
+          - OnPremiseCidr
+          - OnPremiseCtrlAddress
+    ParameterLabels:
+      VpcCIDR:
+        default: "Which CIDR should be used for this VPC?"
+
+Conditions:
+  ShouldUsePlacementGroup:
+    !Equals [true, !Ref UsePlacementGroup]
+  ShouldEncryptStorage:
+    !Equals [true, !Ref EncryptStorage]
+  ShouldUseKMSKey:
+    Fn::And:
+    - !Not [!Equals ['-', !Ref KMSEncryptionKey]]
+    - Condition: ShouldEncryptStorage
+  UseEfsProvisionedThroughput:
+    !Equals [provisioned, !Ref EfsThroughputMode]
+
+Mappings:
+  AWSRegion2VpnAMI:
+    eu-central-1:
+      AMI: ami-011c98360b110b465
+
+  AWSRegion2ComputeAMI:
+    eu-central-1:
+      AMI: ami-04aa1e3f1e3691b31
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'vpc']]
+
+  DhcpOptions:
+    Type: AWS::EC2::DHCPOptions
+    Properties:
+      DomainName: cloud
+      DomainNameServers:
+        - !Ref CtrlPrivateAddress
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'dhcp']]
+
+  VpcDhcpOptionsAssociation:
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+    Properties:
+      DhcpOptionsId: !Ref DhcpOptions
+      VpcId: !Ref VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'gateway']]
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  CtrlSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref AvailabilityZone
+      CidrBlock: !Ref CtrlSubnetCIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'ctrl-subnet']]
+
+  ComputeSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref AvailabilityZone
+      CidrBlock: !Ref ComputeSubnetCIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'compute-subnet']]
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'route-table']]
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  OnPremiseCidrRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: !Ref OnPremiseCidr
+      InstanceId: !Ref VpnInstance
+
+  OnPremiseVpnRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: !Join [ '/', [!Ref 'OnPremiseVpnAddress', '32']]
+      InstanceId: !Ref VpnInstance
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref CtrlSubnet
+
+  ComputeRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'compute-route-table']]
+
+  ComputeDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: CtrlENI
+    Properties:
+      RouteTableId: !Ref ComputeRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NetworkInterfaceId: !Ref CtrlENI
+
+  ComputeSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref ComputeRouteTable
+      SubnetId: !Ref ComputeSubnet
+
+  CtrlSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Enable SSH access to the controller"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: !Ref RemoteCIDR
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: !Ref RemoteCIDR
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: !Ref RemoteCIDR
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'public-sg']]
+
+  ComputeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Enable all traffic inside the cluster"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: '-1'
+        FromPort: '0'
+        ToPort: '65535'
+        SourceSecurityGroupId: !Ref CtrlSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'private-sg']]
+
+  CtrlSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: '-1'
+      FromPort: '0'
+      ToPort: '65535'
+      SourceSecurityGroupId: !Ref ComputeSecurityGroup
+      GroupId: !Ref CtrlSecurityGroup
+
+  ComputeSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: '-1'
+      FromPort: '0'
+      ToPort: '65535'
+      SourceSecurityGroupId: !Ref ComputeSecurityGroup
+      GroupId: !Ref ComputeSecurityGroup
+
+  VpnEndpointSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: udp
+      FromPort: !Ref VpnServerListenPort
+      ToPort: !Ref VpnServerListenPort
+      CidrIp: !Ref RemoteCIDR
+      GroupId: !Ref CtrlSecurityGroup
+
+  VpnComputeSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: '-1'
+      FromPort: '0'
+      ToPort: '65535'
+      CidrIp: !Join [ '/', [!Ref 'OnPremiseVpnAddress', '32']]
+      GroupId: !Ref ComputeSecurityGroup
+
+  SharedFsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for mount target
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '2049'
+        ToPort: '2049'
+        CidrIp: !Ref VpcCIDR
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'sharedfs-sg']]
+
+  VpnSharedFsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for EFS access over VPN
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '2049'
+        ToPort: '2049'
+        CidrIp: !Join [ '/', [!Ref 'OnPremiseVpnAddress', '32']]
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'vpn-efs-sg']]
+
+  SharedFS:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted:
+        Fn::If:
+        - ShouldEncryptStorage
+        - Ref: EncryptStorage
+        - Ref: AWS::NoValue
+      KmsKeyId:
+        Fn::If:
+        - ShouldUseKMSKey
+        - Ref: KMSEncryptionKey
+        - Ref: AWS::NoValue
+      PerformanceMode: !Ref EfsPerformanceMode
+      ThroughputMode: !Ref EfsThroughputMode
+      ProvisionedThroughputInMibps:
+        Fn::If:
+        - UseEfsProvisionedThroughput
+        - Ref: EfsProvisionedThroughputInMibps
+        - Ref: AWS::NoValue
+      FileSystemTags:
+      - Key: Name
+        Value: !Join [ '-', [!Ref 'AWS::StackName', 'efs']]
+
+  SharedFsMountTarget:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref SharedFS
+      IpAddress: !Ref SharedFsIpAddress
+      SubnetId: !Ref CtrlSubnet
+      SecurityGroups:
+        - Ref: SharedFsSecurityGroup
+        - Ref: VpnSharedFsSecurityGroup
+
+  ClusterPlacementGroup:
+    Type: AWS::EC2::PlacementGroup
+    Properties:
+      Strategy: cluster
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'placement']]
+    Condition: ShouldUsePlacementGroup
+
+  CtrlPublicAddress:
+    Type: AWS::EC2::EIP
+
+  CtrlENI:
+    Type: AWS::EC2::NetworkInterface
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      SubnetId: !Ref CtrlSubnet
+      SourceDestCheck: 'false'
+      PrivateIpAddress: !Ref CtrlPrivateAddress
+      GroupSet:
+        - Ref: CtrlSecurityGroup
+        - Ref: SharedFsSecurityGroup
+
+  VpnInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref CtrlInstanceType
+      AvailabilityZone: !Ref AvailabilityZone
+      KeyName: !Ref KeyName
+      ImageId: !FindInMap [AWSRegion2VpnAMI, !Ref "AWS::Region", AMI]
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref CtrlENI
+          DeviceIndex: '0'
+      PlacementGroup:
+        Fn::If:
+        - ShouldUsePlacementGroup
+        - Ref: ClusterPlacementGroup
+        - Ref: AWS::NoValue
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash -x
+              cd /opt/trinityX/site
+
+              mkdir host_vars
+              echo 'enable_selinux: true' > host_vars/controller
+
+              cat > group_vars/controllers <<EOF
+              ---
+              project_id: '(cloud)'
+              ha: false
+              onpremise_ctrl_ip: ${OnPremiseCtrlAddress}
+              onpremise_ctrl_hostname: ${OnPremiseCtrlHostname}
+              onpremise_domain: ${OnPremiseDomain}
+              trix_ctrl_ip: ${CtrlPrivateAddress}
+              trix_ctrl_hostname: 'gateway'
+              wg_server: true
+              wg_address: ${VpnServerPrivateAddress}
+              wg_listen_port: ${VpnServerListenPort}
+              wg_peer_address: ${OnPremiseVpnAddress}
+              wg_peer_allowed_ips: '${OnPremiseVpnAddress}/32, ${OnPremiseCidr}'
+              wg_peer_public_key: ${VpnClientPublicKey}
+
+              # wg_server: false
+              # wg_address: ${OnPremiseVpnAddress}
+              # wg_peer_endpoint: ${LocalVpnEndpoint}
+              # wg_peer_address: ${VpnServerPrivateAddress}
+              # wg_peer_allowed_ips: '${VpnServerPrivateAddress}/32, ${VpcCIDR}'
+              # wg_peer_public_key: SERVER_PUBLIC_KEY
+              aws:
+                bursting: true
+                keyname: ${KeyName}
+                region: ${LocalRegion}
+                availability_zone: ${AvailabilityZone}
+                domain: cloud
+                ctrl_iam_role: ''
+                ctrl_ip: ${OnPremiseCtrlAddress}
+                ctrl_hostname: ${OnPremiseCtrlHostname}
+                sharedfs_ip: ${SharedFsIpAddress}
+                sharedfs_mountpoint: '/${MountPoint}'
+                compute_type: ${ComputeInstanceType}
+                compute_start_number: 0
+                compute_max_number: ${ComputeInstancesMaxNumber}
+                compute_min_number: 0
+                compute_ami: ${LocalFindInMapAMI}
+                subnet: ${ComputeSubnet}
+                stack_name: ${LocalStackName}
+                compute_secgroups:
+                  - ${ComputeSecurityGroup}
+                  - ${SharedFsSecurityGroup}
+                vpc: ${VPC}
+              resolv_search_domains: '${OnPremiseDomain} {{ aws.domain }}'
+              EOF
+              ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519
+              cat /root/.ssh/id_ed25519.pub >> /root/.ssh/authorized_keys
+              ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook cloud-gateway.yml
+              export PUB=$(cat /etc/wireguard/public_key)
+              sed -i  "s,SERVER_PUBLIC_KEY,$PUB," group_vars/controllers
+            - {
+              LocalFindInMapAMI: !FindInMap [AWSRegion2ComputeAMI, !Ref 'AWS::Region', AMI],
+              LocalRegion: !Ref 'AWS::Region',
+              LocalVpnEndpoint: !Join [':', [!Ref 'CtrlPublicAddress', !Ref 'VpnServerListenPort']],
+              LocalStackName: !Ref 'AWS::StackName'
+              }
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [!Ref 'AWS::StackName', 'vpn']]
+
+  CtrlPublicAddressAssoc:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: CtrlENI
+    DependsOn: VpnInstance
+    Properties:
+      AllocationId: !GetAtt CtrlPublicAddress.AllocationId
+      NetworkInterfaceId: !Ref CtrlENI
+
+Outputs:
+  EIP:
+    Description: Controller's public IP address
+    Value: !Ref CtrlPublicAddress
+
+  SharedFsMountTargetID:
+    Description: Mount target ID
+    Value: !Ref SharedFsMountTarget
