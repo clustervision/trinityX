@@ -19,12 +19,12 @@
 
     - role: trinity/firewalld
       firewalld_trusted_interfaces:
-        - eth0
+        - '{{ ansible_default_ipv4.interface }}'
         - wg0
       firewalld_update_ifcfg_files: false
       firewalld_masquerade_zone:
       firewalld_direct_rules:
-        - rule: "! -s {{ wg_peer_address }}/32 -o eth0 -j MASQUERADE"
+        - rule: "! -s {{ wg_peer_address }}/32 -o {{ ansible_default_ipv4.interface }} -j MASQUERADE"
           ipver: ipv4
           table: nat
           chain: POSTROUTING
