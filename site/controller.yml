@@ -9,10 +9,22 @@
     - role: trinity/init
       tags: init
 
+    - role: trinity/local_repo
+      tags: local_repo
+      when: local_install
+
+    - role: trinity/repos
+      repos:
+      - repo: '{{ trix_local_repo_baseurl }}'
+        name: '{{ trix_local_reponame }}'
+      tags: local_repo
+      when: local_install
+
     - role: trinity/repos
       repos:
       - repo: epel-release
-      - repo: https://updates.clustervision.com/userspace/userspace-release.x86_64.rpm
+      - repo: '{{ userspace_repo }}'
+      - repo: '{{ luna_repo }}'
       tags: repos
 
     - role: trinity/cv_support
@@ -28,13 +40,6 @@
       tags: hostname
 
     - role: trinity/firewalld
-      firewalld_public_interfaces:
-        - eth2
-      firewalld_trusted_interfaces:
-        - eth0
-        - eth1
-      firewalld_public_tcp_ports:
-        - 443
       tags: firewalld
 
     - role: trinity/chrony
@@ -95,6 +100,7 @@
       bind_dns_forwarders:
         - '8.8.8.8'
         - '8.8.4.4'
+      resolv_server: '{{ trix_ctrl_ip }}'
       tags: bind
 
     - role: trinity/openldap
@@ -171,10 +177,11 @@
       zabbix_sql_db: 'zabbix'
       tags: zabbix
 
-    - role: trinity/zabbix_agent
-      tags: zabbix_agent
+#    - role: trinity/zabbix_agent
+#      tags: zabbix_agent
 
     - role: trinity/zabbix_checks
+      zabbix_hostmetadata: controller
       tags: zabbix_checks
 
     - role: trinity/trix-status

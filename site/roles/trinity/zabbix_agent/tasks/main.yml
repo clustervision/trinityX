@@ -3,11 +3,9 @@
 #
 - name: Install Zabbix agent packages
   yum:
-    name: '{{ item }}'
+    name: '{{ zabbix_agent_packages }}'
     state: present
-  with_items: '{{ zabbix_agent_packages }}'
-  notify:
-  - restart zabbix-agent
+  tags: install-only
 
 - name: Create config for zabbix-agent
   template:
@@ -16,6 +14,12 @@
     backup: yes
   notify:
   - restart zabbix-agent
+
+- name: Add zabbix_agent to selinux permissive domain
+  selinux_permissive:
+    name: zabbix_agent_t
+    permissive: true
+  when: enable_selinux
 
 - name: Enable zabbix-agent
   service:

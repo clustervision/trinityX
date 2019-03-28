@@ -41,34 +41,36 @@ Steps to install TrinityX
 
     # curl https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo > /etc/yum.repos.d/luna-1.2.repo
 
-5. Install ``git``, ``ansible`` and ``luna-ansible``::
+5. Enable the EPEL repository::
+
+   # yum install epel-release
+
+6. Install ``git``, ``ansible`` and ``luna-ansible``::
 
     # yum install git ansible luna-ansible
 
-6. Clone TrinityX repository into your working directory and go to the site directory::
+7. Clone TrinityX repository into your working directory and go to the site directory::
 
     # git clone http://github.com/clustervision/trinityX
     # cd trinityX/site
 
-7. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
+8. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
 
    * ``group_vars/all``
 
+   You might also want to check if the default firewall parameters in the same file apply to your situation::
+
+      firewalld_public_interfaces: [eth0]
+      firewalld_trusted_interfaces: [eth1]
+      firewalld_public_tcp_ports: [22, 443]
+
    **Note**: In the case of an HA setup you will most probably need to change the default name of the shared block device set by ``shared_fs_device``.
 
-   You might also want to check if the default firewall parameters apply to your situation in the firewalld role in ``controller.yml``::
-
-      firewalld_public_interfaces:
-        - eth2
-      firewalld_trusted_interfaces:
-        - eth0
-        - eth1
-
-8. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
+9. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
 
     # ansible-galaxy install OndrejHome.pcs-modules-2
 
-9. Configure ``hosts`` file to allow ansible to address controllers.
+10. Configure ``hosts`` file to allow ansible to address controllers.
 
    Example for non-HA setup::
 
@@ -81,7 +83,7 @@ Steps to install TrinityX
        controller1 ansible_host=10.141.255.254
        controller2 ansible_host=10.141.255.253
 
-10. Start TrinityX installation::
+11. Start TrinityX installation::
 
      # ansible-playbook controller.yml
 

@@ -3,7 +3,8 @@
 set -e
 set -x
 
-PLAYBOOKS="../../site/controller.yml ../../site/compute.yml"
+PLAYBOOKS_DIR="../../site/"
+PLAYBOOKS="controller.yml compute.yml"
 
 if [ "x${CENTOS_CONTENT}" = "x" ]; then
     echo "Centos content dir should be specifiedi."
@@ -32,11 +33,17 @@ ISO_DIR=${SCRIPTDIR}/ISO
 mkdir -p ${ISO_DIR}/Packages
 
 TRINITY_RPM=trinityx-${VERSION}-${BUILD}.el7.x86_64.rpm
+
+pushd ${SCRIPTDIR}/${PLAYBOOKS_DIR}
+pwd
 for PLB in ${PLAYBOOKS}; do
-    ${SCRIPTDIR}/parse-playbook.py --playbook ${SCRIPTDIR}/${PLB}; \
+    ${SCRIPTDIR}/parse-playbook.py \
+        --playbook ${PLB} \
+        --host controller1
 done \
     | sort \
-    | uniq > ${ISO_DIR}/pkg.list; \
+    | uniq > ${ISO_DIR}/pkg.list;
+popd
 
 cat ${SCRIPTDIR}/additional-packages.lst >> ${ISO_DIR}/pkg.list
 
@@ -45,8 +52,18 @@ cat ${ISO_DIR}/pkg.list \
     | grep -E '^http[s]?://' \
     | while read L; do wget -N -P ${ISO_DIR}/Packages ${L}; done
 
+# copy all local files
+cat ${ISO_DIR}/pkg.list \
+    | grep -E '^/' \
+    | while read L; do cp ${L} ${ISO_DIR}/Packages/; done
+
+# download additional files
+cat ${SCRIPTDIR}/additional-files.lst \
+    | while read L; do wget -N -P ${ISO_DIR}/Packages ${L}; done
+
 # download all the packages from YAMLs
 cat ${ISO_DIR}/pkg.list \
+    | grep -v '/' \
     | paste -d " " $(printf " -%.0s" {1..50}) \
     | while read P; do \
         yumdownloader --installroot ${ISO_DIR}/Packages \
@@ -58,7 +75,7 @@ rm -rf ${ISO_DIR}/Packages/var
 
 # compare desired list and actual downloaded packages
 ORPHANED_PACKAGES=$(comm -23 \
-    <(cat ${ISO_DIR}/pkg.list | grep -v -E '^http[s]?://|^@' | sort | uniq) \
+    <(cat ${ISO_DIR}/pkg.list | grep -v -E '/|^@' | sort | uniq) \
     <(rpm -qp ${ISO_DIR}/Packages/*.rpm --provides \
         | awk '{print $1}' | sort | uniq)
 )

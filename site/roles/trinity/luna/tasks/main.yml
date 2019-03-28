@@ -39,9 +39,8 @@
 
 - name: Install luna packages
   yum:
-    name: '{{ item }}'
+    name: '{{ luna_packages }}'
     state: present
-  with_items: '{{ luna_packages }}'
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
@@ -130,7 +129,7 @@
       state: directory
 
   - name: Copy default dhcp configuraion to {{ luna.dhcp.conf_path }}
-    shell: rsync -raW /etc/dhcp/* {{ luna.dhcp.conf_path }}
+    shell: rsync -raW -AX /etc/dhcp/* {{ luna.dhcp.conf_path }}
     args:
       creates: '{{ luna.dhcp.conf_path }}/dhclient.d'
     when: primary|default(True)

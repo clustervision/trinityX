@@ -7,9 +7,9 @@
 
 - name: Install nfs packages
   yum:
-    name: '{{ item }}'
+    name: '{{ nfs_packages }}'
     state: present
-  with_items: '{{ nfs_packages }}'
+  tags: install-only
 
 - name: Enable NFS over RDMA
   set_fact:
@@ -33,6 +33,7 @@
     dest: '/etc/exports.d/trinity.exports'
     state: link
     force: yes
+    follow: no
   when: nfs_exports_path|string not in '/etc/exports.d'
 
 - name: Render nfsmount.conf configuration file

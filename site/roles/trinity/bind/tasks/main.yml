@@ -3,9 +3,9 @@
 
 - name: Install bind packages
   yum:
-    name: '{{ item }}'
+    name: '{{ bind_packages }}'
     state: present
-  with_items: '{{ bind_packages }}'
+  tags: install-only
 
 - name: Ensure {{ bind_db_path }} exists
   file:
@@ -13,6 +13,13 @@
     owner: named
     group: named
     state: directory
+
+- name: Ensure {{ bind_db_path }} has proper selinux permissions
+  file:
+    path: '{{ bind_db_path }}'
+    state: directory
+    setype: named_zone_t
+    seuser: system_u
 
 - name: Update named data path
   replace:
@@ -40,6 +47,13 @@
     regexp: 'dnssec-enable'
   notify: restart named
 
+- name: Toggle DNSSEC validation
+  lineinfile:
+    path: /etc/named.conf
+    line: 'dnssec-validation {{ "yes" if bind_dnssec_enable else "no"}};'
+    regexp: 'dnssec-validation'
+  notify: restart named
+
 - name: Configure named forwarders
   blockinfile:
     path: /etc/named.conf
@@ -63,7 +77,7 @@
     dest: "/etc/resolv.conf"
     backup: yes
 
-- name: Preserve resolv.conf from being overwriten
+- name: Preserve resolv.conf from being overwritten
   copy:
     src: dhclient-enter-hooks
     dest: /etc/dhcp/dhclient-enter-hooks
@@ -79,7 +93,7 @@
 - block:
 
   - name: Copy default zones to {{ bind_db_path }}
-    shell: rsync -raW /var/named/* {{ bind_db_path }}
+    shell: rsync -raW -AX /var/named/* {{ bind_db_path }}
     args:
       creates: '{{ bind_db_path }}/named.empty'
 

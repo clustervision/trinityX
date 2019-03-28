@@ -3,9 +3,9 @@
 
 - name: Install firewalld packages
   yum:
-    name: '{{ item }}'
+    name: '{{ firewalld_packages }}'
     state: present
-  with_items: '{{ firewalld_packages }}'
+  tags: install-only
 
 - name: Start and enable firewalld service
   service:
@@ -13,7 +13,7 @@
     state: started
     enabled: yes
 
-- name: Assigne interfaces to the public zone
+- name: Assign interfaces to the public zone
   firewalld:
     zone: public
     interface: '{{ item }}'
@@ -28,8 +28,9 @@
     regexp: '^ZONE='
     line: 'ZONE=public'
   with_items: '{{ firewalld_public_interfaces }}'
+  when: firewalld_update_ifcfg_files
 
-- name: Assigne interfaces to the trusted zone
+- name: Assign interfaces to the trusted zone
   firewalld:
     zone: trusted
     interface: '{{ item }}'
@@ -44,6 +45,7 @@
     regexp: '^ZONE='
     line: 'ZONE=trusted'
   with_items: '{{ firewalld_trusted_interfaces }}'
+  when: firewalld_update_ifcfg_files
 
 - name: Disable NetworkManager for public and trusted interfaces
   lineinfile:
@@ -53,14 +55,16 @@
   with_flattened:
     - '{{ firewalld_public_interfaces }}'
     - '{{ firewalld_trusted_interfaces }}'
+  when: firewalld_update_ifcfg_files
 
-- name: Enable masquerading on the public zone
+- name: Enable masquerading on the '{{ firewalld_masquerade_zone }}' zone
   firewalld:
-    zone: public
+    zone: '{{ firewalld_masquerade_zone }}'
     masquerade: yes
     state: enabled
     permanent: true
     immediate: true
+  when: firewalld_masquerade_zone is defined
 
 - name: Configure open TCP ports on the public zone
   firewalld:
@@ -79,3 +83,11 @@
     permanent: true
     immediate: true
   with_items: '{{ firewalld_public_udp_ports }}'
+
+- name: Add direct rules
+  template:
+    src: 'direct-rules.xml'
+    dest: '/etc/firewalld/direct.xml'
+  when: firewalld_direct_rules
+  notify: reload firewalld
+
