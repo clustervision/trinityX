@@ -51,7 +51,7 @@ Steps to install TrinityX
 
 7. Clone TrinityX repository into your working directory and go to the site directory::
 
-    # git clone http://github.com/clustervision/trinityx
+    # git clone http://github.com/clustervision/trinityX
     # cd trinityX/site
 
 8. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:

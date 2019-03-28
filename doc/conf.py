@@ -31,7 +31,7 @@
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'rinoh.frontend.sphinx',
+#    'rinoh.frontend.sphinx',
 #    'sphinx.ext.githubpages',
 ]
 
