@@ -18,8 +18,9 @@
 
 - name: Install environment-modules packages
   yum:
-   name: '{{ envmodules_packages }}'
-   state: present
+    name: '{{ envmodules_packages }}'
+    state: present
+  tags: install-only
 
 - name: Add the group paths to the default configuration
   blockinfile:
@@ -29,6 +30,7 @@
       {{ envmodules_files_path }}/{{ dir }}
       {% endfor %}
     state: present
+  tags: install-only
 
 - name: Get a list of dependencies
   shell: >

@@ -22,6 +22,8 @@
     file:
       path: '{{ ssl_cert_path }}'
       state: directory
+      setype: cert_t
+      seuser: system_u
   
   - name: Generate a certificate authority for the cluster
     command: >
@@ -78,6 +80,8 @@
       path: '{{ ssl_cert_path }}'
       owner: '{{ ssl_cert_owner }}'
       group: '{{ ssl_cert_group }}'
+      setype: cert_t
+      seuser: system_u
       recurse: yes
 
   when: primary|default(True)

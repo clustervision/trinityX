@@ -19,6 +19,22 @@
     state: present
   tags: install-only
 
+- name: Compile zabbix selinux module
+  shell: |
+         checkmodule -M -m -o /tmp/zabbix_server_tmp.mod {{ role_path }}/files/zabbix_server_tmp.te; 
+         semodule_package -m /tmp/zabbix_server_tmp.mod -o /tmp/zabbix_server_tmp.pp;
+  args:
+    creates: '/tmp/zabbix_server_tmp.pp'
+
+- name: Check if zabbix selinux module is already installed
+  shell: 'semodule -l | grep zabbix_server_tmp || true'
+  register: zabbix_selinux
+  changed_when: false
+
+- name: Install zabbix selinux module
+  shell: 'semodule -i /tmp/zabbix_server_tmp.pp'
+  when: '"zabbix_server_tmp" not in zabbix_selinux.stdout'
+
 - name: Stop and disable httpd
   service:
     name: httpd

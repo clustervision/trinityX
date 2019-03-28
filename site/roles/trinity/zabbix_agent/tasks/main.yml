@@ -15,6 +15,12 @@
   notify:
   - restart zabbix-agent
 
+- name: Add zabbix_agent to selinux permissive domain
+  selinux_permissive:
+    name: zabbix_agent_t
+    permissive: true
+  when: enable_selinux
+
 - name: Enable zabbix-agent
   service:
     name: zabbix-agent
