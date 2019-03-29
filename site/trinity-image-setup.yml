@@ -53,6 +53,7 @@
     tags: nfs-mounts
 
   - role: trinity/environment-modules
+    when: enable_openhpc == false
     tags: environment-modules
 
   - role: trinity/sssd
@@ -92,3 +93,16 @@
 
   - role: trinity/nscd
     tags: nscd
+
+  - role: trinity/openhpc
+    when: enable_openhpc
+    tags: openhpc
+
+  - role: trinity/nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: '/opt/ohpc/pub'
+      remote: '{{ trix_ctrl_hostname }}:/opt/ohpc/pub'
+      options: 'defaults,nfsvers=4,ro,retrans=4'
+    when: enable_openhpc
+    tags: nfs-mounts

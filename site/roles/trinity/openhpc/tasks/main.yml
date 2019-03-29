@@ -1,0 +1,39 @@
+---
+- name: Install ohpc-release
+  yum:
+    name: https://github.com/openhpc/ohpc/releases/download/v1.3.GA/ohpc-release-1.3-1.el7.x86_64.rpm
+    state: installed
+
+- name: Install ohpc-base
+  yum:
+    name: ohpc-base
+    state: installed
+  when: ansible_connection not in 'lchroot'
+
+- name: Install ohpc-base-compute
+  yum:
+    name: ohpc-base-compute
+    state: installed
+  when: ansible_connection in 'lchroot'
+
+- name: Install lmod-ohpc
+  yum:
+    name: lmod-ohpc
+    state: installed
+
+- name: Update NFS exports
+  template:
+    src:  OHPC_exports
+    dest: '{{ nfs_exports_path }}/ohpc.exports'
+  when: primary | default(True) and ansible_connection not in 'lchroot'
+  notify:
+    - Export NFS
+
+- file:
+    src: '{{ nfs_exports_path }}/ohpc.exports'
+    dest: '/etc/exports.d/ohpc.exports'
+    state: link
+    force: yes
+  when: ansible_connection not in 'lchroot'
+  notify:
+    - Export NFS
