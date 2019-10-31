@@ -4,7 +4,7 @@
 
 # Trinity version number
 
-trix_version: '11'
+trix_version: '12.0'
 
 
 # Project ID or string that'll show up in the default
@@ -16,7 +16,7 @@ project_id: '000000'
 # Do we want HA?
 # Set to 'False' to disable HA, set to 'True' to enable it.
 
-ha: true
+ha: false
 
 
 # Should we use content of the installation CD/USB-stick
@@ -38,7 +38,7 @@ trix_domain: cluster
 trix_ctrl1_ip: 10.141.255.254
 trix_ctrl1_bmcip: 10.148.255.254
 trix_ctrl1_heartbeat_ip: 10.146.255.254
-trix_ctrl1_hostname: controller1
+trix_ctrl1_hostname: controller1 
 
 # In a non-HA setup, all of the following variables will be ignored:
 # - the variables for CTRL will be set to the same as CTRL1;
@@ -86,7 +86,7 @@ trix_shared: '{{ trix_root }}/shared'
 trix_local: '{{ trix_root }}/local'
 trix_home: '{{ trix_root }}/home'
 trix_repos: '{{ trix_root }}/repos'
-
+trix_ohpc: '{{ trix_root }}/ohpc'
 
 # Backend type and block device to use for the specified backend.
 
@@ -101,8 +101,8 @@ resolv_search_domains: '{{ trix_domain }} ipmi'
 # Only public tcp/udp ports are allowed on the public interfaces
 # whereas everything is allowed on the trusted interfaces
 
-firewalld_public_interfaces: [eth0]
-firewalld_trusted_interfaces: [eth1]
+firewalld_public_interfaces: [ens3]
+firewalld_trusted_interfaces: [ens6]
 firewalld_public_tcp_ports: [22, 443]
 firewalld_public_udp_ports: []
 
@@ -128,7 +128,7 @@ ssl_cert_group: ssl
 
 # Whether or not to enable SELinux throughout the cluster
 
-enable_selinux: false
+enable_selinux: true 
 
 # Whether or not to enable Slurm PAM module
 # If enabled, sssd's ldap filters will be disabled on the compute nodes
@@ -149,7 +149,13 @@ additional_env_modules: []
 
 # Install userspace packages from OpenHPC project
 
-enable_openhpc: false
+enable_openhpc: true
+
+# Default workload manager. Currently supported are:
+# - slurm
+# - pbspro
+
+workload_manager: 'slurm'
 
 # Local yum repository
 
@@ -161,6 +167,4 @@ trix_local_repo_baseurl: 'http://{{ trix_ctrl_ip }}:{{ repos_port }}/repos/trini
 
 luna_repo: 'https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo'
 trinity_repo: 'https://updates.clustervision.com/trinity/10.2/centos/trinity.repo'
-userspace_repo: 'https://updates.clustervision.com/userspace/userspace-release.x86_64.rpm'
 elrepo_repo: 'http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm'
-zabbix_repo: https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm

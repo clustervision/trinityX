@@ -1,0 +1,25 @@
+---
+
+- name: Install Influxdata repo
+  yum_repository:
+    name: influxdata-el7
+    baseurl: "{{ influxdata_repo }}"
+    description: Influxdata
+    gpgkey: https://repos.influxdata.com/influxdb.key
+
+- name: Install telegraf
+  yum:
+    name: telegraf
+    state: present
+
+- name: Configure default telegraf.conf
+  template:
+    src: telegraf.conf.j2
+    dest: /etc/telegraf/telegraf.conf
+  notify: restart telegraf
+
+- name: Start telegraf
+  systemd:
+    name: telegraf
+    state: started
+    enabled: "yes"

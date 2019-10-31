@@ -159,12 +159,17 @@
       mode: 0755
       state: directory
 
+  - name: Selinux fcontext on files
+    sefcontext:
+      target: "{{ trix_local }}/etc/named.luna.zones"
+      setype: named_zone_t
+
   - name: Add a placeholder for luna's DNS zone file
-    lineinfile:
+    file:
       path: '{{ trix_local }}/etc/named.luna.zones'
-      line: '// PLACEHOLDER'
-      insertbefore: BOF
-      create: yes
+      setype: named_zone_t
+      group: named
+      state: touch
 
   - name: Initialize luna cluster
     luna_cluster:

@@ -31,7 +31,7 @@ It will also set up:
 Steps to install TrinityX
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Install CentOS Minimal on your controller(s)
+1. Install CentOS Minimal on your controller(s). It is recommended to put ``/var/lib/influxdb`` on it's own filesystem.
 
 2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks
 
@@ -54,7 +54,11 @@ Steps to install TrinityX
     # git clone http://github.com/clustervision/trinityX
     # cd trinityX/site
 
-8. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
+8. Check out mitogen into the current directory (trinityX/site)::
+
+   # git clone https://github.com/dw/mitogen.git
+
+9. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
 
    * ``group_vars/all``
 
@@ -66,11 +70,11 @@ Steps to install TrinityX
 
    **Note**: In the case of an HA setup you will most probably need to change the default name of the shared block device set by ``shared_fs_device``.
 
-9. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
+10. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
 
     # ansible-galaxy install OndrejHome.pcs-modules-2
 
-10. Configure ``hosts`` file to allow ansible to address controllers.
+11. Configure ``hosts`` file to allow ansible to address controllers.
 
    Example for non-HA setup::
 
@@ -83,7 +87,7 @@ Steps to install TrinityX
        controller1 ansible_host=10.141.255.254
        controller2 ansible_host=10.141.255.253
 
-11. Start TrinityX installation::
+12. Start TrinityX installation::
 
      # ansible-playbook controller.yml
 
@@ -91,7 +95,7 @@ Steps to install TrinityX
 
     **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
 
-11. Create a default OS image::
+13. Create a default OS image::
 
     # ansible-playbook compute.yml
 

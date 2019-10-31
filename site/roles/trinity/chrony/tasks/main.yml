@@ -3,29 +3,23 @@
 
 - name: Install chrony packages
   yum:
-    name: '{{ chrony_packages }}'
+    name: "{{ chrony_packages }}"
     state: present
   tags: install-only
 
 - name: Update chrony configuration file
   template:
-    src: 'chrony.conf'
-    dest: '/etc/chrony.conf'
+    src: chrony.conf.j2
+    dest: /etc/chrony.conf
     owner: root
     group: root
     mode: 0644
   notify: restart chrony
 
-#- name: Enable chrony service
-#  systemd:
-#    name: 'chronyd.service'
-#    enabled: yes
-
 - name: Enable chrony service
-  file:
-    src: '/usr/lib/systemd/system/chronyd.service'
-    dest: '/etc/systemd/system/multi-user.target.wants/chronyd.service'
-    state: link
+  systemd:
+    name: chronyd
+    enabled: 'yes'
 
 - name: Start chrony service
   service:

@@ -1,9 +1,9 @@
 ---
 - hosts: controllers
 
-# List of roles to apply to the controllers, in the order in which they will run.
-# NOTE: These and their default configurations can be found in the "roles/"
-#       directory.
+  # List of roles to apply to the controllers, in the order in which they will run.
+  # NOTE: These and their default configurations can be found in the "roles/"
+  #       directory.
 
   roles:
     - role: trinity/init
@@ -15,16 +15,15 @@
 
     - role: trinity/repos
       repos:
-      - repo: '{{ trix_local_repo_baseurl }}'
-        name: '{{ trix_local_reponame }}'
+        - repo: '{{ trix_local_repo_baseurl }}'
+          name: '{{ trix_local_reponame }}'
       tags: local_repo
       when: local_install
 
     - role: trinity/repos
       repos:
-      - repo: epel-release
-      - repo: '{{ userspace_repo }}'
-      - repo: '{{ luna_repo }}'
+        - repo: epel-release
+        - repo: '{{ luna_repo }}'
       tags: repos
 
     - role: trinity/cv_support
@@ -76,19 +75,10 @@
       nfs_exports_path: '{{ trix_local }}/etc/exports.d'
       tags: nfs
 
-    - role: trinity/environment-modules
-      when: enable_openhpc == false
-      tags: environment-modules
-
-    - role: trinity/pdsh
-      when: enable_openhpc == false
-      pdsh_conf_path: '{{ trix_local }}/etc/dsh'
-      tags: pdsh
-
     - role: trinity/ssl-cert
       ssl_cert_country: 'NL'
       ssl_cert_locality: 'Amsterdam'
-      ssl_cert_organization: 'ClusterVision B.V.'
+      ssl_cert_organization: 'ClusterVision Solutions B.V.'
       ssl_cert_state: 'Noord Holland'
       ssl_cert_altname: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       ssl_cert_days: '3650'
@@ -96,7 +86,7 @@
 
     - role: trinity/bind
       bind_db_path: '{{ trix_local }}/var/lib/named'
-      bind_dnssec_enable: no
+      bind_dnssec_enable: "no"
       bind_dns_forwarders:
         - '8.8.8.8'
         - '8.8.4.4'
@@ -124,6 +114,11 @@
       mariadb_db_path: '{{ trix_local }}/var/lib/mysql'
       tags: mariadb
 
+    - role: trinity/openhpc
+      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
+      when: enable_openhpc
+      tags: openhpc
+
     - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'
       slurm_ctrl_ip: '{{ trix_ctrl_ip }}'
@@ -134,6 +129,12 @@
       slurmdbd_sql_user: 'slurm_accounting'
       slurmdbd_sql_db: 'slurm_accounting'
       tags: slurm
+      when: workload_manager == "slurm"
+
+    - role: trinity/pbspro
+      when: workload_manager == 'pbspro'
+      tags: pbspro
+      pbspro_ctrl: '{{ trix_ctrl_hostname }}'
 
     - role: trinity/luna
       luna:
@@ -147,7 +148,7 @@
           conf_path: '{{ trix_local }}/etc/dhcp'
           network: '{{ trix_domain }}'
           start_ip: '{{ trix_cluster_dhcp_start }}'
-          end_ip:  '{{ trix_cluster_dhcp_end }}'
+          end_ip: '{{ trix_cluster_dhcp_end }}'
         networks:
           - name: '{{ trix_domain }}'
             ip: '{{ trix_cluster_net }}'
@@ -172,20 +173,6 @@
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
       tags: rsyslog
 
-    - role: trinity/zabbix
-      zabbix_path: '{{ trix_local }}/usr/lib/zabbix/'
-      zabbix_sql_db: 'zabbix'
-      tags: zabbix
-
-#    - role: trinity/zabbix_agent
-#      tags: zabbix_agent
-
-    - role: trinity/zabbix_checks
-      zabbix_hostmetadata: controller
-      tags: zabbix_checks
-
-    - role: trinity/trix-status
-      tags: trix-status
 
     - role: trinity/docker-registry
       when: enable_docker
@@ -195,10 +182,27 @@
       docker_ssl_key: '{{ ansible_fqdn }}.key'
       tags: docker-registry
 
-    - role: trinity/openhpc
-      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
-      when: enable_openhpc
-      tags: openhpc
 
     - role: trinity/wrapup
       tags: wrapup
+
+    - role: trinity/ood-portal
+      tags: ood-portal
+      enable_ssl: true
+      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+
+    - role: trinity/telegraf
+      tags: monitoring
+      influxdb_server: "{{ trix_ctrl_ip }}"
+
+    - role: trinity/influxdb
+      tags: monitoring
+      influxdb_server: "{{ trix_ctrl_ip }}"
+
+    - role: trinity/grafana
+      tags: monitoring
+      ldap_auth: true
+      enable_ssl: true
+      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"

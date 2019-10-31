@@ -11,7 +11,7 @@
   service:
     name: firewalld
     state: started
-    enabled: yes
+    enabled: 'yes'
 
 - name: Assign interfaces to the public zone
   firewalld:
@@ -60,7 +60,7 @@
 - name: Enable masquerading on the '{{ firewalld_masquerade_zone }}' zone
   firewalld:
     zone: '{{ firewalld_masquerade_zone }}'
-    masquerade: yes
+    masquerade: 'yes'
     state: enabled
     permanent: true
     immediate: true
@@ -86,8 +86,7 @@
 
 - name: Add direct rules
   template:
-    src: 'direct-rules.xml'
+    src: 'direct-rules.xml.j2'
     dest: '/etc/firewalld/direct.xml'
-  when: firewalld_direct_rules
+  when: firewalld_direct_rules is defined
   notify: reload firewalld
-

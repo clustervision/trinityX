@@ -1,6 +1,12 @@
 ---
 # tasks file for openldap
 
+- name: Install dependencies
+  yum:
+    name: policycoreutils-python
+    state: installed
+  tags: install-only
+
 - name: Generate openldap root password and save it to /etc/trinity/passwords
   set_fact:
     tmp_pwd: "{{ lookup('password',
@@ -19,11 +25,17 @@
     state: present
   tags: install-only
 
+- block:
+    - name: Selinux fcontext on files
+      sefcontext:
+        target: "{{ openldap_server_conf_path }}(/.*)?"
+        setype: slapd_db_t
+
 - name: Hash OpenLDAP root password
   command: slappasswd -h {SSHA} -s {{ openldap_root_pwd }}
   register: openldap_root_pwd_hash
   changed_when: false
-  when: primary
+  when: primary | default(True)
 
 - name: Adjust OpenLDAP server TLS configuration
   lineinfile:
@@ -37,9 +49,9 @@
     line: 'TLS_CACERT   /etc/openldap/certs/cluster-ca.crt'
 
 - name: Enable OpenLDAP service
-  service:
+  systemd:
     name: slapd
-    enabled: yes
+    enabled: "yes"
   when: not ha|default(False)
 
 - name: Get /etc/openldap/slapd.d status
@@ -49,33 +61,33 @@
 
 - block:
 
-  - name: Ensure OpenLDAP configuration directory exists
-    file:
-      path: '{{ openldap_server_conf_path }}'
-      state: directory
-      owner: '{{ openldap_default_user }}'
-      group: '{{ openldap_default_group }}'
-      setype: slapd_db_t
-      seuser: system_u
-    when: primary | default(False)
+    - name: Ensure OpenLDAP configuration directory exists
+      file:
+        path: '{{ openldap_server_conf_path }}'
+        state: directory
+        owner: '{{ openldap_default_user }}'
+        group: '{{ openldap_default_group }}'
+        setype: slapd_db_t
+        seuser: system_u
+      when: primary | default(False)
 
-  - name: Copy default configuration to {{ openldap_server_conf_path }}
-    shell: rsync -raW -AX /etc/openldap/slapd.d/* {{ openldap_server_conf_path|quote }}
-    args:
-      creates: '{{ openldap_server_conf_path }}/cn=config.ldif'
-    when: primary | default(True)
+    - name: Copy default configuration to {{ openldap_server_conf_path }}
+      shell: rsync -raW -AX /etc/openldap/slapd.d/* {{ openldap_server_conf_path|quote }}
+      args:
+        creates: '{{ openldap_server_conf_path }}/cn=config.ldif'
+      when: primary | default(True)
 
-  - name: Delete default configuration
-    file:
-      path: '/etc/openldap/slapd.d'
-      state: absent
+    - name: Delete default configuration
+      file:
+        path: '/etc/openldap/slapd.d'
+        state: absent
 
-  - name: Replace default configuration path with symlink to {{ openldap_server_conf_path }}
-    file:
-      src: '{{ openldap_server_conf_path }}'
-      dest: '/etc/openldap/slapd.d'
-      state: link
-      force: yes
+    - name: Replace default configuration path with symlink to {{ openldap_server_conf_path }}
+      file:
+        src: '{{ openldap_server_conf_path }}'
+        dest: '/etc/openldap/slapd.d'
+        state: link
+        force: "yes"
 
   when: openldap_server_conf_path|string not in '/etc/openldap/slapd.d'
         and default_openldap_path.stat.isdir
@@ -92,87 +104,94 @@
 
 - block:
 
-  - name: Ensure OpenLDAP data directory exists
-    file:
-      path: '{{ openldap_server_dir_path }}'
-      state: directory
-      owner: '{{ openldap_default_user }}'
-      group: '{{ openldap_default_group }}'
-      setype: slapd_db_t
-      seuser: system_u
+    - name: Ensure OpenLDAP data directory exists
+      file:
+        path: '{{ openldap_server_dir_path }}'
+        state: directory
+        owner: '{{ openldap_default_user }}'
+        group: '{{ openldap_default_group }}'
+        setype: slapd_db_t
+        seuser: system_u
 
-  - name: Start OpenLDAP service
-    service:
-      name: slapd
-      state: started
+    - name: Start OpenLDAP service
+      systemd:
+        name: slapd
+        state: started
+        enabled: "yes"
 
-  - name: Copy OpenLDAP schemas
-    copy:
-      src: '{{ item }}'
-      dest: '/etc/openldap/schema/'
-      owner: '{{ openldap_default_user }}'
-      group: '{{ openldap_default_group }}'
-      mode: '0644'
-    with_items:
-      - rfc2307bis.ldif
-      - autoinc.ldif
-      - local_schema.ldif
+    - name: Copy OpenLDAP schemas
+      copy:
+        src: '{{ item }}'
+        dest: '/etc/openldap/schema/'
+        owner: '{{ openldap_default_user }}'
+        group: '{{ openldap_default_group }}'
+        mode: '0644'
+      with_items:
+        - rfc2307bis.ldif
+        - autoinc.ldif
+        - local_schema.ldif
 
-  - name: Load OpenLDAP schemas
-    command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/openldap/schema/{{ item }}.ldif
-    args:
-      creates: '/etc/openldap/slapd.d/cn=config/cn=schema/cn={?}{{ item }}.ldif'
-    with_items: '{{ openldap_schemas }}'
+    - name: Load OpenLDAP schemas
+      command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/openldap/schema/{{ item }}.ldif
+      args:
+        creates: '/etc/openldap/slapd.d/cn=config/cn=schema/cn={?}{{ item }}.ldif'
+      with_items: '{{ openldap_schemas }}'
 
-  - name: Render OpenLDAP configuration
-    template:
-      src: '{{ item }}'
-      dest: '/tmp/'
-    with_items:
-      - config.ldif
-      - local.ldif
-      - proxy.ldif
+    - name: Render OpenLDAP configuration
+      template:
+        src: '{{ item }}'
+        dest: '/tmp/'
+      with_items:
+        - config.ldif
+        - local.ldif
+        - proxy.ldif
 
-  - name: Copy OpenLDAP overlay configurations
-    copy:
-      src: '{{ item }}'
-      dest: '/tmp/'
-    with_items:
-      - ppolicy.ldif
-      - memberof.ldif
+    - name: Copy OpenLDAP overlay configurations
+      copy:
+        src: '{{ item }}'
+        dest: '/tmp/'
+      with_items:
+        - ppolicy.ldif
+        - memberof.ldif
 
-  - name: Load OpenLDAP global configuration
-    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
-    notify: restart openldap
+    - name: Load OpenLDAP global configuration
+      command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
+      notify: restart openldap
 
-  - name: Load OpenLDAP local configuration
-    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
-    args:
-      creates: '/etc/openldap/slapd.d/cn=config/olcDatabase={?}hdb/olcOverlay={0}memberof.ldif'
-    with_items:
-      - config.ldif
-      - local.ldif
-      - proxy.ldif
-      - ppolicy.ldif
-      - memberof.ldif
-    notify: restart openldap
+    - name: Load OpenLDAP local configuration
+      command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
+      args:
+        creates: '/etc/openldap/slapd.d/cn=config/olcDatabase={?}hdb/olcOverlay={0}memberof.ldif'
+      with_items:
+        - config.ldif
+        - local.ldif
+        - proxy.ldif
+        - ppolicy.ldif
+        - memberof.ldif
+      notify: restart openldap
 
+    - name: Check local schemas
+      command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
+      register: ldapsearch
+      failed_when: false
+      changed_when: false
 
-  - name: Load OpenLDAP local schema
-    command: >
-      ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+    - name: Load OpenLDAP local schema
+      command: >
+        ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
                              -f /etc/openldap/schema/local_schema.ldif
-    ignore_errors: yes
+      ignore_errors: "yes"
+      when: ldapsearch.rc == 32
 
-  - name: Add pacemaker resource
-    pcs_resource:
-      name: 'openldap'
-      resource_class: 'systemd'
-      resource_type: 'systemd:slapd'
-      options: 'op monitor interval=0 --group Trinity-stack'
-      state: present
-    when: ha | default(False)
-    tags: pcs
+    - name: Add pacemaker resource
+      pcs_resource:
+        name: 'openldap'
+        resource_class: 'systemd'
+        resource_type: 'systemd:slapd'
+        options: 'op monitor interval=0 --group Trinity-stack'
+        state: present
+      when: ha | default(False)
+      tags: pcs
 
   when: primary | default(True)
 

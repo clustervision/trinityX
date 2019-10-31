@@ -20,11 +20,34 @@
     src: bash_profile.j2
     dest: /root/.bash_profile
 
+- name: Add releaseversion to the controllers
+  lineinfile:
+    path: '/etc/trinityx-release'
+    line: "{{ trix_version }}"
+    state: present
+    create: 'yes'
+  when: primary|default(True)
+
 - name: Add /trinity/site file to the controllers
   lineinfile:
     path: '/trinity/site'
     line: '{{ project_id }}'
     state: present
-    create: yes
+    create: 'yes'
   when: primary|default(True)
 
+- name: Install diagnostics tools
+  copy:
+    src: "{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: 0755
+    owner: root
+    group: root
+  with_items:
+    - trix-diag
+
+- name: Install MOTD
+  template:
+    src: "motd.j2"
+    dest: /etc/motd
+  when: primary|default(True)
