@@ -1,0 +1,27 @@
+---
+v2:
+  metadata:
+    title: "{{ cluster_name }}"
+  login:
+    host: "{{ login_host }}"
+  job:
+    adapter: "slurm"
+    cluster: "cluster"
+    bin: "/bin/"
+    conf: "/etc/slurm/slurm.conf"
+    bin_overrides:
+      sbatch: "/bin/sbatch"
+      squeue: "/bin/squeue"
+      scontrol: "/bin/scontrol"
+      scancel: "/bin/scancel"
+  batch_connect:
+    basic:
+      script_wrapper: |
+        module purge
+        %s
+    vnc:
+      script_wrapper: |
+        module purge
+        module add TurboVNC websockify
+        export WEBSOCKIFY_CMD="websockify"
+        %s

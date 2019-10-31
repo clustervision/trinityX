@@ -16,88 +16,217 @@ What follows is a list of those variables together with their descriptions and d
 
 .. _tab_global_variables:
 
-.. table:: Global variables
-  
-  ======================= ============= ================== =============
-       Variable               Value        Default          Description
-  ======================= ============= ================== =============
-  trix_version            -             -                  The TrinityX version number.
-                                                           This will be automatically set to the current release version.
-  
-  project_id              String        000000             Project ID or string that'll show up in the default shell prompt on the controllers.
-                                                           A pure esthetical configuration option that gives to shell prompts of the format `000000 hh:mm:ss [root@hostname ~]#`
-  
-  ha                      Boolean       true               This option allows to choose whether to do a highly available setup on two controllers or a single controller setup.
-                                                           Set to 'False' to disable HA.
-  
-  trix_domain             Hostname      'cluster'          A domain name to be assigned to the controller(s) and nodes on the internal network.
-                                                           This also serves as luna's default provisioning network name.
-  
-  trix_ctrl1_hostname     Hostname      'controller1'      Default hostname for the controller in a single controller setup.
-                                                           In HA setups, this is the hostname of the first controller.
-  
-  trix_ctrl2_hostname     Hostname      'controller2'      This option is ignored in a single controller setup.
-                                                           In HA setups, this is the hostname of the second controller.
-  
-  trix_ctrl_hostname      Hostname      'controller'       This option is set by the installer to the value of `trix_ctrl1_hostname` in a single controller setup.
-                                                           In HA setups, this the controllers' floating hostname that will always resolve to the controller with the primary role.
-  
-  trix_ctrl1_ip           IP address    '10.141.255.254'   Default IP address of the controller in a single controller setup.
-                                                           In HA setups, this is the IP address of the first controller.
-  
-  trix_ctrl2_ip           IP address    '10.141.255.253'   This option is ignored in a single controller setup.
-                                                           In HA setups, this is the IP address of the second controller.
-  
-  trix_ctrl_ip            IP address    '10.141.255.252'   This option is set by the installer to the value of `trix_ctrl1_ip` in a single controller setup.
-                                                           In HA setups, this is the controllers' floating IP address that will always point to the controller with the primary role.
-  
-  trix_ctrl1_bmcip        IP address    '10.148.255.254'   Only useful in HA setups for fencing purposes.
-                                                           This is the IP address of the BMC on the first controller that will be used to enable IPMI LAN fencing.
-  trix_ctrl2_bmcip        IP address    '10.148.255.253'   Only useful in HA setups for fencing purposes.
-                                                           This is the IP address of the BMC on the second controller that will be used to enable IPMI LAN fencing.
-  
-  trix_cluster_net        IP address    '10.141.0.0'       Default provisioning network used by luna to allocate IP addresses to provisioned nodes.
-                                                           This will be the luna network whose name is defined in `trix_domain`.
-  
-  trix_cluster_netprefix  Subnet prefix 16                 The subnet prefix of the provisioning network defined in `trix_cluster_net`.
-  
-  trix_cluster_dhcp_start IP address    '10.141.128.0'     The IP address that marks the start of the DHCP IP range used by the provisioning tool to PXE boot the nodes.
-                                                           This IP address must belong to the network defined in `trix_cluster_net`.
-  
-  trix_cluster_dhcp_end   IP address    '10.141.140.0'     The IP address that marks the end of the DHCP IP range used by the provisioning tool to PXE boot the nodes.
-                                                           This IP address must belong to the network defined in `trix_cluster_net`.
-  
-  trix_root               Path          /trinity           Path to which the standard TrinityX files and directories will be installed.
-  
-  trix_images             Path          `trix_root`/images The default path where compute node images will be stored.
-  
-  trix_shared             Path          `trix_root`/shared The default path where everything shared by the controllers to the nodes will be stored.
-  
-  trix_local              Path          `trix_root`/local  The default path where configuration files specific to each of the controllers will be stored.
-  
-  trix_home               Path          `trix_root`/home   The default path where the user home directories will be located.
-  
-  trix_repos              Path          `trix_root`/repos  The default path where the local TrinityX rpm repository will be located.
-  
-  enable_selinux          Boolean       false              Whether or not to enable SELinux throughout the cluster.
-  
-  enable_slurm_pam        Boolean       true               Whether or not to enable Slurm PAM module by default.
-                                                           If enabled, sssd's ldap filters will be disabled on the compute nodes.
-  
-  enable_docker           Boolean       false              Whether or not to install docker tools on the cluster
-  
-  enable_heartbeat_link   Boolean       true               Whether or not to configure the secondary corosync heartbeat link between the controllers.
-  
-  shared_fs_type          String        'drbd'             The type of shared storage used on the controllers in TrinityX.
-                                                           Currently the only type supported by the installer is 'drbd'. Other types are planned for future releases.
-  
-  shared_fs_device        Path          /dev/vdb           A path to the device that will be used as backend for the default 'drbd' storage type.
+.. list-table:: Global variables
+   :header-rows: 1
+   :widths: auto
 
-  additional_env_modules  List          []                 A user-defined list of environment modules to install in addition to the default one.
-                                                           See the table `environment-modules role`_.
-  
-  ======================= ============= ================== =============
+   * - Variable
+     - Value
+     - Vefault
+     - Description
 
+   * - local_install
+     - Boolean
+     - false
+     - Do we need to use local DVD/USB-stick as a source of the all packages
+
+   * - trix_version
+     - -
+     - -
+     - The TrinityX version number.
+       This will be automatically set to the current release version.
+
+   * - project_id
+     - String
+     - 000000
+     - Project ID or string that'll show up in the default shell prompt on the controllers.
+       A pure esthetical configuration option that gives to shell prompts of the format `000000 hh:mm:ss [root@hostname ~]#`
+
+   * - ha
+     - Boolean
+     - true
+     - This option allows to choose whether to do a highly available setup on two controllers or a single controller setup.
+       Set to 'False' to disable HA.
+
+   * - trix_domain
+     - Hostname
+     - 'cluster'
+     - A domain name to be assigned to the controller(s) and nodes on the internal network.
+       This also serves as luna's default provisioning network name.
+
+   * - trix_ctrl1_hostname
+     - Hostname
+     - 'controller1'
+     - Default hostname for the controller in a single controller setup.
+       In HA setups, this is the hostname of the first controller.
+
+   * - trix_ctrl2_hostname
+     - Hostname
+     - 'controller2'
+     - This option is ignored in a single controller setup.
+       In HA setups, this is the hostname of the second controller.
+
+   * - trix_ctrl_hostname
+     - Hostname
+     - 'controller'
+     - This option is set by the installer to the value of `trix_ctrl1_hostname` in a single controller setup.
+       In HA setups, this the controllers' floating hostname that will always resolve to the controller with the primary role.
+
+   * - trix_ctrl1_ip
+     - IP address
+     - '10.141.255.254'
+     - Default IP address of the controller in a single controller setup.
+       In HA setups, this is the IP address of the first controller.
+
+   * - trix_ctrl2_ip
+     - IP address
+     - '10.141.255.253'
+     - This option is ignored in a single controller setup.
+       In HA setups, this is the IP address of the second controller.
+
+   * - trix_ctrl_ip
+     - IP address
+     - '10.141.255.252'
+     - This option is set by the installer to the value of `trix_ctrl1_ip` in a single controller setup.
+       In HA setups, this is the controllers' floating IP address that will always point to the controller with the primary role.
+
+   * - trix_ctrl1_bmcip
+     - IP address
+     - '10.148.255.254'
+     - Only useful in HA setups for fencing purposes.
+       This is the IP address of the BMC on the first controller that will be used to enable IPMI LAN fencing.
+
+   * - trix_ctrl2_bmcip
+     - IP address
+     - '10.148.255.253'
+     - Only useful in HA setups for fencing purposes.
+       This is the IP address of the BMC on the second controller that will be used to enable IPMI LAN fencing.
+
+   * - trix_cluster_net
+     - IP address
+     - '10.141.0.0'
+     - Default provisioning network used by luna to allocate IP addresses to provisioned nodes.
+       This will be the luna network whose name is defined in `trix_domain`.
+
+   * - trix_cluster_netprefix
+     - Subnet prefix
+     - 16
+     - The subnet prefix of the provisioning network defined in `trix_cluster_net`.
+
+   * - trix_cluster_dhcp_start
+     - IP address
+     - '10.141.128.0'
+     - The IP address that marks the start of the DHCP IP range used by the provisioning tool to PXE boot the nodes.
+       This IP address must belong to the network defined in `trix_cluster_net`.
+
+   * - trix_cluster_dhcp_end
+     - IP address
+     - '10.141.140.0'
+     - The IP address that marks the end of the DHCP IP range used by the provisioning tool to PXE boot the nodes.
+       This IP address must belong to the network defined in `trix_cluster_net`.
+
+   * - trix_root
+     - Path
+     - /trinity
+     - Path to which the standard TrinityX files and directories will be installed.
+
+   * - trix_images
+     - Path
+     - `trix_root`/images
+     - The default path where compute node images will be stored.
+
+   * - trix_shared
+     - Path
+     - `trix_root`/shared
+     - The default path where everything shared by the controllers to the nodes will be stored.
+
+   * - trix_local
+     - Path
+     - `trix_root`/local
+     - The default path where configuration files specific to each of the controllers will be stored.
+
+   * - trix_home
+     - Path
+     - `trix_root`/home
+     - The default path where the user home directories will be located.
+
+   * - trix_repos
+     - Path
+     - `trix_root`/repos
+     - The default path where the local TrinityX rpm repository will be located.
+
+   * - enable_selinux
+     - Boolean
+     - false
+     - Whether or not to enable SELinux throughout the cluster.
+
+   * - enable_slurm_pam
+     - Boolean
+     - true
+     - Whether or not to enable Slurm PAM module by default.
+       If enabled, sssd's ldap filters will be disabled on the compute nodes.
+
+   * - enable_docker
+     - Boolean
+     - false
+     - Whether or not to install docker tools on the cluster
+
+   * - enable_heartbeat_link
+     - Boolean
+     - true
+     - Whether or not to configure the secondary corosync heartbeat link between the controllers.
+
+   * - shared_fs_type
+     - String
+     - 'drbd'
+     - The type of shared storage used on the controllers in TrinityX.
+       Currently the only type supported by the installer is 'drbd'. Other types are planned for future releases.
+
+   * - shared_fs_device
+     - Path
+     - /dev/vdb
+     - A path to the device that will be used as backend for the default 'drbd' storage type.
+
+   * - additional_env_modules
+     - List
+     - []
+     - A user-defined list of environment modules to install in addition to the default one.
+       See the table `environment-modules role`_.
+
+   * - trinityx_local_reponame
+     - String
+     - 'trinityx-local'
+     - Name of the local repository in the case of offline installation
+
+   * - trinityx_local_repo_baseurl
+     - URL
+     - http://`trix_ctrl_ip`:`repos_port`/repos/trinityx/
+     - URL to be used to access local repository
+
+   * - luna_repo
+     - URL
+     - https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo
+     - URL of the luna repository
+
+   * - trinity_repo
+     - URL
+     - https://updates.clustervision.com/trinity/10.2/centos/trinity.repo
+     - URL of the trinity repository
+
+   * - userspace_repo
+     - URL
+     - https://updates.clustervision.com/userspace/userspace-release.x86_64.rpm
+     - URL of the repository of the userspace packages
+
+   * - elrepo_repo
+     - URL
+     - http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
+     - URL of elrepo repository
+
+   * - zabbix_repo
+     - URL
+     - https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm
+     - URL of default Zabbix repository
 
 Role specific variables
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,14 +239,17 @@ The default values for each variable are set in `site/controller.yml`. For the s
 `bind` role
 ^^^^^^^^^^^^
 
-=================== ============= ====================== =============
-     Variable           Value        Default              Description
-=================== ============= ====================== =============
-bind_dns_forwarders List          - '8.8.8.8'            A list of the default DNS forwarders to use on the controllers.
-                                  - '8.8.4.4'
-bind_dnssec_enable  Boolean       no                     Whether to enable DNSSEC in Bind9 on the controllers or not.
-bind_db_path        Path          `trix_local`/var/named The default path where Bind9 will store is DNS database.
-=================== ============= ====================== =============
+===================== ============= ====================== =============
+     Variable             Value        Default              Description
+===================== ============= ====================== =============
+bind_dns_forwarders   List          - '8.8.8.8'            A list of the default DNS forwarders to use on the controllers.
+                                    - '8.8.4.4'
+bind_dnssec_enable    Boolean       no                     Whether to enable DNSSEC in Bind9 on the controllers or not.
+bind_db_path          Path          `trix_local`/var/named The default path where Bind9 will store is DNS database.
+
+resolv_server         IP address    127.0.0.1              Default nameserver to use in /etc/resolv.conf
+resolv_search_domains String        cluster ipmi           Default search domains to use in /etc/resolv.conf
+===================== ============= ====================== =============
 
 `chrony` role
 ^^^^^^^^^^^^^^
@@ -157,7 +289,7 @@ drbd_shared_resource_name String        'trinity_disk'        The name that will
 .. list-table::
    :header-rows: 1
    :widths: auto
-   
+
    * - Variable
      - Value
      - Default
@@ -175,7 +307,7 @@ drbd_shared_resource_name String        'trinity_disk'        The name that will
 
    * - envmodules_default_list
      - List
-     - 
+     -
        - gcc
        - gdb
        - hwloc
@@ -199,6 +331,8 @@ firewalld_public_interfaces  List          ['eth2']         A list of network in
 firewalld_trusted_interfaces List          ['eth0', 'eth1'] A list of network interfaces that are considered to be trusted. i.e. used to access networks that are interal to the cluster.
 firewalld_public_tcp_ports   List          [443]            A list of TCP ports that will be allowd on the public interfaces defined in `firewalld_public_interfaces`
 firewalld_public_udp_ports   List          []               A list of UDP ports that will be allowd on the public interfaces defined in `firewalld_public_interfaces`
+firewalld_masquerade_zone    firewall zone public           Firewalld zone to enable masquerading on
+firewalld_update_ifcfg_files Boolean       true             Whether to update ifcfg-* files with zone information
 ============================ ============= ================ =============
 
 `luna` role
@@ -399,7 +533,7 @@ munge_conf_path     Path          `trix_shared`/etc/munge                     Pa
 ^^^^^^^^^^^^^^^^
 
 ===================== ============= ================================== =============
-     Variable             value        default                          description
+     Variable             Value        Default                          Description
 ===================== ============= ================================== =============
 ssl_cert_path         Path          `trix_local`/etc/ssl               Location where to store cluster certificates and keys.
 
@@ -423,7 +557,7 @@ ssl_cert_group_id     Number        991                                Default g
 ^^^^^^^^^^^^
 
 =================== ============= ==================================== =============
-     Variable           value        default                            description
+     Variable           Value        Default                            Description
 =================== ============= ==================================== =============
 sss_allowed_groups  List          - admins                             List of user groups that are allowed access on the controller(s).
 
@@ -436,16 +570,16 @@ sss_filter_enabled  Boolean       false                                Whether t
 `zabbix` role
 ^^^^^^^^^^^^^^
 
-======================= ============= ============================ =============
-     Variable               Value        Default                    Description
-======================= ============= ============================ =============
-zabbix_script_path      Path          `trix_local`/usr/lib/zabbix/ Location where zabbix can find custom scripts
-zabbix_sql_db           String        'zabbix'                     Name of the zabbix database in MariaDB
-zabbix_sql_user         String        'zabbix'                     SQL user used by zabbix
+======================= ============= ======================================================================================= =============
+     Variable               Value        Default                                                                              Description
+======================= ============= ======================================================================================= =============
+zabbix_script_path      Path          `trix_local`/usr/lib/zabbix/                                                            Location where zabbix can find custom scripts
+zabbix_sql_db           String        'zabbix'                                                                                Name of the zabbix database in MariaDB
+zabbix_sql_user         String        'zabbix'                                                                                SQL user used by zabbix
 
-zabbix_login            String        'Admin'                      Default name of the zabbix admin user
+zabbix_login            String        'Admin'                                                                                 Default name of the zabbix admin user
 
-zabbix_mail_server      Hostname      'localhost'                  Default mail server
+zabbix_mail_server      Hostname      'localhost'                                                                             Default mail server
 
 ======================= ============= ============================ =============
 

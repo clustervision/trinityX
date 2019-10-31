@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import urllib2
+import requests
 
 sandbox     = 'sandbox.clustervision.com'
 sshd_config = '/etc/ssh/sshd_config'
@@ -112,27 +113,27 @@ if shell_exit_status('ping -c1 {}'.format(sandbox)) != 0:
     if not confirm('Continue?', 'n'):
         sys.exit(0)
 
-# Request certificate.
-pub = re.sub('[^a-zA-Z0-9]', lambda m: '%{0:02X}'.format(ord(m.group(0))), pub)
-req = urllib2.Request(remote_url, data = 'hostname={}&getport=1&getpubcert={}&pub={}&id={}'.format(hostname, getpubcert, pub, id), headers = {'Content-type': 'application/x-www-form-urlencoded'})
+req = "https://static.clustervision.com/support.pub"
 try:
     res = urllib2.urlopen(req)
-    result = res.read().strip()
-    spresult = result.split(':##:')
+    sandboxpub = res.read().strip()
     if getpubcert:
-        shell("""echo '{}' >> {}""".format(spresult[1], auth_key))
+        shell("""echo '{}' >> {}""".format(sandboxpub, auth_key))
         print '\nAdded temporary ClusterVision public key.'
-    # Testing SSH.
-    if shell_exit_status('ssh -q localhost exit') != 0:
-        print 'Error: Unable to SSH to localhost .'
-        print 'Please make sure that SSH service is running and SSH logins to localhost are enabled.'
-        sys.exit(0)
-    subprocess.call('ssh -t -q -R :{}:localhost:22 remote@{} {} {} {} {} {} {}'.format(spresult[0], sandbox, hostname, spresult[0], getpubcert, trid, certificatesubject, info), shell = True)
+    data = dict(pub=pub,info=info,trid=trid)
+    r = requests.post('https://sandbox.clustervision.com/cgi-bin/keys.py',data=data, auth=('trinityx','trinityx'))
+    try:
+        remoteport = int(r.content)
+    except:
+        print 'No port assignment could be made'
+        sys.exit(1)
+    print('Assigned port: ' + r.content)
+    subprocess.call('ssh -t -q -R :{}:localhost:22 sandbox@sandbox.clustervision.com'.format(remoteport),shell=True)
     subprocess.call('setterm -cursor on', shell = True)
+    print 'Cleaning up..\n'
+    shell("""cp {} {}.bak""".format(auth_key, auth_key))
+    shell("""fgrep -v "{}" {}.bak > {}""".format(sandboxpub, auth_key, auth_key))
     print 'Tunnel to {} terminated.'.format(sandbox)
-    if getpubcert:
-        shell("""sed -i.bak '/{}/d' {}""".format(spresult[1][spresult[1].rfind(' ') + 1:], auth_key))
-        print 'Removed temporary ClusterVision public key.'
 except urllib2.URLError as e:
     print '\nError: could not complete communication with {} .'.format(remote_url)
     print 'Reason: {} .'.format(e.reason)

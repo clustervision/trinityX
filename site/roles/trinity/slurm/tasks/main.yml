@@ -1,44 +1,82 @@
 ---
 # tasks file for slurm
+- name: Install ohpc-release
+  yum:
+    name: https://github.com/openhpc/ohpc/releases/download/v1.3.GA/ohpc-release-1.3-1.el7.x86_64.rpm
+    state: installed
+
+- name: Install PyMSQL
+  yum:
+    name: python2-PyMySQL
+    state: installed
 
 - name: Generate password for DB user and save it to /etc/trinity/passwords
   set_fact:
     tmp_pwd: '{{ lookup("password",
-                           "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt  
+                           "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt
                             chars=ascii_letters,digits,hexdigits") }}'
 
 - name: Get password for DB user from /etc/trinity/passwords)
   set_fact:
     slurmdbd_sql_pwd: '{{ lookup("password",
-                           "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt  
+                           "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt
                             chars=ascii_letters,digits,hexdigits") }}'
 
 - name: Create groups for munge and slurm
   group:
-    name: '{{ item.0 }}'
-    gid: '{{ item.1 }}'
+    name: "{{ item.0 }}"
+    gid: "{{ item.1 }}"
     state: present
   with_together:
     - ['munge', 'slurm']
     - ['{{ munge_group_id }}', '{{ slurm_group_id }}']
+  tags: install-only
 
 - name: Create users for munge and slurm
   user:
-    name: '{{ item.0 }}'
-    uid: '{{ item.1 }}'
-    group: '{{ item.0 }}'
+    name: "{{ item.0 }}"
+    uid: "{{ item.1 }}"
+    group: "{{ item.0 }}"
     shell: /sbin/nologin
-    system: yes
+    system: "yes"
     state: present
   with_together:
     - ['munge', 'slurm']
     - ['{{ munge_user_id }}', '{{ slurm_user_id }}']
+  tags: install-only
 
 - name: Install slurm packages
   yum:
-    name: '{{ item }}'
+    name: '{{ slurm_packages }}'
     state: present
-  with_items: '{{ slurm_packages }}'
+  tags: install-only
+  when: enable_openhpc == false
+
+- name: ensure legacy slurm rpms are not installed before configuring ohpc versions
+  yum:
+    name: '{{ slurm_packages }}'
+    state: removed
+  tags: install-only
+  when: enable_openhpc == true
+
+- name: ensure legacy munge rpms are not installed before configuring ohpc versions
+  yum:
+    name:
+      - munge
+      - munge-libs
+      - pmix
+      - pmix-devel
+    state: removed
+  tags: install-only
+  when: enable_openhpc == true
+
+- name: Install ohpc slurm packages
+  yum:
+    name: '{{ slurm_packages_ohpc }}'
+    state: present
+  tags: install-only
+  when: enable_openhpc == true
+
 
 - name: Create systemd unit dirs
   file:
@@ -53,7 +91,7 @@
   template:
     src: 'systemd/{{ item }}.service.d/trinity.conf.j2'
     dest: '/etc/systemd/system/{{ item }}.service.d/trinity.conf'
-    backup: yes
+    backup: "yes"
   with_items:
     - munge
     - slurmdbd
@@ -85,28 +123,32 @@
     path: '/etc/slurm'
   register: default_slurm_path
 
-- block:
-
-  - name: Delete default configuration
-    file:
-      path: '/etc/slurm'
-      state: absent
-  
-  - name: Replace default configuration path with symlink to {{ slurm_conf_path }}
-    file:
-      src: '{{ slurm_conf_path }}'
-      dest: '/etc/slurm'
-      state: link
-      force: yes
-
+- name: Delete default configuration
+  file:
+    path: '/etc/slurm'
+    state: absent
   when: slurm_conf_path|string not in '/etc/slurm'
+        and default_slurm_path.stat.exists == true
         and default_slurm_path.stat.isdir
+
+- name: Get /etc/slurm status
+  stat:
+    path: '/etc/slurm'
+  register: default_slurm_path
+
+- name: Replace default configuration path with symlink to {{ slurm_conf_path }}
+  file:
+    src: '{{ slurm_conf_path }}'
+    dest: '/etc/slurm'
+    state: link
+    force: "yes"
+  when: default_slurm_path.stat.exists == false
 
 - name: Enable slurm controller services
   service:
-    daemon_reload: yes
+    daemon_reload: "yes"
     name: '{{ item }}'
-    enabled: yes
+    enabled: "{{ not ha|default(True) }}"
   when: not ha|default(False)
         and primary|default(True)
         and ansible_connection not in 'lchroot'
@@ -118,32 +160,32 @@
 
 - block:
 
-  - name: Enable slurm compute services
-    file:
-      src: '{{ item.src }}'
-      dest: '{{ item.dest }}'
-      state: link
-    with_items:
-      - { src: '/usr/lib/systemd/system/munge.service', dest: '/etc/systemd/system/multi-user.target.wants/munge.service' }
-      - { src: '/usr/lib/systemd/system/slurmd.service', dest: '/etc/systemd/system/multi-user.target.wants/slurmd.service' }
-  
-  - name: Update PAM configuration to enable slurm pam controls
-    copy:
-      src: '{{ item.0 }}'
-      dest: '/etc/pam.d/{{ item.1 }}'
-      owner: root
-      group: root
-      mode: 0644
-    with_together:
-      - [ 'pam-sshd', 'pam-slurm']
-      - [ 'sshd', 'slurm' ]
-    when: enable_slurm_pam
+    - name: Enable slurm compute services
+      file:
+        src: '{{ item.src }}'
+        dest: '{{ item.dest }}'
+        state: link
+      with_items:
+        - {src: '/usr/lib/systemd/system/munge.service', dest: '/etc/systemd/system/multi-user.target.wants/munge.service'}
+        - {src: '/usr/lib/systemd/system/slurmd.service', dest: '/etc/systemd/system/multi-user.target.wants/slurmd.service'}
+
+    - name: Update PAM configuration to enable slurm pam controls
+      copy:
+        src: '{{ item.0 }}'
+        dest: '/etc/pam.d/{{ item.1 }}'
+        owner: root
+        group: root
+        mode: 0644
+      with_together:
+        - ['pam-sshd', 'pam-slurm']
+        - ['sshd', 'slurm']
+      when: enable_slurm_pam
 
   when: ansible_connection in 'lchroot' or compute|default(False)
 
 - name: Start slurm compute services
   service:
-    daemon_reload: yes
+    daemon_reload: "yes"
     name: '{{ item }}'
     state: started
   with_items:
@@ -153,109 +195,186 @@
 
 - block:
 
-  - name: Create shared spool dir
-    file:
-      name: "{{ slurm_spool_path }}"
-      state: directory
-      owner: root
-      group: root
-      mode: 0750
-  
-  - name: Create shared munge dir
-    file:
-      name: '{{ munge_conf_path }}'
-      state: directory
-      owner: munge
-      group: munge
-      mode: 0700
-  
-  - name: Create munge.key
-    command: 'dd if=/dev/urandom bs=1 count=1024 of={{ munge_conf_path }}/munge.key'
-    args:
-      creates: '{{ munge_conf_path }}/munge.key'
-  
-  - name: Set munge.key permissions
-    file:
-      name: '{{ munge_conf_path }}/munge.key'
-      state: file
-      owner: munge
-      group: munge
-      mode: 0400
-    notify: restart munge
-  
-  - name: Create DB for accounting
-    mysql_db:
-      name: '{{ slurmdbd_sql_db }}'
-      state: present
-      
-  - name: Create DB user for accounting
-    mysql_user:
-      name: '{{ slurmdbd_sql_user }}'
-      password: '{{ slurmdbd_sql_pwd }}'
-      priv: '{{ slurmdbd_sql_db }}.*:ALL'
-      state: present
-  
-  - name: Copy configuration files 
-    copy:
-      src: '{{ item }}'
-      dest: '{{ slurm_conf_path }}/{{ item }}'
-      force: no
-    with_items:
-     - slurm-partitions.conf
-     - slurm-nodes.conf
-     - slurm-user.conf
-     - slurm-health.conf
-     - topology.conf
-     - cgroup.conf
-    notify: restart slurm
-  
-  - name: Render slurm.conf and slurmdbd.conf
-    template:
-      src: '{{ item.0 }}'
-      dest: '{{ slurm_conf_path }}/{{ item.0 }}'
-      mode: '{{ item.1 }}'
-      backup: yes
-    with_together:
-      - ['slurm.conf', 'slurmdbd.conf']
-      - ['0644', '0640']
-    notify: restart slurm
-  
-  - name: Set UsePAM to 1 in slurm-user.conf
-    lineinfile:
-      path: '{{ slurm_conf_path }}/slurm-user.conf'
-      line: 'UsePAM=1'
-    when: enable_slurm_pam
+    - name: Create shared spool dir
+      file:
+        name: "{{ slurm_spool_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: 0750
 
-  - name: Start slurm controller services
-    service:
-      daemon_reload: yes
-      name: '{{ item }}'
-      state: started
-    with_items:
-      - munge
-      - slurmdbd
-      - slurmctld
-  
-  - name: Add slurm pacemaker resources
-    pcs_resource:
-      name: '{{ item }}'
-      resource_class: 'systemd'
-      resource_type: 'systemd:{{ item }}'
-      options: 'op monitor interval=0 --group Trinity-stack'
-      state: present
-    when: ha|default(False)
-    with_items:
-      - slurmdbd
-      - slurmctld
-    tags: pcs
-  
-  - name: Register slurm cluster in slurmdbd
-    shell: 'sacctmgr -i add cluster cluster | grep -i adding'
-    register: sacctmgr_success
-    changed_when: '"Not adding." not in sacctmgr_success.stdout'
-    until: '"Adding Cluster" in sacctmgr_success.stdout or "Not adding." in sacctmgr_success.stdout'
-    retries: 6
-    delay: 5
+    - name: Create shared munge dir
+      file:
+        name: '{{ munge_conf_path }}'
+        state: directory
+        owner: munge
+        group: munge
+        mode: 0700
+
+    - name: Create munge.key
+      command: 'dd if=/dev/urandom bs=1 count=1024 of={{ munge_conf_path }}/munge.key'
+      args:
+        creates: '{{ munge_conf_path }}/munge.key'
+
+    - name: Set munge.key permissions
+      file:
+        name: '{{ munge_conf_path }}/munge.key'
+        state: file
+        owner: munge
+        group: munge
+        mode: 0400
+      notify: restart munge
+
+    - name: Create DB for accounting
+      mysql_db:
+        name: '{{ slurmdbd_sql_db }}'
+        state: present
+
+    - name: Create DB user for accounting
+      mysql_user:
+        name: '{{ slurmdbd_sql_user }}'
+        password: '{{ slurmdbd_sql_pwd }}'
+        priv: '{{ slurmdbd_sql_db }}.*:ALL'
+        state: present
+
+    - name: Copy configuration files
+      copy:
+        src: '{{ item }}'
+        dest: '{{ slurm_conf_path }}/{{ item }}'
+        force: "no"
+      with_items:
+        - slurm-partitions.conf
+        - slurm-nodes.conf
+        - slurm-user.conf
+        - slurm-health.conf
+        - topology.conf
+        - cgroup.conf
+        - acct_gather.conf
+      notify: restart slurm
+
+    - name: Render slurm.conf and slurmdbd.conf
+      template:
+        src: '{{ item.0 }}'
+        dest: '{{ slurm_conf_path }}/{{ item.0 }}'
+        mode: '{{ item.1 }}'
+        backup: "yes"
+      with_together:
+        - ['slurm.conf', 'slurmdbd.conf']
+        - ['0644', '0640']
+      notify: restart slurm
+
+    - name: Set UsePAM to 1 in slurm-user.conf
+      lineinfile:
+        path: '{{ slurm_conf_path }}/slurm-user.conf'
+        line: 'UsePAM=1'
+      when: enable_slurm_pam
+
+    - name: Start munge and slurmdbd services
+      service:
+        daemon_reload: "yes"
+        name: '{{ item }}'
+        state: started
+        enabled: "{{ not ha|default(True) }}"
+      with_items:
+        - munge
+        - slurmdbd
+
+    - name: wait 10s after starting slurmdbd
+      wait_for:
+        timeout: 10
+
+    - name: Start slurmctld services
+      service:
+        daemon_reload: "yes"
+        name: '{{ item }}'
+        state: started
+        enabled: "{{ not ha|default(True) }}"
+      with_items:
+        - slurmctld
+
+    - name: Add slurm pacemaker resources
+      pcs_resource:
+        name: '{{ item }}'
+        resource_class: 'systemd'
+        resource_type: 'systemd:{{ item }}'
+        options: 'op monitor interval=0 --group Trinity-stack'
+        state: present
+      when: ha|default(False)
+      with_items:
+        - munge
+        - slurmdbd
+        - slurmctld
+      tags: pcs
+
+    - name: Register slurm cluster in slurmdbd
+      shell: 'sacctmgr -i add cluster cluster | grep -i adding'
+      register: sacctmgr_success
+      changed_when: '"Not adding." not in sacctmgr_success.stdout'
+      until: '"Adding Cluster" in sacctmgr_success.stdout or "Not adding." in sacctmgr_success.stdout'
+      retries: 6
+      delay: 5
+
+  when: primary|default(True)
+        and ansible_connection not in 'lchroot'
+        and not compute|default(False)
+
+- name: Enable munge service on passive slurm nodes (portal services etc)
+  service:
+    daemon_reload: "yes"
+    name: '{{ item }}'
+    enabled: true
+  when: not on_controller|bool
+        and not compute|bool
+  with_items:
+    - munge
+
+- name: start munge service on passive slurm nodes (portal services etc)
+  service:
+    daemon_reload: "yes"
+    name: '{{ item }}'
+    state: started
+  when: not on_controller|bool
+        and not compute|bool
+  with_items:
+    - munge
+  ignore_errors: true
+
+- block:
+
+    - name: Install metric script
+      template:
+        src: slurm.py.j2
+        dest: /usr/local/bin/slurm.py
+        mode: 0755
+
+    - name: Requests dependency
+      yum:
+        name: python34-requests
+        state: present
+
+    - name: Create systemd targets
+      template:
+        src: "systemd/{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+      with_items:
+        - "minute-timer.target"
+        - "slurm-stats.service"
+        - "slurm-stats.timer"
+
+    - name: Enable metricscript
+      systemd:
+        daemon_reload: "yes"
+        name: '{{ item }}'
+        enabled: "yes"
+      with_items:
+        - slurm-stats.service
+        - slurm-stats.timer
+        - minute-timer.target
+
+    - name: Activate metricscript
+      systemd:
+        name: slurm-stats.timer
+        state: started
 
   when: primary|default(True)
         and ansible_connection not in 'lchroot'

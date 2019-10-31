@@ -39,9 +39,8 @@
 
 - name: Install luna packages
   yum:
-    name: '{{ item }}'
+    name: '{{ luna_packages }}'
     state: present
-  with_items: '{{ luna_packages }}'
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
@@ -130,7 +129,7 @@
       state: directory
 
   - name: Copy default dhcp configuraion to {{ luna.dhcp.conf_path }}
-    shell: rsync -raW /etc/dhcp/* {{ luna.dhcp.conf_path }}
+    shell: rsync -raW -AX /etc/dhcp/* {{ luna.dhcp.conf_path }}
     args:
       creates: '{{ luna.dhcp.conf_path }}/dhclient.d'
     when: primary|default(True)
@@ -160,12 +159,17 @@
       mode: 0755
       state: directory
 
+  - name: Selinux fcontext on files
+    sefcontext:
+      target: "{{ trix_local }}/etc/named.luna.zones"
+      setype: named_zone_t
+
   - name: Add a placeholder for luna's DNS zone file
-    lineinfile:
+    file:
       path: '{{ trix_local }}/etc/named.luna.zones'
-      line: '// PLACEHOLDER'
-      insertbefore: BOF
-      create: yes
+      setype: named_zone_t
+      group: named
+      state: touch
 
   - name: Initialize luna cluster
     luna_cluster:

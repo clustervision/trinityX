@@ -3,9 +3,9 @@
 
 - name: Install sssd packages
   yum:
-    name: '{{ item }}'
+    name: '{{ sss_packages }}'
     state: present
-  with_items: '{{ sss_packages }}'
+  tags: install-only
 
 - name: Add configuration file to /etc/sssd/sssd.conf
   template:
@@ -20,6 +20,7 @@
   copy:
     src: "{{ ssl_ca_cert }}"
     dest: /etc/openldap/certs/cluster-ca.crt
+  when: ssl_ca_cert is defined
 
 - name: Adjust OpenLDAP client TLS configuration
   lineinfile:
@@ -27,16 +28,12 @@
     line: 'TLS_CACERT   /etc/openldap/certs/cluster-ca.crt'
 
 - name: Enable sssd service
-# service:
-#   name: sssd
-#   enabled: yes
-  file:
-    src: '/usr/lib/systemd/system/sssd.service'
-    dest: '/etc/systemd/system/multi-user.target.wants/sssd.service'
-    state: link
+  systemd:
+    name: sssd
+    enabled: "yes"
 
 - name: Start sssd service
-  service:
+  systemd:
     name: sssd
     state: started
   when: ansible_connection not in 'lchroot'
@@ -49,6 +46,8 @@
   when: primary|default(True)
         and ansible_connection not in 'lchroot'
         and not compute|default(False)
+        and sss_allowed_groups is defined
+        and sss_allowed_groups is iterable
 
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update

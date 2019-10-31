@@ -10,6 +10,13 @@
     - '{{ trix_home }}'
     - '{{ trix_shared }}'
 
+- name: Apply proper selinux context to '{{ trix_home }}'
+  file:
+    path: '{{ trix_home }}'
+    state: directory
+    setype: home_root_t
+    seuser: system_u
+
 - name: Create Trinity directory structure on controllers
   file:
     path: '{{ item }}'

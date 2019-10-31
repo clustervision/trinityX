@@ -3,55 +3,93 @@
 
 - name: Install bind packages
   yum:
-    name: '{{ item }}'
+    name: "{{ bind_packages }}"
     state: present
-  with_items: '{{ bind_packages }}'
+  tags: install-only
+
+- block:
+    - name: Selinux fcontext on files
+      sefcontext:
+        target: "{{ bind_db_path }}(/.*)?"
+        setype: named_zone_t
+
+    - name: Selinux permissions for {{ bind_db_path }}/data
+      sefcontext:
+        target: "{{ bind_db_path }}/data(/.*)?"
+        setype: named_cache_t
+
+    - name: Selinux  permissions for {{ bind_db_path }}/dynamic
+      sefcontext:
+        target: "{{ bind_db_path }}/dynamic(/.*)?"
+        setype: named_cache_t
+  when: not ansible_virtualization_type=="docker"
 
 - name: Ensure {{ bind_db_path }} exists
   file:
-    path: '{{ bind_db_path }}'
+    path: "{{ item }}"
     owner: named
     group: named
+    setype: named_zone_t
     state: directory
+  with_items:
+    - "{{ bind_db_path }}"
+
+- name: Ensure {{ bind_db_path }} data directories exists
+  file:
+    path: "{{ item }}"
+    owner: named
+    group: named
+    setype: named_cache_t
+    state: directory
+  with_items:
+    - "{{ bind_db_path }}/data"
+    - "{{ bind_db_path }}/dynamic"
 
 - name: Update named data path
   replace:
     path: /etc/named.conf
-    regexp: '/var/named'
-    replace: '{{ bind_db_path }}'
-    backup: yes
+    regexp: "/var/named"
+    replace: "{{ bind_db_path }}"
+    backup: "yes"
   notify: restart named
 
 - name: Configure named to listen on all ports
   replace:
     path: /etc/named.conf
-    regexp: '{{ item }}'
-    replace: ' any; '
+    regexp: "{{ item }}"
+    replace: " any; "
   with_items:
     - ' localhost; '
     - ' 127\.0\.0\.1; '
     - ' ::1; '
   notify: restart named
- 
+
 - name: Toggle DNSSEC
   lineinfile:
     path: /etc/named.conf
-    line: 'dnssec-enable {{ "yes" if bind_dnssec_enable else "no"}};'
-    regexp: 'dnssec-enable'
+    line: 'dnssec-enable {{ "yes" if bind_dnssec_enable else "no" }};'
+    regexp: "dnssec-enable"
+  notify: restart named
+
+- name: Toggle DNSSEC validation
+  lineinfile:
+    path: /etc/named.conf
+    line: 'dnssec-validation {{ "yes" if bind_dnssec_enable else "no" }};'
+    regexp: "dnssec-validation"
   notify: restart named
 
 - name: Configure named forwarders
   blockinfile:
     path: /etc/named.conf
-    insertafter: 'recursion yes;'
-    marker: '// {mark} forwarders'
+    insertafter: "recursion yes;"
+    marker: "// {mark} forwarders"
     block: |
-      {% if ansible_dns['nameservers'] is defined or bind_dns_forwarders %}
+      {% if ansible_dns["nameservers"] is defined or bind_dns_forwarders %}
           forwarders {
             {% if bind_dns_forwarders %}
               {% for f in bind_dns_forwarders %}{{ f }}; {% endfor %}
             {% else %}
-              {% for f in ansible_dns['nameservers'] %}{% if f not in ansible_all_ipv4_addresses%}{{ f }};{% endif %} {% endfor %}
+              {% for f in ansible_dns["nameservers"] %}{% if f not in ansible_all_ipv4_addresses%}{{ f }};{% endif %} {% endfor %}
             {% endif %}
           };
       {% endif %}
@@ -61,41 +99,58 @@
   template:
     src: "resolv.conf"
     dest: "/etc/resolv.conf"
-    backup: yes
+    backup: "yes"
+  when: not ansible_virtualization_type=="docker"
 
-- name: Preserve resolv.conf from being overwriten
+- name: Check if the directory exists
+  stat:
+    path: "{{ trix_local }}/etc/dhcp"
+  register: dhcp_directory
+
+- name: Ensure directory
+  file:
+    state: directory
+    path: "{{ trix_local }}/etc/dhcp"
+  when: not dhcp_directory.stat.exists
+
+- name: Preserve resolv.conf from being overwritten
   copy:
     src: dhclient-enter-hooks
     dest: /etc/dhcp/dhclient-enter-hooks
     mode: 0755
-    backup: yes
+    backup: "yes"
 
 - name: Enable named service
   service:
     name: named
-    enabled: yes
+    enabled: "yes"
   when: not ha|default(False)
 
 - block:
+    - name: Copy default zones to {{ bind_db_path }}
+      synchronize:
+        src: /var/named/
+        dest: "{{ bind_db_path }}"
+      when: not ansible_virtualization_type=="docker"
+    #  creates: "{{ bind_db_path }}/named.empty"
+    # - name: Copy default zones to {{ bind_db_path }}
+    #  shell: rsync -raW -AX /var/named/* {{ bind_db_path }}
+    #  args:
+    #    creates: "{{ bind_db_path }}/named.empty"
 
-  - name: Copy default zones to {{ bind_db_path }}
-    shell: rsync -raW /var/named/* {{ bind_db_path }}
-    args:
-      creates: '{{ bind_db_path }}/named.empty'
+    - name: Start named service
+      service:
+        name: named
+        state: started
 
-  - name: Start named service
-    service:
-      name: named
-      state: started
-  
-  - name: Add pacemaker resource
-    pcs_resource:
-      name: 'named'
-      resource_class: 'systemd'
-      resource_type: 'systemd:named'
-      options: 'op monitor interval=0 --group Trinity-stack'
-      state: present
-    tags: pcs
-    when: ha | default(False)
+    - name: Add pacemaker resource
+      pcs_resource:
+        name: "named"
+        resource_class: "systemd"
+        resource_type: "systemd:named"
+        options: "op monitor interval=0 --group Trinity-stack"
+        state: present
+      tags: pcs
+      when: ha | default(False)
 
   when: primary | default(True)
