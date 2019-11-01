@@ -15,14 +15,15 @@ In standard configuration TrinityX provides the following services to the cluste
 
 * Luna, our default super-efficient node provisioner https://github.com/clustervision/luna
 * OpenLDAP
-* SLURM
-* Zabbix
-* NTP
+* SLURM or OpenPBS
+* Telegraf, InfluxDB and Grafana
+* Infrastructure services such as NTP, DNS, DHCP
 * and more
 
 It will also set up:
 
 * NFS-shared home and application directories
+* OpenHPC applications and libraries
 * environment modules
 * rsyslog
 * and more
