@@ -27,7 +27,7 @@
 - name: Ensure {{ bind_db_path }} exists
   file:
     path: "{{ item }}"
-    owner: named
+    owner: root
     group: named
     setype: named_zone_t
     state: directory
@@ -67,14 +67,14 @@
 - name: Toggle DNSSEC
   lineinfile:
     path: /etc/named.conf
-    line: 'dnssec-enable {{ "yes" if bind_dnssec_enable else "no" }};'
+    line: 'dnssec-enable {{ bind_dnssec_enable }};'
     regexp: "dnssec-enable"
   notify: restart named
 
 - name: Toggle DNSSEC validation
   lineinfile:
     path: /etc/named.conf
-    line: 'dnssec-validation {{ "yes" if bind_dnssec_enable else "no" }};'
+    line: 'dnssec-validation {{ bind_dnssec_enable }};'
     regexp: "dnssec-validation"
   notify: restart named
 
@@ -97,7 +97,7 @@
 
 - name: Render /etc/resolv.conf
   template:
-    src: "resolv.conf"
+    src: "resolv.conf.j2"
     dest: "/etc/resolv.conf"
     backup: "yes"
   when: not ansible_virtualization_type=="docker"

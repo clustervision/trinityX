@@ -23,7 +23,7 @@
       
 - name: Setup NFS exports in {{ nfs_exports_path }}
   template:
-    src: '{{ "HA_exports" if ha == true else "nonHA_exports" }}'
+    src: '{{ "HA_exports.j2" if ha == true else "nonHA_exports.j2" }}'
     dest: '{{ nfs_exports_path }}/trinity.exports'
   when: primary | default(True)
 
@@ -38,12 +38,12 @@
 
 - name: Render nfsmount.conf configuration file
   template:
-    src: 'nfsmount.conf'
+    src: 'nfsmount.conf.j2'
     dest: '/etc/nfsmount.conf'
 
 - name: Setup NFS sysconfig
   template:
-    src: 'sysconfig_nfs'
+    src: 'sysconfig_nfs.j2'
     dest: '/etc/sysconfig/nfs'
   notify: restart nfs-config
 

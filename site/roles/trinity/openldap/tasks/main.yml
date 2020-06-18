@@ -139,12 +139,13 @@
 
     - name: Render OpenLDAP configuration
       template:
-        src: '{{ item }}'
-        dest: '/tmp/'
+        src: '{{ item }}.j2'
+        dest: '/tmp/{{ item }}'
       with_items:
         - config.ldif
         - local.ldif
         - proxy.ldif
+      changed_when: false
 
     - name: Copy OpenLDAP overlay configurations
       copy:
@@ -156,6 +157,8 @@
 
     - name: Load OpenLDAP global configuration
       command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
+      args:
+        creates: '/etc/openldap/slapd.d/cn=config.ldif'
       notify: restart openldap
 
     - name: Load OpenLDAP local configuration

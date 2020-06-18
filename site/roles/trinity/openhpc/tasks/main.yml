@@ -56,6 +56,9 @@
   file:
     dest: "/usr/bin/{{ item }}"
     src: "/opt/ohpc/admin/pdsh/bin/{{ item }}"
+    state: link
+    force: yes
+    follow: no
   with_items:
     - pdsh
     - pdcp
@@ -69,7 +72,7 @@
 
 - name: Update NFS exports
   template:
-    src: OHPC_exports
+    src: OHPC_exports.j2
     dest: '{{ nfs_exports_path }}/ohpc.exports'
   when: primary | default(True) and ansible_connection not in 'lchroot'
   notify:

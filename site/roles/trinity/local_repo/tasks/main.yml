@@ -72,13 +72,9 @@
 
     when: not trinityx_iso_repodata_status.stat.exists
 
-  - name: Check if nginx is installed
-    command: rpm -q nginx
-    args:
-      warn: false
-    failed_when: false
-    changed_when: false
-    register: nginx_rpm
+  - name: Make installed package list
+    package_facts:
+      manager: rpm
 
   - block:
 
@@ -100,7 +96,7 @@
         path: /etc/yum.repos.d/tmp_local.repo
         state: absent
 
-    when: nginx_rpm.rc != 0
+    when: ansible_facts.packages['nginx'] is not defined
 
   - name: Enable nginx
     service:

@@ -15,13 +15,13 @@
 
 - name: Set up DRBD common settings configuration file
   template:
-    src: global_common.conf
-    dest: /etc/drbd.d/
+    src: global_common.conf.j2
+    dest: /etc/drbd.d/global_common.conf
 
 - name: Set up DRBD shared resource configuration file
   template:
-    src: '{{ drbd_shared_resource_name }}.res'
-    dest: /etc/drbd.d/
+    src: '{{ drbd_shared_resource_name }}.res.j2'
+    dest: "/etc/drbd.d/{{ drbd_shared_resource_name }}.res"
 
 - name: Initialize DRBD shared resource
   shell: '/usr/sbin/drbdadm --force create-md {{ drbd_shared_resource_name }}'

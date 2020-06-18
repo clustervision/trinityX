@@ -1,3 +1,5 @@
+.. image:: img/trinityxbanner_scaled.png
+
 Overview
 ========
 
@@ -28,38 +30,30 @@ It will also set up:
 * rsyslog
 * and more
 
+.. image:: img/triX_300.png
+   :width: 600px
+   :height: 160px
+
 
 Steps to install TrinityX
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Install CentOS Minimal on your controller(s). It is recommended to put ``/var/lib/influxdb`` on it's own filesystem.
+1. Install CentOS Minimal on your controller(s). It is recommended to put ``/trinity`` and  ``/var/lib/influxdb`` on it's own filesystem.
 
-2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks
+2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks on the controller(s).
 
-3. Configure passwordless authentication to the controller itself or/and for both controllers in the HA case
+3. Configure passwordless authentication to the controller itself or/and for both controllers in the HA case.
 
-4. Setup luna repository::
-
-    # curl https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo > /etc/yum.repos.d/luna-1.2.repo
-
-5. Enable the EPEL repository::
-
-   # yum install epel-release
-
-6. Install ``git``, ``ansible`` and ``luna-ansible``::
-
-    # yum install git ansible luna-ansible
-
-7. Clone TrinityX repository into your working directory and go to the site directory::
+4. Clone TrinityX repository into your working directory. Then run ```prepare.sh``` to install all the prerequisites.
 
     # git clone http://github.com/clustervision/trinityX
-    # cd trinityX/site
+    # cd trinityX
+    # bash prepare.sh
 
-8. Check out mitogen into the current directory (trinityX/site)::
 
-   # git clone https://github.com/dw/mitogen.git
-
-9. Based on whether you're installing a single-controller or a high-availability (HA) setup, you might want to update the configuration files:
+5. Based on whether you're installing a single-controller or a high-availability (HA) setup, the contents may differ. Please view the contents of the file on the directives that may need modification(s)::
+   # cd group_vars
+   # cp all.yml.example all.yml
 
    * ``group_vars/all``
 
@@ -71,11 +65,8 @@ Steps to install TrinityX
 
    **Note**: In the case of an HA setup you will most probably need to change the default name of the shared block device set by ``shared_fs_device``.
 
-10. Install ``OndrejHome.pcs-modules-2`` from the ansible galaxy::
-
-    # ansible-galaxy install OndrejHome.pcs-modules-2
-
-11. Configure ``hosts`` file to allow ansible to address controllers.
+6. Configure ``hosts`` file to allow ansible to address controllers.
+   # cp hosts.example hosts
 
    Example for non-HA setup::
 
@@ -88,7 +79,7 @@ Steps to install TrinityX
        controller1 ansible_host=10.141.255.254
        controller2 ansible_host=10.141.255.253
 
-12. Start TrinityX installation::
+7. Start TrinityX installation::
 
      # ansible-playbook controller.yml
 
@@ -96,7 +87,7 @@ Steps to install TrinityX
 
     **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
 
-13. Create a default OS image::
+8. Create a default OS image::
 
     # ansible-playbook compute.yml
 
@@ -120,13 +111,12 @@ You can also choose which components to exclude from the installation by modifyi
 OpenHPC Support
 ===============
 
-The OpenHPC project provides a framework for building, managing and maintain HPC clusters. This project provides packages for most popular scientific and HPC applications. TrinityX can integrate this effort into it's ecosystem. In order to enable this integration set the flag ``enable_openhpc`` in ``group_vars/all`` to ``true``. 
-Currently when OpenHPC is enabled standart environment modules and pdsh from TrinityX gets disabled, ``slurm`` is used from TrinityX's repositories. 
+The OpenHPC project provides a framework for building, managing and maintain HPC clusters. This project provides packages for most popular scientific and HPC applications. TrinityX can integrate this effort into it's ecosystem. In order to enable this integration set the flag ``enable_openhpc`` in ``group_vars/all`` to ``true`` (default). 
 
 Documentation
 =============
 
-To build the full set of the documentation included with TrinityX:
+A pre-built PDF is provided in the main directory. To build the full set of the documentation included with TrinityX:
 
 1. Install ``git``::
 
@@ -139,7 +129,7 @@ To build the full set of the documentation included with TrinityX:
 
 3. Install ``pip``, e.g. from EPEL repository::
 
-    # yum install python34-pip.noarch
+    # yum install python3-pip.noarch
 
 4. Install ``sphinx`` and ``Rinohtype``::
 
