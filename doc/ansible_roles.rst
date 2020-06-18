@@ -29,8 +29,4 @@ Ansible Roles overview
 - nginx: installs and configures nginx (web server for luna)
 - luna: installs and configures luna
 - rsyslog: installs and configures syslog
-- zabbix: installs and configures Zabbix (monitoring)
-- zabbix_agent: installs Zabbix agent on controllers and images
-- zabbix_checks: installs additional check scripts and configures templates on Zabbix server
-- trix-status: installs trix-status - tool for getting TrinityX cluster overview
 - docker-registry: installs and configures docker registry

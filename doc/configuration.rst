@@ -22,7 +22,7 @@ What follows is a list of those variables together with their descriptions and d
 
    * - Variable
      - Value
-     - Vefault
+     - Default
      - Description
 
    * - local_install
@@ -193,6 +193,13 @@ What follows is a list of those variables together with their descriptions and d
      - A user-defined list of environment modules to install in addition to the default one.
        See the table `environment-modules role`_.
 
+
+.. _tab_global_variables:
+
+.. list-table:: Global variables (cont'd)
+   :header-rows: 1
+   :widths: auto
+
    * - trinityx_local_reponame
      - String
      - 'trinityx-local'
@@ -200,33 +207,29 @@ What follows is a list of those variables together with their descriptions and d
 
    * - trinityx_local_repo_baseurl
      - URL
-     - http://`trix_ctrl_ip`:`repos_port`/repos/trinityx/
+     - http://`trix_ctrl_ip`:`repos_port`/ repos/trinityx/
      - URL to be used to access local repository
 
    * - luna_repo
      - URL
-     - https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo
+     - https://updates.clustervision.com/ luna/1.2/centos/luna-1.2.repo
      - URL of the luna repository
 
    * - trinity_repo
      - URL
-     - https://updates.clustervision.com/trinity/10.2/centos/trinity.repo
+     - https://updates.clustervision.com/ trinity/10.2/centos/trinity.repo
      - URL of the trinity repository
 
    * - userspace_repo
      - URL
-     - https://updates.clustervision.com/userspace/userspace-release.x86_64.rpm
+     - https://updates.clustervision.com/ userspace/userspace-release.x86_64.rpm
      - URL of the repository of the userspace packages
 
    * - elrepo_repo
      - URL
-     - http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
+     - | http://www.elrepo.org/
+       | elrepo-release-7.0-3.el7.elrepo.noarch.rpm
      - URL of elrepo repository
-
-   * - zabbix_repo
-     - URL
-     - https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm
-     - URL of default Zabbix repository
 
 Role specific variables
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -318,6 +321,7 @@ drbd_shared_resource_name String        'trinity_disk'        The name that will
        - python2
        - python3
        *versions omitted*
+
      - List of modules to install by default.
 
 
@@ -470,35 +474,38 @@ repos_port          Number        8080           Default port to listen on when 
 `rsyslog` role
 ^^^^^^^^^^^^^^^
 
-===================================== ============= ========================================================================= =============
-     Variable                             Value        Default                                                                 Description
-===================================== ============= ========================================================================= =============
-syslog_forwarding_rules               List of dicts                                                                           A list of log forwarding rules to use in rsyslog.d/ configuration files.
+====================================== ============= ========================================================================== =============
+     Variable                             Value        Default                                                                    Description
+====================================== ============= ========================================================================== =============
+syslog_forwarding_rules                List of dicts                                                                            A list of log forwarding rules to use in rsyslog.d/ configuration files.
 
-syslog_forwarding_rules.0.name        String                                                                                  Forwarding rule's name
-syslog_forwarding_rules.0.proto       String                                                                                  Protocol to use for this rule. Can be TCP or UDP.
-syslog_forwarding_rules.0.port        Number                                                                                  The port to which rsyslog will send logs that match the rule.
-syslog_forwarding_rules.0.host        String                                                                                  The destination host.
-syslog_forwarding_rules.0.facility    String                                                                                  Syslog facility name to use for logs sent through this rule.
-syslog_forwarding_rules.0.level       String                                                                                  Syslog level to use for logs send through this rule.
+.0.name                                String                                                                                   Forwarding rule's name
+.0.proto                               String                                                                                   Protocol to use for this rule. Can be TCP or UDP.
+.0.port                                Number                                                                                   The port to which rsyslog will send logs that match the rule.
+.0.host                                String                                                                                   The destination host.
+.0.facility                            String                                                                                   Syslog facility name to use for logs sent through this rule.
+.0.level                               String                                                                                   Syslog level to use for logs send through this rule.
 
-syslog_listeners                      List of dicts                                                                           A list of listeners to be configured in rsyslog.
+syslog_listeners                       List of dicts                                                                            A list of listeners to be configured in rsyslog.
 
-syslog_listeners.0.name               String        default                                                                   Listener's name
-syslog_listeners.0.proto              String        tcp                                                                       Listener's protocol. Can be TCP or UDP
-syslog_listeners.0.port               Number        514                                                                       Listener's port.
+syslog_listeners.0.name                String        default                                                                    Listener's name
+syslog_listeners.0.proto               String        tcp                                                                        Listener's protocol. Can be TCP or UDP
+syslog_listeners.0.port                Number        514                                                                        Listener's port.
 
-syslog_file_template_rules            List of dicts                                                                           A list of template rules.
-                                                                                                                              See http://www.rsyslog.com/doc/master/configuration/templates.html for details.
+syslog_file_template_rules             List of dicts                                                                            A list of template rules.
+                                                                                                                                See http://www.rsyslog.com/ doc/master/configuration/ templates.html for details.
 
-syslog_file_template_rules.0.name     String        controllers                                                               Template name
-syslog_file_template_rules.0.type     String        string                                                                    Template type
-syslog_file_template_rules.0.content  String        '/var/log/cluster-messages/%HOSTNAME%.messages'                           Content of the template rule.
-syslog_file_template_rules.0.field    String        '$fromhost-ip'                                                            Template's field
-syslog_file_template_rules.0.criteria String        startswith                                                                Templates's criteria
-syslog_file_template_rules.0.rule     String        '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}' The matching rule for the template.
+syslog_file_template_rules             List of dicts
+.0.name                                String        controllers                                                                Template name
+.0.type                                String        string                                                                     Template type
+.0.content                             String        '/var/log/cluster-messages/ %HOSTNAME%.messages'                           Content of the template rule.
+.0.field                               String        '$fromhost-ip'                                                             Template's field
+.0.criteria                            String        startswith                                                                 Templates's criteria
+.0.rule                                String        trix_cluster_net                                                           The matching rule for the template.
 
-===================================== ============= ========================================================================= =============
+====================================== ============= ========================================================================== =============
+
+The default for the syslog_file_template_rules.0.rule is '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
 
 `slurm` role
 ^^^^^^^^^^^^^
@@ -566,22 +573,6 @@ sss_ldap_hosts      List          - `trix_ctrl_hostname.trix_domain`   List of h
 sss_filter_enabled  Boolean       false                                Whether to use group based access filters on restrict access to compute nodes or not.
 
 =================== ============= ==================================== =============
-
-`zabbix` role
-^^^^^^^^^^^^^^
-
-======================= ============= ======================================================================================= =============
-     Variable               Value        Default                                                                              Description
-======================= ============= ======================================================================================= =============
-zabbix_script_path      Path          `trix_local`/usr/lib/zabbix/                                                            Location where zabbix can find custom scripts
-zabbix_sql_db           String        'zabbix'                                                                                Name of the zabbix database in MariaDB
-zabbix_sql_user         String        'zabbix'                                                                                SQL user used by zabbix
-
-zabbix_login            String        'Admin'                                                                                 Default name of the zabbix admin user
-
-zabbix_mail_server      Hostname      'localhost'                                                                             Default mail server
-
-======================= ============= ============================ =============
 
 Compute specific variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

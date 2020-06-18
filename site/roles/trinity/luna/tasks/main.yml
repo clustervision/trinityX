@@ -1,5 +1,5 @@
 ---
-# tasks file for luna
+# tasks file for luna 
 
 - name: Generate root password for MongoDB and save it to /etc/trinity/passwords
   set_fact:
@@ -30,10 +30,13 @@
     state: present
 
 - name: Create a user for luna in MongoDB
-  t_mongodb_user:
+  mongodb_user:
+    login_database: "admin"
+    login_user: "root"
+    login_password: "{{ mongo_root_pwd }}"
     name: "luna"
     database: "luna"
-    role: "dbOwner"
+    roles: [ "dbOwner" ]
     password: "{{ luna_db_pwd }}"
   when: primary | default(True)
 
@@ -53,15 +56,21 @@
     path: '/tftpboot'
     state: directory
 
-- name: Copy luna_undionly.kpxe to /tftpboot
-  copy:
-    src: '/usr/share/ipxe/undionly.kpxe'
-    dest: '/tftpboot/luna_undionly.kpxe'
-    remote_src: True
+- name: Download iPXE EFI image to /tftpboot
+  get_url:
+    url: http://boot.ipxe.org/ipxe.efi
+    dest: /tftpboot/luna_ipxe.efi
+    mode: '0444'
+
+- name: Download iPXE legacy image to /tftpboot
+  get_url:
+    url: http://boot.ipxe.org/undionly.kpxe
+    dest: /tftpboot/luna_undionly.kpxe
+    mode: '0444'
 
 - name: Render /etc/luna.conf
   template:
-    src: 'luna.conf'
+    src: 'luna.conf.j2'
     dest: '/etc/luna.conf'
     owner: luna
     group: luna
@@ -76,7 +85,7 @@
 
 - name: Add luna's server configuration to nginx
   template:
-    src: 'nginx-luna.conf'
+    src: 'nginx-luna.conf.j2'
     dest: '/etc/nginx/conf.d/nginx-luna.conf'
   notify: reload nginx
 
@@ -112,7 +121,7 @@
 
 - name: Workaround PXE boot issue when doing HA and masquerading is enabled
   template:
-    src: 'firewalld_direct.xml'
+    src: 'firewalld_direct.xml.j2'
     dest: '/etc/firewalld/direct.xml'
     owner: 'root'
     group: 'root'
@@ -164,12 +173,18 @@
       target: "{{ trix_local }}/etc/named.luna.zones"
       setype: named_zone_t
 
+  - name: Check File exists or not
+    stat:
+      path: '{{ trix_local }}/etc/named.luna.zones'
+    register: luna_dns_placeholder
+
   - name: Add a placeholder for luna's DNS zone file
     file:
       path: '{{ trix_local }}/etc/named.luna.zones'
       setype: named_zone_t
       group: named
       state: touch
+    when: luna_dns_placeholder.stat.exists == false
 
   - name: Initialize luna cluster
     luna_cluster:

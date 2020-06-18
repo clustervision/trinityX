@@ -12,6 +12,12 @@
                           '/etc/trinity/passwords/mongo/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
 
+- name: Install pymongo
+  pip:
+    name: pymongo
+    version: 2.7.2
+    state: present
+
 - name: Install MongoDB packages
   yum:
     name: '{{ mongo_packages }}'
@@ -56,12 +62,31 @@
         state: started
 
     - name: "Create root user"
-      t_mongodb_user:
+      mongodb_user:
+        login_user: "root"
+        login_database: "admin"
+        login_password: "{{ mongo_root_pwd }}"
         name: "root"
         database: "admin"
-        role: "root"
+        roles: [ "root" ]
         password: "{{ mongo_root_pwd }}"
         state: present
+        update_password: on_create
+      register: createrootuser
+      failed_when: false
+
+    - debug:
+        msg: "{{ createrootuser }}"
+
+    - name: "Create root user"
+      mongodb_user:
+        name: "root"
+        database: "admin"
+        roles: [ "root" ]
+        password: "{{ mongo_root_pwd }}"
+        state: present
+        update_password: on_create
+      when: 'createrootuser.msg is defined and "auth failed" in createrootuser.msg'
 
     - name: Add pacemaker resource
       pcs_resource:

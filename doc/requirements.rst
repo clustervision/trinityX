@@ -18,7 +18,9 @@ The machines that will be used as TrinityX controllers are expected to have a mi
 
 - one NIC for the private (internal) interface, used for compute node provisioning and general cluster communications.
 
-.. note:: A third NIC that serves as a dedicated heartbeat link between a pair of HA controllers would provide a redundant communication link which would go a long way in reducing the risk of encountering a split-brain situation. 
+.. note:: The out-of-band management network can be integrated on the internal network, or be accessible on it's own network. Depending on the design of your cluster, this could add another NIC.
+
+.. note:: A third NIC that serves as a dedicated heartbeat link between a pair of HA controllers would provide a redundant communication link which would go a long way in reducing the risk of encountering a split-brain situation.
 
 .. note:: When installing the controllers in a high availability configuration it is required to have an IPMI interface properly configured on both controllers. This allows for IPMI based fencing functionality to be implemented for safer failovers.
 
@@ -45,6 +47,7 @@ The machines that will be used as compute nodes are expected to have at least 1 
 
 - one NIC for the private (internal) interface, used for provisioning and general cluster communications.
 
+.. note:: This NIC could also be an InfiniBand interface (boot-over-IB).
 
 The OpenStack optional module adds another network requirement:
 
@@ -79,6 +82,8 @@ On the machine used to install the controllers, the EPEL repository must be enab
 
     # yum install epel-release
     # yum install git ansible
+
+.. note:: The ``prepare.sh`` script includes these steps.
 
 This machine is usually the controller in non HA configurations or the first of the two controllers in HA configurations.
 
