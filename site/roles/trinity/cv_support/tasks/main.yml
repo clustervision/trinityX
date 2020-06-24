@@ -43,17 +43,10 @@
     dest: "/etc/systemd/system/remote-assistance.service"
   notify: reload systemd daemon
 
-- name: Check if there is an existing python3 interpreter
-  stat:
-    path: /usr/bin/python3
-  register: py3_link
-
-- name: Set 3.4 symbolic link
-  file:
-    src: /usr/bin/python3.4
-    dest: /usr/bin/python3
-    state: link
-  when: not py3_link.stat.exists
+- name: Install python3
+  yum:
+    name: python3
+    state: installed
 
 - name: Configure systemd service
   systemd:
