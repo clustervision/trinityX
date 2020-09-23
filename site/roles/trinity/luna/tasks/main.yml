@@ -38,12 +38,30 @@
     database: "luna"
     roles: [ "dbOwner" ]
     password: "{{ luna_db_pwd }}"
+    state: present
   when: primary | default(True)
 
 - name: Install luna packages
   yum:
     name: '{{ luna_packages }}'
     state: present
+
+# the above breaks all future runs because luna installs pymongo 2.5.2 from rpm which takes precidence over 2.7.2 installed by pip
+
+- name: uninstall python-pymongo-2.5.2-5
+  command: 
+    cmd: "rpm -e --nodeps python-pymongo-2.5.2-5.el7.x86_64"
+    warn: false
+  register: uninstall_pymongo_rpm
+  changed_when: uninstall_pymongo_rpm.rc==0
+  failed_when: false
+
+- name: force reinstall of pymongo after rpm version of pymongo removed
+  pip:
+    name: pymongo
+    version: 2.7.2
+    state: forcereinstall
+  when: uninstall_pymongo_rpm.changed is defined and uninstall_pymongo_rpm.changed|bool
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
@@ -172,7 +190,7 @@
     sefcontext:
       target: "{{ trix_local }}/etc/named.luna.zones"
       setype: named_zone_t
-
+    when: enable_selinux|bool
   - name: Check File exists or not
     stat:
       path: '{{ trix_local }}/etc/named.luna.zones'
