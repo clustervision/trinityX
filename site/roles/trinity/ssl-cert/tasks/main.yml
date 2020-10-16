@@ -63,7 +63,7 @@
           -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
           -extensions req_ext
           -extfile '{{ ssl_cert_path }}/san.conf'
-          -set_serial {{ 2 | random }}
+          -set_serial {{ ansible_date_time.epoch }}
       args:
         creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
       with_items: '{{ groups["controllers"] }}'
