@@ -18,8 +18,20 @@
     dest: /etc/telegraf/telegraf.conf
   notify: restart telegraf
 
+- name: Configure TrinityX telegraf configurations
+  template:
+    src: trinityx.conf.j2
+    dest: /etc/telegraf/telegraf.d/trinityx.conf
+  notify: restart telegraf
+
+- name: Place telegraf sudoers file
+  template:
+    src: sudo.telegraf.j2
+    dest: /etc/sudoers.d/telegraf
+ 
 - name: Start telegraf
   systemd:
     name: telegraf
     state: started
     enabled: "yes"
+
