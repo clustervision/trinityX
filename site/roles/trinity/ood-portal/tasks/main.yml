@@ -11,6 +11,7 @@
   yum:
     name: centos-release-scl
     state: present
+when: ansible_distribution == "CentOS"
 
 - name: Install OOD Repo rpm
   yum:
@@ -21,6 +22,16 @@
   yum:
     name: ondemand
     state: present
+when: ansible_distribution == "CentOS"
+
+- name: Install OOD
+  yum:
+    name: ondemand
+    state: present
+    enablerepo:
+      - rhel-server-rhscl-7-eus-rpms
+      - rhel-7-server-optional-rpms
+when: ansible_distribution == "RedHat"
 
 - name: Ensure ood config paths exist
   file:
@@ -43,7 +54,6 @@
     owner: root
     group: root
   notify: run update_ood_portal
-
 
 - name: remove default apache pages
   file:
@@ -72,6 +82,7 @@
     group: root
     backup: "yes"
   when: enable_vnc_to_nodes == true
+  notify: run update_ood_portal
 
 - name: Copy TrinityX branding  to /var/www/ood/public
   copy:
@@ -82,6 +93,7 @@
     - trix_logo.png
     - logo_trinityx.png
   when: ood_portal_brand == "TrinityX"
+  notify: run update_ood_portal
 
 - name: Apply TrinityX welcome_html branding if appropriate
   replace:

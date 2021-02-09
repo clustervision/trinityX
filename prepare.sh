@@ -5,7 +5,7 @@ else
   setenforce 0
   yum update -y
   curl https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo > /etc/yum.repos.d/luna-1.2.repo
-  yum install epel-release -y
+  yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm -y
   yum install ansible git luna-ansible python-pip -y
   ansible-galaxy install OndrejHome.pcs-modules-2
   git clone https://github.com/dw/mitogen.git site/mitogen

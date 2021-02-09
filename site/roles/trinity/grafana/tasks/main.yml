@@ -95,6 +95,21 @@
     name: grafana-server
     state: started
     enabled: "yes"
+  when: not ha|default(False)
+
+- name: Start and disable Grafana-server
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: "no"
+  when: ha|default(False) and primary|default(True)
+
+- name: Stop and disable Grafana-server
+  systemd:
+    name: grafana-server
+    state: stopped
+    enabled: "no"
+  when: ha|default(False) and not primary|default(True)
 
 - name: Install piechart
   grafana_plugin:
@@ -113,6 +128,7 @@
     force_basic_auth: true
     validate_certs: "no"
   register: grafana_orgs
+  when: primary | default(False)
 
 - name: Configure organization
   uri:
@@ -125,7 +141,7 @@
     body_format: json
     body:
       name: '{{ grafana_org_name }}'
-  when: grafana_org_name not in grafana_orgs
+  when: grafana_org_name not in grafana_orgs and primary | default(False)
 
 - name: Set home dashboard
   uri:
@@ -138,6 +154,7 @@
     body_format: json
     body:
       homeDashboardId: 2
+  when: primary | default(False)
 
 - name: Configure firewalld
   firewalld:

@@ -12,11 +12,32 @@
     name: influxdb
     state: present
 
+- name: Create InfluxDB config file from template
+  template:
+    src: influxdb.conf.j2
+    dest: '/etc/influxdb/influxdb.conf'
+    backup: "yes"
+
+- name: Create a directory if it does not exist
+  file:
+    path: /trinity/local/var/lib/influxdb/
+    state: directory
+    mode: '0755'
+    owner: influxdb
+    group: influxdb
+
 - name: Enable and start InfluxDB
   systemd:
     name: influxdb
     state: started
     enabled: "yes"
+  when: not ha|default(False)
+
+- name: Disable and stop InfluxDB
+  systemd:
+    name: influxdb
+    enabled: "no"
+  when: not ha|default(False)
 
 - name: Install python2-pip
   yum:
@@ -36,6 +57,7 @@
   with_items:
     - telegraf
     - slurm
+  failed_when: false
 
 - name: Retention
   influxdb_retention_policy:
@@ -45,3 +67,14 @@
     duration: 60d
     replication: 1
     default: yes
+  failed_when: false
+
+- name: Add influxdb pacemaker resources
+  pcs_resource:
+    name: 'influxdb'
+    resource_class: 'systemd'
+    resource_type: 'systemd:influxdb'
+    options: 'op monitor interval=30 --group Trinity-stack'
+    state: present
+  when: ha|default(False)
+  tags: pcs

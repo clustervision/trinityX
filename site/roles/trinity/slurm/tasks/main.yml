@@ -74,9 +74,16 @@
   yum:
     name: '{{ slurm_packages_ohpc }}'
     state: present
+    enablerepo: rhel-7-server-optional-rpms
   tags: install-only
-  when: enable_openhpc == true
+  when: enable_openhpc == true and ansible_distribution == "RedHat"
 
+- name: Install ohpc slurm packages
+  yum:
+    name: '{{ slurm_packages_ohpc }}'
+    state: present
+  tags: install-only
+  when: enable_openhpc == true and ansible_distribution == "CentOS"
 
 - name: Create systemd unit dirs
   file:
@@ -297,7 +304,7 @@
         name: '{{ item }}'
         resource_class: 'systemd'
         resource_type: 'systemd:{{ item }}'
-        options: 'op monitor interval=0 --group Trinity-stack'
+        options: 'op monitor interval=30 --group Trinity-stack'
         state: present
       when: ha|default(False)
       with_items:

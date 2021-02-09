@@ -17,7 +17,16 @@
   yum:
     name: '{{ pacemaker_packages }}'
     state: present
+    enablerepo: rhel-ha-for-rhel-7-server-rpms
   tags: install-only
+  when: ansible_distribution == "RedHat"
+
+- name: Install pacemaker packages
+  yum:
+    name: '{{ pacemaker_packages }}'
+    state: present
+  tags: install-only
+  when: ansible_distribution == "CentOS"
 
 - name: Set up Corosync's configuration file
   template:

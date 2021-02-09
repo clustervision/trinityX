@@ -35,7 +35,14 @@
   yum:
     name: ohpc-base
     state: installed
-  when: ansible_connection not in 'lchroot' and "controllers" in group_names
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names and ansible_distribution == "CentOS"
+
+- name: Install ohpc-base
+  yum:
+    name: ohpc-base
+    state: installed
+    enablerepo: rhel-7-server-optional-rpms
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names and ansible_distribution == "RedHat"
 
 - name: Install ohpc-base-compute
   yum:

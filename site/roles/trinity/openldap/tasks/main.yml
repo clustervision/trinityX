@@ -179,9 +179,10 @@
       failed_when: false
       changed_when: false
 
+        #ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
     - name: Load OpenLDAP local schema
       command: >
-        ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
                              -f /etc/openldap/schema/local_schema.ldif
       ignore_errors: "yes"
       when: ldapsearch.rc == 32
@@ -191,7 +192,7 @@
         name: 'openldap'
         resource_class: 'systemd'
         resource_type: 'systemd:slapd'
-        options: 'op monitor interval=0 --group Trinity-stack'
+        options: 'op monitor interval=30 --group Trinity-stack'
         state: present
       when: ha | default(False)
       tags: pcs
