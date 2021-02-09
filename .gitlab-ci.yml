@@ -1,0 +1,17 @@
+---
+
+stages:
+  - lint
+
+yamllint:
+  image: sdesbure/yamllint
+  stage: lint
+  script:
+    - yamllint -v
+    - apk add --no-cache --wait 10 git
+    - git clone http://gitlab.clustervision.lan/trinityx/molecule.git molecule
+    - find . -name '*.yml' -exec yamllint -c molecule/default/yamllint.yml {} +
+    - find site/
+  allow_failure: true
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive

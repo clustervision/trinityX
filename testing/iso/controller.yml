@@ -1,0 +1,18 @@
+---
+- hosts: all
+  vars:
+    interfaces:
+    - DEVICE: "eth0"
+      BOOTPROTO: "none"
+      IPADDR: "{{ lookup('env', 'HOST_IP') }}"
+      PREFIX: 16
+      NM_CONTROLLED: "no"
+      ZONE: "public"
+      GATEWAY: "{{ lookup('env', 'GATEWAY_IP') }}"
+      DNS1: "10.4.0.1"
+      DNS2: "10.2.0.1"
+  roles:
+  - configure_ssh
+  - configure_interfaces
+  - update_os
+  - create_build_env

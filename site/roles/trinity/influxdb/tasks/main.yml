@@ -1,0 +1,47 @@
+---
+
+- name: Install Influxdata repo
+  yum_repository:
+    name: influxdata-el7
+    baseurl: "{{ influxdata_repo }}"
+    description: Influxdata
+    gpgkey: https://repos.influxdata.com/influxdb.key
+
+- name: Install InfluxDB
+  yum:
+    name: influxdb
+    state: present
+
+- name: Enable and start InfluxDB
+  systemd:
+    name: influxdb
+    state: started
+    enabled: "yes"
+
+- name: Install python2-pip
+  yum:
+    name: python2-pip
+    state: present
+
+- name: Install influxdb pip
+  pip:
+    name: influxdb
+    state: present
+
+- name: Configure influxdb database
+  influxdb_database:
+    hostname: "{{ influxdb_server }}"
+    database_name: "{{ item }}"
+    state: present
+  with_items:
+    - telegraf
+    - slurm
+
+- name: Retention
+  influxdb_retention_policy:
+    hostname: "{{ influxdb_server }}"
+    database_name: telegraf
+    policy_name: 2months
+    duration: 60d
+    replication: 1
+    default: yes

@@ -1,0 +1,57 @@
+---
+# tasks file for rsyslog
+
+- name: Configure listeners
+  blockinfile:
+    path: '/etc/rsyslog.d/{{ item.proto | lower }}-listeners.conf'
+    create: yes
+    owner: root
+    group: root
+    block: |
+      $ModLoad im{{ item.proto | lower }}
+      ${{ 'Input' if item.proto|lower == 'tcp' else '' }}{{ item.proto | upper }}ServerRun {{ item.port }}
+  with_items: '{{ syslog_listeners }}'
+  notify: restart rsyslog
+
+- name: Add template rules
+  template:
+    src: 'template-rule.conf.j2'
+    dest: '/etc/rsyslog.d/template-rule-{{ item.name }}.conf'
+    owner: root
+    group: root
+  with_items: '{{ syslog_file_template_rules }}'
+  notify: restart rsyslog
+  
+- name: Add forwarding rules
+  template:
+    src: 'forwarding.conf.j2'
+    dest: '/etc/rsyslog.d/forwarding-{{ item.name }}.conf'
+    owner: root
+    group: root
+  with_items: '{{ syslog_forwarding_rules }}'
+  notify: restart rsyslog
+
+- name: Add SELinux rules for the forwarding ports
+  seport:
+    ports: '{{ item.port }}'
+    proto: '{{ item.proto }}'
+    setype: syslogd_port_t
+    state: present
+  with_items: '{{ syslog_forwarding_rules }}'
+  when: enable_selinux|default(True)
+  ignore_errors: True
+
+- name: Enable rsyslog service
+  file:
+# service:
+#   name: rsyslog
+#   enabled: yes
+    src: '/usr/lib/systemd/system/rsyslog.service'
+    dest: '/etc/systemd/system/multi-user.target.wants/rsyslog.service'
+    state: link
+
+- name: Start rsyslog daemon
+  service:
+    name: rsyslog
+    state: started
+  when: ansible_connection not in 'lchroot'

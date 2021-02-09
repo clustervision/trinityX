@@ -1,0 +1,34 @@
+---
+# handler file for luna
+
+- name: restart xinetd
+  service:
+    name: xinetd
+    state: restarted
+  when: primary|default(True)
+
+- name: restart dhcpd
+  service:
+    name: dhcpd
+    state: restarted
+  when: primary|default(True)
+
+- name: reload nginx
+  service:
+    name: nginx
+    state: reloaded
+  when: primary|default(True)
+
+- name: restart luna
+  service:
+    name: '{{ item }}'
+    state: restarted
+  with_items:
+    - ltorrent
+    - lweb
+  when: primary|default(True)
+
+- name: reload firewalld
+  service:
+    name: firewalld
+    state: reloaded

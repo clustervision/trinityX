@@ -1,0 +1,21 @@
+---
+# Install additional packages and tunables
+
+- name: Install prereq packages
+  yum:
+    name: "{{ packages_packages }}"
+    state: present
+  tags: install-only
+
+- name: Install additional packages
+  yum:
+    name: "{{ tunables_packages }}"
+    state: present
+  tags: install-only
+
+- name: Install Infiniband support
+  yum:
+    name: "@Infiniband support"
+    state: present
+  when: install_infiniband
+  tags: install-only

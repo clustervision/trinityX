@@ -1,0 +1,42 @@
+#%Module1.0
+#
+# @name: openmpi 
+# @version: 2.0.0
+
+
+# Customize the output of `module help` command
+# ---------------------------------------------
+proc ModulesHelp { } {
+    puts stderr "\tAdds openmpi to your environment variables"
+    puts stderr "\t\t\$PATH, \$MANPATH"
+}
+
+# Customize the output of `module whatis` command
+# -----------------------------------------------
+module-whatis "loads the [module-info name] environment"
+
+# Define internal modulefile variables (Tcl script use only)
+# ----------------------------------------------------------
+set name    openmpi
+set version 2.0.0
+set prefix  {{ prefix }}/applications/${name}/${version}
+
+# Check if the path exists before modifying environment
+# -----------------------------------------------------
+if {![file exists $prefix]} {
+    puts stderr "\t[module-info name] Load Error: $prefix does not exist"
+    break
+    exit 1
+}
+
+# Update common variables in the environment
+# ------------------------------------------
+prepend-path   PATH              $prefix/bin
+prepend-path   LD_LIBRARY_PATH   $prefix/lib
+prepend-path   LIBRARY_PATH      $prefix/lib
+prepend-path   INCLUDE           $prefix/include
+prepend-path   C_INCLUDE_PATH    $prefix/include
+prepend-path   MANPATH           $prefix/share/man
+
+setenv         OPAL_PREFIX       $prefix
+

@@ -1,0 +1,54 @@
+---
+# tasks file for sssd
+
+- name: Install sssd packages
+  yum:
+    name: '{{ sss_packages }}'
+    state: present
+  tags: install-only
+
+- name: Add configuration file to /etc/sssd/sssd.conf
+  template:
+    src: 'sssd.conf.j2'
+    dest: '/etc/sssd/sssd.conf'
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+  notify: restart sssd
+
+- name: Copy CA certificate
+  copy:
+    src: "{{ ssl_ca_cert }}"
+    dest: /etc/openldap/certs/cluster-ca.crt
+  when: ssl_ca_cert is defined
+
+- name: Adjust OpenLDAP client TLS configuration
+  lineinfile:
+    path: '/etc/openldap/ldap.conf'
+    line: 'TLS_CACERT   /etc/openldap/certs/cluster-ca.crt'
+
+- name: Enable sssd service
+  systemd:
+    name: sssd
+    enabled: "yes"
+
+- name: Start sssd service
+  systemd:
+    name: sssd
+    state: started
+  when: ansible_connection not in 'lchroot'
+
+- name: Adding access controler groups to the system
+  shell: 'obol group list | grep {{ item }} || obol group add {{ item }}'
+  register: obol_result
+  with_items: '{{ sss_allowed_groups }}'
+  changed_when: item not in obol_result.stdout
+  when: primary|default(True)
+        and ansible_connection not in 'lchroot'
+        and not compute|default(False)
+        and sss_allowed_groups is defined
+        and sss_allowed_groups is iterable
+
+- name: Setting up the system to use sssd for authentication
+  command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
+  changed_when: false

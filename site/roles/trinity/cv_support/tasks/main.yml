@@ -1,0 +1,67 @@
+---
+# Install support script and configure bash environment
+
+- name: Install needed packages
+  yum:
+    name: '{{ cv_support_packages }}'
+    state: present
+  tags: install-only
+
+- name: Render /root/.bash_profile
+  template:
+    src: bash_profile.j2
+    dest: /root/.bash_profile
+
+- name: Add releaseversion to the controllers
+  lineinfile:
+    path: '/etc/trinityx-release'
+    line: "{{ trix_version }}"
+    state: present
+    create: 'yes'
+  when: primary|default(True)
+
+- name: Add /trinity/site file to the controllers
+  lineinfile:
+    path: '/trinity/site'
+    line: '{{ project_id }}'
+    state: present
+    create: 'yes'
+  when: primary|default(True)
+
+- name: Install diagnostics tools
+  copy:
+    src: "{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: 0755
+    owner: root
+    group: root
+  with_items: "{{ trix_tools }}" 
+
+- name: Configure remote-assistance tunnel service
+  copy:
+    src: "remote-assistance.service"
+    dest: "/etc/systemd/system/remote-assistance.service"
+  notify: reload systemd daemon
+
+- name: Check if there is an existing python3 interpreter
+  stat:
+    path: /usr/bin/python3
+  register: py3_link
+
+- name: Set 3.4 symbolic link
+  file:
+    src: /usr/bin/python3.4
+    dest: /usr/bin/python3
+    state: link
+  when: not py3_link.stat.exists
+
+- name: Configure systemd service
+  systemd:
+    daemon_reload: "yes"
+    name: "remote-assistance.service"
+
+- name: Install MOTD
+  template:
+    src: "motd.j2"
+    dest: /etc/motd
+  when: primary|default(True)

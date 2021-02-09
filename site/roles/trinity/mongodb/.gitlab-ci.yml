@@ -1,0 +1,75 @@
+---
+# * Internal use only *
+# Configuraiton date: 01-Aug-2019
+# Author <matthew.steggink@clustervision.com>
+
+stages:
+  - checkci
+  - molecule
+
+gitlabci:
+  # This phase will detect changes with the current CI/CD testing for roles.
+  # When this fails, the file (thus configuration) differs.
+  image: alpine:latest
+  stage: checkci
+  script:
+    - apk add --no-cache --wait 10 git
+    - git clone http://gitlab.clustervision.lan/trinityx/molecule.git molecule
+    - diff .gitlab-ci.yml molecule/configs/gitlab-ansibleroles-ci.yml
+  allow_failure: true
+
+yamllint:
+  image: sdesbure/yamllint
+  stage: checkci
+  script:
+    - yamllint -v
+    - apk add --no-cache --wait 10 git
+    - git clone http://gitlab.clustervision.lan/trinityx/molecule.git molecule
+    - find . -name '*.yml' -exec yamllint -c molecule/default/yamllint.yml {} +
+  allow_failure: true
+
+molecule:
+  only:
+    - dev
+    - develop
+    - master
+  services:
+    - docker:dind
+  variables:
+    SPACES: 'echo -n " " >> molecule/default/playbook.yml;'
+    ROLENAMESHORT: "${CI_PROJECT_NAME}"
+    ROLENAME: 'echo " - role: ${CI_PROJECT_NAME}" >> molecule/default/playbook.yml'
+    DOCKER_HOST: tcp://192.168.120.210:2375
+    ANSIBLE_LIBRARY: "/root/.ansible/roles/"
+  cache:
+    paths:
+      - .pip/
+      - virtenv/
+  before_script:
+    # - yum clean all
+    # - yum install -y epel-release
+    # - yum install -y git
+    - git clone http://192.168.120.205/trinityx/molecule.git molecule
+    - 'eval $SPACES $SPACES $ROLENAME'
+    - mkdir -p molecule/default/tests
+    - if [ -d molecule/default/testinfra/${ROLENAMESHORT} ]; then
+      cp -a molecule/default/testinfra/${ROLENAMESHORT}/* molecule/default/tests; fi
+    # - yum -y install python python2-pip ansible docker gcc python-devel
+    # - pip install --upgrade pip
+    # - pip install docker-py
+    - pip install virtualenv molecule --ignore-installed PyYAML
+    - virtualenv virtenv
+    - source virtenv/bin/activate
+    - ansible-galaxy install OndrejHome.pcs-modules-2 -p /builds/trinityx
+  # image: centos:7.3.1611
+  image: 192.168.120.210:5000/centos7/7.6.1810
+  stage: molecule
+  tags:
+    - pip
+    - docker
+  script:
+    - docker -v
+    - docker ps
+    - python -V
+    - ansible --version
+    - molecule test

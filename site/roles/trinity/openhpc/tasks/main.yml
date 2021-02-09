@@ -1,0 +1,88 @@
+---
+
+- name: Create trinity/ohpc dir for opt link to point at
+  file:
+    path: '{{ trix_ohpc }}'
+    owner: root
+    group: root
+    state: directory
+    mode: '0755'
+  when: '"controllers" in group_names'
+
+- name: Create link so openhpc ends up on /trinity filesystem
+  file:
+    src: '{{ trix_ohpc }}'
+    path: /opt/ohpc
+    owner: root
+    group: root
+    state: link
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names
+
+
+- name: Install ohpc-release
+  yum:
+    name: https://github.com/openhpc/ohpc/releases/download/v1.3.GA/ohpc-release-1.3-1.el7.x86_64.rpm
+    state: installed
+
+- name: Ensure conflicting rpms from legacy TrinityX are not installed
+  yum:
+    name:
+      - pdsh
+      - environment-modules
+    state: removed
+
+- name: Install ohpc-base
+  yum:
+    name: ohpc-base
+    state: installed
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names
+
+- name: Install ohpc-base-compute
+  yum:
+    name: ohpc-base-compute
+    state: installed
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names
+
+- name: Install lmod dependencies on non-controller nodes
+  yum:
+    name:
+      - lua-filesystem-ohpc
+      - lua-posix-ohpc
+      - lua-bit-ohpc
+    state: installed
+  when: ansible_connection in 'lchroot' or "controllers" not in group_names
+
+- name: Create symlinks for pdsh and pdcp
+  file:
+    dest: "/usr/bin/{{ item }}"
+    src: "/opt/ohpc/admin/pdsh/bin/{{ item }}"
+    state: link
+    force: yes
+    follow: no
+  with_items:
+    - pdsh
+    - pdcp
+
+- name: Install lmod-ohpc
+  yum:
+    name: lmod-ohpc
+    state: installed
+  when: ansible_connection in 'lchroot' or "controllers" not in group_names
+
+
+- name: Update NFS exports
+  template:
+    src: OHPC_exports.j2
+    dest: '{{ nfs_exports_path }}/ohpc.exports'
+  when: primary | default(True) and ansible_connection not in 'lchroot'
+  notify:
+    - Export NFS
+
+- file:
+    src: '{{ nfs_exports_path }}/ohpc.exports'
+    dest: '/etc/exports.d/ohpc.exports'
+    state: link
+    force: "yes"
+  when: primary | default(True) and ansible_connection not in 'lchroot'
+  notify:
+    - Export NFS

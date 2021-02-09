@@ -1,0 +1,172 @@
+---
+# This file contains variables that are global to all playbooks
+# in this repository.
+
+# Trinity version number
+
+trix_version: '12.0u2'
+
+
+# Project ID or string that'll show up in the default
+# prompt on the controllers.
+
+project_id: '000000'
+
+
+# Do we want HA?
+# Set to 'False' to disable HA, set to 'True' to enable it.
+
+ha: false
+
+
+# Should we use content of the installation CD/USB-stick
+# to install TrinityX
+
+local_install: false
+
+# Should Infiniband support packages be installed on the controller and images
+install_infiniband: false 
+
+# A domain name to be assigned to the controller(s) and nodes
+# on the internal network.
+# Luna's provisioning network name will be set to the same value.
+
+trix_domain: cluster
+
+# Default hostname and IP for the controller
+# In an HA pair, those are the hostname and IP for the first controller.
+# Those variables are required, with or without HA.
+
+trix_ctrl1_ip: 10.141.255.254
+trix_ctrl1_bmcip: 10.148.255.254
+trix_ctrl1_heartbeat_ip: 10.146.255.254
+trix_ctrl1_hostname: controller1 
+
+# In a non-HA setup, all of the following variables will be ignored:
+# - the variables for CTRL will be set to the same as CTRL1;
+# - the variables for CTRL2 will be ignored.
+
+# Hostname and IP of the second controller
+
+trix_ctrl2_ip: 10.141.255.253
+trix_ctrl2_bmcip: 10.148.255.253
+trix_ctrl2_heartbeat_ip: 10.146.255.253
+trix_ctrl2_hostname: controller2
+
+# Floating hostname and IP
+
+trix_ctrl_ip: 10.141.255.252
+trix_ctrl_hostname: controller
+
+# Internal network definitions and the DHCP range used to to PXE boot
+# the compute nodes.
+
+trix_cluster_net: 10.141.0.0
+trix_cluster_netprefix: 16
+trix_cluster_dhcp_start: 10.141.128.0
+trix_cluster_dhcp_end: 10.141.140.0
+
+
+# Path to which the standard TrinityX files will be installed.
+# If not set, it will default to /trinity
+
+trix_root: '/trinity'
+
+# The TrinityX root contains multiple subdirectories for different uses:
+# - trix_images For the compute node images
+# - trix_shared for everything shared by the controllers to the nodes
+# - trix_local for configuration files specific to each machine
+# - trix_home for the user home directories
+#
+# By default those exist under trix_root. There are some cases where this is not
+# desirable; the following variables allow you to override the default paths.
+# WARNING: use with caution! It's not well tested and there may be some issues
+# here and there...
+
+trix_images: '{{ trix_root }}/images'
+trix_shared: '{{ trix_root }}/shared'
+trix_local: '{{ trix_root }}/local'
+trix_home: '{{ trix_root }}/home'
+trix_repos: '{{ trix_root }}/repos'
+trix_ohpc: '{{ trix_root }}/ohpc'
+
+# Backend type and block device to use for the specified backend.
+
+shared_fs_type: 'drbd'
+shared_fs_device: '/dev/vdb'
+
+# Default search domains to be added to /etc/resolv.conf
+
+resolv_search_domains: '{{ trix_domain }} ipmi'
+
+# Default firewalld configuration
+# Only public tcp/udp ports are allowed on the public interfaces
+# whereas everything is allowed on the trusted interfaces
+
+firewalld_public_interfaces: [ens3]
+firewalld_trusted_interfaces: [ens6]
+firewalld_public_tcp_ports: [22, 443]
+firewalld_public_udp_ports: []
+
+
+# All of the following are variables that override values for roles
+# that are only applied as a dependency for another role.
+
+# Default MongoDB data path. Dependency of the luna role.
+
+mongo_db_path: '{{ trix_local }}/var/lib/mongodb'
+
+
+# Path in which the generated certificates for the cluster will be installed.
+# ssl_cert_group refers to the UNIX group that has read access to the certs.
+
+ssl_cert_path: '{{ trix_local }}/etc/ssl'
+ssl_ca_cert: '{{ ssl_cert_path }}/cluster-ca.crt'
+ssl_cert_group: ssl
+
+
+# The following variables give the ability to enable or disable
+# certain features in TrinityX:
+
+# Whether or not to enable SELinux throughout the cluster
+
+enable_selinux: true 
+
+# Whether or not to enable Slurm PAM module
+# If enabled, sssd's ldap filters will be disabled on the compute nodes
+
+enable_slurm_pam: true
+
+# Whether or not to configure the corosync heartbeat link (ring 1)
+
+enable_heartbeat_link: true
+
+# Install docker daemon, registry and utilities on the cluster
+
+enable_docker: false
+
+# List of additional environment modules to install
+
+additional_env_modules: []
+
+# Install userspace packages from OpenHPC project
+
+enable_openhpc: true
+
+# Default workload manager. Currently supported are:
+# - slurm
+# - pbspro
+
+workload_manager: 'slurm'
+
+# Local yum repository
+
+trix_local_reponame: 'trinityx-local'
+repos_port: 8080
+trix_local_repo_baseurl: 'http://{{ trix_ctrl_ip }}:{{ repos_port }}/repos/trinityx/'
+
+# Repositories to use
+
+luna_repo: 'https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo'
+trinity_repo: 'https://updates.clustervision.com/trinity/10.2/centos/trinity.repo'
+elrepo_repo: 'http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm'

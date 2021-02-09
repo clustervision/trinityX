@@ -1,0 +1,34 @@
+---
+
+- name: Install rdma packages
+  yum:
+    name: '{{ rdma_centos_packages }}'
+    state: present
+  tags: install-only
+
+#- name: Enable rdma services
+#  service:
+#    name: '{{ item }}'
+#    state: started
+#    enabled: yes
+#  with_items:
+#    - rdma
+#    - rdma-ndd
+ 
+- name: Enable rdma services
+  file:
+    src: '{{ item.src }}'
+    dest: '{{ item.dest }}'
+    state: link
+  with_items:
+    - { src: '/usr/lib/systemd/system/rdma.service', dest: '/etc/systemd/system/multi-user.target.wants/rdma.service' }
+    - { src: '/usr/lib/systemd/system/rdma-ndd.service', dest: '/etc/systemd/system/multi-user.target.wants/rdma-ndd.service' }
+
+- name: Start rdma services
+  service:
+    name: '{{ item }}'
+    state: started
+  with_items:
+    - rdma
+    - rdma-ndd
+  when: ansible_connection not in 'lchroot'

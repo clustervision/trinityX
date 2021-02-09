@@ -1,0 +1,56 @@
+---
+# tasks file for docker
+
+- name: Install docker packages
+  yum:
+    name: '{{ docker_packages }}'
+    state: present
+  tags: install-only
+
+- name: Disable the default docker0 bridge on compute nodes
+  lineinfile:
+    path: '/etc/sysconfig/docker-network'
+    line: 'DOCKER_NETWORK_OPTIONS="--bridge=none"'
+  when: ansible_connection in 'lchroot'
+        or compute|default(False)
+  notify: restart docker
+
+- name: Compile mpi-drun tools
+  shell: 'gcc -O2 -o /usr/local/bin/mpi-drun {{ role_path }}/files/mpi-drun.c'
+  args:
+    creates: '/usr/local/bin/mpi-drun'
+  delegate_to: localhost
+
+- name: Copy mpi-drun over
+  copy:
+    src: '/usr/local/bin/mpi-drun'
+    dest: '/usr/local/bin/mpi-drun'
+
+- name: Update mpi-drun permissions
+  file:
+    path: '/usr/local/bin/mpi-drun'
+    mode: '4755'
+
+- name: Install mpi-drun dependencies
+  copy:
+    src: '{{ item.0 }}'
+    dest: '/usr/local/bin/{{ item.0 }}'
+    mode: '{{ item.1 }}'
+  with_together:
+    - [ 'mpi-drun.sh', 'mpi-dclean']
+    - [ '0755', '0700' ]
+
+- name: Enable docker service
+  file:
+# service:
+#   name: docker
+#   enabled: yes
+    src: '/usr/lib/systemd/system/docker.service'
+    dest: '/etc/systemd/system/multi-user.target.wants/docker.service'
+    state: link
+
+- name: Start docker daemon
+  service:
+    name: docker
+    state: started
+  when: ansible_connection not in 'lchroot'
