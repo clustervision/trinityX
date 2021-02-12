@@ -259,6 +259,17 @@
         - acct_gather.conf
       notify: restart slurm
 
+    - name: Place epi/prolog
+      copy:
+        src: '{{ item }}'
+        dest: '{{ slurm_conf_path }}/{{ item }}'
+        force: "no"
+        mode: 0755
+      with_items:
+        - epilog.sh
+        - prolog.sh
+      notify: restart slurm
+
     - name: Render slurm.conf and slurmdbd.conf
       template:
         src: '{{ item.0 }}.j2'
@@ -382,6 +393,15 @@
       systemd:
         name: slurm-stats.timer
         state: started
+
+    - name: Enable slurm pam controls for computations on controller
+      copy:
+        src: pam-slurm 
+        dest: /etc/pam.d/slurm
+        owner: root
+        group: root
+        mode: 0644
+      when: enable_slurm_pam
 
   when: primary|default(True)
         and ansible_connection not in 'lchroot'
