@@ -168,13 +168,12 @@
 - block:
 
     - name: Enable slurm compute services
-      file:
-        src: '{{ item.src }}'
-        dest: '{{ item.dest }}'
-        state: link
+      systemd:
+        name: '{{ item }}'
+        enabled: yes
       with_items:
-        - {src: '/usr/lib/systemd/system/munge.service', dest: '/etc/systemd/system/multi-user.target.wants/munge.service'}
-        - {src: '/usr/lib/systemd/system/slurmd.service', dest: '/etc/systemd/system/multi-user.target.wants/slurmd.service'}
+        - slurmd
+        - munge
 
     - name: Update PAM configuration to enable slurm pam controls
       copy:
