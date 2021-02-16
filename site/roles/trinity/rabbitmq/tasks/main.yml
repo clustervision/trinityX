@@ -1,0 +1,69 @@
+---
+
+- name: Install RabbitMQ Repo
+  yum_repository:
+    name: CV-RabbitMQ
+    description: RabbitMQ Server repository
+    baseurl: https://dl.bintray.com/rabbitmq/rpm/rabbitmq-server/v3.8.x/el/7
+    gpgkey: https://dl.bintray.com/rabbitmq/Keys/rabbitmq-release-signing-key.asc
+
+- name: Install erlang repo
+  yum_repository:
+    name: CV-erlang-22
+    description: Erlang 22 repository
+    baseurl: https://dl.bintray.com/rabbitmq-erlang/rpm/erlang/22/el/7
+    gpgkey: https://dl.bintray.com/rabbitmq/Keys/rabbitmq-release-signing-key.asc
+
+- name: Install RabbitMQ Server
+  yum:
+    name: rabbitmq-server
+    state: installed
+
+- name: Set erlang cookie
+  copy:
+    src: erlang.cookie
+    dest: /var/lib/rabbitmq/.erlang.cookie
+    owner: rabbitmq
+    group: rabbitmq
+    mode: '0400'
+  notify: restart rabbitmq-server
+
+- name: Enables the rabbitmq_management plugin
+  rabbitmq_plugin:
+    names: rabbitmq_management
+    state: enabled
+
+- name: Open firewall port for rabbitmq traffic
+  firewalld:
+    port: 5672/tcp
+    state: enabled
+    permanent: yes
+    immediate: yes
+
+- name: Open firewall port for rabbitmq_management
+  firewalld:
+    port: 15672/tcp
+    state: enabled
+    permanent: yes
+    immediate: yes
+
+- name: Open firewall port for rabbitmq traffic
+  firewalld:
+    port: "{{ item }}"
+    state: enabled
+    permanent: yes
+    immediate: yes
+  with_items:
+    - 4369/tcp
+    - 25672/tcp
+
+- name: Start and enable rabbitmq-server
+  systemd:
+    name: rabbitmq-server
+    state: started
+
+- name: make sure rabbitmq app is up
+  command: rabbitmqctl start_app
+  changed_when: False
+
+- include_tasks: setup_rabbitmq.yml

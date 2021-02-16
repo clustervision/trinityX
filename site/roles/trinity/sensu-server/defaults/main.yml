@@ -1,0 +1,70 @@
+---
+
+sensu_mailer:
+  mailer:
+    admin_gui: "https://{{ trix_ctrl_hostname }}"
+    mail_from: "Monitoring <noreply@monitoring.com>"
+    mail_to: noreply@monitoring.com
+    smtp_address: localhost
+    smtp_port: 25
+    template: "/etc/sensu/mailer.erb"
+    content_type: html
+
+sensu_handlers:
+  handlers:
+    mailer:
+      type: pipe
+      command: /opt/sensu/embedded/bin/handler-mailer.rb
+      filters:
+      - recurrences
+  filters:
+    recurrences:
+      attributes:
+        occurrences: "eval: value == 1 || value % 60 == 0"
+
+sensu_server_gems:
+  - name: sensu-plugins-mailer
+    state: present
+
+sensu_client_checks:
+  linux:
+    fstab:
+      command: "check-fstab-mounts.rb :::mounts.extraoptions|:::"
+    cpu_idle:
+      command: "check-cpu.rb --idle --less_than -w :::cpuidle.warning|20::: -c :::cpuidle.critical|10::: :::cpuidle.extraoptions|:::"
+    cpu_iowait:
+      command: "check-cpu.rb --iowait -w :::cpuiowait.warning|20::: -c :::cpuiowait.critical|40::: :::cpuiowait.extraoptions|:::"
+    cpu_steal:
+      command: "check-cpu.rb --steal -w :::cpusteal.warning|20::: -c :::cpusteal.critical|40::: :::cpusteal.extraoptions|:::"
+    cpu_system:
+      command: "check-cpu.rb --system -w :::cpusystem.warning|25::: -c :::cpusystem.critical|50::: :::cpusystem.extraoptions|:::"
+    entropy:
+      command: "check-entropy.rb :::entropy.extraoptions|:::"
+    filesystem_local_usage:
+      command: "check-disk-usage.rb -i /var/log/audit -x nsfs -t xfs,ext2,ext3,ext4,zfs,ntfs,reiserfs,ufs,vfat -w :::filesystemlocalusage.warning|80::: -c :::filesystemlocalusage.critical|90::: :::filesystemlocalusage.extraoptions|:::"
+    filesystem_remote_usage:
+      command: "check-disk-usage.rb -x nsfs,xfs,ext2,ext3,ext4,zfs,ntfs,reiserfs,ufs,vfat,tmpfs,sysv,proc,debugfs,cgmfs,tracefs,rootfs,overlay -w :::filesystemremoteusage.warning|80::: -c :::filesystemremoteusage.critical|90::: :::filesystemremoteusage.extraoptions|:::"
+    load:
+      command: "check-load.rb :::load.extraoptions|:::"
+    memory_percent:
+      command: "check-memory-percent.rb -p -w :::memorypercent.warning|80::: -c :::memorypercent.critical|90::: :::memorypercent.extraoptions|:::"
+    swap_percent:
+      command: "check-swap-percent.rb -w :::swappercent.warning|80::: -c :::swappercent.critical|90::: :::swappercent.extraoptions|:::"
+    time_offset:
+      command: "check-chrony.rb --warn-stratum :::ntpoffset.warnstratum|7::: --crit-stratum :::ntpoffset.critstratum|9::: --crit-offset :::ntpoffset.critical|100::: --warn-offset :::ntpoffset.critical|250::: :::ntpoffset.extraoptions|:::"
+    console_users:
+      command: "WHO=`who | grep tty`; if [ $? == 0 ]; then echo \\\"WARNING Console user active: User `echo ${WHO} | awk '{ print $1 }'` is still logged on to the console.\\\"; exit 1; else echo \\\"OK: No users logged onto the console.\\\"; fi"
+    tcp_connections:
+      command: "check-netstat-tcp.rb -c :::tcpconnections.critical|1000::: -w :::tcpconnections.warning|800::: :::tcpconnections.extraoptions|:::"
+  systemd:
+    systemd_check:
+      command: "check-systemd.rb -s :::systemd.services:::"
+  rabbitmq:
+    rabbitmq-alive:
+      command: "check-rabbitmq-alive.rb :::rabbitmqalive.extraoptions|:::"
+    rabbitmq-cluster-health:
+      command: "check-rabbitmq-cluster-health.rb :::rabbitmqclusterhealth.extraoptions|:::"
+    rabbitmq-messages:
+      command: "check-rabbitmq-messages.rb :::rabbitmqmessages.extraoptions|:::"
+    rabbitmq-node-health:
+      command: "check-rabbitmq-node-health.rb :::rabbitmqnodehealth.extraoptions|:::"

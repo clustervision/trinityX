@@ -1,0 +1,43 @@
+---
+- name: Install Sensu Repo (CV)
+  yum_repository:
+    name: CV-Sensu
+    description: ClusterVision Sensu Repository
+    baseurl: https://updates.clustervision.com/mirror/sensu-centos7
+    gpgkey: https://updates.clustervision.com/mirror/sensu-pubkey.gpg
+
+- name: Install Sensu
+  yum:
+    name: sensu
+    state: installed
+
+- name: Install Sensu plugins
+  gem:
+    executable: /opt/sensu/embedded/bin/gem
+    state: "{{ item.state }}"
+    name: "{{ item.name }}"
+    version: "{{ item.version | default() }}"
+    pre_release: "{{ item.pre_release | default('no') }}"
+    repository: "{{ item.repository | default('') }}"
+    user_install: no
+  with_items: "{{ sensu_client_gems }}"
+
+- name: Place configuration files
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/sensu/conf.d/{{ item }}"
+    owner: sensu
+    group: sensu
+  notify:
+   - restart sensu-client
+  with_items:
+    - rabbitmq.json
+    - client.json
+
+- name: Start sensu client
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  with_items:
+    - sensu-client
