@@ -11,6 +11,12 @@
     name: sensu
     state: installed
 
+- name: Install plugins prerequisites
+  yum:
+    name: "{{ item.yumprereq | default('sensu') }}"
+    state: installed
+  with_items: "{{ sensu_client_gems }}"
+
 - name: Install Sensu plugins
   gem:
     executable: /opt/sensu/embedded/bin/gem
