@@ -32,13 +32,18 @@
   template:
     src: "{{ item }}.j2"
     dest: "/etc/sensu/conf.d/{{ item }}"
-    owner: sensu
-    group: sensu
+    owner: {{ sensu_user }} 
+    group: {{ sensu_group }}
   notify:
    - restart sensu-client
   with_items:
     - rabbitmq.json
     - client.json
+
+- name: Enable sensu sudoers
+  template:
+    src: "sensu-sudo.j2"
+    dest: "/etc/sudoers.d/sensu"
 
 - name: Start sensu client
   systemd:
