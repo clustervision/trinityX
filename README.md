@@ -1,2 +1,0 @@
-# trinityx-combined
-
