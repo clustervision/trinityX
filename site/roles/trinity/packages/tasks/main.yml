@@ -35,3 +35,15 @@
     state: present
   when: install_infiniband
   tags: install-only
+  with_items: '{{ tunables_packages }}'
+
+- name: Enable haveged service
+  service:
+    name: haveged
+    enabled: yes
+
+- name: Start haveged service
+  service:
+    name: haveged
+    state: started
+  when: ansible_connection not in 'lchroot'
