@@ -33,10 +33,32 @@
 ## Workaround until it's fixed.
 ##
 
+- name: Create yum base directory
+  file:
+    path: "{{ image_path }}/etc/yum/vars/"
+    state: directory
+  when: ansible_distribution == "RedHat"
+
 - name: Add releasever variable
   copy:
-    content: "{{ ansible_distribution_major_version }}\n"
+    content: "7Server\n"
     dest: "{{ image_path }}/etc/yum/vars/releasever"
+  when: ansible_distribution != "CentOS"
+
+- name: Add releasever variable
+  copy:
+    content: "7Server\n"
+    dest: "{{ image_path }}/etc/yum/vars/releasever"
+  when: ansible_distribution == "RedHat"
+
+- name: Touch config files for RedHat 
+  file:
+    path: "{{ item }}"
+    state: touch
+  with_items:
+    - /etc/sysconfig/network
+    - /etc/resolv.conf
+  when: ansible_distribution == "RedHat"
 
 - name: Install {{ os_release_rpm.stdout }} package in {{ image_path }}
   yum:
@@ -44,6 +66,17 @@
     #releasever: "{{ ansible_distribution_major_version }}"
     installroot: "{{ image_path }}"
     state: present
+
+- name: Install yum package in {{ image_path }}
+  yum:
+    name: yum
+    installroot: "{{ image_path }}"
+    state: present
+
+- synchronize:
+    src: "/etc/pki/"
+    dest: "{{ image_path }}/etc/pki/"
+  when: ansible_distribution == "RedHat"
 
 - name: Create {{ image_path }}/dev
   file:
@@ -95,7 +128,7 @@
 
 - name: Install epel manually
   yum:
-    name: epel-release
+    name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
     installroot: "{{ image_path }}"
     state: present
 
@@ -111,6 +144,18 @@
     name: "{{ image_core_packages }}"
     state: present
     installroot: "{{ image_path }}"
+
+- name: Install missing elfutils-libs on RedHat
+  yum:
+    name: "elfutils-libs"
+    state: present
+    installroot: "{{ image_path }}"
+  when: ansible_distribution == "RedHat"
+
+- name: Add dracut.conf.d entries
+  template:
+    src: trinity.conf.j2
+    dest: "{{ image_path}}/etc/dracut.conf.d/"
 
 #- name: Copy gpg keys
 #  copy:

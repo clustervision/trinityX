@@ -16,19 +16,24 @@
 #    - rdma-ndd
  
 - name: Enable rdma services
-  file:
-    src: '{{ item.src }}'
-    dest: '{{ item.dest }}'
-    state: link
+  systemd:
+    name: '{{ item }}'
+    enabled: yes
   with_items:
-    - { src: '/usr/lib/systemd/system/rdma.service', dest: '/etc/systemd/system/multi-user.target.wants/rdma.service' }
-    - { src: '/usr/lib/systemd/system/rdma-ndd.service', dest: '/etc/systemd/system/multi-user.target.wants/rdma-ndd.service' }
+    - rdma
+    - rdma-ndd
 
 - name: Start rdma services
-  service:
+  systemd:
     name: '{{ item }}'
     state: started
   with_items:
     - rdma
     - rdma-ndd
   when: ansible_connection not in 'lchroot'
+
+- name: Place i40iw blacklist
+  template:
+    src: i40.conf.j2 
+    dest: /etc/modprobe.d/i40.conf
+  when: install_infiniband

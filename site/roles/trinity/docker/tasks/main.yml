@@ -41,16 +41,12 @@
     - [ '0755', '0700' ]
 
 - name: Enable docker service
-  file:
-# service:
-#   name: docker
-#   enabled: yes
-    src: '/usr/lib/systemd/system/docker.service'
-    dest: '/etc/systemd/system/multi-user.target.wants/docker.service'
-    state: link
+  systemd:
+    name: docker
+    enabled: yes
 
 - name: Start docker daemon
-  service:
+  systemd:
     name: docker
     state: started
   when: ansible_connection not in 'lchroot'

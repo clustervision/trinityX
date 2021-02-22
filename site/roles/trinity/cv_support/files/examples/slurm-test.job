@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH -t 12:00:00
+#SBATCH -o test-%j.out
+#SBATCH -J CPU
+#SBATCH -n 16
+#SBATCH -N 1
+#SBATCH -p defq
+echo "Execution is `date`"
+echo "On `hostname`"
+
+echo "CPU's: `grep -c processor /proc/cpuinfo`"
+
+module load gnu8 openmpi3 openblas
+export OMP_NUM_THREADS=1
+
+mpirun ./hello_mpi
