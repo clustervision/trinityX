@@ -74,9 +74,16 @@
   yum:
     name: '{{ slurm_packages_ohpc }}'
     state: present
+    enablerepo: rhel-7-server-optional-rpms
   tags: install-only
-  when: enable_openhpc == true
+  when: enable_openhpc == true and ansible_distribution == "RedHat"
 
+- name: Install ohpc slurm packages
+  yum:
+    name: '{{ slurm_packages_ohpc }}'
+    state: present
+  tags: install-only
+  when: enable_openhpc == true and ansible_distribution == "CentOS"
 
 - name: Create systemd unit dirs
   file:
@@ -161,13 +168,12 @@
 - block:
 
     - name: Enable slurm compute services
-      file:
-        src: '{{ item.src }}'
-        dest: '{{ item.dest }}'
-        state: link
+      systemd:
+        name: '{{ item }}'
+        enabled: yes
       with_items:
-        - {src: '/usr/lib/systemd/system/munge.service', dest: '/etc/systemd/system/multi-user.target.wants/munge.service'}
-        - {src: '/usr/lib/systemd/system/slurmd.service', dest: '/etc/systemd/system/multi-user.target.wants/slurmd.service'}
+        - slurmd
+        - munge
 
     - name: Update PAM configuration to enable slurm pam controls
       copy:
@@ -252,6 +258,17 @@
         - acct_gather.conf
       notify: restart slurm
 
+    - name: Place epi/prolog
+      copy:
+        src: '{{ item }}'
+        dest: '{{ slurm_conf_path }}/{{ item }}'
+        force: "no"
+        mode: 0755
+      with_items:
+        - epilog.sh
+        - prolog.sh
+      notify: restart slurm
+
     - name: Render slurm.conf and slurmdbd.conf
       template:
         src: '{{ item.0 }}.j2'
@@ -297,7 +314,7 @@
         name: '{{ item }}'
         resource_class: 'systemd'
         resource_type: 'systemd:{{ item }}'
-        options: 'op monitor interval=0 --group Trinity-stack'
+        options: 'op monitor interval=30 --group Trinity-stack'
         state: present
       when: ha|default(False)
       with_items:
@@ -375,6 +392,15 @@
       systemd:
         name: slurm-stats.timer
         state: started
+
+    - name: Enable slurm pam controls for computations on controller
+      copy:
+        src: pam-slurm 
+        dest: /etc/pam.d/slurm
+        owner: root
+        group: root
+        mode: 0644
+      when: enable_slurm_pam
 
   when: primary|default(True)
         and ansible_connection not in 'lchroot'

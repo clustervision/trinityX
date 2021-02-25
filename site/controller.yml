@@ -9,9 +9,15 @@
     - role: trinity/init
       tags: init
 
+    - role: trinity/sensu-client
+      tags: monitoring
+
     - role: trinity/local_repo
       tags: local_repo
       when: local_install
+
+    - role: trinity/trix-tree
+      tags: trix-tree
 
     - role: trinity/repos
       repos:
@@ -64,8 +70,9 @@
       when: ha
       tags: drbd
 
-    - role: trinity/trix-tree
-      tags: trix-tree
+    - role: trinity/beegfs
+      when: ha and beegfs
+      tags: beegfs
 
     - role: trinity/nfs
       nfs_rpccount: 256
@@ -195,6 +202,12 @@
     - role: trinity/telegraf
       tags: monitoring
       influxdb_server: "{{ trix_ctrl_ip }}"
+
+    - role: trinity/rabbitmq
+      tags: monitoring
+
+    - role: trinity/sensu-server
+      tags: monitoring
 
     - role: trinity/influxdb
       tags: monitoring

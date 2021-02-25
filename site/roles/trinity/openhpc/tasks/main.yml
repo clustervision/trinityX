@@ -35,7 +35,14 @@
   yum:
     name: ohpc-base
     state: installed
-  when: ansible_connection not in 'lchroot' and "controllers" in group_names
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names and ansible_distribution == "CentOS"
+
+- name: Install ohpc-base
+  yum:
+    name: ohpc-base
+    state: installed
+    enablerepo: rhel-7-server-optional-rpms
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names and ansible_distribution == "RedHat"
 
 - name: Install ohpc-base-compute
   yum:
@@ -69,6 +76,10 @@
     state: installed
   when: ansible_connection in 'lchroot' or "controllers" not in group_names
 
+- name: Install profile for modules
+  template:
+    src: z_trinityx.sh.j2
+    dest: /etc/profile.d/z_trinityx.sh
 
 - name: Update NFS exports
   template:

@@ -11,7 +11,16 @@
   yum:
     name: "{{ tunables_packages }}"
     state: present
+    enablerepo: rhel-7-server-optional-rpms
   tags: install-only
+  when: ansible_distribution == "RedHat"
+
+- name: Install additional packages
+  yum:
+    name: "{{ tunables_packages }}"
+    state: present
+  tags: install-only
+  when: ansible_distribution == "CentOS"
 
 - name: Install Infiniband support
   yum:
@@ -19,3 +28,21 @@
     state: present
   when: install_infiniband
   tags: install-only
+
+- name: Install Infiniband support (compat)
+  yum:
+    name: compat-opensm-libs
+    state: present
+  when: install_infiniband
+  tags: install-only
+
+- name: Enable haveged service
+  service:
+    name: haveged
+    enabled: yes
+
+- name: Start haveged service
+  service:
+    name: haveged
+    state: started
+  when: ansible_connection not in 'lchroot'

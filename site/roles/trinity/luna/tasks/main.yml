@@ -44,6 +44,14 @@
   yum:
     name: '{{ luna_packages }}'
     state: present
+  when: ansible_distribution == "CentOS"
+
+- name: Install luna packages
+  yum:
+    name: '{{ luna_packages }}'
+    state: present
+    enablerepo: rhel-7-server-optional-rpms
+  when: ansible_distribution == "RedHat"
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
@@ -226,7 +234,7 @@
       name: '{{ item }}'
       resource_class: 'systemd'
       resource_type: 'systemd:{{ item }}'
-      options: 'op monitor interval=0 --group Trinity-stack'
+      options: 'op monitor interval=30 --group Trinity-stack'
       state: present
     when: ha | default(False)
     with_items:
@@ -239,7 +247,7 @@
       name: '{{ item }}'
       resource_class: 'systemd'
       resource_type: 'systemd:{{ item }}'
-      options: 'op monitor interval=0 op start timeout=120 --group Trinity-stack'
+      options: 'op monitor interval=30 op start timeout=120 --group Trinity-stack'
       state: present
     when: ha | default(False)
     with_items:
