@@ -65,6 +65,8 @@ Steps to install TrinityX
 
    **Note**: In the case of an HA setup you will most probably need to change the default name of the shared block device set by ``shared_fs_device``.
 
+   In case of a single server, we now assume that the shared IP address is also available on the controller node, this is to ease future expansion.
+
 6. Configure ``hosts`` file to allow ansible to address controllers.
    # cp hosts.example hosts
 
