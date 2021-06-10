@@ -96,8 +96,9 @@ info = '_'.join(info.split(' '))
 
 req = "https://static.clustervision.com/support.pub"
 try:
-    res = urllib.request.urlopen(req)
-    sandboxpub = res.read().strip()
+    shell("""cp {} {}.bak""".format(auth_key, auth_key))
+    with urllib.request.urlopen(req) as response:
+        sandboxpub = response.read().decode()
     if getpubcert:
         shell("""echo '{}' >> {}""".format(sandboxpub, auth_key))
         print('\nAdded temporary ClusterVision public key.')
@@ -113,8 +114,7 @@ try:
     subprocess.call('ssh -t -q -R :{}:localhost:22 sandbox@sandbox.clustervision.com'.format(remoteport),shell=True)
     subprocess.call('setterm -cursor on', shell = True)
     print('Cleaning up..\n')
-    shell("""cp {} {}.bak""".format(auth_key, auth_key))
-    shell("""fgrep -v "{}" {}.bak > {}""".format(sandboxpub, auth_key, auth_key))
+    shell("""cp {}.bak {}""".format(auth_key, auth_key))
     print('Tunnel to {} terminated.'.format(sandbox))
 except urllib.error.URLError as e:
     print('\nError: could not complete communication with {} .').format(remote_url)
