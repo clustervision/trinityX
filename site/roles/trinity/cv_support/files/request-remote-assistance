@@ -103,8 +103,8 @@ if shell_exit_status('ping -c1 {}'.format(sandbox)) != 0:
 
 req = "https://static.clustervision.com/support.pub"
 try:
-    res = urllib.request.urlopen(req)
-    sandboxpub = res.read().strip()
+    with urllib.request.urlopen(req) as response:
+        sandboxpub = response.read().decode()
     if getpubcert:
         shell("""echo '{}' >> {}""".format(sandboxpub, auth_key))
         print('\nAdded temporary ClusterVision public key.')
