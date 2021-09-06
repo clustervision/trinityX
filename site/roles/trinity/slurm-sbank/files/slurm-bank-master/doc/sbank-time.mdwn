@@ -1,0 +1,116 @@
+# NAME
+
+sbank time - time calculator
+
+# SYNOPSIS
+
+sbank time *subcommand* [OPTION]...
+
+# DESCRIPTION
+
+Collection of shell scripts for estimating amount of time for a given
+set of nodes, ntasks, cores and time and converting a slurm time string
+to hours.
+
+TIME can be one of the following formats (integer values only):
+
+	days-hours:minutes:seconds
+	days-hours:minutes
+	days-hours
+	hours:minutes:seconds
+	minutes:seconds
+	minutes
+
+* calc - convert slurm time string to hours
+
+  -h
+
+  show help message
+
+  -t TIME
+
+  Specify time to convert
+
+
+* estimate - estimate the number of hours for a given number of tasks,
+nodes, cores and wall time hours.
+
+  -h
+
+  show help message
+
+  -N, --nodes
+
+  Specify the number nodes, this option conflicts with ntasks, and
+  requires that the number of cores per node must be specified.
+
+  -n, --ntasks
+
+  Specify the number of tasks, this option conflicts with nodes and does
+  not require that
+
+  -c, --cores
+
+  Specify the number of cores per node, this option is required for
+  nodes and has no effect for ntasks.
+
+  -t, --time
+
+  Specify the time in walltime in the units of hours, it must be an
+  integer value and non-negative.
+
+* estimatescript - estimate the number of CPU hours by parsing a sbatch
+script for time and core/node values
+
+  -h
+
+  show help message
+
+  -s, --scriptname
+
+  Specify the sbatch script name. It must exist, and be readable.
+
+  -v, --verbose
+
+  Specify verbose output
+
+
+# EXAMPLES
+
+Convert the slurm time '4-00:00:00' to hours
+
+	sbank time calc -t 4-00:00:00
+
+Estimate how many hours needed for 4 nodes each with 8 cores for 24hrs
+of wall time
+
+	sbank time estimate -N 4 -c 8 -t 24
+
+Estimate how many hours needed for 32 tasks for 4 days
+
+	sbank time estimate -n 32 -t 96
+
+Chaining the two commands together
+
+	sbank time estimate -n 32 -t $(sbank time calc -t 4-00:00:00)
+
+Check the estimated CPU hours from a script
+
+	sbank time estimatescript -s ~/job.sh
+
+
+# SEE ALSO
+
+* [[sbank]](1)
+* [[sbank-balance]](1)
+* [[sbank-deposit]](1)
+
+# AUTHOR
+
+Paddy Doyle <paddy@tchpc.tcd.ie>
+Jimmy Tang <jtang@tchpc.tcd.ie>
+
+# COPYRIGHT
+
+Copyright  (C) 2011 Trinity Centre for High Performance Computing, Trinity College Dublin.
+There is NO WARRANTY, to the extent permitted by law.

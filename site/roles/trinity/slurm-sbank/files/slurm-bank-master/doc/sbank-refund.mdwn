@@ -1,0 +1,63 @@
+# NAME
+
+sbank-refund - refund hours to a slurm account based on a jobid
+
+# SYNOPSIS
+
+sbank refund [OPTION]...
+
+# DESCRIPTION
+
+slurm bank administrative tool (wraps sacctmgr) for refund hours to
+a slurm account given a jobid.
+
+This command should be run on the same cluster that the job has been run on.
+
+* job - refund hours to a given job
+
+  -h
+
+  show help message
+
+  -d
+
+  show debug messages
+
+  -a, --account
+
+  Specify the slurm account, this is optional if no account is specified
+  then the script will go back to the slurmdbd and refund the original
+  account that the account was run on.
+
+  -j, --jobid
+
+   The jobid to be refunded.
+
+# EXAMPLES
+
+If the user Charles has had a job die due to a node failure, he supplies
+the jobid '53453' which we want to refund
+
+    sbank refund job -j 53453
+
+But Charles now decides he wants to have the hours from the failed job
+to be refunded to another account (other than the one that he ran the
+original job on)
+
+    sbank refund job -j 53453 -a myotheraccount
+
+# SEE ALSO
+
+* [[sbank]](1)
+* [[sbank-deposit]](1)
+* [[sbank-balance]](1)
+* [[sbank-project]](1)
+
+# AUTHOR
+
+Jimmy Tang <jtang@tchpc.tcd.ie>
+
+# COPYRIGHT
+
+Copyright  (C) 2011 Trinity Centre for High Performance Computing, Trinity College Dublin.
+There is NO WARRANTY, to the extent permitted by law.

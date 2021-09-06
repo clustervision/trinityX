@@ -1,0 +1,20 @@
+There exists a wrapper for submitting jobs to slurm which wraps up the
+[[sbank-balance]] statement and checkscript commands before running
+sbatch.
+
+The primary advantage of this wrapper script is that for un-experienced
+users, they only need to know that [[sbank-submit]] will tell them at
+submission time whether their jobs are likely to complete or not.
+
+	sbank submit -s sample-job1.sh 
+	log: Getting balance for jtang
+	User             Usage |          Account       Usage | Account Limit   Available (CPU hrs)
+	---------- ----------- + ---------------- ----------- + ------------- -----------
+	jtang               20 |            TCHPC          32 |       315,360     315,328
+	log: Checking script before submitting
+	warn: no account specified in the script, using default: tchpc
+	Current balance      =    315,328
+	Requested hours      =      3,072
+	Expected balance     =    312,256
+	log: sbatch'ing the script
+

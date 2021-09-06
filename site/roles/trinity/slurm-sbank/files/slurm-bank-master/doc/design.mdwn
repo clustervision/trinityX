@@ -1,0 +1,250 @@
+## DESIGN
+
+Based on discussions from 
+
+* <http://groups.google.com/group/slurm-devel/browse_frm/thread/1c8805fb274c108f#>
+* <http://groups.google.com/group/slurm-devel/browse_thread/thread/b06f3985cc7504b2?tvc=2>
+
+## Requirements
+
+This documentation assumes the user knows basic slurm administration.
+
+Slurmdbd must be configured and working, account enforcing is enabled
+in *slurm.conf*
+
+    AccountingStorageEnforce=limits
+
+Note that the *PriorityDecayHalfLife* and *PriorityUsageResetPeriod* can
+be used to allow usage half-life decay and reset. This is because
+the usage information is pulled directly from the Slurmdbd via
+*sreport*; whereas the two parameters above only affect the way
+usage is stored in local *_usage files.
+
+Note also that when the scheduler looks to see if an association has
+sufficient balance to start a new job, it compares the "GrpCPUMins" 
+field against the local *_usage files to check if enough time is 
+available (not the Slurmdbd), this can result in negative balances 
+being reported by "sbank balance statement".
+
+What is also required is a pretty good estimate of the total available
+cpu hours that you have on your cluster that you can allocate to
+accounts.
+
+Users will need to learn how to use accounts (nothing new here).
+
+sacctmgr and sreport are required and must be working.
+
+One implementation detail is that 'sreport' requires a start date
+parameter (otherwise it defaults to the previous day). The script defaults
+to using a start date of 3 years in the past. This can be changed with
+the '-s yyyy-mm-dd' parameter.
+
+## How it works
+
+Time is deposited to an account, which gets drawn from whenever a job
+is submitted to the cluster. Currently the "GrpCPUMins" is used.
+
+Note that there is no concept of 'Reserved' time, like Gold does. This 
+is probably a good thing - as the Gold way of doing it sometimes leads
+to Reserved time getting stuck, and never released. The Slurm way seems
+to only subtract time when the jobs are actually running.
+
+A consequence of this is that it will kill jobs mid-run (say if another
+user in the Account uses up all the time first) - again, probably not
+a bad thing.
+
+### Time period
+
+The tools work with hours as the time unit (conversions are done where
+needed).
+
+### The slurmdbd hierachy
+
+We assume this type of setup, which is the default behaviour of the
+slurmdbd. (This is our current assumption to keep things simple)
+
+* root 20N hours available
+  * account1 with 1N hours
+  * account2 with 1N hours
+  * account3 with 2N hours
+  * account4 with 2N hours
+
+There is effectively no hierachy at all, we could do something like this...
+
+* root with 20U of time
+  * CLASS-A with 1U time
+     * account1
+     * account2
+  * CLASS-B with 0.5U time
+     * account3
+  * CLASS-C with 0.25U time
+     * account4
+
+We would have to add some checks or script up the [[sbank-project]]
+wrapper to work in a pre-defined way to allow for the different
+workflows.
+
+### Note
+
+It *seems* that the slurmctld must be restarted sometimes - for new
+Accounts or Account updates. This needs to be checked more (it may not
+be the case).
+
+## Missing components
+
+* Ability to *end* accounts at a given date, could associate accounts
+  with overlapping reservations. We tried this but we can't set a
+  *maint* reservation that is honoured by slurm. So this is a no go
+  for now. One idea is to do it with an external database and some
+  helper scripts (done via crontab or something similar).
+    * Note that setting GrpCPUMins to 0 can be used to do this - to put
+      an end on the account.  
+    * One idea is to do this offline with an external database and a
+      handful of scripts.
+    * Another idea is to use a flat text file with KEY, PROJECTNAME,
+      STARTDATE, ENDDATE and STATUS columns, we could then loop
+      through this file every day and simply expire accounts as
+      needed. [gnu-recutils][] looks like a good set of tools for
+      manipulating a flatfile based database. We could dump out a
+      recutils styled db with a perl script every night, then run our
+      own expiration script. On second thought sqlite3 might be a better choice.
+* This was mainly conceived as a Gold (bank) replacement, if we ditch maui,
+  what other functionality will users miss? Have a 'showq' and 'checkjob'
+  wrapper?
+
+#### recutils as a database backend
+
+Possibly define this type of record
+
+	%rec: project
+	%mandatory: project createdate
+	%type: project line
+	%type: startdate date
+	%type: enddate date
+	%type: createdate date
+	%type: status enum active inactive
+	%type: id int
+	%key: id
+	%auto: id createdate
+
+	id: 0
+	modifydate: Thu, 26 May 2011 14:46:14 +0100
+	project: physics
+	enddate: 2009-06-06
+	status: active
+
+	id: 1
+	modifydate: Thu, 26 May 2011 14:49:01 +0100
+	project: chemistry
+	enddate: 2011-06-06
+	status: inactive
+
+	id: 2
+	modifydate: Thu, 26 May 2011 14:49:42 +0100
+	project: maths
+	enddate: 2012-06-06
+	status: active
+
+To insert a record
+
+	$ recins -t project -f project -v chemistry \
+		-f enddate -v 2011-06-06 \
+		projects.rec
+	$ recins -t project -f project -v physics \
+		-f enddate -v "2012-06-06" \
+		projects.rec
+
+To select records after whose accounts are to expire
+
+	$ recsel -t project -e "enddate >> '2011-07-01'" projects.rec
+
+Or for a machine readable form
+
+	$ recsel -C -R project -t project \
+		-e "enddate << '2012-07-01'" projects.rec
+
+Return a list of projects that are 'active' after an 'enddate'
+
+	$ recsel -C -R project -t project \
+		-e "enddate << '2012-07-01'" -e "status='active'" projects.rec
+
+With this list of codes we should be able to mark projects with sbank
+with no more runnable hours. A tool or script to do the above probably
+should be kept seperate from the main set of scripts.
+
+### Done
+
+* Helper script to add/remove hours from a given account (short of
+  manually doing it by hand and doing the sums). (This is somewhat
+  done as [[sbank-deposit]])
+* And to add/remove users from an Account. (see below with gchproject
+  idea). [[sbank-project]]
+* some additional commands/wrapper scripts to mimic GOLD
+ * wrapper script for creating accounts (gmkproject like command),
+   default behaviour should create accounts associated with a default
+   root account and allow the user to define a parent account if
+   necessary. Need to define how projects should be created deleted,
+   do you want a structure/hierachy in the accounting db?
+   [[sbank-project]]
+ * wrapper script for adding/deleting users from (gchproject like
+   command) [[sbank-user]] or [[sbank-project]] 
+ * wrapper script for making users (gmkuser), do we need to create
+   users in slurmdbd before associating users with
+   projects/accounts. [[sbank-user]]
+
+## TODO for the script(s)
+
+* Re-write using Slurm-Perl API (or in C).
+* A bunch of basic tests (partially done), need to be more systematic.
+
+## Ideas
+
+* [[sbank-submit]] to wrap up submitting jobs to a cluster, this could
+  be used to hide quite a few commands from the user. Or else we could
+  place some of the scripts/sbank commands into the epilog/prologue.
+
+* Reservations according to
+  https://computing.llnl.gov/linux/slurm/reservations.html implies
+  that users will be charged if they do not use their reservation.
+  We should define that only accounts get associated with reservations,
+  if possible we should figure out how to penalise users for the
+  time reserved (i.e. interest rates).
+
+* [[sbank-refund]] given a job ID, go through slurmdbd logs and figure
+  out the hours used, account used and refund the hours back to the
+  user. sacct -j JOBID has the elapsed time in a slurm time
+  string. Should the transaction logs be checked so users don't get
+  multiple refunds?
+
+### Implemented Ideas
+
+* Feedback for user, e.g. on submission estimate how many hours are
+  needed then print a number of hours that is in the balance before and
+  after the job has run. Maybe add this in the form of *sbank balance
+  request --nodes N --cores C --time hours --account ACCOUNT* [[sbank-balance]]
+* the balance request commands - use 'sbank cluster' to find the local
+  cluster, if -c is not specified [[sbank-cluster]]
+* similarly, it would be nice to add a command to 'sbank user' to list the
+  current user's default account on the cluster. I noticed that people might
+  leave out the account name in their job script, and so slurm will just
+  use their default one. [[sbank-user]]
+* for 'sbank balance request', the verbose flag prints out the following:
+
+    Current balance     = nnn
+    Requested CPU hours = nnn
+    Expected balance    = nnn
+
+* I'd like 'user list' to maybe default to the current user, on the local
+  cluster, and print their default account ? Not sure if the current behaviour
+  of showing all users is the best. It could be specified with '-a' or something [[sbank-user]]
+* sbank starts with a basic sanity checking script, seeing if commands like
+  'sacctmgr' are actually there? If it's packaged as an rpm, the dependencies
+  will catch this, but it's no harm to have it. [[sbank-common]]
+* Simple [[tests]] to make sure things are working
+
+## Tested on
+
+* SLURM 2.2.0
+* SL5x (and system version of perl/bash)
+
+[gnu-recutils]: http://www.gnu.org/software/recutils/

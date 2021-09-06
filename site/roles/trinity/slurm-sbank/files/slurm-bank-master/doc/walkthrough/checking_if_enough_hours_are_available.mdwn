@@ -1,0 +1,38 @@
+Once you have an estimate of how much time you require you might want
+to check if you really have enough hours to run your job
+
+[[sbank-balance]] request can give you an idea if you have time or not,
+what the [[sbank-balance]] request command returns is the number of
+available hours after a request has been made. It does not do anything
+apart from print a number. If it returns a negative number then you do
+not have enough hours to run.
+
+	$ sbank balance request -c chuck -a tchpc -t 100 -u
+	315260
+
+Or else if you want to script things up to be efficient/lazy you can
+use some of the helper scripts such as [[sbank-time]].
+
+	$ sbank balance request --cluster chuck --account tchpc \
+		--time $( sbank time estimate -n 32 -t \
+		$( sbank time calc -t 4-00:00:00 ))
+
+If you want more more details this command can be run with the -v flag
+
+	$ sbank balance request -v --cluster chuck --account tchpc \
+		--time $( sbank time estimate -n 32 -t \
+		$( sbank time calc -t 2000-00:00:00 ))
+		
+	Current balance      =    315,326
+	Requested hours      =  1,536,000
+	Expected balance     = -1,220,674  <= warning: job won't run sucessfully
+
+You can also feed [[sbank-balance]] a job script to see if the script's
+request can be completed or not
+
+	$ sbank balance checkscript -s sample-job1.sh  -t myaccount
+	312288
+
+The above command returns the remaining balance of your specified account
+on the current cluster. If a negative value is returned, then your job
+will most likely not complete if it is submitted.

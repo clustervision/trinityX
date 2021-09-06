@@ -1,0 +1,31 @@
+#!/bin/sh
+# May at somepoint want to do this `date +%Y%m%d%H%M%S` for a version
+usage() {
+	echo "usage: bump-version <version-id>"
+}
+
+if [ $# -ne 1 ]; then
+	usage
+	exit 1
+fi
+
+if ! sed 's/^SBANK_VERSION=.*$/SBANK_VERSION='$1'/g' src/sbank-version > src/.sbank-version.new; then
+	echo "Could not replace SBANK_VERSION variable." >&2
+	exit 2
+fi
+mv src/.sbank-version.new src/sbank-version
+
+if ! sed 's/^Version:.*$/Version:        '$1'/g' slurm-bank.spec > .slurm-bank.spec.new; then
+	echo "Could not replace SBANK_VERSION variable." >&2
+	exit 2
+fi
+mv .slurm-bank.spec.new slurm-bank.spec
+
+
+echo slurm-bank-$1 > VERSION
+
+git add src/sbank-version
+git add VERSION
+git add slurm-bank.spec
+git commit -m "Bumped version number to $1"
+git tag -a $(cat VERSION) -m "Tagging version number to $(cat VERSION)"

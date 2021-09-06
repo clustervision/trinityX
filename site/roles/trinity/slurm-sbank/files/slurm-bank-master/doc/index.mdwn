@@ -1,0 +1,164 @@
+[[!sidebar content="""
+
+* [[download]]
+* [[install]]
+* [[bugs]]
+* [[walkthrough]]
+* [[design]]
+* [[contact]]
+* [[copyright]]
+
+"""]]
+
+## About
+
+SLURM Bank, a collection of wrapper scripts to give slurm GOLD like
+capabilities for managing resources.
+
+With the scripts we are able to provide a simple *banking* system
+where we can deposit hours to an account. Users are associated with
+these accounts which they use to run jobs. If users do not have an
+account or if they do not have hours in their account then they cannot
+run jobs.
+
+<table>
+<tr>
+<td width="50%" valign="top">[[!inline feeds=no template=bare pages=use_case/user]]</td>
+<td width="50%" valign="top">[[!inline feeds=no template=bare pages=use_case/admin]]</td>
+</tr>
+</table>
+
+## Motivation
+
+To replace our (at [TCHPC][]) current Resource Management and Allocation Systems
+which comprises three pieces of software ([slurm][], [GOLD][] and
+[maui][]) with just a single piece of software: Slurm.
+
+Having all of the banking functionality of SLURM wrapped up has
+benefits for both the systems administrators:
+
+* Having just slurm without maui means there are less things to go
+  wrong
+* Overall performance for scheduling and launching jobs is much better
+  with just slurm
+* GOLD is overly complicated and we don't need many of the features
+  from GOLD
+
+And also benefits for end users of clusters:
+
+* Less commands/systems to learn
+* Faster job submission and turn-around
+* Greater overall system stability
+
+## Experience with the migratation
+
+Moving from GOLD, Maui and SLURM to just running SLURM required us to
+gather some information.
+
+* List of Principle Investigators who own accounts/projects
+* List of projects
+* List of users
+
+We also required a set of associations
+
+* PI -> projects -> users
+
+The mapping we ended up having in the end in the slurmdbd was kept simple
+
+* projects -> users
+
+Which gave us a hierachy like this
+
+- root
+  - project1
+     - user1
+     - user2
+  - project2
+     - user1
+     - user3
+     - user4
+  - project3
+     - user3
+
+and so on...
+
+## Design
+
+The [[design]] document contains ideas (todo and done). So far we have
+discovered that slurm already has much of the needed functionality
+required for "banking". Much of the [[sbank]] commands are just
+wrapper scripts to already existing slurm commands. One of the
+problems with banking is being consistent, the sbank wrapper scripts
+try to provide a workflow to provide a GOLD like banking system with
+slurm.
+
+SLURM bank is extremely simple and only very basic banking
+functionality is provided. That is when a user or a group of users run
+out of time in an account the jobs that are running will be
+immediately terminated. In SLURM bank we do not have reservation of
+time to ensure jobs complete, it is up to the user to figure that out,
+by doing so users will hopefully be more aware of the time that they
+have used. We also do not have the notion of crediting or overdrawing
+so if jobs fail due to system failures etc... users will not be
+automatically refunded hours. This issue will be left up to the users
+and admins to resolve.
+
+### Needed components
+
+This is now available with slurm-bank
+
+* A consistent way of adding/removing projects and users to said
+  projects.
+* A way of adding/removing hours from a project (account).
+* A way of telling users how much time they have left and how much
+  time they have used.
+* A way of letting users know if they can complete a job or not
+  (easily).
+
+You can do everything that these wrapper scripts are doing with plain
+slurm commands! We stress that these scripts are just fixing the
+workflows in managing accounts and users as well as providing some
+helper tools to let users manage their own resources.
+
+The SLURM software itself is free and open-source, under a GPLv2
+Licence, so anyone could freely and easily replicate the work
+undertaken here themselves.
+
+Also, note that the software itself is fully-readable scripts (no
+compiled code) and its behaviour is fully documented, it is trivial
+for any user on our systems to view the documentation and scripts, and
+re-implement it themselves.
+
+## Documentation
+
+See the [[walkthrough]] for an example of how to implement and use
+slurm-bank.
+
+### Shell scripts
+
+* [[sbank]]
+* [[sbank-balance]]
+* [[sbank-cluster]]
+* [[sbank-deposit]]
+* [[sbank-project]]
+* [[sbank-time]]
+
+### Experimental scripts
+
+* [[sbank-submit]]
+* [[sbank-user]]
+* [[sbank-refund]]
+
+### Proposed scripts
+
+* [[sbank-report]] -- this might be better provided with the
+[[sbank-balance]] script.
+
+## Repo history
+
+	git shortlog --since "Mon May 16 17:12:35 2011"
+
+[slurm]: https://computing.llnl.gov/linux/slurm/
+[maui]: http://www.clusterresources.com/products/maui/
+[GOLD]: http://www.clusterresources.com/pages/products/gold/
+[TCHPC]: http://www.tchpc.tcd.ie/
