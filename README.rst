@@ -46,10 +46,9 @@ Steps to install TrinityX
 
 4. Clone TrinityX repository into your working directory. Then run ```prepare.sh``` to install all the prerequisites:
 
-      # git clone http://github.com/clustervision/trinityX
-      # cd trinityX
-      # bash prepare.sh
-
+       # git clone http://github.com/clustervision/trinityX
+       # cd trinityX
+       # bash prepare.sh
 
 5. Based on whether you're installing a single-controller or a high-availability (HA) setup, the contents may differ. Please view the contents of the file on the directives that may need modification(s)::
 
