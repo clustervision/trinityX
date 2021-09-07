@@ -55,7 +55,7 @@ Steps to install TrinityX
        # cd site 
        # cp group_vars/all.yml.example group_vars/all.yml
 
-   * ``group_vars/all``
+   * ``group_vars/all.yml``
 
    You might also want to check if the default firewall parameters in the same file apply to your situation::
 
