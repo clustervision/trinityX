@@ -30,11 +30,14 @@ Copy the ``.yml.example`` files to the ``.yml`` version::
     # pwd
     ~/trinityX/site/
 
-    # ls hosts controller.yml group_vars/
+    # ls hosts.example controller.yml group_vars/
     hosts.example  controller.yml
 
     group_vars/:
     all.yml.example
+
+    # cp hosts.example hosts
+    # cp group_vars/all.yml.example group_vars/all.yml
 
 
 These files can be edited to reflect the user's own installation choices. For a full list of configuration options supported by TrinityX, refer to :doc:`configuration`.
