@@ -52,8 +52,8 @@ Steps to install TrinityX
 
 
 5. Based on whether you're installing a single-controller or a high-availability (HA) setup, the contents may differ. Please view the contents of the file on the directives that may need modification(s)::
-   # cd group_vars
-   # cp all.yml.example all.yml
+       # cd group_vars
+       # cp all.yml.example all.yml
 
    * ``group_vars/all``
 
@@ -68,7 +68,8 @@ Steps to install TrinityX
    In case of a single server, we now assume that the shared IP address is also available on the controller node, this is to ease future expansion.
 
 6. Configure ``hosts`` file to allow ansible to address controllers.
-   # cp hosts.example hosts
+
+       # cp hosts.example hosts
 
    Example for non-HA setup::
 
