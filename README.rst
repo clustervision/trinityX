@@ -31,8 +31,8 @@ It will also set up:
 * and more
 
 .. image:: img/triX_300.png
-   :width: 600px
-   :height: 160px
+   :width: 300px
+   :height: 300px
 
 
 Steps to install TrinityX
