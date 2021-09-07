@@ -1,0 +1,20 @@
+---
+
+- name: Create directory structure
+  file:
+    name: "{{ sbank_path }}/bin"
+    state: directory
+
+- name: Copy files
+  copy:
+   src: 'slurm-bank-master/src/'
+   dest: "{{ sbank_path }}/bin"
+
+- name: Make executable
+  file:
+    name: "{{ item }}"
+    mode: 0755
+  with_items:
+  - "{{ sbank_path }}/bin/sbank"
+  - "{{ sbank_path }}/bin/_sbank-balance.pl"
+  - "{{ sbank_path }}/bin/_sbank-common-cpu_hrs.pl"

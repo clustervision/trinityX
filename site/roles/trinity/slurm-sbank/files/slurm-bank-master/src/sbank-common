@@ -1,0 +1,40 @@
+## generic functions
+die()
+{
+	[ $# -gt 0 ] && echo "error: $@" >&2
+	flags_help
+	exit 1
+}
+
+
+log()
+{
+	echo "log: $@" >&2
+}
+
+warn()
+{
+	echo "warn: $@" >&2
+}
+
+debug()
+{
+	[ "${FLAGS_debug}" = "${FLAGS_TRUE}" ] || return
+	echo "DEBUG: $@" >&2
+}
+
+sanity_check()
+{
+	local ret
+	# check for sacctmgr
+	# note - when this is packaged e.g. as an rpm, the installation package
+	# should take care of this as a Requirement
+	debug "SACCTMGR_BIN = $SACCTMGR_BIN"
+	which ${SACCTMGR_BIN} > /dev/null 2>&1
+	ret=$?
+	if [ ${ret} != "0" ]
+	then
+		die "unable to find sacctmgr. Is slurm installed? Exiting.."
+	fi
+
+}

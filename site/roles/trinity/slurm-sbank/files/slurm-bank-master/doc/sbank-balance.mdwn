@@ -1,0 +1,124 @@
+# NAME
+
+sbank balance - show slurm balance
+
+# SYNOPSIS
+
+sbank balance *subcommand* [OPTION]...
+
+# DESCRIPTION
+
+Show the balance of used and available hours to the user for a given
+account. This is just a wrapper to the sbalance command, and is provided
+to give the user/admin a consistent interface. If no options are given,
+then sbank-balance will show the balance of the user who ran the script.
+
+* statement - shows balance sheet statement for user.
+
+  -h
+
+  show help message
+
+  -c
+
+  display per cluster 'clustername' (defaults to the local cluster)
+
+  -a
+
+  display balance of account 'accountname' (defaults to
+  all accounts of the current user)
+
+  -A
+
+  display all accounts (defaults to all accounts of the
+  current user)
+
+  -U
+
+  display only the current user's balances (defaults to all users
+  in all accounts of the current user)
+
+  -u
+
+  display for the given user (defaults to the current user)
+
+  -b
+
+  display unformatted balance of account 'accountname'
+
+  -s
+
+  display historical user/account usage from the DBD via 'sreport',
+  starting from yyyy-mm-dd
+
+* request - request a number hours from an account and returns a number
+  of hours remaining in the account.
+
+  -h
+
+  show help message
+
+  -c, --cluster
+
+  Specify the slurm cluster
+
+  -a, --account
+
+  Specify the slurm account
+
+  -t, --time
+
+  Specify the amount of hours to request. This value must be a
+  positive integer value.
+
+* checkscript - check the hours that a script is about to request.
+
+  -c, --cluster
+
+  Specify the slurm cluster
+
+  -s, --scriptname
+  
+  Name of script to check
+
+# EXAMPLES
+
+Show your own balance (all your accounts), including those of other members of the accounts
+
+	sbank balance statement
+
+Show your own balance (all your accounts)
+
+	sbank balance statement -U
+
+Show the balance in the given account, including those of other members of the accounts
+
+	sbank balance statement -a account_name
+
+Show the unformatted balance of an account
+
+	sbank balance statement -b account_name
+
+Show the balance of all accounts in the given cluster
+
+	sbank balance statement -A -c mycluster
+
+Request 'hours' from an account to see if there are enough hours available
+to run a job.
+
+	sbank request -c mycluster -a account0001 -t 1000
+
+# SEE ALSO
+
+* [[sbank]](1)
+* [[sbank-deposit]](1)
+
+# AUTHOR
+
+Jimmy Tang <jtang@tchpc.tcd.ie>
+Paddy Doyle <paddy@tchpc.tcd.ie>
+
+# COPYRIGHT
+
+Copyright  (C) 2011 Trinity Centre for High Performance Computing, Trinity College Dublin.
+There is NO WARRANTY, to the extent permitted by law.

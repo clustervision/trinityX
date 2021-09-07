@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+# Warning: hack
+
+my $prog=shift;
+my $section=shift;
+
+print ".TH $prog $section\n";
+
+while (<>) {
+	s{(\\?)\[\[([^\s\|\]]+)(\|[^\s\]]+)?\]\]}{$1 ? "[[$2]]" : $2}eg;
+	s/\`//g;
+	s/^\s*\./\\&./g;
+	if (/^#\s/) {
+		s/^#\s/.SH /;
+		<>; # blank;
+	}
+	s/^[ \n]+//;
+	s/^\t/ /;
+	s/-/\\-/g;
+	s/^Warning:.*//g;
+	s/^$/.PP\n/;
+	s/^\*\s+(.*)/.IP "$1"/;
+	next if $_ eq ".PP\n" && $skippara;
+	if (/^.IP /) {
+		$inlist=1;
+		$spippara=0;
+	}
+	elsif (/.SH/) {
+		$skippara=0;
+		$inlist=0;
+	}
+	elsif (/^\./) {
+		$skippara=1;
+	}
+	else {
+		$skippara=0;
+	}
+	if ($inlist && $_ eq ".PP\n") {
+		$_=".IP\n";
+	}
+
+	print $_;
+}

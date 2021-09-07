@@ -1,0 +1,123 @@
+usage() 
+{
+	echo "usage: sbank user create -c CLUSTER -a ACCOUNT -u USER"
+	#echo "       sbank user delete -c CLUSTER -a ACCOUNT -u USER"
+	echo "   or: sbank user list -c CLUSTER -a ACCOUNT -u USER"
+	echo "   or: sbank user account -c CLUSTER -u USER"
+	echo
+}
+
+parse_args() {
+	# parse options
+	FLAGS "$@" || exit $?
+	eval set -- "${FLAGS_ARGV}"
+}
+
+cmd_default() 
+{
+	usage
+}
+
+cmd_create()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'account' 'null' 'specify a slurm account' 'a'
+	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
+	DEFINE_string 'user' 'null' 'specify a user' 'u'
+
+	FLAGS_PARENT="sbank user create"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	[ ${FLAGS_cluster} = 'null' ] && die "${FLAGS_cluster}" "is not an cluster, no cluster specified"
+
+	debug "check if account is specified"
+	[ ${FLAGS_account} = 'null' ] && die "${FLAGS_account}" "is not an account, no account specified"
+
+	debug "check if user is specified"
+	[ ${FLAGS_user} = 'null' ] && die "${FLAGS_user}" "is not an user, no user specified"
+ 
+	debug "creating account with the following account name ${FLAGS_account} and cluster name ${FLAGS_cluster}"
+	$SACCTMGR -i add user cluster=${FLAGS_cluster} name=${FLAGS_user} account=${FLAGS_account}
+}
+
+cmd_list()
+{
+	local opts
+	local sacctmgr_opts
+
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'account' '' 'specify a slurm account' 'a'
+	DEFINE_string 'cluster' '' 'specify a cluster' 'c'
+	DEFINE_string 'user' '' 'specify a user' 'u'
+	DEFINE_boolean 'verbose' false 'verbose output' 'v'
+
+	FLAGS_PARENT="sbank user list"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	[ "${FLAGS_cluster}" != "" ]  && opts="$opts cluster=${FLAGS_cluster}"
+	[ "${FLAGS_account}" != "" ]  && opts="$opts DefaultAccount=${FLAGS_account}"
+	[ "${FLAGS_user}" != "" ]  && opts="$opts names=${FLAGS_user}"
+
+	if [ ${FLAGS_verbose} -eq ${FLAGS_TRUE} ]
+	then
+		sacctmgr_opts="$sacctmgr_opts "
+	else
+		sacctmgr_opts="-n $sacctmgr_opts "
+	fi
+	$SACCTMGR $sacctmgr_opts list users $opts format=User,DefaultAccount%15,AdminLevel%15
+}
+
+cmd_account()
+{
+	local opts
+	local sacctmgr_opts
+
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'cluster' '' 'specify a cluster' 'c'
+	DEFINE_string 'user' '' 'specify a user' 'u'
+	DEFINE_boolean 'verbose' false 'verbose output' 'v'
+
+	FLAGS_PARENT="sbank user account"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	[ "${FLAGS_cluster}" != "" ]  && opts="$opts cluster=${FLAGS_cluster}"
+	[ "${FLAGS_account}" != "" ]  && opts="$opts DefaultAccount=${FLAGS_account}"
+	#[ "${FLAGS_user}" != "" ]  && opts="$opts names=${FLAGS_user}"
+
+	# if no user specified grab the username from environment
+	if [ "${FLAGS_user}" != "" ]
+	then
+		opts="$opts names=${FLAGS_user}"
+	else
+		opts="$opts names=${USER}"
+	fi
+
+	if [ ${FLAGS_verbose} -eq ${FLAGS_TRUE} ]
+	then
+		sacctmgr_opts="$sacctmgr_opts "
+		$SACCTMGR $sacctmgr_opts list users $opts format=user%30,cluster%30,DefaultAccount%30
+	else
+		sacctmgr_opts="-n $sacctmgr_opts "
+		$SACCTMGR $sacctmgr_opts list users $opts format=DefaultAccount%30
+	fi
+
+}
+
+cmd_help()
+{
+	usage
+	exit 0
+}
