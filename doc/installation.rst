@@ -19,6 +19,7 @@ Controller installation
 The TrinityX configuration tool will install and configure all packages required to set up a working TrinityX controller.
 
 First, make sure that all pre-requisites are present. This can be easily done by running the ``prepare.sh`` script.
+
     # cd ~/trinityX/site
     # bash prepare.sh
 
