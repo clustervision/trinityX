@@ -44,7 +44,7 @@ Steps to install TrinityX
 
 3. Configure passwordless authentication to the controller itself or/and for both controllers in the HA case.
 
-4. Clone TrinityX repository into your working directory. Then run ```prepare.sh``` to install all the prerequisites:
+4. Clone TrinityX repository into your working directory. Then run ```prepare.sh``` to install all the prerequisites::
 
        # git clone http://github.com/clustervision/trinityX
        # cd trinityX
@@ -52,8 +52,8 @@ Steps to install TrinityX
 
 5. Based on whether you're installing a single-controller or a high-availability (HA) setup, the contents may differ. Please view the contents of the file on the directives that may need modification(s)::
 
-       # cd group_vars
-       # cp all.yml.example all.yml
+       # cd site 
+       # cp group_vars/all.yml.example group_vars/all.yml
 
    * ``group_vars/all``
 
