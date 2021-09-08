@@ -1,0 +1,83 @@
+# NAME
+
+sbank cluster - manages clusters in slurm
+
+# SYNOPSIS
+
+sbank cluster *subcommand* [OPTION]...
+
+# DESCRIPTION
+
+* list
+
+  -h
+
+  show help message
+
+  -a, --all
+
+  List all clusters in slurmdbd 
+
+* cpupernode
+
+  -m, --min
+
+  -c, --cluster
+
+  Return the number of cpus on a node, by default we take the max value. Optionally
+  take a cluster name.
+
+* create
+
+  -c, --cluster
+
+  Create a cluster in slurmdbd
+
+* delete
+
+  -c, --cluster
+
+  Delete a cluster in slurmdbd
+
+* cpuhrs
+
+  -c, --cluster
+
+  get an estimate of the total cpu hours available (talks to sinfo)
+
+# EXAMPLES
+
+Show the default cluster from slurm.conf
+
+	sbank cluster list
+
+Show all clusters from slurmdbd
+
+	sbank cluster list -a
+
+Passing on the cluster name to another application
+
+	sbank balance request --cluster $(sbank cluster list) \
+		--account tchpc --time $( sbank time estimate -n 32 -t \
+		$( sbank time calc -t 4-00:00:00 ))
+
+Show the maximum cpus on a node in the local cluster
+
+	sbank cluster cpupernode
+
+# SEE ALSO
+
+* [[sbank]](1)
+* [[sbank-balance]](1)
+* [[sbank-deposit]](1)
+* [[sbank-time]](1)
+
+# AUTHOR
+
+Paddy Doyle <paddy@tchpc.tcd.ie>
+Jimmy Tang <jtang@tchpc.tcd.ie>
+
+# COPYRIGHT
+
+Copyright  (C) 2011 Trinity Centre for High Performance Computing, Trinity College Dublin.
+There is NO WARRANTY, to the extent permitted by law.

@@ -18,16 +18,26 @@ Controller installation
 
 The TrinityX configuration tool will install and configure all packages required to set up a working TrinityX controller.
 
-The configuration for a default controller installation is described in the file ``controller.yml``, as well as the files located in the ``group_vars/`` subdirectory of the TrinityX tree, while the list of machines to which the configuration needs to be applied is described in the file called ``hosts``::
+First, make sure that all pre-requisites are present. This can be easily done by running the ``prepare.sh`` script::
+
+    # cd ~/trinityX/site
+    # bash prepare.sh
+
+The configuration for a default controller installation is described in the file ``controller.yml``, as well as the files located in the ``group_vars/`` subdirectory of the TrinityX tree, while the list of machines to which the configuration needs to be applied is described in the file called ``hosts``.
+
+Copy the ``.yml.example`` files to the ``.yml`` version::
 
     # pwd
     ~/trinityX/site/
 
-    # ls hosts controller.yml group_vars/
-    hosts  controller.yml
+    # ls hosts.example controller.yml group_vars/
+    hosts.example  controller.yml
 
     group_vars/:
-    all
+    all.yml.example
+
+    # cp hosts.example hosts
+    # cp group_vars/all.yml.example group_vars/all.yml
 
 
 These files can be edited to reflect the user's own installation choices. For a full list of configuration options supported by TrinityX, refer to :doc:`configuration`.

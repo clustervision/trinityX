@@ -1,0 +1,186 @@
+usage() 
+{
+	echo "usage: sbank project create -c CLUSTER -a ACCOUNT"
+	echo "   or: sbank project delete -c CLUSTER -a ACCOUNT"
+	echo "   or: sbank project list -c CLUSTER -v"
+	echo "   or: sbank project useradd -c CLUSTER -a ACCOUNT -u USER [-s]"
+	echo "   or: sbank project userdel -c CLUSTER -a ACCOUNT -u USER"
+	echo "   or: sbank project expire -c CLUSTER -a ACCOUNT"
+	echo
+}
+
+parse_args() {
+	# parse options
+	FLAGS "$@" || exit $?
+	eval set -- "${FLAGS_ARGV}"
+}
+
+cmd_default() 
+{
+	usage
+}
+
+cmd_create()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'account' 'null' 'specify a slurm account' 'a'
+	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
+
+	FLAGS_PARENT="sbank project create"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	[ ${FLAGS_cluster} = 'null' ] && die "${FLAGS_cluster}" "is not an cluster, no cluster specified"
+
+	debug "check if account is specified"
+	[ ${FLAGS_account} = 'null' ] && die "${FLAGS_account}" "is not an account, no account specified"
+
+	debug "creating account with the following account name ${FLAGS_account} and cluster name ${FLAGS_cluster}"
+	$SACCTMGR -i add account ${FLAGS_account} cluster=${FLAGS_cluster} parent=root GrpCPUMins=0
+}
+
+cmd_delete()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'account' 'null' 'specify a slurm account' 'a'
+	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
+
+	FLAGS_PARENT="sbank project delete"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	[ ${FLAGS_cluster} = 'null' ] && die "${FLAGS_cluster}" "is not an cluster, no cluster specified"
+
+	debug "check if account is specified"
+	[ ${FLAGS_account} = 'null' ] && die "${FLAGS_account}" "is not an account, no account specified"
+
+	debug "creating account with the following account name ${FLAGS_account} and cluster name ${FLAGS_cluster}"
+	$SACCTMGR -i delete account ${FLAGS_account} cluster=${FLAGS_cluster} parent=root
+}
+
+cmd_list() {
+	local opts
+	local SACCTMGR_EXTRA
+
+	DEFINE_string 'cluster' '' 'specify a cluster' 'c'
+	DEFINE_boolean 'verbose' false 'verbose output' 'v'
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	FLAGS_PARENT="sbank project"
+
+	debug "list accounts for all clusters"
+
+	[ "${FLAGS_cluster}" != "" ]  && SACCTMGR_EXTRA="cluster=${FLAGS_cluster}"
+
+	if [ ${FLAGS_verbose} -eq ${FLAGS_TRUE} ]
+	then
+		opts=
+	else
+		opts=-n
+	fi
+	$SACCTMGR $opts list associations format=cluster%30,account%30 ${SACCTMGR_EXTRA} | uniq
+}
+
+cmd_useradd()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'account' 'null' 'specify a slurm account' 'a'
+	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
+	DEFINE_string 'user' 'null' 'specify a user' 'u'
+	DEFINE_boolean 'setdefault' true 'toggle setting it as the DefaultAccount for the user' 's'
+
+	FLAGS_PARENT="sbank project useradd"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	[ ${FLAGS_cluster} = 'null' ] && die "${FLAGS_cluster}" "is not an cluster, no cluster specified"
+
+	debug "check if account is specified"
+	[ ${FLAGS_account} = 'null' ] && die "${FLAGS_account}" "is not an account, no account specified"
+
+	debug "check if user is specified"
+	[ ${FLAGS_user} = 'null' ] && die "${FLAGS_user}" "is not an user, no user specified"
+
+	debug "creating account with the following account name ${FLAGS_account} and cluster name ${FLAGS_cluster}"
+	$SACCTMGR -i add user ${FLAGS_user} account=${FLAGS_account} cluster=${FLAGS_cluster}
+
+	if [ ${FLAGS_setdefault} -eq ${FLAGS_TRUE} ]
+	then
+		debug "setting the DefaultAccount to ${FLAGS_account} on cluster ${FLAGS_cluster} for user ${FLAGS_user}"
+		$SACCTMGR -i update users cluster=${FLAGS_cluster} set DefaultAccount=${FLAGS_account} where user=${FLAGS_user},cluster=${FLAGS_cluster}
+	else
+		debug "not updating the default account for user ${FLAGS_user}"
+	fi
+
+}
+
+cmd_userdel()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'account' 'null' 'specify a slurm account' 'a'
+	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
+	DEFINE_string 'user' 'null' 'specify a user' 'u'
+
+	FLAGS_PARENT="sbank project userdel"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	[ ${FLAGS_cluster} = 'null' ] && die "${FLAGS_cluster}" "is not an cluster, no cluster specified"
+
+	debug "check if account is specified"
+	[ ${FLAGS_account} = 'null' ] && die "${FLAGS_account}" "is not an account, no account specified"
+
+	debug "check if user is specified"
+	[ ${FLAGS_user} = 'null' ] && die "${FLAGS_user}" "is not an user, no user specified"
+
+	debug "delete account with the following account name ${FLAGS_account} and cluster name ${FLAGS_cluster} and user ${FLAGS_user}"
+	$SACCTMGR -i delete user ${FLAGS_user} account=${FLAGS_account} cluster=${FLAGS_cluster}
+}
+
+cmd_expire()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'account' 'null' 'specify a slurm account' 'a'
+	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
+
+	FLAGS_PARENT="sbank project expire"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	[ ${FLAGS_cluster} = 'null' ] && die "${FLAGS_cluster}" "is not an cluster, no cluster specified"
+
+	debug "check if account is specified"
+	[ ${FLAGS_account} = 'null' ] && die "${FLAGS_account}" "is not an account, no account specified"
+
+	debug "Zero balance on account ${FLAGS_account} on cluster ${FLAGS_cluster}"
+	$SACCTMGR -i modify account account=${FLAGS_account} set GrpCPUMins=0 where cluster=${FLAGS_cluster}
+}
+
+cmd_help()
+{
+	usage
+	exit 0
+}

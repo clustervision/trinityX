@@ -1,0 +1,45 @@
+[[!meta title="Setup slurm and slurmdbd (need root access)"]]
+
+The first thing to do is to setup [slurm][] and [slurmdbd][]. This
+documentation assumes the user knows basic slurm administration.
+
+Slurmdbd must be configured and working, account enforcing is enabled
+in *slurm.conf*
+
+    AccountingStorageEnforce=limits
+
+Note that the *PriorityDecayHalfLife* and *PriorityUsageResetPeriod* can
+be used to allow usage half-life decay and reset. This is because
+the usage information is pulled directly from the Slurmdbd via
+*sreport*; whereas the two parameters above only affect the way
+usage is stored in local *_usage files.
+
+Note also that when the scheduler looks to see if an association has
+sufficient balance to start a new job, it compares the "GrpCPUMins"
+field against the local *_usage files to check if enough time is
+available (not the Slurmdbd), this can result in negative balances
+being reported by "sbank balance statement".
+
+What is also required is a pretty good estimate of the total available
+cpu hours that you have on your cluster that you can allocate to
+accounts.
+
+[[sbank-cluster]] can provide a rough estimate of what's available.
+
+    $ sbank cluster cpuhrs
+
+Users will need to learn how to use accounts (nothing new here).
+
+sbatch, sinfo, sacctmgr and sreport are required and must be working.
+
+One implementation detail is that 'sreport' requires a start date
+parameter (otherwise it defaults to the previous day). The script defaults
+to using a start date of 3 years in the past. This can be changed with
+the '-s yyyy-mm-dd' parameter.
+
+If you do not already have a cluster registered and configured in slurm,
+
+	$ sbank cluster create mycluster
+
+[slurm]: https://computing.llnl.gov/linux/slurm/
+[slurmdbd]: https://computing.llnl.gov/linux/slurm/accounting.html

@@ -31,8 +31,8 @@ It will also set up:
 * and more
 
 .. image:: img/triX_300.png
-   :width: 600px
-   :height: 160px
+   :width: 300px
+   :height: 300px
 
 
 Steps to install TrinityX
@@ -44,18 +44,18 @@ Steps to install TrinityX
 
 3. Configure passwordless authentication to the controller itself or/and for both controllers in the HA case.
 
-4. Clone TrinityX repository into your working directory. Then run ```prepare.sh``` to install all the prerequisites.
+4. Clone TrinityX repository into your working directory. Then run ```prepare.sh``` to install all the prerequisites::
 
-    # git clone http://github.com/clustervision/trinityX
-    # cd trinityX
-    # bash prepare.sh
-
+       # git clone http://github.com/clustervision/trinityX
+       # cd trinityX
+       # bash prepare.sh
 
 5. Based on whether you're installing a single-controller or a high-availability (HA) setup, the contents may differ. Please view the contents of the file on the directives that may need modification(s)::
-   # cd group_vars
-   # cp all.yml.example all.yml
 
-   * ``group_vars/all``
+       # cd site 
+       # cp group_vars/all.yml.example group_vars/all.yml
+
+   * ``group_vars/all.yml``
 
    You might also want to check if the default firewall parameters in the same file apply to your situation::
 
@@ -68,7 +68,8 @@ Steps to install TrinityX
    In case of a single server, we now assume that the shared IP address is also available on the controller node, this is to ease future expansion.
 
 6. Configure ``hosts`` file to allow ansible to address controllers.
-   # cp hosts.example hosts
+
+       # cp hosts.example hosts
 
    Example for non-HA setup::
 

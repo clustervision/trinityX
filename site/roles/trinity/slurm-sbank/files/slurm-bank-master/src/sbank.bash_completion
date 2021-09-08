@@ -1,0 +1,56 @@
+_sbank()
+{
+	local cur prev opts base;
+	cur="${COMP_WORDS[COMP_CWORD]}";
+	prev="${COMP_WORDS[COMP_CWORD-1]}";
+
+	COMPREPLY=();
+
+	# generic list of commands
+	opts=$(sbank | egrep 'usage:|or:' | awk '{print $3}');
+
+	case "${prev}" in
+		balance)
+			local subopts=$(sbank balance | egrep 'usage:|or:' | awk '{print $4}');
+			COMPREPLY=( $(compgen -W "${subopts}" -- ${cur}) )
+			return 0
+			;;
+		project)
+			local subopts=$(sbank project | egrep 'usage:|or:' | awk '{print $4}')
+			COMPREPLY=( $(compgen -W "${subopts}" -- ${cur}) )
+			return 0
+			;;
+		user)
+			local subopts=$(sbank user | egrep 'usage:|or:' | awk '{print $4}')
+			COMPREPLY=( $(compgen -W "${subopts}" -- ${cur}) )
+			return 0
+			;;
+		time)
+			local subopts=$(sbank time | egrep 'usage:|or:' | awk '{print $4}')
+			COMPREPLY=( $(compgen -W "${subopts}" -- ${cur}) )
+			return 0
+			;;
+		submit)
+			local subopts=$(sbank submit | egrep 'usage:|or:' | awk '{print $4}')
+			COMPREPLY=( $(compgen -W "${subopts}" -- ${cur}) )
+			return 0
+			;;
+		cluster)
+			local subopts=$(sbank cluster | egrep 'usage:|or:' | awk '{print $4}')
+			COMPREPLY=( $(compgen -W "${subopts}" -- ${cur}) )
+			return 0
+			;;
+		refund)
+			local subopts=$(sbank refund | egrep 'usage:|or:' | awk '{print $4}')
+			COMPREPLY=( $(compgen -W "${subopts}" -- ${cur}) )
+			return 0
+			;;
+	esac
+
+	if [ $COMP_CWORD -eq 1 ]; then
+		COMPREPLY=( $( compgen -W "${opts}" -- ${cur} ) );
+	fi
+	return 0
+}
+
+complete -F _sbank sbank  2>/dev/null || complete -o default -o nospace -F _sbank sbank

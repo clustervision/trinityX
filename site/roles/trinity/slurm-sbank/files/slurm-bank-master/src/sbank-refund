@@ -1,0 +1,60 @@
+# Requires 'sacctmgr' 
+
+usage()
+{
+	echo "usage: sbank refund job -a ACCOUNT -j JOBID"
+	echo
+}
+
+parse_args() {
+	# parse options
+	FLAGS "$@" || exit $?
+	eval set -- "${FLAGS_ARGV}"
+}
+
+cmd_default()
+{
+	cmd_help "$@"
+}
+
+cmd_job() 
+{
+	local account
+	local jobtime_slurm
+	local jobtime_hours
+
+	# define some variables
+	debug "define some variables"
+	DEFINE_integer 'jobid' '0' 'specify a jobid' 'j'
+	DEFINE_string 'account' '' 'specify a slurm account' 'a'
+
+	FLAGS_PARENT="sbank refund"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	[ "${FLAGS_jobid}" -le "0" ] && die "jobid must be greater than 0"
+	debug "jobid ${FLAGS_jobid}"
+
+	if [ -z "${FLAGS_account}" ]
+	then
+		account=$(sacct -n --format account%30 -j "${FLAGS_jobid}")
+	else
+		account=${FLAGS_account}
+	fi
+	debug "account $account"
+
+	jobtime_slurm=$(sacct -n --format elapsed%30 -j "${FLAGS_jobid}")
+	debug "elapsed time from sacct $jobtime_slurm"
+
+	jobtime_hours=$($SLURMBANK_DIR/sbank time calc -t $jobtime_slurm)
+	debug "elapsed time from sacct in hours $jobtime_hours"
+
+	$SLURMBANK_DIR/sbank deposit -a $account -t $jobtime_hours -c $(sbank cluster list)
+}
+
+cmd_help()
+{
+	usage
+}

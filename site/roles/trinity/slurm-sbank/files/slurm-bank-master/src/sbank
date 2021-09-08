@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+# somewhat emulate GOLD's gdeposit account
+#
+# Requires 'sacctmgr' 
+
+export SLURMBANK_DIR=$(dirname "$0")
+SACCTMGR_BIN=sacctmgr
+SACCTMGR_OPT=
+SACCTMGR="$SACCTMGR_BIN $SACCTMGR_OPT "
+SCONTROL_BIN=scontrol
+SINFO_BIN=sinfo
+
+usage() 
+{
+	echo "usage: sbank project <ARGS>"
+	echo "   or: sbank user    <ARGS>"
+	echo "   or: sbank deposit <ARGS>"
+	echo "   or: sbank balance <ARGS>"
+	echo "   or: sbank time    <ARGS>"
+	echo "   or: sbank cluster <ARGS>"
+	echo "   or: sbank submit  <ARGS>"
+	echo "   or: sbank refund  <ARGS>"
+	echo "   or: sbank version <ARGS>"
+	echo
+	echo "Available commands are:"
+	echo "    project    Manage projects and accounts"
+	echo "    user       Manage users (EXPERIMENTAL)"
+	echo "    deposit    Deposit hours to an account"
+	echo "    balance    Show balance sheet of account(s)"
+	echo "    time       Time calculator"
+	echo "    cluster    Manage clusters in slurmdbd"
+	echo "    submit     Wrapper to submit jobs"
+	echo "    refund     refund hours for a given jobid"
+	echo "    version    Show version information"
+	echo 
+	echo "Try 'sbank <command> help' for details."
+	echo
+}
+
+main() 
+{
+	# source  shflags library
+	. "$SLURMBANK_DIR/shflags"
+
+	# This environmental variable fixes non-POSIX getopt style argument
+	# parsing, effectively breaking git-flow subcommand parsing on several
+	# Linux platforms.
+	export POSIXLY_CORRECT=1
+
+	# source common
+	. "$SLURMBANK_DIR/sbank-common"
+
+	# check for slurm
+	sanity_check
+
+	if [ $# -lt 1 ]; then
+		usage
+		exit 1
+	fi
+
+	# define some variables
+	debug "define some variables"
+	DEFINE_boolean 'debug' false 'enable debug mode' 'd'
+
+	# parse the command line
+	debug "parse command line"
+	FLAGS_PARENT="sbank"
+	FLAGS "$@" || exit $?
+	eval set -- "${FLAGS_ARGV}"
+
+	# sanity checks
+	SUBCOMMAND="$1"; shift
+
+	if [ ! -e "$SLURMBANK_DIR/sbank-$SUBCOMMAND" ]; then
+		usage
+		exit 1
+	fi
+
+	# run command
+	. $SLURMBANK_DIR/sbank-$SUBCOMMAND
+	FLAGS_PARENT="sbank $SUBCOMMAND"
+
+	# test if the first argument is a flag (i.e. starts with '-')
+	# in that case, we interpret this arg as a flag for the default
+	# command
+	SUBACTION="default"
+	if [ "$1" != "" ] && ! echo "$1" | grep -q "^-"; then
+		SUBACTION="$1"; shift
+	fi
+	if ! type "cmd_$SUBACTION" >/dev/null 2>&1; then
+		warn "Unknown subcommand: '$SUBACTION'"
+		usage
+		exit 1
+	fi
+
+	# run the specified action
+	cmd_$SUBACTION "$@"
+}
+
+main "$@"

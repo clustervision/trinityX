@@ -1,0 +1,257 @@
+# Requires 'sacctmgr'
+#
+
+usage() 
+{
+	echo "usage: sbank balance statement [-c clustername] [-b accountname] [-a accountname] [-A] [-u username] [-U] [-s yyyy-mm-dd]"
+	echo "   or: sbank balance request -c CLUSTER -a ACCOUNT -t TIME -v"
+	echo "   or: sbank balance checkscript -c CLUSTER -s SCRIPT -v"
+	echo 
+	echo "options for 'statement'"
+	echo "        -c:     report on cluster 'clustername' (defaults to the local cluster)"
+	echo "        -b:     report unformatted balance of account 'accountname'"
+	echo "        -a:     report balance of account 'accountname' (defaults to all accounts of the current user)"
+	echo "        -A:     report all accounts (defaults to all accounts of the current user)"
+	echo "        -U:     report only the current user's balances (defaults to all users in all accounts of the current user)"
+	echo "        -u:     report information for the given username, instead of the current user"
+	echo "        -s:     report historical user/account usage from the DBD via 'sreport', starting from yyyy-mm-dd"
+	echo
+	echo "options for 'request'"
+	echo "        -a specify account"
+	echo "        -t specify total time in hours"
+	echo "        -v verbose output, including current balance, requested hours and expected balance"
+	echo
+	echo "options for 'checkscript'"
+	echo "        -s specify sbatch script name"
+	echo "        -v verbose output, including current balance, requested hours and expected balance"
+	echo
+	echo "common options"
+	echo "        -c specify cluster (defaults to the local cluster)"
+	echo
+
+}
+
+parse_args() {
+	# parse options
+	FLAGS "$@" || exit $?
+	eval set -- "${FLAGS_ARGV}"
+}
+
+cmd_default()
+{
+	usage
+}
+
+cmd_statement()
+{
+	local opts
+
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'account' '' 'specify a slurm account' 'a'
+	DEFINE_string 'account2' '' 'specify a slurm account for unformatted balance' 'b'
+	DEFINE_string 'cluster' '' 'specify a cluster' 'c'
+	DEFINE_string 'user' '' 'specify a username' 'u'
+	DEFINE_string 'startdate' '' 'specify a start-date yyyy-mm-dd' 's'
+	DEFINE_boolean 'all' false 'show all users in the account' 'A'
+	DEFINE_boolean 'useronly' false 'show only the current user' 'U'
+
+	FLAGS_PARENT="sbank balance statement"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	# change behaviour of getopt to let perl program take args
+	unset POSIXLY_CORRECT
+
+	[ "${FLAGS_cluster}" != "" ]  && opts="$opts -c ${FLAGS_cluster}"
+	[ "${FLAGS_account}" != "" ]  && opts="$opts -a ${FLAGS_account}"
+	[ "${FLAGS_account2}" != "" ]  && opts="$opts -b ${FLAGS_account2}"
+	[ "${FLAGS_user}" != "" ]  && opts="$opts -u ${FLAGS_user}"
+	[ "${FLAGS_startdate}" != "" ]  && opts="$opts -s ${FLAGS_startdate}"
+	[ ${FLAGS_all} -eq ${FLAGS_TRUE} ] && opts="$opts -A"
+	[ ${FLAGS_useronly} -eq ${FLAGS_TRUE} ] && opts="$opts -U"
+
+	$SLURMBANK_DIR/_sbank-balance.pl $opts
+}
+
+cmd_request()
+{
+	local balance_initial
+	local balance_post
+
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'account' '' 'specify a slurm account' 'a'
+	DEFINE_string 'cluster' '' 'specify a cluster' 'c'
+	DEFINE_integer 'time' '0' 'specify time in hours' 't'
+	DEFINE_boolean 'verbose' false 'verbose output, including current balance, requested hours and expected balance' 'v'
+
+	FLAGS_PARENT="sbank balance request"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	[ "${FLAGS_time}" -le "0" ] && die "time must be greater than 0"
+
+	# if no account, look for default
+	#[ "${FLAGS_account}" = "" ]  && die "must specify account"
+	if [ -z "${FLAGS_account}" ]
+	then
+		FLAGS_account=$($SLURMBANK_DIR/sbank user account)
+
+		# if no default, then error
+		if [ -z "${FLAGS_account}" ]
+		then
+			die "no account specified, and no default account configured"
+		else
+			warn "no account specified, using default: $FLAGS_account"
+		fi
+	fi
+
+
+	if [ "${FLAGS_cluster}" = "" ]
+	then
+		FLAGS_cluster=$($SLURMBANK_DIR/sbank cluster list)
+		debug "using local cluster: ${FLAGS_cluster}"
+	fi
+
+	# the balance account - this could be re-worked in a more clever way and check for exitcodes
+	balance_initial=$($SLURMBANK_DIR/sbank balance statement -b ${FLAGS_account})
+	debug "${balance_initial} hours is in the balance of ${FLAGS_account} on ${FLAGS_cluster}"
+
+	balance_post=$(echo "${balance_initial} - ${FLAGS_time}" | bc)
+
+	debug "${balance_post} hours remaining in balance after the request"
+
+
+	if [ ${FLAGS_verbose} -eq ${FLAGS_TRUE} ]
+	then
+		printf "%-20s = %'10d\n" "Current balance" ${balance_initial}
+		printf "%-20s = %'10d\n" "Requested hours" ${FLAGS_time}
+		if [ "${balance_post}" -gt "0" ]
+		then
+			printf "%-20s = %'10d\n" "Expected balance" ${balance_post}
+		else
+			printf "%-20s = %'10d  <= warning: job won't run sucessfully\n" "Expected balance" ${balance_post}
+		fi
+	else
+
+		if [ "${balance_post}" -gt "0" ]
+		then
+			echo ${balance_post}
+		else
+			warn "The account does not have enough time to complete your request"
+			echo ${balance_post}
+		fi
+	fi
+}
+
+cmd_checkscript()
+{
+	local walltime
+	local wall_hours
+	local cpu_hours
+	local tasks
+	local cpus
+	local nodes
+	local acc
+	local arg
+	local line
+
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'scriptname' '' 'specify a slurm job script' 's'
+	DEFINE_string 'cluster' '' 'specify a cluster' 'c'
+	DEFINE_boolean 'verbose' false 'verbose output, including current balance, requested hours and expected balance' 'v'
+
+	FLAGS_PARENT="sbank balance checkscript"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	[ "${FLAGS_scriptname}" = "" ]  && die "must specify job script name"
+
+	[ ! -f "${FLAGS_scriptname}" ]  && die "no such file: ${FLAGS_scriptname}"
+	[ ! -r "${FLAGS_scriptname}" ]  && die "unable to read: ${FLAGS_scriptname}"
+
+
+	if [ "${FLAGS_cluster}" = "" ]
+	then
+		FLAGS_cluster=$($SLURMBANK_DIR/sbank cluster list)
+		debug "using local cluster: ${FLAGS_cluster}"
+	fi
+
+	# use the filename at the end to avoid starting a subshell and losing the variables
+	while read line
+	do
+		if [[ "${line}" =~ ^#SBATCH[[:space:]]-([[:alpha:]])[[:space:]]*([^[:space:]]*) ]]
+		then
+			flag=${BASH_REMATCH[1]}
+			arg=${BASH_REMATCH[2]}
+
+			case "${flag}" in
+				t)
+				       walltime=$arg ;;
+				n)
+				       tasks=$arg ;;
+				c)
+				       cpus=$arg ;;
+				N)
+				       nodes=$arg ;;
+				A)
+					acc=$arg ;;
+			esac
+		fi
+
+	done < "${FLAGS_scriptname}"
+
+	[ -z "$walltime" ] && die "no time parameter set in the script"
+	[ -z "$tasks" -a -z "$nodes" ] && die "at least one of tasks (-n) or nodes (-N) must be set in the script"
+
+
+	wall_hours=$($SLURMBANK_DIR/sbank time calc -t $walltime)
+
+	if [ -n "$tasks" ]
+	then
+		cpu_hours=$($SLURMBANK_DIR/sbank time estimate -n $tasks -t $wall_hours)
+	elif [ -n "$nodes" ]
+	then
+		if [ -z "$cpus" ]
+		then
+			cpus=$($SLURMBANK_DIR/sbank cluster cpupernode)
+			warn "no cores-per-node specified - estimating $cpus"
+		fi
+		cpu_hours=$($SLURMBANK_DIR/sbank time estimate -N $nodes -c $cpus -t $wall_hours)
+	fi
+
+	# if no account, look for default
+	if [ -z "$acc" ]
+	then
+		acc=$($SLURMBANK_DIR/sbank user account)
+
+		# if no default, then error
+		if [ -z "$acc" ]
+		then
+			die "no account specified in the script, and no default account configured"
+		else
+			warn "no account specified in the script, using default: $acc"
+		fi
+	fi
+
+	if [ ${FLAGS_verbose} -eq ${FLAGS_TRUE} ]
+	then
+		$SLURMBANK_DIR/sbank balance request -a $acc -c ${FLAGS_cluster} -t $cpu_hours -v
+	else
+		$SLURMBANK_DIR/sbank balance request -a $acc -c ${FLAGS_cluster} -t $cpu_hours
+	fi
+}
+
+cmd_help()
+{
+	usage
+	exit 0
+}
