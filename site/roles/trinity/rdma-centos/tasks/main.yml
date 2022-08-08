@@ -1,0 +1,39 @@
+---
+
+- name: Install rdma packages
+  yum:
+    name: '{{ rdma_centos_packages }}'
+    state: present
+  tags: install-only
+
+#- name: Enable rdma services
+#  service:
+#    name: '{{ item }}'
+#    state: started
+#    enabled: yes
+#  with_items:
+#    - rdma
+#    - rdma-ndd
+ 
+- name: Enable rdma services
+  systemd:
+    name: '{{ item }}'
+    enabled: yes
+  with_items:
+    - rdma
+    - rdma-ndd
+
+- name: Start rdma services
+  systemd:
+    name: '{{ item }}'
+    state: started
+  with_items:
+    - rdma
+    - rdma-ndd
+  when: ansible_connection not in 'lchroot'
+
+- name: Place i40iw blacklist
+  template:
+    src: i40.conf.j2 
+    dest: /etc/modprobe.d/i40.conf
+  when: install_infiniband

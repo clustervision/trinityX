@@ -1,0 +1,141 @@
+# Requires sacctmgr and scontrol
+
+usage() 
+{
+	echo "usage: sbank cluster list -a"
+	echo "   or: sbank cluster cpupernode -m -c CLUSTER"
+	echo "   or: sbank cluster create -c CLUSTER"
+	echo "   or: sbank cluster delete -c CLUSTER"
+	echo "   or: sbank cluster cpuhrs -c CLUSTER"
+	echo
+}
+
+parse_args() {
+	# parse options
+	FLAGS "$@" || exit $?
+	eval set -- "${FLAGS_ARGV}"
+}
+
+cmd_default() 
+{
+	cmd_help
+}
+
+cmd_list()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_boolean 'all' false 'show all clusters' 'a'
+
+	FLAGS_PARENT="sbank cluster"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	if [ ${FLAGS_all} -eq ${FLAGS_TRUE} ];
+	then
+		$SACCTMGR_BIN -n list cluster format=cluster%30 | sed -e 's/^ *//g;s/ *$//g'
+	else
+		$SCONTROL_BIN show config | grep -i clustername | awk -F'=' '{print $2}' | sed -e 's/^ *//g;s/ *$//g'
+	fi
+}
+
+cmd_create()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
+
+	FLAGS_PARENT="sbank cluster create"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	[ ${FLAGS_cluster} = 'null' ] && die "${FLAGS_cluster}" "is not an cluster, no cluster specified"
+
+	$SACCTMGR -i create cluster ${FLAGS_cluster}
+}
+
+cmd_delete()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
+
+	FLAGS_PARENT="sbank cluster create"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	[ ${FLAGS_cluster} = 'null' ] && die "${FLAGS_cluster}" "is not an cluster, no cluster specified"
+
+	$SACCTMGR -i delete cluster ${FLAGS_cluster}
+}
+
+cmd_cpupernode() {
+	local cpus
+
+	# define some variables
+	debug "define some variables"
+	DEFINE_boolean 'min' false 'return lowest value of cpu per node' 'm'
+	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
+
+	FLAGS_PARENT="sbank cluster cpupernode"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	if [ ${FLAGS_cluster} != 'null' ]
+	then
+		FLAGS_cluster="-M${FLAGS_cluster}"
+	fi
+
+	if [ ${FLAGS_min} -eq ${FLAGS_TRUE} ];
+	then
+		opts="-n"
+	else
+		opts="-nr"
+	fi
+	cpus=$( $SINFO_BIN -h --format "%c %P" "${FLAGS_cluster}" | grep -v ^CLUSTER | sort $opts | head -1 | awk '{print $1}' )
+	# should probably test to see if this is an integer number or not
+	echo $cpus
+}
+
+cmd_cpuhrs() {
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'cluster' '' 'specify a cluster' 'c'
+
+	FLAGS_PARENT="sbank cluster cpuhrs"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if cluster is specified"
+	if [ "${FLAGS_cluster}" != "" ]
+	then
+		FLAGS_cluster="-M ${FLAGS_cluster}"
+	else
+		FLAGS_cluster="-M $($SLURMBANK_DIR/sbank cluster list)"
+	fi
+
+	for i in year month week day
+	do
+		$SLURMBANK_DIR/_sbank-common-cpu_hrs.pl -t hours -i $i ${FLAGS_cluster}
+	done
+}
+
+
+cmd_help()
+{
+	usage
+	exit 0
+}

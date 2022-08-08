@@ -1,0 +1,102 @@
+---
+# tasks for mariadb role
+
+- name: Generate password for DB root and save it to /etc/trinity/passwords 
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mysql/root.txt  
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get root password from /etc/trinity/passwords
+  set_fact:
+    mysql_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mysql/root.txt  
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Install MariaDB packages
+  yum:
+   name: '{{ mariadb_packages }}'
+   state: present
+  tags: install-only
+
+- name: Update SELinux context for {{ mariadb_db_path }}
+  sefcontext:
+    target: '{{ mariadb_db_path }}(/.*)?'
+    setype: mysqld_db_t
+    seuser: system_u
+    state: present
+
+- name: Ensure {{ mariadb_db_path }} exists
+  file:
+    path: '{{ mariadb_db_path }}'
+    owner: mysql
+    group: mysql
+    state: directory
+    setype: mysqld_db_t
+    seuser: system_u
+  when: primary | default(True)
+
+- name: Render /etc/my.cnf
+  template:
+    src: 'etc_my.cnf.j2'
+    dest: '/etc/my.cnf'
+    backup: yes
+  notify: restart mariadb
+
+- name: Render /root/.my.cnf
+  template:
+    src: my.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: 0600
+    backup: yes
+
+- name: Enable MariaDB service
+  service:
+    name: mariadb
+    enabled: yes
+  when: not ha|default(False)
+
+- block:
+
+  - name: Start MariaDB service
+    service:
+      name: mariadb
+      state: started
+  
+  - meta: flush_handlers
+
+  - name: Set MariaDB's root pasword
+    mysql_user: 
+      config_file: '/root/.my.cnf'
+      name: root
+      password: '{{ mysql_root_pwd }}'
+      host_all: yes
+      check_implicit_admin: yes
+      state: present
+  
+  - name: Remove anonymous users
+    mysql_user:
+      config_file: '/root/.my.cnf'
+      name: ''
+      host_all: yes
+      state: absent
+  
+  - name: Remove test db
+    mysql_db:
+      config_file: '/root/.my.cnf'
+      name: test
+      state: absent
+  
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'mariadb'
+      resource_class: 'systemd'
+      resource_type: 'systemd:mariadb'
+      options: 'op monitor interval=30 --group Trinity-stack'
+      state: present
+    when: ha | default(False)
+    tags: pcs
+
+  when: primary | default(True)

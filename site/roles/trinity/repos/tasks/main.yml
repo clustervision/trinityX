@@ -1,0 +1,45 @@
+---
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}.yaml"
+    - "{{ ansible_os_family }}.yaml"
+
+- debug:
+    msg: "{{ repos }}"
+
+- name: Configure repo
+  trix_repos:
+    remote_repo: "{{ item.repo }}"
+    remote_key:  "{{ item.key | default(None)}}"
+    local_repo:  "{{ trix_local_repo_baseurl }}"
+    local_key:   "{{ trix_local_repo_key | default(None) }}"
+    name:        "{{ item.name | default(None) }}"
+    use_local:   "{{ local_install | default(False) }}"
+  with_items: "{{ repos }}"
+  tags: install-only
+
+# Disable all remote repos (without *-local suffix)
+# If we have local install
+#
+- block:
+
+  # FIXME
+  # Was trying to do it via yum_repos, lineinfile or ini_file
+  # modules. Got monstrous construction at the end.
+  - name: Install yum-utils to make yum-config-manager available
+    yum:
+      name: yum-utils
+      state: installed
+
+  - name: Disable all repo without '*-local' suffix
+    shell: >
+      yum-config-manager  \
+      | sed -n 's/^\[\(.*\)\]$/\1/p' \
+      | egrep -v "\-local$" \
+      | xargs yum-config-manager --disable {}
+
+    args:
+      warn: no
+
+  when: local_install | default(False)

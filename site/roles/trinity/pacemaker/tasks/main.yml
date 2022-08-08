@@ -1,0 +1,239 @@
+---
+# tasks file for pacemaker
+
+- name: Generate hacluster password and save it to  /etc/trinity/passwords
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/hacluster.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get hacluster password from /etc/trinity/passwords
+  set_fact:
+    pacemaker_user_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/hacluster.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Install pacemaker packages
+  yum:
+    name: '{{ pacemaker_packages }}'
+    state: present
+    enablerepo: rhel-ha-for-rhel-7-server-rpms
+  tags: install-only
+  when: ansible_distribution == "RedHat"
+
+- name: Install pacemaker packages
+  yum:
+    name: '{{ pacemaker_packages }}'
+    state: present
+  tags: install-only
+  when: ansible_distribution == "CentOS"
+
+- name: Set up Corosync's configuration file
+  template:
+    src: corosync.conf.j2
+    dest: '/etc/corosync/corosync.conf'
+  notify: restart corosync
+
+- meta: flush_handlers
+
+- name: Generate corosync's authentication key
+  command: corosync-keygen -l
+  args:
+    creates: '/etc/corosync/authkey'
+
+- name: Copy corosync's authentication key to the secondary controller
+  synchronize:
+    dest: /etc/corosync/authkey
+    src: /etc/corosync/authkey
+    archive: yes
+  when: not primary|default(True)
+
+- name: Add colouring to pcs status
+  copy:
+    src: pcs-status.sh
+    dest: /etc/profile.d/pcs-status.sh
+
+- name: Start corosync service
+  service:
+    name: corosync
+    state: started
+
+- name: Start and enable pcsd service
+  service:
+    name: pcsd
+    enabled: yes
+    state: started
+
+- name: Generate salt for the hacluster password
+  set_fact:
+    password_salt: "{{ lookup('password',
+                          '/etc/trinity/passwords/hacluster-salt.txt
+                           chars=ascii_letters,digits,hexdigits length=16') }}"
+
+- name: Set a passwd for the user hacluster
+  user:
+    name: hacluster
+    password: '{{ pacemaker_user_pwd | password_hash("sha512", password_salt) }}'
+
+- name: Authenticate the controllers
+  command: pcs cluster auth --all -u 'hacluster' -p '{{ pacemaker_user_pwd }}'
+  args:
+    creates: '/var/lib/pcsd/tokens'
+  run_once: true
+
+- name: Start pacemaker service
+  service:
+    name: pacemaker
+    state: started
+
+- block:
+
+  - name: Set pacemaker properties
+    pcs_property:
+      name: '{{ item.key }}'
+      value: '{{ item.value }}'
+    with_dict: '{{ pacemaker_properties }}'
+
+  - name: Setup pacemaker resource defaults
+    command: pcs resource defaults '{{ item }}'
+    register: result
+    until: result.rc == 0
+    retries: 5
+    delay: 10
+    with_items: '{{ pacemaker_resource_defaults }}'
+
+  - name: Add primary dummy resource
+    pcs_resource:
+      name: 'primary'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=179s --group Trinity'
+      state: present
+
+  - name: Add secondary dummy resource
+    pcs_resource:
+      name: 'secondary'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=181s --group Trinity-secondary'
+      state: present
+
+  - name: Add floating IP resource
+    pcs_resource:
+      name: 'trinity-ip'
+      resource_type: 'ocf:heartbeat:IPaddr2'
+      options: 'ip={{ trix_ctrl_ip }} op monitor interval=29s --group Trinity'
+      state: present
+
+  - name: Add pacemaker order constraint - Trinity then Trinity-secondary
+    pcs_constraint_order:
+      resource1: 'Trinity'
+      resource2: 'Trinity-secondary'
+      state: present
+
+  - name: Add pacemaker colocation constraint - Trinity-secondary not with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-secondary'
+      resource2: 'Trinity'
+      score: '-INFINITY'
+      state: present
+
+  - name: Add pacemaker resource group Trinity-fs
+    pcs_resource:
+      name: 'fs'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=0 --group Trinity-fs'
+      state: present
+
+  - name: Add pacemaker order constraint - Trinity then Trinity-fs
+    pcs_constraint_order:
+      resource1: 'Trinity'
+      resource2: 'Trinity-fs'
+      state: present
+
+  - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-fs'
+      resource2: 'Trinity'
+      score: 'INFINITY'
+      state: present
+
+  - name: Add pacemaker resource group Trinity-stack
+    pcs_resource:
+      name: 'stack'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=0 --group Trinity-stack'
+      state: present
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity'
+      score: 'INFINITY'
+      state: present
+
+  - name: Add pacemaker order constraint - Trinity-fs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-fs'
+      resource2: 'Trinity-stack'
+      state: present
+
+  - name: Toggle pacemaker stonith property
+    pcs_property:
+      name: stonith-enabled
+      value: '{{ fence_ipmilan_enabled }}'
+
+  - name: Configure fencing resources using the ipmilan fencing agent
+    pcs_resource:
+      name: 'fence-{{ item.0 }}'
+      resource_class: 'stonith'
+      resource_type: 'fence_ipmilan'
+      options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
+      state: present
+    with_together:
+      - ['{{ trix_ctrl1_hostname }}', '{{ trix_ctrl2_hostname }}']
+      - ['{{ trix_ctrl1_bmcip }}', '{{ trix_ctrl2_bmcip }}']
+    when: fence_ipmilan_enabled == 'true'
+    tags: fencing
+
+  - name: Add fencing location constraints
+    pcs_constraint_location:
+      resource: 'fence-{{ item }}'
+      node_name: '{{ item }}'
+      score: '-INFINITY'
+      state: present
+    with_items:
+      - '{{ trix_ctrl1_hostname }}'
+      - '{{ trix_ctrl2_hostname }}'
+    when: fence_ipmilan_enabled == 'true'
+    tags: fencing
+
+#  - name: Get IB interface names
+#    shell: ip l | awk '/ib.:/ { print $2 }' | tr -d ':'
+#    register: ib_interfaces
+#    changed_when: False
+#    tags: ibmon
+#
+#  - name: Get IB devices names
+#    shell: ibstatus | awk '/Infiniband device/ { print $3 }' | tr -d "'"
+#    register: ib_devices
+#    changed_when: False
+#    tags: ibmon
+#
+#  - name: Add ibmon resources
+#    pcs_resource:
+#      name: '{{ item.0 }}-mon'
+#      resource_type: 'ocf:heartbeat:ethmonitor'
+#      options: 'interface={{ item.0 }} infiniband_device={{ item.1 }} link_status_only=true --clone'
+#      state: present
+#    with_together:
+#      - '{{ ib_interfaces.stdout_lines | default([]) }}'
+#      - '{{ ib_devices.stdout_lines | default([]) }}'
+#    when: ib_interfaces.stdout
+#    tags: ibmon
+#
+#  - name: Add ibmon location constraints
+#    shell: 'pcs constraint location Trinity rule score=-INFINITY ethmonitor-{{ item }} ne 1'
+#    with_items: '{{ ib_devices.stdout_lines | default([]) }}'
+#    when: ib_interfaces.stdout
+#    tags: ibmon
+
+  when: primary|default(True)

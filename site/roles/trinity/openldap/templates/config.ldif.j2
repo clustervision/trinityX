@@ -1,0 +1,35 @@
+# Global parameters
+dn: cn=config
+changetype: modify
+replace: olcTLSCACertificateFile
+olcTLSCACertificateFile: {{ openldap_tls_cacrt }}
+-
+replace: olcTLSCertificateFile
+olcTLSCertificateFile: {{ openldap_tls_crt }}
+-
+replace: olcTLSCertificateKeyFile
+olcTLSCertificateKeyFile: {{ openldap_tls_key }}
+-
+replace: olcConnMaxPendingAuth
+olcConnMaxPendingAuth: 20000
+-
+replace: olcConnMaxPending
+olcConnMaxPending: 5000
+-
+replace: olcIdleTimeout
+olcIdleTimeout: 120
+-
+replace: olcWriteTimeout
+olcWriteTimeout: 120
+-
+replace: olcTimeLimit
+olcTimeLimit: 60
+
+# config backend: access configuration
+dn: olcDatabase={0}config,cn=config
+changetype: modify
+replace: olcRootDN
+olcRootDN: cn=config
+-
+replace: olcRootPW
+olcRootPW: {{ openldap_root_pwd_hash.stdout }}

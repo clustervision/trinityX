@@ -1,0 +1,63 @@
+SLURM BANK
+==========
+
+SLURM Bank, a collection of wrapper scripts to give slurm GOLD like
+capabilities for managing resources.
+
+With the scripts we are able to provide a simple banking system where we
+can deposit hours to an account. Users are associated to these accounts
+from which they can use to run jobs. If users do not have an account or
+if they do not have hours in their account then they cannot run jobs.
+
+Requirements (tested with)
+
+* SLURM 2.2.0, 2.2.7, 2.4.1, 2.5.3, 2.6.x, 14.11.x, 15.08.x
+* Scientific Linux 5.x, 6.x (bash, rsync, perl)
+
+Source and Documentation
+========================
+
+The documentation is stored in doc/ and is generated with ikiwiki,
+that is, all the documentation is written in markdown.
+
+There is a pre-generated set of documentation available at
+<http://jcftang.github.com/slurm-bank/>
+
+To get the source and documentation please do
+
+	git clone git://github.com/jcftang/slurm-bank.git
+
+Administrator Notes
+===================
+
+To build an installable RPM from the tarball
+
+	rpmbuild -ta slurm-bank-1.1.1.2.tar.gz
+
+The above assumes that the appropriate compiler and rpm-build packages
+are installed on your system. You will need ikiwiki installed to generate
+the html documetation. If you do not have ikiwiki installed you can do:
+
+	rpmbuild -ta --without docs slurm-bank-1.1.1.2.tar.gz
+
+If you have a clone of the repository, there is a pre-generated set of
+html pages stored in the html branch.
+
+Tests
+=====
+
+There is a simple test suite to make sure things are working as we
+expect. To execute them,
+
+	make test
+
+The tests behave differently if you run them as a normal user or as root.
+
+Doing a release
+===============
+
+* clone the git repository
+* Finalise changes
+* Run bump-version script to make some version number changes to various files
+* Tag repository
+* then run "make dist" to generate a tarball for redistribution

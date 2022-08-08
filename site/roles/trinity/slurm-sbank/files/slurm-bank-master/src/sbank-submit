@@ -1,0 +1,47 @@
+usage()
+{
+	echo "usage: sbank submit -s SCRIPT"
+	echo
+}
+
+parse_args() {
+	# parse options
+	FLAGS "$@" || exit $?
+	eval set -- "${FLAGS_ARGV}"
+}
+
+cmd_default()
+{
+	cmd_submit "$@"
+}
+
+cmd_submit() 
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'scriptname' '' 'specify a slurm job script' 's'
+
+	FLAGS_PARENT="sbank submit"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	[ "${FLAGS_scriptname}" = "" ]  && die "must specify job script name"
+
+	debug "check to see that ${FLAGS_scriptname} is okay"
+	[ ! -f "${FLAGS_scriptname}" ]  && die "no such file: ${FLAGS_scriptname}"
+	[ ! -r "${FLAGS_scriptname}" ]  && die "unable to read: ${FLAGS_scriptname}"
+
+	log "Getting balance for ${USER}"
+	$SLURMBANK_DIR/sbank balance statement
+	log "Checking script before submitting"
+	$SLURMBANK_DIR/sbank balance checkscript -s ${FLAGS_scriptname} -v
+	log "sbatch'ing the script"
+	sbatch ${FLAGS_scriptname}
+}
+
+cmd_help()
+{
+	usage
+}

@@ -1,0 +1,31 @@
+---
+# vars file for openldap
+
+openldap_packages:
+  - openldap-servers
+  - openldap-clients
+  - rsync
+
+openldap_default_user: ldap
+openldap_default_group: ldap
+
+openldap_server_dir_path: /var/lib/ldap
+openldap_server_conf_path: /etc/openldap/slapd.d
+openldap_server_defaults_file: /etc/sysconfig/slapd
+
+openldap_endpoints: ldaps:/// ldapi:///
+openldap_host: 'controller.cluster'
+
+ssl_cert_path: '/etc/ssl/certs'
+ssl_cert_group: '{{ openldap_default_user }}'
+
+openldap_tls_cacrt: '{{ ssl_ca_cert }}'
+openldap_tls_crt: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
+openldap_tls_key: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.key'
+
+openldap_schemas:
+  - cosine
+  - inetorgperson
+  - rfc2307bis
+  - autoinc
+  - ppolicy

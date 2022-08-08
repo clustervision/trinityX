@@ -1,0 +1,33 @@
+---
+# Create the trinity tree
+
+- name: Create common Trinity directory structure
+  file:
+    path: '{{ item }}'
+    state: directory
+  with_items:
+    - '{{ trix_root }}'
+    - '{{ trix_home }}'
+    - '{{ trix_shared }}'
+
+- name: Apply proper selinux context to '{{ trix_home }}'
+  file:
+    path: '{{ trix_home }}'
+    state: directory
+    setype: home_root_t
+    seuser: system_u
+
+- name: Create Trinity directory structure on controllers
+  file:
+    path: '{{ item }}'
+    state: directory
+  with_items:
+    - '{{ trix_local }}'
+    - '{{ trix_images }}'
+    - '{{ trix_shared }}/apps'
+    - '{{ trix_licenses }}' 
+    - '{{ trix_docs }}'
+    - '{{ trix_examples }}'
+    - '{{ trix_modulefiles }}'
+  when: ansible_connection not in 'lchroot'
+        and not compute|default(False)

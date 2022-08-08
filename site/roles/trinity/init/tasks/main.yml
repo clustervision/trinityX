@@ -1,0 +1,57 @@
+---
+# Initialize required variables
+#
+# Keep in mind that this role applies to the controllers
+# as well as compute nodes and images
+
+- name: Install init packages
+  yum:
+    name: '{{ init_packages }}'
+    state: present
+  tags: install-only
+
+- block:
+
+  - name: Check if this node is a controller
+    set_fact:
+      on_controller: '{{ True if "controllers" in group_names else False }}'
+
+  - name: Check if this node is the primary controller
+    set_fact:
+      primary: '{{ True if trix_ctrl_ip in ansible_all_ipv4_addresses and on_controller else False }}'
+  
+  - name: Update the trix_ctrl_* variables in case of non-HA setup
+    set_fact:
+      trix_ctrl_hostname: '{{ trix_ctrl1_hostname }}'
+      trix_ctrl_ip: '{{ trix_ctrl1_ip }}'
+      trix_ctrl2_hostname: ''
+      trix_ctrl2_ip: ''
+    when: not ha|default(False)
+
+  tags: always
+
+- name: Toggle selinux state
+  selinux:
+    state: '{{ "permissive" if enable_selinux else "disabled" }}'
+    policy: 'targeted'
+
+# Workaround the issue where NM is left running in the system
+# after it has been removed
+- name: Is NetworkManager running?
+  shell: systemctl status NetworkManager
+  register: NM_service
+  failed_when: false
+  changed_when: false
+  ignore_errors: true
+
+- name: Stop NetworkManager
+  service:
+    name: NetworkManager
+    state: stopped
+  when: NM_service.rc == 0 and
+        'lchroot' not in ansible_connection
+
+- name: Remove NetworkManager
+  yum:
+    name: NetworkManager
+    state: absent

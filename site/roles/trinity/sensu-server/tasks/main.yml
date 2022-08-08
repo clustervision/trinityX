@@ -1,0 +1,112 @@
+---
+- name: Install Sensu Repo (CV)
+  yum_repository:
+    name: CV-Sensu
+    description: ClusterVision Sensu Repository
+    baseurl: https://updates.clustervision.com/mirror/sensu-centos7
+    gpgkey: https://updates.clustervision.com/mirror/sensu-pubkey.gpg
+
+- name: Install redis
+  yum:
+    name: redis
+    state: installed
+
+- name: Ensure redis binds to localhost 
+  tags: redis
+  lineinfile:
+    dest: /etc/redis.conf
+    regexp: '^bind'
+    line: 'bind 127.0.0.1'
+
+- name: Start redis
+  systemd:
+    name: redis
+    state: started
+    enabled: true
+
+- name: Install Sensu and dashboarding
+  yum:
+    name: "{{ sensu_packages }}"
+    state: installed
+  vars:
+    sensu_packages: 
+    - sensu
+    - uchiwa
+
+- name: Uchiwa template
+  template:
+    src: uchiwa.json
+    dest: /etc/sensu/uchiwa.json
+    owner: uchiwa
+    group: uchiwa
+    mode: '0664'
+  notify: restart uchiwa
+
+- name: Firewalld for sensu
+  firewalld:
+    port: "{{ item }}"
+    state: enabled
+    permanent: yes
+    immediate: yes
+  with_items:
+  - 4567/tcp
+  - 3001/tcp
+
+- name: Install Sensu plugins
+  gem:
+    executable: /opt/sensu/embedded/bin/gem
+    state: "{{ item.state }}"
+    name: "{{ item.name }}"
+    version: "{{ item.version | default() }}"
+    pre_release: "{{ item.pre_release | default('no') }}"
+    repository: "{{ item.repository | default('') }}"
+    user_install: no
+  with_items: "{{ sensu_server_gems }}"
+
+- name: Place mailer configuration
+  template:
+    src: mailer.erb
+    dest: /etc/sensu/mailer.erb
+    owner: sensu
+    group: sensu
+  notify:
+   - restart sensu-server
+   - restart sensu-api
+
+- name: Place configuration files
+  template:
+    src: "{{ item }}"
+    dest: "/etc/sensu/conf.d/{{ item }}"
+    owner: sensu
+    group: sensu
+  notify:
+   - restart sensu-server
+   - restart sensu-api
+  with_items:
+    - mailer.json
+    - handlers.json
+    - rabbitmq.json
+    - sensu-api.json
+    - sensu-checks.json
+
+- name: Start sensu componenets
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  with_items:
+    - sensu-server
+    - sensu-api
+    - sensu-client
+    - uchiwa
+
+- name: Create Sensu JIT clients
+  uri:
+    url: "http://localhost:4567/clients"
+    method: POST
+    body: "{{ item | to_nice_json }}"
+    body_format: json
+    status_code: 201
+  with_items:
+  - "{{ sensu_jit_clients }}"
+  when: sensu_jit_clients is defined

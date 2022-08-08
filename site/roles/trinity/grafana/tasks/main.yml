@@ -1,0 +1,165 @@
+---
+
+- name: Generate grafana admin password and save it to /etc/trinity/passwords
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/grafana/admin.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get grafana admin password from /etc/trinity/passwords
+  set_fact:
+    grafana_admin_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/grafana/admin.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Set protocol
+  set_fact:
+    grafana_protocol: "https"
+  when: enable_ssl
+
+- name: Set protocol
+  set_fact:
+    grafana_protocol: "http"
+  when: not enable_ssl
+
+- name: Install dependencies
+  yum:
+    name: python-firewall
+    state: present
+  when: ansible_virtualization_type != 'docker'
+
+- name: Install grafana dashboard
+  yum:
+    name: "{{ grafana_rpm }}"
+    state: present
+
+- name: Configure LDAP
+  template:
+    src: ldap.toml.j2
+    dest: /etc/grafana/ldap.toml
+    owner: root
+    group: grafana
+  notify: restart grafana-server
+  when: ldap_auth
+
+- name: Configure grafana-server
+  template:
+    src: grafana.ini.j2
+    dest: /etc/grafana/grafana.ini
+    owner: root
+    group: grafana
+  notify: restart grafana-server
+
+- name: Add grafana user to ssl group
+  user:
+    name: grafana
+    groups: ssl
+    append: "yes"
+  when: enable_ssl
+
+- name: Configure Grafana datasources
+  template:
+    src: trinityx-datasource.yaml.j2
+    dest: /etc/grafana/provisioning/datasources/trinityx-datasource.yaml
+  notify: restart grafana-server
+
+- name: Ensure directory
+  file:
+    state: directory
+    path: "{{ grafana_dashboard_dir }}"
+    owner: grafana
+    group: grafana
+
+- name: Configure Grafana dashboard provider
+  template:
+    src: trinityx-dashboards.yaml.j2
+    dest: /etc/grafana/provisioning/dashboards/trinityx-dashboards.yaml
+  notify: restart grafana-server
+
+- name: Place dashboards
+  copy:
+    src: "{{ item }}"
+    dest: "{{ grafana_dashboard_dir }}/{{ item }}"
+    owner: grafana
+    group: grafana
+  with_items: "{{ grafana_dashboards }}"
+  notify: restart grafana-server
+
+- name: Place branding
+  copy:
+    src: triX_7.png
+    dest: /usr/share/grafana/public/triX_7.png
+
+- name: Start and enable Grafana-server
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: "yes"
+  when: not ha|default(False)
+
+- name: Start and disable Grafana-server
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: "no"
+  when: ha|default(False) and primary|default(True)
+
+- name: Stop and disable Grafana-server
+  systemd:
+    name: grafana-server
+    state: stopped
+    enabled: "no"
+  when: ha|default(False) and not primary|default(True)
+
+- name: Install piechart
+  grafana_plugin:
+    name: grafana-piechart-panel
+    version: latest
+    state: present
+  notify: restart grafana-server
+
+- name: List organisations
+  uri:
+    method: GET
+    url: "{{ grafana_protocol }}://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/org/"
+    user: "{{ grafana_admin }}"
+    password: '{{ grafana_admin_pwd }}'
+    return_content: true
+    force_basic_auth: true
+    validate_certs: "no"
+  register: grafana_orgs
+  when: primary | default(False)
+
+- name: Configure organization
+  uri:
+    method: PUT
+    url: "{{ grafana_protocol }}://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/org"
+    user: "{{ grafana_admin }}"
+    password: '{{ grafana_admin_pwd }}'
+    validate_certs: "no"
+    force_basic_auth: true
+    body_format: json
+    body:
+      name: '{{ grafana_org_name }}'
+  when: grafana_org_name not in grafana_orgs and primary | default(False)
+
+- name: Set home dashboard
+  uri:
+    method: PUT
+    url: "{{ grafana_protocol }}://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/org/preferences"
+    user: "{{ grafana_admin }}"
+    password: '{{ grafana_admin_pwd }}'
+    validate_certs: "no"
+    force_basic_auth: true
+    body_format: json
+    body:
+      homeDashboardId: 2
+  when: primary | default(False)
+
+- name: Configure firewalld
+  firewalld:
+    state: enabled
+    port: "{{ grafana_port }}/tcp"
+    permanent: "yes"
+    immediate: "yes"
+  when: ansible_virtualization_type != 'docker'

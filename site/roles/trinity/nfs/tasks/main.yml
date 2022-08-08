@@ -1,0 +1,73 @@
+---
+# tasks file for nfs
+
+- name: Check if shared_fs_type is not 'none'
+  meta: end_play
+  when: shared_fs_type|string in "none"
+
+- name: Install nfs packages
+  yum:
+    name: '{{ nfs_packages }}'
+    state: present
+  tags: install-only
+
+- name: Enable NFS over RDMA
+  set_fact:
+    nfs_proto: '{{ "rdma" if nfs_enable_rdma == true else "tcp" }}'
+
+- name: Create {{ nfs_exports_path }} if needed
+  file:
+    path: '{{ nfs_exports_path }}'
+    state: directory
+  when: primary | default(True)
+      
+- name: Setup NFS exports in {{ nfs_exports_path }}
+  template:
+    src: '{{ "HA_exports.j2" if ha == true else "nonHA_exports.j2" }}'
+    dest: '{{ nfs_exports_path }}/trinity.exports'
+  when: primary | default(True)
+
+- name: Add link to the exports file in /etc/exports.d
+  file:
+    src: '{{ nfs_exports_path }}/trinity.exports'
+    dest: '/etc/exports.d/trinity.exports'
+    state: link
+    force: yes
+    follow: no
+  when: nfs_exports_path|string not in '/etc/exports.d'
+
+- name: Render nfsmount.conf configuration file
+  template:
+    src: 'nfsmount.conf.j2'
+    dest: '/etc/nfsmount.conf'
+
+- name: Setup NFS sysconfig
+  template:
+    src: 'sysconfig_nfs.j2'
+    dest: '/etc/sysconfig/nfs'
+  notify: restart nfs-config
+
+- name: Start and enable nfs server
+  service:
+    name: nfs-server
+    state: started
+    enabled: yes
+  when: not ha|default(False)
+
+- block:
+
+  - name: Create shared directory for data that should survive a failover
+    file:
+      path: '{{ trix_local }}/var/lib/nfs'
+      state: directory
+  
+  - name: Add NFS server pacemaker resource
+    pcs_resource:
+      name: 'trinity-nfs-server'
+      resource_class: 'ocf'
+      resource_type: 'nfsserver'
+      options: 'nfs_shared_infodir="{{ trix_local }}/var/lib/nfs" op monitor interval=47s --group Trinity-fs'
+      state: present
+    tags: pcs
+
+  when: primary|default(True) and ha|default(False)

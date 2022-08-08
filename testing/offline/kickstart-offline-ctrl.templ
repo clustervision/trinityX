@@ -1,0 +1,41 @@
+auth --enableshadow --passalgo=sha512
+cdrom
+graphical
+firstboot --enable
+ignoredisk --only-use=vda
+keyboard --vckeymap=us --xlayouts='us'
+lang en_US.UTF-8
+network  --bootproto=static --device=${VM_if1} --gateway=${GATEWAY} --ip=${VM_if1_ip} --nameserver=${GATEWAY} --netmask=${NETMASK_if1} --ipv6=auto --activate
+network  --bootproto=static --device=${VM_if2}  --ip=${VM_if2_ip} --netmask=${NETMASK_if2} --ipv6=auto --activate
+network  --bootproto=static --device=${VM_if3}  --ip=${VM_if3_ip} --netmask=${NETMASK_if3} --ipv6=auto --activate
+network  --hostname=${VM_HOSTNAME}
+rootpw ${ROOT_PASSWORD}
+services --enabled="chronyd"
+timezone Europe/Amsterdam --isUtc
+bootloader --append=" crashkernel=auto" --location=mbr --boot-drive=vda
+clearpart --all
+part /boot --fstype="ext4" --ondisk=vda --size=1024
+part swap --fstype="swap" --ondisk=vda --size=4096
+part / --fstype="ext4" --ondisk=vda --grow
+
+shutdown
+
+%packages
+@^trinityx
+@base
+@core
+@trinity
+chrony
+kexec-tools
+
+%end
+
+%addon com_redhat_kdump --enable --reserve-mb='auto'
+
+%end
+
+%anaconda
+pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
+pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+%end

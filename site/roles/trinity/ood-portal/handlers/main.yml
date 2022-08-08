@@ -1,0 +1,18 @@
+---
+- name: run update_ood_portal
+  command: '/opt/ood/ood-portal-generator/sbin/update_ood_portal -f'
+  register: command_result
+  failed_when: "'Completed successfully!' not in command_result.stdout"
+  notify:
+    - restart httpd24-httpd
+    - restart httpd24-htcacheclean
+
+- name: restart httpd24-httpd
+  systemd:
+    name: httpd24-httpd
+    state: restarted
+
+- name: restart httpd24-htcacheclean
+  systemd:
+    name: httpd24-htcacheclean
+    state: restarted

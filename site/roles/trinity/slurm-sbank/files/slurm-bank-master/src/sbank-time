@@ -1,0 +1,281 @@
+# Requires 'sacctmgr' 
+#
+# Parse a slurm time expression into CPU hours.
+# From the sbatch man page:
+#       -t, --time=<time>
+#       Acceptable time formats include "minutes",   "minutes:seconds",
+#       "hours:minutes:seconds",   "days-hours",   "days-hours:minutes"   and
+#       "days-hours:minutes:seconds".
+#
+
+export SLURMBANK_DIR=$(dirname "$0")
+
+usage()
+{
+	echo "usage: sbank time calc -t TIME"
+	echo "   or: sbank time estimate -N NODES -n NTASKS -c CORES -t TIME"
+	echo "   or: sbank time estimatescript -s SCRIPT -v"
+	echo
+	echo "options for 'calc'"
+	echo "        -t specify time in slurm time format"
+	echo
+	echo "options for 'estimate'"
+	echo "        -N specify total number of node, conflicts with ntasks"
+	echo "        -n specify total number of ntasks, conflicts with nodes"
+	echo "        -c specify total number of cores per node"
+	echo "        -t specify total time in hours"
+	echo
+	echo "options for 'estimatescript'"
+	echo "        -s specify sbatch script name"
+	echo "        -v verbose output"
+	echo "        -t specify total time in hours"
+	echo
+	echo "notes: for 'sbank time calc' TIME can be one of the following"
+	echo "       formats (integer values only):"
+	echo "           days-hours:minutes:seconds"
+	echo "           days-hours:minutes"
+	echo "           days-hours"
+	echo "           hours:minutes:seconds"
+	echo "           minutes:seconds"
+	echo "           minutes"
+	echo
+	echo "notes: for 'estimate' and 'estimatescript' the value for time is"
+	echo "       in hours only"
+	echo
+}
+
+parse_args() {
+	# parse options
+	FLAGS "$@" || exit $?
+	eval set -- "${FLAGS_ARGV}"
+}
+
+cmd_default()
+{
+	usage
+}
+
+cmd_calc()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'time' '' 'specify time in slurm time format' 't'
+
+	FLAGS_PARENT="sbank time calc"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	debug "check if time is specified"
+	if [ "${FLAGS_time}" = "" ]
+	then
+		usage
+		die "${FLAGS_time}" "no time specified"
+	fi
+
+	debug "'${FLAGS_time}' is the time string to be parsed"
+
+
+	# set default values
+	days=0
+	hours=0
+	mins=0
+	secs=0
+
+	# parse the string
+	if [[ "${FLAGS_time}" =~ ^([0-9]+)-([0-9]+):([0-9]+):([0-9]+)$ ]]
+	then
+		debug "days-hours:minutes:seconds"
+
+		days=${BASH_REMATCH[1]}
+		hours=${BASH_REMATCH[2]}
+		mins=${BASH_REMATCH[3]}
+		secs=${BASH_REMATCH[4]}
+
+	elif [[ "${FLAGS_time}" =~ ^([0-9]+)-([0-9]+):([0-9]+)$ ]]
+	then
+		debug "days-hours:minutes"
+
+		days=${BASH_REMATCH[1]}
+		hours=${BASH_REMATCH[2]}
+		mins=${BASH_REMATCH[3]}
+
+	elif [[ "${FLAGS_time}" =~ ^([0-9]+)-([0-9]+)$ ]]
+	then
+		debug "days-hours"
+
+		days=${BASH_REMATCH[1]}
+		hours=${BASH_REMATCH[2]}
+
+	elif [[ "${FLAGS_time}" =~ ^([0-9]+):([0-9]+):([0-9]+)$ ]]
+	then
+		debug "hours:minutes:seconds"
+
+		hours=${BASH_REMATCH[1]}
+		mins=${BASH_REMATCH[2]}
+		secs=${BASH_REMATCH[3]}
+
+	elif [[ "${FLAGS_time}" =~ ^([0-9]+):([0-9]+)$ ]]
+	then
+		debug "minutes:seconds"
+
+		mins=${BASH_REMATCH[1]}
+		secs=${BASH_REMATCH[2]}
+
+	elif [[ "${FLAGS_time}" =~ ^[0-9]+$ ]]
+	then
+		debug "minutes"
+		mins=$FLAGS_time
+	else
+		usage
+	fi
+
+
+	# now do the cals
+
+	# call 'bc' because bash doesn't do floating point!
+	float=$(echo "scale=2; ($days*86400 + $hours*3600 + $mins*60 + $secs) / 3600" | bc)
+	# and call printf because bc doesn't round numbers!
+	debug "rounded to the nearest hour:"
+	wallhours=$(printf "%.0f\n" $float)
+
+	# final check - if it has been rounded down to 0 wall hours, make it 1 (this is only
+	# an estimate anyway
+	if [[ $wallhours -eq "0" ]]
+	then
+		debug "rounding up from 0 hours to 1 hour"
+		echo "1"
+	else
+		echo "$wallhours"
+	fi
+}
+
+cmd_estimate()
+{
+	# define some variables
+	debug "define some variables"
+	DEFINE_integer 'ntasks' '' 'specify a total number of tasks, conflicts with nodes' 'n'
+	DEFINE_integer 'nodes' '' 'specify a total number of nodes, conflicts with ntasks' 'N'
+	DEFINE_integer 'cores' '0' 'specify a total number of cores per node' 'c'
+	DEFINE_integer 'time' '0' 'specify a total hours (Walltime)' 't'
+
+	FLAGS_PARENT="sbank time estimate"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	# get account balance and substract estimate of total cores *
+	# walltime and return a value to the user
+
+	debug "ntasks=${FLAGS_ntasks} "
+	debug "nodes=${FLAGS_nodes} "
+	debug "cores=${FLAGS_cores} "
+	debug "time=${FLAGS_time} "
+
+	if [ -z "${FLAGS_nodes}" ] && [ -z "${FLAGS_ntasks}" ];
+	then
+		die "Please specify either --nodes or --ntasks"
+	fi
+
+	[ "${FLAGS_time}" -le "0" ] && die "time must be greater than 0"
+
+	if [  -n "${FLAGS_ntasks}" ];
+	then
+		[ "${FLAGS_ntasks}" -le "0" ] && die "ntasks must be greater than 0"
+		printf "$(( ${FLAGS_ntasks} * ${FLAGS_time} ))\n"
+	else
+		[ "${FLAGS_nodes}" -le "0" ] && die "nodes must be greater than 0"
+		if [ "${FLAGS_cores}" -le "0" ]
+		then
+			FLAGS_cores=$($SLURMBANK_DIR/sbank cluster cpupernode)
+			warn "no cores-per-node specified - estimating $cpus"
+		fi
+		printf "$(( ${FLAGS_nodes} * ${FLAGS_cores} * ${FLAGS_time} ))\n"
+	fi
+}
+
+cmd_estimatescript()
+{
+	local walltime
+	local wall_hours
+	local cpu_hours
+	local tasks
+	local cpus
+	local nodes
+	local acc
+	local arg
+	local line
+
+	# define some variables
+	debug "define some variables"
+	DEFINE_string 'scriptname' '' 'specify a slurm job script' 's'
+	DEFINE_boolean 'verbose' false 'verbose output' 'v'
+
+	FLAGS_PARENT="sbank balance estimatescript"
+
+	# parse the command line
+	debug "parse command line"
+	parse_args "$@"
+
+	[ "${FLAGS_scriptname}" = "" ]  && die "must specify job script name"
+
+	[ ! -f "${FLAGS_scriptname}" ]  && die "no such file: ${FLAGS_scriptname}"
+	[ ! -r "${FLAGS_scriptname}" ]  && die "unable to read: ${FLAGS_scriptname}"
+
+
+	# use the filename at the end to avoid starting a subshell and losing the variables
+	while read line
+	do
+		if [[ "${line}" =~ ^#SBATCH[[:space:]]-([[:alpha:]])[[:space:]]*(.*) ]]
+		then
+			flag=${BASH_REMATCH[1]}
+			arg=${BASH_REMATCH[2]}
+
+			case "${flag}" in
+				t)
+				       walltime=$arg ;;
+				n)
+				       tasks=$arg ;;
+				c)
+				       cpus=$arg ;;
+				N)
+				       nodes=$arg ;;
+			esac
+		fi
+
+	done < "${FLAGS_scriptname}"
+
+	[ -z "$walltime" ] && die "no time parameter set in the script"
+	[ -z "$tasks" -a -z "$nodes" ] && die "at least one of tasks (-n) or nodes (-N) must be set in the script"
+
+
+	wall_hours=$($SLURMBANK_DIR/sbank time calc -t $walltime)
+
+	if [ -n "$tasks" ]
+	then
+		cpu_hours=$($SLURMBANK_DIR/sbank time estimate -n $tasks -t $wall_hours)
+	elif [ -n "$nodes" ]
+	then
+		if [ -z "$cpus" ]
+		then
+			cpus=$($SLURMBANK_DIR/sbank cluster cpupernode)
+			warn "no cores-per-node specified - estimating $cpus"
+		fi
+		cpu_hours=$($SLURMBANK_DIR/sbank time estimate -N $nodes -c $cpus -t $wall_hours)
+	fi
+
+	if [ ${FLAGS_verbose} -eq ${FLAGS_TRUE} ]
+	then
+		printf "Requested hours = %'d\n" ${cpu_hours}
+	else
+		printf "%d\n" ${cpu_hours}
+	fi
+}
+
+cmd_help()
+{
+	usage
+	exit 0
+}

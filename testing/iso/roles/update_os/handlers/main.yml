@@ -1,0 +1,14 @@
+- name: reboot host
+  shell: "sleep 1 && shutdown -r now"
+  async: 1
+  poll: 0
+  ignore_errors: true
+
+- name: wait host
+  local_action:
+    module: wait_for
+      sleep=10
+      host={{ ansible_host }}
+      port=22 
+      delay=1
+      timeout=300

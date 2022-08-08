@@ -1,0 +1,25 @@
+---
+# tasks file for nfs-mounts
+
+- name: Install nfs packages
+  yum:
+    name: '{{ nfs_packages }}'
+    state: present
+
+- name: Ensure mountpoints exist
+  file:
+    path: '{{ item.path }}'
+    owner: root
+    group: root
+    mode: '0755'
+    state: directory
+  with_items: '{{ nfs_mounts }}'
+
+- name: Setup NFS mounts
+  mount:
+    path: '{{ item.path }}'
+    src: '{{ item.remote }}'
+    fstype: 'nfs'
+    opts: '{{ item.options }},proto={{ "rdma" if nfs_enable_rdma else "tcp" }}'
+    state: '{{ "present" if ansible_connection in "lchroot" else "mounted" }}'
+  with_items: '{{ nfs_mounts }}'

@@ -1,0 +1,30 @@
+There will be times when you will need to figure out how many CPU hours
+you need to see if it exceeds the available hours in your account balance.
+
+This can be done with using the [[sbank-time]] estimate command.
+
+Assuming that you wish to run a 64 node job with 2 cores per node,
+that's 128 cores for 72hrs of wall time
+
+	$ sbank time estimate  -N 64 -c 2 -t 72
+	9216
+
+Or you want to run 256 tasks for 48hrs
+
+	$ sbank time estimate  -n 256 -t 48
+	12288
+
+You can also use [[sbank-time]]'s helper function 'estimatescript'
+to check the job script that you have 
+
+	$ sbank time estimatescript -s sample-job1.sh
+	3072
+
+Where the contents of *sample-job1.sh*
+
+	#!/bin/bash
+
+	#SBATCH -n 32
+	#SBATCH -t 4-00:00:00
+
+	echo "HELLO WORLD"

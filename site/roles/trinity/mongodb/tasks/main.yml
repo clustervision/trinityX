@@ -1,0 +1,107 @@
+---
+
+- name: Generate root password for MongoDB and save it to /etc/trinity/passwords
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mongo/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get root password for MongoDB from /etc/trinity/passwords
+  set_fact:
+    mongo_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/mongo/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Install pymongo
+  pip:
+    name: pymongo
+    version: 2.7.2
+    state: present
+
+- name: Install MongoDB packages
+  yum:
+    name: '{{ mongo_packages }}'
+    state: present
+  tags: install-only
+
+- name: Create config file
+  template:
+    src: mongod.conf.j2
+    dest: /etc/mongod.conf
+    backup: "yes"
+  notify: "restart mongod"
+
+- name: Selinux fcontext on files
+  sefcontext:
+    target: "{{ mongo_db_path }}(/.*)?"
+    setype: mongod_var_lib_t
+  tags: selinux
+
+- name: Ensure {{ mongo_db_path }} exists
+  file:
+    path: '{{ mongo_db_path }}'
+    owner: mongodb
+    group: mongodb
+    setype: mongod_var_lib_t
+    state: directory
+  when: primary|default(True)
+
+- name: Enable MongoDB service
+  systemd:
+    name: mongod
+    enabled: "yes"
+  when: not ha|default(False)
+
+- meta: flush_handlers
+
+- block:
+
+    - name: Start MongoDB service
+      systemd:
+        name: mongod
+        state: started
+
+    - name: "Create root user"
+      mongodb_user:
+        login_user: "root"
+        login_database: "admin"
+        login_password: "{{ mongo_root_pwd }}"
+        name: "root"
+        database: "admin"
+        roles: [ "root" ]
+        password: "{{ mongo_root_pwd }}"
+        state: present
+        update_password: on_create
+      register: createrootuser
+      failed_when: false
+
+    - debug:
+        msg: "{{ createrootuser }}"
+
+    - name: "Create root user"
+      mongodb_user:
+        name: "root"
+        database: "admin"
+        roles: [ "root" ]
+        password: "{{ mongo_root_pwd }}"
+        state: present
+        update_password: on_create
+      when: 'createrootuser.msg is defined and "auth failed" in createrootuser.msg'
+
+    - name: Add pacemaker resource
+      pcs_resource:
+        name: 'mongod'
+        resource_class: 'systemd'
+        resource_type: 'systemd:mongod'
+        options: 'op monitor interval=30 --group Trinity-stack'
+        state: present
+      when: ha | default(False)
+      tags: pcs
+
+  when: primary | default(True)
+
+- name: Render /root/.mongorc.js
+  template:
+    src: "mongorc.js.j2"
+    dest: "/root/.mongorc.js"
+    backup: "yes"

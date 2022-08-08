@@ -1,0 +1,20 @@
+---
+# tasks file for fail2ban
+
+- name: Install fail2ban packages
+  yum:
+    name: '{{ fail2ban_packages }}'
+    state: present
+  tags: install-only
+
+- name: Update fail2ban configuration file
+  copy:
+    src: 'trinityx.conf'
+    dest: '/etc/fail2ban/jail.d/trinityx.conf'
+  notify: restart fail2ban
+
+- name: Start and enable fail2ban service
+  service:
+    name: fail2ban
+    state: started
+    enabled: 'yes'

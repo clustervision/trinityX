@@ -1,0 +1,83 @@
+---
+- name: Set compute variable
+  set_fact:
+    compute: '{{ True if ansible_connection not in "lchroot" else False }}'
+  tags: always
+
+- name: Stop firewalld
+  service:
+    name: firewalld
+    state: stopped
+  when: compute|default(False)
+
+- name: Disable firewalld
+  systemd: 
+    name: firewalld
+    enabled: no
+
+- name: Get image name
+  set_fact:
+    image_name: '{{ inventory_hostname.split(".")|first }}'
+
+- name: Generate salt for the root password
+  set_fact:
+    password_salt: "{{ lookup('password',
+                '/etc/trinity/passwords/images/' + image_name + '/root-salt.txt
+                chars=ascii_letters,digits,hexdigits length=16') }}"
+
+- name: Setup the root user's password
+  user:
+    name: root
+    password: '{{ lookup("password","/etc/trinity/passwords/images/" +image_name
+              + "/root.txt")|password_hash("sha512", password_salt) }}'
+
+    state: present
+
+- name: Generate host SSH keys
+  shell: ssh-keygen -A
+  args:
+    creates: /etc/ssh/ssh_host_rsa_key
+
+- name: Disable host key check between nodes
+  blockinfile:
+    path: "/etc/ssh/ssh_config"
+    block: |
+      # Names without domain, such as node001
+      host  * !*.*
+              ForwardX11 yes
+              CheckHostIP no
+              HostbasedAuthentication no
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+
+      # Our local domains
+      Host  *.cluster *.ib
+              ForwardX11 yes
+              CheckHostIP no
+              HostbasedAuthentication no
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+
+- name: Use the controller as a DNS resolver
+  template:
+    src: "resolv.conf"
+    dest: "/etc/resolv.conf"
+
+- name: Use the controller as default gateway
+  lineinfile:
+    path: "/etc/sysconfig/network"
+    line: "GATEWAY={{ trix_ctrl_ip }}"
+    state: present
+    create: yes
+
+- name: Get the controller's timezone
+  stat:
+    path: "/etc/localtime"
+  register: tz
+  delegate_to: localhost
+
+- name: Set the image/node's timezone
+  file:
+    src: "{{ tz.stat.lnk_source }}"
+    dest: "/etc/localtime"
+    state: link

@@ -1,0 +1,28 @@
+---
+# tasks file for chrony
+
+- name: Install chrony packages
+  yum:
+    name: "{{ chrony_packages }}"
+    state: present
+  tags: install-only
+
+- name: Update chrony configuration file
+  template:
+    src: chrony.conf.j2
+    dest: /etc/chrony.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart chrony
+
+- name: Enable chrony service
+  systemd:
+    name: chronyd
+    enabled: 'yes'
+
+- name: Start chrony service
+  service:
+    name: chronyd
+    state: started
+  when: ansible_connection not in "lchroot"

@@ -1,0 +1,130 @@
+# NOTES
+
+architecture
+	explicitly list all of the sacctmgr/sshare commands
+	explicitly list all of the sacctmgr/sshare db field dependencies
+		expected output formats (raw?)
+	note about the shflags thingy
+
+walkthroughs
+
+future
+	obtain sshare info through sreport instead??? counter the lack
+	of half-life (required for priorities)
+
+reporting
+	wrap sreport
+
+
+
+
+# Slides
+- Intro/Abstract
+- developers
+- Historical background
+  - to satisfy funding agencies who wanted accounting, but didn't care
+    about the architecture used
+    # not commissioned by an official work / funding agency project
+    # sysadmin and user driven, not a project in work
+  - issues with torque/maui/gold etc; perf, scalability, reliability
+  - using very few GOLD features (simple balance); no charge rates etc
+  - slurm mailing list discussions
+      - prior to this, we hadn't noticed any pre-existing slurm deployments
+        with a configuration like this
+- goals
+  - simpler for user/admin
+  - wrapper and well-defined workflow around existing slurm features/tools
+    - targeted at simplifying existing tools
+  #- simple shell script! so simple, why had no-one done it before
+- design
+  - slurm.conf requirements
+  - slurmdbd deps
+  - sinfo / sacctmgr / sshare deps
+  - flat hierarchy of Associations
+- implementation
+  - shell / perl; quick, easy to implement; script, so easy to read/understand
+    - was ok in shell/perl because we needed simple features
+  - shFlags
+  - single command "sbank" similar to "git" (self-documenting)
+  - notes about existing slurm commands and output (sinfo / sacctmgr / sshare) to 
+    avoid writing new programs
+  - terminology: Association == Project
+- features
+  - admin creates slurm associations
+  - admin adds users, add/refund hours
+  - tools for users to check balance, query, estimate, submit
+- admin walk-through
+  - docs: http://jcftang.github.com/slurm-bank/
+  - install
+  - setup
+  - creating_projects
+  - deciding_on_a_policy
+  - deposit_hours_to_an_account
+  - expiring_accounts
+  - refunding_hours
+
+- user walk-through
+  - checking_account_balances
+  - estimating_time_for_a_job
+  - checking_if_enough_hours_are_available
+  - submitting_jobs_with_sbank-submit
+
+- misc commands
+  - print cpu hours per cluster per year
+  - print min/max num cpus per node
+  - convert SLURM time to hours
+
+- limitations
+  - fairshare, half-life (sshare)
+  - no hierarchy of Associations
+    - our assumption, not an issue for our site; we do project-based accounting, not group-based
+  - written in shell / perl, instead of integrated with SLURM source / API
+  - many small jobs: has the potential to query sacctmgr many times and create a bottleneck
+  - no lifetime/expiry of Associations / Projects
+  - no multi-cluster support, requires that Associations/Project codes must be identical on many clusters
+    - un-tested!
+  - no control over users within an Assocation - all can use all hours
+- our experiences
+  - sbank balance statement written to slurm.out file by Epilog, not always noticed
+    - so when they run out of hours, they don't know why their jobs aren't running
+    - same as with GOLD
+    - no over-drawn
+    - people-problem!
+  - local policy: create a new Association/Project when hours run out
+    - emphasis is on the user to provide a new abstract / Project description
+  - heavy users vs light users
+    - no usage decay with fairshare
+    - because of our local policies
+
+- off-line PHP/MySQL Projects Database
+  - abstracts, Project Leaders, funding streams etc, project dates
+  - users apply for hours; submit project expiry
+  - outside of slurm-bank, but would be nice
+    - feature request: lifetime (start/end) for Associations
+- future work
+  - considering moving away from fixed hours, and use off-line database together
+    with sreport to monitor usage per quarter, and close associations if over limit
+    - can use half-life again
+    - does sreport decay with half-life?
+  - investigate if sreport can give raw usage, instead of sshare
+    - sreport -t hours cluster AccountUtilizationByUser user=paddy start=2000-01-01
+      - this includes deleted associations as well
+      # include `live' figures here to illustrate slight difference in sreport/sshare
+    - can use half-life again
+  - re-implement in C, or all in Perl using SLURM-Perl API
+  - add Association expiry to slurmdbd
+    - end-times for resevations. QoS ??
+- conclusion
+  - currently deployed on SL5.x, SLURM 2.2, 2.3, 2.4
+  - generally works well, aside from priority/fairshare issue
+    - in production for over a year at TCHPC over 3 clusters
+  - funding agencies don't care too much, so long as they get a report
+  - users haven't complained about changes in workflows
+    - users are silent mostly!
+  - as a sysadmin, much happier! much more reliable than slurm+maui+gold
+- software
+  - on github
+  - docs: http://jcftang.github.com/slurm-bank/
+  - packaged as an rpm
+  - contact emails
+
