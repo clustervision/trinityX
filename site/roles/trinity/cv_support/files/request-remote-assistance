@@ -83,9 +83,12 @@ for f in pub_files:
         pub_file = f
         break
 if not pub_file:
-    print('\nError: found no SSH public key files in /root/.ssh/ use ssh-keygen tool to')
-    print('       generate private/public keys.')
-    sys.exit(0)
+    print('\nNote: No SSH public keys found. Generating one...')
+    shell(""" timeout 20 -k5 yes y|ssh-keygen -t rsa -N '' -f /root/.ssh/id_rsa-CV """)
+    pub_file="/root/.ssh/id_rsa-CV"
+    if os.access(f, !os.R_OK):
+        print('Error: Generating SSH key failed.')
+        sys.exit(0)
 with open(pub_file, 'r') as f:
     pub = f.read()
 
