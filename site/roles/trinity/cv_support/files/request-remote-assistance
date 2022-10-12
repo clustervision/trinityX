@@ -92,6 +92,9 @@ if not pub_file:
 with open(pub_file, 'r') as f:
     pub = f.read()
 
+# we split off the .pub to get the private key file name
+priv_file=pub_file.rsplit('.',1)[0]
+
 freetext = ''
 info = ''
 
@@ -120,7 +123,7 @@ try:
         print('No port assignment could be made')
         sys.exit(1)
     print(remoteport)
-    subprocess.call('ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t -q -R :{}:localhost:22 sandbox@sandbox.clustervision.com'.format(remoteport),shell=True)
+    subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i '+priv_file+' -t -R :{}:localhost:22 sandbox@sandbox.clustervision.com'.format(remoteport),shell=True)
     subprocess.call('setterm -cursor on', shell = True)
     print('Cleaning up..\n')
     shell("""cp {} {}.bak""".format(auth_key, auth_key))
