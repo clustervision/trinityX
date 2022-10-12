@@ -6,6 +6,8 @@ import subprocess
 import sys
 import urllib
 import requests
+from datetime import datetime
+
 
 sandbox      = 'sandbox.clustervision.com'
 sshd_config  = '/etc/ssh/sshd_config'
@@ -129,6 +131,9 @@ if shell_exit_status('ping -w5 -c1 {}'.format(sandbox)) != 0:
 
 req = "https://static.clustervision.com/support.pub"
 try:
+    readable_trid=str(trid.decode("utf-8"))
+    now = datetime.now()
+    logfile_name = 'tunnel--TrinityID-' + readable_trid + '--' + now.strftime("%m-%d-%Y_%H-%M-%S") + ".log"
     with urllib.request.urlopen(req) as response:
         sandboxpub = response.read().decode()
     if getpubcert:
@@ -142,10 +147,13 @@ try:
         print(r.content)
         print('No port assignment could be made')
         sys.exit(1)
-    print(remoteport)
-    subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i '+priv_file+' -t -R :{}:localhost:22 sandbox@sandbox.clustervision.com'.format(remoteport),shell=True)
+    print('TrinityID: '+ readable_trid +', Remote port: '+str(remoteport))
+    subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -t -R :{}:localhost:22 sandbox@sandbox.clustervision.com | tee tunnel.log'.format(priv_file,remoteport),shell=True)
     subprocess.call('setterm -cursor on', shell = True)
-    print('Cleaning up..\n')
+    print('\nCleaning up..\n')
+    # ------ copy the log file ------- Won't work as we cannot copy files accross
+    #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@sandbox.clustervision.com:{}""".format(priv_file,remoteport,logfile_name))
+    # --------------------------------
     shell("""cp {} {}.bak""".format(auth_key, auth_key))
     shell("""fgrep -v "{}" {}.bak > {}""".format(sandboxpub, auth_key, auth_key))
     print('Tunnel to {} terminated.'.format(sandbox))
