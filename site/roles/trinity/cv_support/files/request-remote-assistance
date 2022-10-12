@@ -34,6 +34,7 @@ def confirm(msg, default):
             sys.stdout.write('[Y/n] ')
         else:
             sys.stdout.write('[y/N] ')
+        sys.stdout.flush()
         answer = sys.stdin.readline().strip()
         if re.search('^y|^n', answer, re.IGNORECASE) or answer == '':
             break
@@ -63,9 +64,15 @@ if not re.search('^\d+$', trid.decode('utf-8')):
     trid = 'UNKNOWN'
 certificatesubject = 'T=Trinity,_C=No_certificate_provided'
 
-print('This tool helps securely set up a temporary SSH tunnel to: ' + sandbox)
-#if not confirm('Allow a ClusterVision engineer SSH access to the cluster?', 'y'):
-#    sys.exit(0)
+# ------------------------------- we ask to comply to our terms and conditions ----------------------------
+
+print ('\nPlease note that by using Remote Assistance you agree with ClusterVision\'s terms and conditions.')
+print ('The terms and conditions can be found here: https://clustervision.com/wp-content/uploads/2020/11/Terms-and-Conditions-2020v1-pub.pdf\n')
+print ('The Remote Assistance utility helps securely set up a temporary SSH tunnel to: ' + sandbox + '\n')
+if not confirm('Do you agree with the terms and conditions and allow a ClusterVision engineer SSH access to the cluster?', 'n'):
+    sys.exit(0)
+
+# ---------------------------------------------------------------------------------------------------------
 
 r1 = shell(""" grep "^RSAAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
 r2 = shell(""" grep "^PubkeyAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
@@ -101,7 +108,7 @@ info = ''
 info = '_'.join(info.split(' '))
 
 # Testing the Internet connection.
-if shell_exit_status('ping -c1 {}'.format(sandbox)) != 0:
+if shell_exit_status('ping -w5 -c1 {}'.format(sandbox)) != 0:
     print('Error: Unable to ping: ' + sandbox)
     print('Please check your internet connection.')
     if not confirm('Continue?', 'n'):
