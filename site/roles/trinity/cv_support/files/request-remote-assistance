@@ -160,8 +160,10 @@ try:
     with urllib.request.urlopen(req) as response:
         sandboxpub = response.read().decode()
     if getpubcert:
+        shell("""touch {}""".format(auth_key))
         shell("""cp -f {} {}.bak""".format(auth_key, auth_key))
         shell("""echo '{}' >> {}""".format(sandboxpub, auth_key))
+        shell("""chmod 640 {}""".format(auth_key))
         print('\nAdded temporary ClusterVision public key.')
     data = dict(pub=pub,info=info,trid=trid)
     r = requests.post('https://sandbox.clustervision.com/cgi-bin/keys.py',data=data, auth=('trinityx','trinityx'))
@@ -173,7 +175,7 @@ try:
         sys.exit(1)
     print('TrinityID: '+ readable_trid +', Remote port: '+str(remoteport))
     subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com | tee tunnel.log'.format(priv_file,remoteport,sandbox),shell=True)
-    subprocess.call('setterm -cursor on', shell = True)
+    subprocess.call('setterm -cursor on', shell=True)
     print('\nCleaning up..\n')
     # ------ copy the log file ------- Won't work as we cannot copy files accross
     #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@{}.clustervision.com:{}""".format(priv_file,remoteport,sandbox,logfile_name))
