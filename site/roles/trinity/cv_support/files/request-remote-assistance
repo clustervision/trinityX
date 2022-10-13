@@ -9,7 +9,7 @@ import requests
 from datetime import datetime
 
 
-sandbox      = 'sandbox.clustervision.com'
+sandbox      = 'sandbox'
 sshd_config  = '/etc/ssh/sshd_config'
 auth_key     = '/root/.ssh/authorized_keys'
 pub_files    = ['/root/.ssh/id_dsa.pub', '/root/.ssh/id_rsa.pub', '/root/.ssh/identity.pub', '/root/.ssh/id_rsa-CV.pub']
@@ -56,10 +56,16 @@ def confirm(msg, default):
 
 # ---------------------------------------------------------------------------------------------------------
 
+# remove first element as it is the script name itself
+del sys.argv[0]
+
 while sys.argv:
     arg = sys.argv.pop()
+    print (arg)
     if (arg == '--confirm') or (arg == '-c'):
         no_questions=1
+    elif (len(arg) > 1):
+        sandbox = arg.split('.',1)[0]
 
 if int(shell('id -u')) != 0:
     print('Error: this script must be executed as root.')
@@ -70,8 +76,6 @@ if hostname == '':
     hostname = shell('hostname -f')
     hostname += '.NOFQDN'
 
-if len(sys.argv) > 1:
-    sandbox = sys.argv[1]
 remote_url = 'http://{}/~remote/'.format(sandbox)
 
 try:
@@ -128,8 +132,8 @@ info = ''
 info = '_'.join(info.split(' '))
 
 # Testing the Internet connection.
-if shell_exit_status('ping -w5 -c1 {}'.format(sandbox)) != 0:
-    print('Error: Unable to ping: ' + sandbox)
+if shell_exit_status('ping -w5 -c1 {}.clustervision.com'.format(sandbox)) != 0:
+    print('Error: Unable to ping: ' + sandbox + '.clustervision.com')
     print('Please check your internet connection.')
     if not confirm('Continue?', 'n'):
         sys.exit(0)
@@ -154,11 +158,11 @@ try:
         print('No port assignment could be made')
         sys.exit(1)
     print('TrinityID: '+ readable_trid +', Remote port: '+str(remoteport))
-    subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -t -R :{}:localhost:22 sandbox@sandbox.clustervision.com | tee tunnel.log'.format(priv_file,remoteport),shell=True)
+    subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com | tee tunnel.log'.format(priv_file,remoteport,sandbox),shell=True)
     subprocess.call('setterm -cursor on', shell = True)
     print('\nCleaning up..\n')
     # ------ copy the log file ------- Won't work as we cannot copy files accross
-    #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@sandbox.clustervision.com:{}""".format(priv_file,remoteport,logfile_name))
+    #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@{}.clustervision.com:{}""".format(priv_file,remoteport,sandbox,logfile_name))
     # --------------------------------
     shell("""cp {} {}.bak""".format(auth_key, auth_key))
     shell("""fgrep -v "{}" {}.bak > {}""".format(sandboxpub, auth_key, auth_key))
