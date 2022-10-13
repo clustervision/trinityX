@@ -7,6 +7,7 @@ import sys
 import urllib
 import requests
 from datetime import datetime
+from os.path import expanduser
 
 
 sandbox      = 'sandbox'
@@ -17,6 +18,7 @@ pub          = ''
 getpubcert   = 1
 ok_chars     = 'a-zA-Z0-9 _,-.+#='
 no_questions = 0
+version      = '1.1'
 
 # ---------------------------------------------------------------------------------------------------------
 
@@ -67,10 +69,6 @@ while sys.argv:
     elif (len(arg) > 1):
         sandbox = arg.split('.',1)[0]
 
-if int(shell('id -u')) != 0:
-    print('Error: this script must be executed as root.')
-    sys.exit(1)
-
 hostname = shell('hostname -f')
 if hostname == '':
     hostname = shell('hostname -f')
@@ -90,13 +88,23 @@ certificatesubject = 'T=Trinity,_C=No_certificate_provided'
 
 # ------------------------------- we ask to comply to our terms and conditions ----------------------------
 
-print ('\nPlease note that by using Remote Assistance you agree with ClusterVision\'s terms and conditions.')
-print ('The terms and conditions can be found here: https://clustervision.com/wp-content/uploads/2020/11/Terms-and-Conditions-2020v1-pub.pdf\n')
+print ('\nRequest Remote Assistance v'+version+'\n')
+print ('--------------------------------------------------------------------------------------------------------------------------------------')
+print ('Please note that by using Remote Assistance you agree with ClusterVision\'s terms and conditions.')
+print ('The terms and conditions can be found here: https://clustervision.com/wp-content/uploads/2020/11/Terms-and-Conditions-2020v1-pub.pdf')
+print ('--------------------------------------------------------------------------------------------------------------------------------------\n')
 print ('The Remote Assistance utility helps securely set up a temporary SSH tunnel to: ' + sandbox + '\n')
 if not confirm('Do you agree with the terms and conditions and allow a ClusterVision engineer SSH access to the cluster?', 'n'):
     sys.exit(0)
 
 # ---------------------------------------------------------------------------------------------------------
+
+if int(shell('id -u')) != 0:
+    print('\nWarning: this script should be executed as root.')
+    if not confirm('Would you prefer to continue as current user?','n'):
+        sys.exit(1)
+
+current_home=expanduser("~")
 
 r1 = shell(""" grep "^RSAAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
 r2 = shell(""" grep "^PubkeyAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
@@ -115,11 +123,12 @@ for f in pub_files:
         break
 if not pub_file:
     print('\nNote: No SSH public keys found. Generating one...')
-    shell(""" timeout 20 -k5 yes y|ssh-keygen -t rsa -b 4096 -N '' -f /root/.ssh/id_rsa-CV """)
-    pub_file="/root/.ssh/id_rsa-CV.pub"
-    if not os.access(f, os.R_OK):
+    shell(""" timeout 20 -k5 yes y|ssh-keygen -t rsa -b 4096 -N '' -f /{}/.ssh/id_rsa-CV """.format(current_home))
+    pub_file=current_home+"/.ssh/id_rsa-CV.pub"
+    if not os.access(pub_file, os.R_OK):
         print('Error: Generating SSH key failed.')
         sys.exit(0)
+    pub_files.append(pub_file)
 with open(pub_file, 'r') as f:
     pub = f.read()
 
