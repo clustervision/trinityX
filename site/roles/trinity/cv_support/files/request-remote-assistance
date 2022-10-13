@@ -74,8 +74,13 @@ if len(sys.argv) > 1:
     sandbox = sys.argv[1]
 remote_url = 'http://{}/~remote/'.format(sandbox)
 
-trid = shell('cat /trinity/site')
-if not re.search('^\d+$', trid.decode('utf-8')):
+try:
+    tridsitefile = open('/trinity/site', 'r')
+    Lines = tridsitefile.readlines()
+    trid = Lines[0].rstrip('\n')
+except FileNotFoundError as e:
+    trid = 'UNKNOWN'
+if not re.search('^\d+$', trid):
     trid = 'UNKNOWN'
 certificatesubject = 'T=Trinity,_C=No_certificate_provided'
 
@@ -131,7 +136,8 @@ if shell_exit_status('ping -w5 -c1 {}'.format(sandbox)) != 0:
 
 req = "https://static.clustervision.com/support.pub"
 try:
-    readable_trid=str(trid.decode("utf-8"))
+    #readable_trid=str(trid.decode("utf-8"))
+    readable_trid=str(trid)
     now = datetime.now()
     logfile_name = 'tunnel--TrinityID-' + readable_trid + '--' + now.strftime("%m-%d-%Y_%H-%M-%S") + ".log"
     with urllib.request.urlopen(req) as response:
