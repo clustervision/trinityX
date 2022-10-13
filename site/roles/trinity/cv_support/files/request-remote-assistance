@@ -12,8 +12,8 @@ from os.path import expanduser
 
 sandbox      = 'sandbox'
 sshd_config  = '/etc/ssh/sshd_config'
-auth_key     = '/root/.ssh/authorized_keys'
-pub_files    = ['/root/.ssh/id_dsa.pub', '/root/.ssh/id_rsa.pub', '/root/.ssh/identity.pub', '/root/.ssh/id_rsa-CV.pub']
+auth_key     = '/.ssh/authorized_keys'
+pub_files    = ['/.ssh/id_dsa.pub', '/.ssh/id_rsa.pub', '/.ssh/identity.pub', '/.ssh/id_rsa-CV.pub']
 pub          = ''
 getpubcert   = 1
 ok_chars     = 'a-zA-Z0-9 _,-.+#='
@@ -63,7 +63,6 @@ del sys.argv[0]
 
 while sys.argv:
     arg = sys.argv.pop()
-    print (arg)
     if (arg == '--confirm') or (arg == '-c'):
         no_questions=1
     elif (len(arg) > 1):
@@ -105,6 +104,10 @@ if int(shell('id -u')) != 0:
         sys.exit(1)
 
 current_home=expanduser("~")
+if (current_home == ""):
+    print ('\nError: Cannot figure out my home directory')
+    sys.exit(1)
+auth_key=current_home+auth_key
 
 r1 = shell(""" grep "^RSAAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
 r2 = shell(""" grep "^PubkeyAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
@@ -118,6 +121,7 @@ if (r1 != '' and r1 == 'no') or (r2 != '' and r2 == 'no'):
 
 pub_file = ''
 for f in pub_files:
+    f=current_home+f
     if os.access(f, os.R_OK):
         pub_file = f
         break
@@ -128,7 +132,7 @@ if not pub_file:
     if not os.access(pub_file, os.R_OK):
         print('Error: Generating SSH key failed.')
         sys.exit(0)
-    pub_files.append(pub_file)
+#    pub_files.append(pub_file)
 with open(pub_file, 'r') as f:
     pub = f.read()
 
@@ -156,6 +160,7 @@ try:
     with urllib.request.urlopen(req) as response:
         sandboxpub = response.read().decode()
     if getpubcert:
+        shell("""cp -f {} {}.bak""".format(auth_key, auth_key))
         shell("""echo '{}' >> {}""".format(sandboxpub, auth_key))
         print('\nAdded temporary ClusterVision public key.')
     data = dict(pub=pub,info=info,trid=trid)
@@ -173,10 +178,8 @@ try:
     # ------ copy the log file ------- Won't work as we cannot copy files accross
     #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@{}.clustervision.com:{}""".format(priv_file,remoteport,sandbox,logfile_name))
     # --------------------------------
-    shell("""cp {} {}.bak""".format(auth_key, auth_key))
-    shell("""fgrep -v "{}" {}.bak > {}""".format(sandboxpub, auth_key, auth_key))
+    shell("""cp -f {}.bak {}""".format(auth_key, auth_key))
     print('Tunnel to {} terminated.'.format(sandbox))
-    shell("""cp {}.bak {}""".format(auth_key, auth_key))
 except urllib.error.URLError as e:
     print('\nError: could not complete communication with {} .').format(remote_url)
     print('Reason: {} .').format(e.reason)
