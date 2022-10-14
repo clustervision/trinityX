@@ -7,16 +7,18 @@ import sys
 import urllib
 import requests
 from datetime import datetime
+from os.path import expanduser
 
 
 sandbox      = 'sandbox'
 sshd_config  = '/etc/ssh/sshd_config'
-auth_key     = '/root/.ssh/authorized_keys'
-pub_files    = ['/root/.ssh/id_dsa.pub', '/root/.ssh/id_rsa.pub', '/root/.ssh/identity.pub', '/root/.ssh/id_rsa-CV.pub']
+auth_key     = '/.ssh/authorized_keys'
+pub_files    = ['/.ssh/id_dsa.pub', '/.ssh/id_rsa.pub', '/.ssh/identity.pub', '/.ssh/id_rsa-CV.pub']
 pub          = ''
 getpubcert   = 1
 ok_chars     = 'a-zA-Z0-9 _,-.+#='
 no_questions = 0
+version      = '1.1'
 
 # ---------------------------------------------------------------------------------------------------------
 
@@ -61,15 +63,10 @@ del sys.argv[0]
 
 while sys.argv:
     arg = sys.argv.pop()
-    print (arg)
     if (arg == '--confirm') or (arg == '-c'):
         no_questions=1
     elif (len(arg) > 1):
         sandbox = arg.split('.',1)[0]
-
-if int(shell('id -u')) != 0:
-    print('Error: this script must be executed as root.')
-    sys.exit(1)
 
 hostname = shell('hostname -f')
 if hostname == '':
@@ -90,13 +87,27 @@ certificatesubject = 'T=Trinity,_C=No_certificate_provided'
 
 # ------------------------------- we ask to comply to our terms and conditions ----------------------------
 
-print ('\nPlease note that by using Remote Assistance you agree with ClusterVision\'s terms and conditions.')
-print ('The terms and conditions can be found here: https://clustervision.com/wp-content/uploads/2020/11/Terms-and-Conditions-2020v1-pub.pdf\n')
+print ('\nRequest Remote Assistance v'+version+'\n')
+print ('--------------------------------------------------------------------------------------------------------------------------------------')
+print ('Please note that by using Remote Assistance you agree with ClusterVision\'s terms and conditions.')
+print ('The terms and conditions can be found here: https://clustervision.com/wp-content/uploads/2020/11/Terms-and-Conditions-2020v1-pub.pdf')
+print ('--------------------------------------------------------------------------------------------------------------------------------------\n')
 print ('The Remote Assistance utility helps securely set up a temporary SSH tunnel to: ' + sandbox + '\n')
 if not confirm('Do you agree with the terms and conditions and allow a ClusterVision engineer SSH access to the cluster?', 'n'):
     sys.exit(0)
 
 # ---------------------------------------------------------------------------------------------------------
+
+if int(shell('id -u')) != 0:
+    print('\nWarning: this script should be executed as root.')
+    if not confirm('Would you prefer to continue as current user?','n'):
+        sys.exit(1)
+
+current_home=expanduser("~")
+if (current_home == ""):
+    print ('\nError: Cannot figure out my home directory')
+    sys.exit(1)
+auth_key=current_home+auth_key
 
 r1 = shell(""" grep "^RSAAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
 r2 = shell(""" grep "^PubkeyAuthentication" /etc/ssh/sshd_config | awk '{print $2}' """)
@@ -110,16 +121,18 @@ if (r1 != '' and r1 == 'no') or (r2 != '' and r2 == 'no'):
 
 pub_file = ''
 for f in pub_files:
+    f=current_home+f
     if os.access(f, os.R_OK):
         pub_file = f
         break
 if not pub_file:
     print('\nNote: No SSH public keys found. Generating one...')
-    shell(""" timeout 20 -k5 yes y|ssh-keygen -t rsa -b 4096 -N '' -f /root/.ssh/id_rsa-CV """)
-    pub_file="/root/.ssh/id_rsa-CV.pub"
-    if not os.access(f, os.R_OK):
+    shell(""" timeout 20 -k5 yes y|ssh-keygen -t rsa -b 4096 -N '' -f {}/.ssh/id_rsa-CV """.format(current_home))
+    pub_file=current_home+"/.ssh/id_rsa-CV.pub"
+    if not os.access(pub_file, os.R_OK):
         print('Error: Generating SSH key failed.')
         sys.exit(0)
+#    pub_files.append(pub_file)
 with open(pub_file, 'r') as f:
     pub = f.read()
 
@@ -147,7 +160,10 @@ try:
     with urllib.request.urlopen(req) as response:
         sandboxpub = response.read().decode()
     if getpubcert:
+        shell("""touch {}""".format(auth_key))
+        shell("""cp -f {} {}.bak""".format(auth_key, auth_key))
         shell("""echo '{}' >> {}""".format(sandboxpub, auth_key))
+        shell("""chmod 640 {}""".format(auth_key))
         print('\nAdded temporary ClusterVision public key.')
     data = dict(pub=pub,info=info,trid=trid)
     r = requests.post('https://sandbox.clustervision.com/cgi-bin/keys.py',data=data, auth=('trinityx','trinityx'))
@@ -159,15 +175,13 @@ try:
         sys.exit(1)
     print('TrinityID: '+ readable_trid +', Remote port: '+str(remoteport))
     subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com | tee tunnel.log'.format(priv_file,remoteport,sandbox),shell=True)
-    subprocess.call('setterm -cursor on', shell = True)
+    subprocess.call('setterm -cursor on', shell=True)
     print('\nCleaning up..\n')
     # ------ copy the log file ------- Won't work as we cannot copy files accross
     #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@{}.clustervision.com:{}""".format(priv_file,remoteport,sandbox,logfile_name))
     # --------------------------------
-    shell("""cp {} {}.bak""".format(auth_key, auth_key))
-    shell("""fgrep -v "{}" {}.bak > {}""".format(sandboxpub, auth_key, auth_key))
+    shell("""cp -f {}.bak {}""".format(auth_key, auth_key))
     print('Tunnel to {} terminated.'.format(sandbox))
-    shell("""cp {}.bak {}""".format(auth_key, auth_key))
 except urllib.error.URLError as e:
     print('\nError: could not complete communication with {} .').format(remote_url)
     print('Reason: {} .').format(e.reason)
