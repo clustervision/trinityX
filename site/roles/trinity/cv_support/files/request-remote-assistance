@@ -11,13 +11,8 @@ import certifi
 import ssl
 from datetime import datetime
 from os.path import expanduser
-#from requests.utils import DEFAULT_CA_BUNDLE_PATH
-# ------------------------ needed section when building binaries ----------------------------
-#from PyInstaller.utils.hooks import collect_data_files
-#
-## Get the cacert.pem
-#datas = collect_data_files('certifi')
-# ------------------------ section ends here ------------------------------------------------
+
+# ---------------------------------------------------------------------------------------------------------
 
 sandbox      = 'sandbox'
 sshd_config  = '/etc/ssh/sshd_config'
@@ -28,16 +23,9 @@ getpubcert   = 1
 ok_chars     = 'a-zA-Z0-9 _,-.+#='
 no_questions = 0
 run_in_loop  = 0
-version      = '1.1.1'
+version      = '1.1.2'
 
 # ---------------------------------------------------------------------------------------------------------
-
-# DEBUG when you see SSL CERTIFICATE_VERIFY_FAILED
-#print("----------------------------------------------------------------------------")
-#print("DEFAULT_CA_BUNDLE_PATH: "+DEFAULT_CA_BUNDLE_PATH)
-#print("certifi.where(): " + certifi.where())
-#print("----------------------------------------------------------------------------")
-
 
 def shell(cmd):
     with open(os.devnull) as DEVNULL:
@@ -164,7 +152,7 @@ info = ''
 info = '_'.join(info.split(' '))
 
 # Testing the Internet connection.
-perr=shell_exit_status('ping -w5 -c1 {}.clustervision.com'.format(sandbox))
+perr=shell_exit_status('ping -w5 -c1 {}.clustervision.com 2>&1 > /tmp/ping.log'.format(sandbox))
 if perr != 0:
     print('Error {}: Unable to ping: {}.clustervision.com'.format(perr,sandbox))
     print('Please check your internet connection.')
@@ -197,10 +185,11 @@ try:
 #        subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com | tee tunnel.log'.format(priv_file,remoteport,sandbox),shell=True)
         subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com'.format(priv_file,remoteport,sandbox),shell=True)
         subprocess.call('setterm -cursor on', shell=True)
+        print()
         if not run_in_loop:
             break
         time.sleep(5)
-    print('\nCleaning up..\n')
+    print('Cleaning up..\n')
     # ------ copy the log file ------- Won't work as we cannot copy files accross
     #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@{}.clustervision.com:{}""".format(priv_file,remoteport,sandbox,logfile_name))
     # --------------------------------
