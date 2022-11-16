@@ -6,6 +6,7 @@ import subprocess
 import sys
 import urllib
 import requests
+import time
 from datetime import datetime
 from os.path import expanduser
 
@@ -18,7 +19,8 @@ pub          = ''
 getpubcert   = 1
 ok_chars     = 'a-zA-Z0-9 _,-.+#='
 no_questions = 0
-version      = '1.1'
+run_in_loop  = 0
+version      = '1.1.1'
 
 # ---------------------------------------------------------------------------------------------------------
 
@@ -65,6 +67,8 @@ while sys.argv:
     arg = sys.argv.pop()
     if (arg == '--confirm') or (arg == '-c'):
         no_questions=1
+    elif (arg == '--loop') or (arg == '-l'):
+        run_in_loop=1
     elif (len(arg) > 1):
         sandbox = arg.split('.',1)[0]
 
@@ -145,8 +149,9 @@ info = ''
 info = '_'.join(info.split(' '))
 
 # Testing the Internet connection.
-if shell_exit_status('ping -w5 -c1 {}.clustervision.com'.format(sandbox)) != 0:
-    print('Error: Unable to ping: ' + sandbox + '.clustervision.com')
+perr=shell_exit_status('ping -w5 -c1 {}.clustervision.com'.format(sandbox))
+if perr != 0:
+    print('Error {}: Unable to ping: {}.clustervision.com'.format(perr,sandbox))
     print('Please check your internet connection.')
     if not confirm('Continue?', 'n'):
         sys.exit(0)
@@ -171,11 +176,16 @@ try:
         remoteport = int(r.content)
     except:
         print(r.content)
-        print('No port assignment could be made')
+        print('Error: No port assignment could be made')
         sys.exit(1)
-    print('TrinityID: '+ readable_trid +', Remote port: '+str(remoteport))
-    subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com | tee tunnel.log'.format(priv_file,remoteport,sandbox),shell=True)
-    subprocess.call('setterm -cursor on', shell=True)
+    while True:
+        print('TrinityID: '+ readable_trid +', Remote port: '+str(remoteport))
+#        subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com | tee tunnel.log'.format(priv_file,remoteport,sandbox),shell=True)
+        subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com'.format(priv_file,remoteport,sandbox),shell=True)
+        subprocess.call('setterm -cursor on', shell=True)
+        if not run_in_loop:
+            break
+        time.sleep(2)
     print('\nCleaning up..\n')
     # ------ copy the log file ------- Won't work as we cannot copy files accross
     #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@{}.clustervision.com:{}""".format(priv_file,remoteport,sandbox,logfile_name))
@@ -183,10 +193,10 @@ try:
     shell("""cp -f {}.bak {}""".format(auth_key, auth_key))
     print('Tunnel to {} terminated.'.format(sandbox))
 except urllib.error.URLError as e:
-    print('\nError: could not complete communication with {} .').format(remote_url)
-    print('Reason: {} .').format(e.reason)
+    print('\nError: could not complete communication with {} .'.format(remote_url))
+    print('Reason: {} .'.format(e.reason))
 except urllib.error.HTTPError as e:
     print('\nError: {} could not fulfill the request.').format(remote_url)
-    print('Reason: {} {} .').format(e.code, e.read())
+    print('Reason: {} {} .'.format(e.code, e.read()))
 
 sys.exit(0)
