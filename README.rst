@@ -3,6 +3,8 @@
 Overview
 ========
 
+NOTE: TrinityX/Luna2 is almost here!! With (a.o many other things) Ubuntu client support, DHPC-less booting and encrypted/secured image distribution (est. 01/09/2023)!! Please use this repo only for testing purposes.
+
 Welcome to TrinityX!
 
 TrinityX is the new generation of ClusterVision's open-source HPC platform. It is designed from the ground up to provide all services required in a modern HPC system, and to allow full customization of the installation. Also it includes optional modules for specific needs, such as an OpenStack cloud and Docker on the compute nodes.
