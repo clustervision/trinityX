@@ -1,9 +1,12 @@
+NOTE: TrinityX/Luna2 is almost here!! This version is OBSOLETE, don't use.
+========
+
 .. image:: img/trinityxbanner_scaled.png
 
 Overview
 ========
 
-NOTE: TrinityX/Luna2 is almost here!! With (a.o many other things) Ubuntu client support, DHPC-less booting and encrypted/secured image distribution (est. 01/09/2023)!! Please use this repo only for testing purposes.
+TrinityX/Luna2 is almost here with (a.o many other things) Ubuntu client support, DHPC-less booting and encrypted/secured image distribution (est. 01/09/2023)!! Please use this repo only for testing purposes.
 
 Welcome to TrinityX!
 
