@@ -6,9 +6,11 @@
 
 - name: Install init packages
   yum:
-    name: '{{ init_packages }}'
+    name: '{{ item }}'
     state: present
   tags: install-only
+  with_items: '{{ init_packages }}'
+  when: init_packages is defined
 
 - block:
 
@@ -37,21 +39,21 @@
 
 # Workaround the issue where NM is left running in the system
 # after it has been removed
-- name: Is NetworkManager running?
-  shell: systemctl status NetworkManager
-  register: NM_service
-  failed_when: false
-  changed_when: false
-  ignore_errors: true
+# - name: Is NetworkManager running?
+#   shell: systemctl status NetworkManager
+#   register: NM_service
+#   failed_when: false
+#   changed_when: false
+#   ignore_errors: true
 
-- name: Stop NetworkManager
-  service:
-    name: NetworkManager
-    state: stopped
-  when: NM_service.rc == 0 and
-        'lchroot' not in ansible_connection
+# - name: Stop NetworkManager
+#   service:
+#     name: NetworkManager
+#     state: stopped
+#   when: NM_service.rc == 0 and
+#         'chroot' not in ansible_connection
 
-- name: Remove NetworkManager
-  yum:
-    name: NetworkManager
-    state: absent
+# - name: Remove NetworkManager
+#   yum:
+#     name: NetworkManager
+#     state: absent

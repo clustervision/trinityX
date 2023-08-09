@@ -4,7 +4,7 @@
   yum_repository:
     name: CV-RabbitMQ
     description: RabbitMQ Server repository
-    baseurl: https://packagecloud.io/rabbitmq/rabbitmq-server/el/7/x86_64 
+    baseurl: https://packagecloud.io/rabbitmq/rabbitmq-server/el/8/x86_64 
     gpgkey: https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey 
     gpgcheck: no
     repo_gpgcheck: no
@@ -13,7 +13,7 @@
   yum_repository:
     name: CV-erlang-22
     description: Erlang 22 repository
-    baseurl: https://packagecloud.io/rabbitmq/erlang/el/7/x86_64 
+    baseurl: https://packagecloud.io/rabbitmq/erlang/el/8/x86_64 
     gpgkey: https://packagecloud.io/rabbitmq/erlang/gpgkey 
     gpgcheck: no
     repo_gpgcheck: no
@@ -32,15 +32,15 @@
     mode: '0400'
   notify: restart rabbitmq-server
 
-- name: Enables the rabbitmq_management plugin
-  rabbitmq_plugin:
-    names: rabbitmq_management
-    state: enabled
-
 - name: Start and enable rabbitmq-server
   systemd:
     name: rabbitmq-server
     state: started
+
+- name: Enables the rabbitmq_management plugin
+  rabbitmq_plugin:
+    names: rabbitmq_management
+    state: enabled
 
 - name: make sure rabbitmq app is up
   command: rabbitmqctl start_app

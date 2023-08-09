@@ -11,7 +11,7 @@
   lineinfile:
     path: '/etc/sysconfig/docker-network'
     line: 'DOCKER_NETWORK_OPTIONS="--bridge=none"'
-  when: ansible_connection in 'lchroot'
+  when: ansible_connection in 'chroot'
         or compute|default(False)
   notify: restart docker
 
@@ -49,4 +49,4 @@
   systemd:
     name: docker
     state: started
-  when: ansible_connection not in 'lchroot'
+  when: ansible_connection not in 'chroot'

@@ -1,6 +1,11 @@
 ---
 # tasks file for rsyslog
 
+- name: Install rsyslog
+  yum:
+    name: rsyslog
+    state: installed
+
 - name: Configure listeners
   blockinfile:
     path: '/etc/rsyslog.d/{{ item.proto | lower }}-listeners.conf'
@@ -50,4 +55,4 @@
   service:
     name: rsyslog
     state: started
-  when: ansible_connection not in 'lchroot'
+  when: ansible_connection not in 'chroot'

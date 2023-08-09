@@ -8,9 +8,10 @@
     name: "{{ image_path }}"
     state: directory
 
-- name: Install yum-utils
-  yum:
-    name: yum-utils
+- name: Install dnf-utils
+  dnf:
+    disable_gpg_check: yes
+    name: dnf-utils
     state: present
 
 - name: Check OS release on controller
@@ -18,37 +19,37 @@
   register: os_release_rpm
   changed_when: False
 
-- name: Copy local yum.conf
+- name: Copy local dnf.conf
   copy:
-    src: "/etc/yum.conf"
-    dest: "{{ image_path }}/etc/"
+    src: "/etc/dnf/dnf.conf"
+    dest: "{{ image_path }}/etc/dnf/"
 
-- name: Copy local yum variables
+- name: Copy local dnf variables
   copy:
-    src: "/etc/yum/vars"
-    dest: "{{ image_path }}/etc/yum/"
+    src: "/etc/dnf/vars"
+    dest: "{{ image_path }}/etc/dnf/"
 
 ##
-## The new releasever option in the yum module actually doesn't do anything...
+## The new releasever option in the dnf module actually doesn't do anything...
 ## Workaround until it's fixed.
 ##
 
-- name: Create yum base directory
+- name: Create dnf base directory
   file:
-    path: "{{ image_path }}/etc/yum/vars/"
+    path: "{{ image_path }}/etc/dnf/vars/"
     state: directory
   when: ansible_distribution == "RedHat"
 
 - name: Add releasever variable
   copy:
     content: "{{ ansible_distribution_major_version }}"
-    dest: "{{ image_path }}/etc/yum/vars/releasever"
+    dest: "{{ image_path }}/etc/dnf/vars/releasever"
   when: ansible_distribution == "CentOS"
 
 - name: Add releasever variable
   copy:
     content: "7Server\n"
-    dest: "{{ image_path }}/etc/yum/vars/releasever"
+    dest: "{{ image_path }}/etc/dnf/vars/releasever"
   when: ansible_distribution == "RedHat"
 
 - name: Touch config files for RedHat 
@@ -61,15 +62,19 @@
   when: ansible_distribution == "RedHat"
 
 - name: Install {{ os_release_rpm.stdout }} package in {{ image_path }}
-  yum:
+  dnf:
+    disable_gpg_check: yes
     name: "{{ os_release_rpm.stdout }}"
     #releasever: "{{ ansible_distribution_major_version }}"
     installroot: "{{ image_path }}"
     state: present
 
-- name: Install yum package in {{ image_path }}
-  yum:
-    name: yum
+- name: Install dnf package in {{ image_path }}
+  dnf:
+    disable_gpg_check: yes
+    name:
+      - yum
+      - dnf
     installroot: "{{ image_path }}"
     state: present
 
@@ -127,8 +132,8 @@
   when: local_install | default(False)
 
 - name: Install epel manually
-  yum:
-    name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+  dnf:
+    name: epel-release
     installroot: "{{ image_path }}"
     state: present
 
@@ -140,13 +145,15 @@
   when: local_install | default(False)
 
 - name: Install core packages - @core, kernel and grub2
-  yum:
+  dnf:
+    disable_gpg_check: yes
     name: "{{ image_core_packages }}"
     state: present
     installroot: "{{ image_path }}"
 
 - name: Install missing elfutils-libs on RedHat
-  yum:
+  dnf:
+    disable_gpg_check: yes
     name: "elfutils-libs"
     state: present
     installroot: "{{ image_path }}"
@@ -194,10 +201,21 @@
     key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
     path: "{{ image_path }}/root/.ssh/authorized_keys"
 
+#- name: Add the image to luna
+#  luna_osimage:
+#    name: "{{ image_name }}"
+#    path: "{{ image_path }}"
+
 - name: Add the image to luna
-  luna_osimage:
-    name: "{{ image_name }}"
-    path: "{{ image_path }}"
+  ansible.builtin.shell:
+    cmd: "/sbin/luna osimage add --name {{ image_name }} --path {{ image_path }}"
+  register: osimage_output
+  failed_when: false
+  changed_when: '"is already created" not in osimage_output.stderr'
+
+- name: Pack the image
+  ansible.builtin.shell:
+    cmd: "/sbin/luna osimage pack {{ image_name }}"
 
 - name: Refresh the list of hosts in the inventory
   meta: refresh_inventory

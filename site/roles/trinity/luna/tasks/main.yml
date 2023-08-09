@@ -29,6 +29,18 @@
     system: yes
     state: present
 
+#- name: Install pymongo3 dependency
+#  pip:
+#    name: 'pymongo<4'
+#    executable: /usr/bin/pip3
+#    state: latest
+
+#- name: Install pymongo2 dependency
+#  pip:
+#    name: 'pymongo<4'
+#    executable: /usr/bin/pip2
+#    state: latest
+
 - name: Create a user for luna in MongoDB
   mongodb_user:
     login_database: "admin"
@@ -45,6 +57,13 @@
     name: '{{ luna_packages }}'
     state: present
   when: ansible_distribution == "CentOS"
+
+- name: Install luna packages
+  yum:
+    name: '{{ luna_packages }}'
+    state: present
+    enablerepo: trix
+  when: ansible_distribution == "Rocky"
 
 - name: Install luna packages
   yum:
@@ -194,30 +213,66 @@
       state: touch
     when: luna_dns_placeholder.stat.exists == false
 
+#  - name: Initialize luna cluster
+#    luna_cluster:
+#      frontend_address: "{{ luna.cluster.frontend_address }}"
+#      path: "{{ luna.cluster.path }}"
+#      named_include_file: '{{ luna.cluster.named_include_file }}'
+#      named_zone_dir: '{{ luna.cluster.named_zone_dir }}'
+#      lweb_num_proc: '{{ luna.cluster.lweb_num_proc }}'
+#      state: present
+
   - name: Initialize luna cluster
-    luna_cluster:
-      frontend_address: "{{ luna.cluster.frontend_address }}"
-      path: "{{ luna.cluster.path }}"
-      named_include_file: '{{ luna.cluster.named_include_file }}'
-      named_zone_dir: '{{ luna.cluster.named_zone_dir }}'
-      lweb_num_proc: '{{ luna.cluster.lweb_num_proc }}'
-      state: present
+    ansible.builtin.shell:
+      cmd: "/sbin/luna cluster init --frontend_address {{ luna.cluster.frontend_address }} --path {{ luna.cluster.path }} --user luna --nodeprefix node --nodedigits 3"
+    register: initialize_output
+    failed_when: false
+    changed_when: '"is already created" not in initialize_output.stderr'
+
+  - name: Set luna cluster named include file
+    ansible.builtin.shell:
+      cmd: "/sbin/luna cluster change --named_include_file {{ luna.cluster.named_include_file }}"
+    register: initialize_output
+    failed_when: false
+    changed_when: '"is already created" not in initialize_output.stderr'
+
+  - name: Set luna cluster named zone dir
+    ansible.builtin.shell:
+      cmd: "/sbin/luna cluster change --named_zone_dir {{ luna.cluster.named_zone_dir }}"
+    register: initialize_output
+    failed_when: false
+    changed_when: '"is already created" not in initialize_output.stderr'
+
+#  - name: Create luna networks
+#    luna_network:
+#      name: "{{ item.name }}"
+#      network: "{{ item.ip }}"
+#      prefix: "{{ item.prefix }}"
+#      ns_ip: "{{ item.ns_ip  | default(None) }}"
+#      state: present
+#    with_items: "{{ luna.networks }}"
 
   - name: Create luna networks
-    luna_network:
-      name: "{{ item.name }}"
-      network: "{{ item.ip }}"
-      prefix: "{{ item.prefix }}"
-      ns_ip: "{{ item.ns_ip  | default(None) }}"
-      state: present
+    ansible.builtin.shell:
+      cmd: "/sbin/luna network add --name {{ item.name }} --network {{ item.ip }} --prefix {{ item.prefix }} --ns_ip {{ item.ns_ip }}"
     with_items: "{{ luna.networks }}"
+    register: networks_output
+    failed_when: false
+    changed_when: '"is already created" not in networks_output.stderr'
+
+#  - name: Run luna cluster makedhcp
+#    luna_cluster:
+#      makedhcp: true
+#      dhcp_net: "{{ luna.dhcp.network }}"
+#      dhcp_range_start: "{{ luna.dhcp.start_ip }}"
+#      dhcp_range_end: "{{ luna.dhcp.end_ip }}"
 
   - name: Run luna cluster makedhcp
-    luna_cluster:
-      makedhcp: true
-      dhcp_net: "{{ luna.dhcp.network }}"
-      dhcp_range_start: "{{ luna.dhcp.start_ip }}"
-      dhcp_range_end: "{{ luna.dhcp.end_ip }}"
+    ansible.builtin.shell:
+      cmd: "/sbin/luna cluster makedhcp --network {{ luna.dhcp.network }} --start_ip {{ luna.dhcp.start_ip }} --end_ip {{ luna.dhcp.end_ip }}"
+    register: dhcp_output
+    failed_when: false
+    changed_when: '"is already created" not in dhcp_output.stderr'
 
   - name: Start luna services
     service:

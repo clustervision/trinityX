@@ -16,13 +16,14 @@
     owner: root
     group: root
     state: link
-  when: ansible_connection not in 'lchroot' and "controllers" in group_names
+  when: ansible_connection not in 'chroot' and "controllers" in group_names
 
 
 - name: Install ohpc-release
   yum:
-    name: https://github.com/openhpc/ohpc/releases/download/v1.3.GA/ohpc-release-1.3-1.el7.x86_64.rpm
+    name: https://github.com/openhpc/ohpc/releases/download/v2.4.GA/ohpc-release-2-1.el8.x86_64.rpm
     state: installed
+    disable_gpg_check: yes
 
 - name: Ensure conflicting rpms from legacy TrinityX are not installed
   yum:
@@ -35,29 +36,29 @@
   yum:
     name: ohpc-base
     state: installed
-  when: ansible_connection not in 'lchroot' and "controllers" in group_names and ansible_distribution == "CentOS"
+  when: ansible_connection not in 'chroot' and "controllers" in group_names and ansible_distribution == "CentOS"
 
 - name: Install ohpc-base
   yum:
     name: ohpc-base
     state: installed
     enablerepo: rhel-7-server-optional-rpms
-  when: ansible_connection not in 'lchroot' and "controllers" in group_names and ansible_distribution == "RedHat"
+  when: ansible_connection not in 'chroot' and "controllers" in group_names and ansible_distribution == "RedHat"
 
 - name: Install ohpc-base-compute
   yum:
     name: ohpc-base-compute
     state: installed
-  when: ansible_connection not in 'lchroot' and "controllers" in group_names
+  when: ansible_connection not in 'chroot' and "controllers" in group_names
 
 - name: Install lmod dependencies on non-controller nodes
   yum:
     name:
-      - lua-filesystem-ohpc
-      - lua-posix-ohpc
-      - lua-bit-ohpc
+      - lua-filesystem
+      - lua-posix
+    enablerepo: powertools
     state: installed
-  when: ansible_connection in 'lchroot' or "controllers" not in group_names
+  when: ansible_connection in 'chroot' or "controllers" not in group_names
 
 - name: Create symlinks for pdsh and pdcp
   file:
@@ -74,7 +75,8 @@
   yum:
     name: lmod-ohpc
     state: installed
-  when: ansible_connection in 'lchroot' or "controllers" not in group_names
+    enablerepo: powertools
+  when: ansible_connection in 'chroot' or "controllers" not in group_names
 
 - name: Install profile for modules
   template:
@@ -85,7 +87,7 @@
   template:
     src: OHPC_exports.j2
     dest: '{{ nfs_exports_path }}/ohpc.exports'
-  when: primary | default(True) and ansible_connection not in 'lchroot'
+  when: primary | default(True) and ansible_connection not in 'chroot'
   notify:
     - Export NFS
 
@@ -94,6 +96,6 @@
     dest: '/etc/exports.d/ohpc.exports'
     state: link
     force: "yes"
-  when: primary | default(True) and ansible_connection not in 'lchroot'
+  when: primary | default(True) and ansible_connection not in 'chroot'
   notify:
     - Export NFS

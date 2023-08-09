@@ -11,7 +11,17 @@
   yum:
     name: "{{ tunables_packages }}"
     state: present
-    enablerepo: rhel-7-server-optional-rpms
+    enablerepo: powertools
+    disable_gpg_check: true
+  tags: install-only
+  when: ansible_distribution == "Rocky"
+
+- name: Install additional packages
+  yum:
+    name: "{{ tunables_packages }}"
+    state: present
+    disable_gpg_check: true
+#    enablerepo: rhel-7-server-optional-rpms
   tags: install-only
   when: ansible_distribution == "RedHat"
 
@@ -19,6 +29,7 @@
   yum:
     name: "{{ tunables_packages }}"
     state: present
+    disable_gpg_check: true
   tags: install-only
   when: ansible_distribution == "CentOS"
 
@@ -45,4 +56,4 @@
   service:
     name: haveged
     state: started
-  when: ansible_connection not in 'lchroot'
+  when: ansible_connection not in 'chroot'

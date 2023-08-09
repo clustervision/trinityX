@@ -56,24 +56,6 @@
     - role: trinity/ssh
       tags: ssh
 
-    - role: trinity/fail2ban
-      tags: fail2ban
-
-    - role: trinity/pacemaker
-      when: ha
-      fence_ipmilan_enabled: 'false'
-      fence_ipmilan_login: 'user'
-      fence_ipmilan_passwd: 'password'
-      tags: pcs
-
-    - role: trinity/drbd
-      when: ha
-      tags: drbd
-
-    - role: trinity/beegfs
-      when: ha and beegfs
-      tags: beegfs
-
     - role: trinity/nfs
       nfs_rpccount: 256
       nfs_enable_rdma: false
@@ -142,11 +124,6 @@
       tags: slurm, sbank
       when: workload_manager == "slurm"
 
-    - role: trinity/pbspro
-      when: workload_manager == 'pbspro'
-      tags: pbspro
-      pbspro_ctrl: '{{ trix_ctrl_hostname }}'
-
     - role: trinity/luna
       luna:
         cluster:
@@ -184,24 +161,8 @@
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
       tags: rsyslog
 
-
-    - role: trinity/docker-registry
-      when: enable_docker
-      docker_registry_path: '{{ trix_local }}/docker-registry'
-      docker_ssl_path: '{{ ssl_cert_path }}'
-      docker_ssl_cert: '{{ ansible_fqdn }}.crt'
-      docker_ssl_key: '{{ ansible_fqdn }}.key'
-      tags: docker-registry
-
-
     - role: trinity/wrapup
       tags: wrapup
-
-    - role: trinity/ood-portal
-      tags: ood-portal
-      enable_ssl: true
-      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
 
     - role: trinity/telegraf
       tags: monitoring

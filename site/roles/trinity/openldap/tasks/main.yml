@@ -3,7 +3,7 @@
 
 - name: Install dependencies
   yum:
-    name: policycoreutils-python
+    name: python3-policycoreutils
     state: installed
   tags: install-only
 
@@ -23,6 +23,9 @@
   yum:
     name: '{{ openldap_packages }}'
     state: present
+    enablerepo:
+      - plus
+      - powertools
   tags: install-only
 
 - block:
@@ -39,6 +42,7 @@
 
 - name: Adjust OpenLDAP server TLS configuration
   lineinfile:
+    create: yes
     path: '{{ openldap_server_defaults_file }}'
     regexp: '^SLAPD_URLS='
     line: 'SLAPD_URLS="{{ openldap_endpoints }}"'
