@@ -16,7 +16,7 @@
     owner: root
     group: root
     state: link
-  when: ansible_connection not in 'chroot' and "controllers" in group_names
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names
 
 
 - name: Install ohpc-release
@@ -36,20 +36,20 @@
   yum:
     name: ohpc-base
     state: installed
-  when: ansible_connection not in 'chroot' and "controllers" in group_names and ansible_distribution == "CentOS"
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names and ansible_distribution == "CentOS"
 
 - name: Install ohpc-base
   yum:
     name: ohpc-base
     state: installed
     enablerepo: rhel-7-server-optional-rpms
-  when: ansible_connection not in 'chroot' and "controllers" in group_names and ansible_distribution == "RedHat"
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names and ansible_distribution == "RedHat"
 
 - name: Install ohpc-base-compute
   yum:
     name: ohpc-base-compute
     state: installed
-  when: ansible_connection not in 'chroot' and "controllers" in group_names
+  when: ansible_connection not in 'lchroot' and "controllers" in group_names
 
 - name: Install lmod dependencies on non-controller nodes
   yum:
@@ -58,7 +58,7 @@
       - lua-posix
     enablerepo: powertools
     state: installed
-  when: ansible_connection in 'chroot' or "controllers" not in group_names
+  when: ansible_connection in 'lchroot' or "controllers" not in group_names
 
 - name: Create symlinks for pdsh and pdcp
   file:
@@ -76,7 +76,7 @@
     name: lmod-ohpc
     state: installed
     enablerepo: powertools
-  when: ansible_connection in 'chroot' or "controllers" not in group_names
+  when: ansible_connection in 'lchroot' or "controllers" not in group_names
 
 - name: Install profile for modules
   template:
@@ -87,7 +87,7 @@
   template:
     src: OHPC_exports.j2
     dest: '{{ nfs_exports_path }}/ohpc.exports'
-  when: primary | default(True) and ansible_connection not in 'chroot'
+  when: primary | default(True) and ansible_connection not in 'lchroot'
   notify:
     - Export NFS
 
@@ -96,6 +96,6 @@
     dest: '/etc/exports.d/ohpc.exports'
     state: link
     force: "yes"
-  when: primary | default(True) and ansible_connection not in 'chroot'
+  when: primary | default(True) and ansible_connection not in 'lchroot'
   notify:
     - Export NFS

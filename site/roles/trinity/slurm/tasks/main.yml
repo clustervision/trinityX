@@ -163,7 +163,7 @@
     enabled: "{{ not ha|default(True) }}"
   when: not ha|default(False)
         and primary|default(True)
-        and ansible_connection not in 'chroot'
+        and ansible_connection not in 'lchroot'
         and not compute|default(False)
   with_items:
     - munge
@@ -192,7 +192,7 @@
         - ['sshd', 'slurm']
       when: enable_slurm_pam
 
-  when: ansible_connection in 'chroot' or compute|default(False)
+  when: ansible_connection in 'lchroot' or compute|default(False)
 
 - name: Start slurm compute services
   service:
@@ -338,7 +338,7 @@
       delay: 5
 
   when: primary|default(True)
-        and ansible_connection not in 'chroot'
+        and ansible_connection not in 'lchroot'
         and not compute|default(False)
 
 - name: Enable munge service on passive slurm nodes (portal services etc)
@@ -407,5 +407,5 @@
       when: enable_slurm_pam
 
   when: primary|default(True)
-        and ansible_connection not in 'chroot'
+        and ansible_connection not in 'lchroot'
         and not compute|default(False)
