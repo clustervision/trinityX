@@ -1,26 +1,24 @@
 ---
-# vars file for luna
+# vars file for luna2
 
 luna_packages:
-  - luna
-
-luna_user_id: 2008
-luna_group_id: 2008
+  - luna2-daemon
+  - luna2-cli
 
 luna:
   cluster:
-    frontend_address: '10.141.255.252'
-    path: '/opt/luna'
-    named_include_file: '/trinity/local/etc/named.luna.zones'
-    named_zone_dir: '/trinity/local/var/lib/named'
-  dhcp: 
-    conf_path: '/etc/dhcp'
-    network: 'cluster'
-    start_ip: '10.141.128.0'
-    end_ip:  '10.141.140.0'
+    frontend_address: {{ trix_ctrl_ip }}
   networks:
     - name: 'cluster'
-      ip: '10.141.0.0'
-      prefix: '16'
+      ip: {{ trix_cluster_net }}
+      prefix: {{ trix_cluster_netprefix }}
+      start_ip: {{ trix_cluster_dhcp_start }}
+      end_ip:  {{ trix_cluster_dhcp_end }}
+    - name: 'ipmi'
+      ip: 10.148.0.0
+      prefix: 16
+    - name: 'ib'
+      ip: 10.149.0.0
+      prefix: 16
 
 luna_repository: https://updates.clustervision.com/trinityx/12.2/luna/luna-2.repo

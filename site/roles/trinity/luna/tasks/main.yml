@@ -1,33 +1,21 @@
 ---
 # tasks file for luna 
 
-- name: Generate root password for MongoDB and save it to /etc/trinity/passwords
-  set_fact:
-    tmp_pwd: "{{ lookup('password',
-                          '/etc/trinity/passwords/mongo/luna.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
-
-- name: Get root password for MongoDB from /etc/trinity/passwords
-  set_fact:
-    luna_db_pwd: "{{ lookup('password',
-                          '/etc/trinity/passwords/mongo/luna.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
-
-- name: Create a group for luna
-  group:
-    name: luna
-    gid: '{{ luna_group_id }}'
-    state: present
-
-- name: Create a user for luna
-  user:
-    name: luna
-    uid: '{{ luna_user_id }}'
-    home: '{{ luna.cluster.path }}'
-    group: luna
-    shell: /sbin/nologin
-    system: yes
-    state: present
+#- name: Create a group for luna
+#  group:
+#    name: luna
+#    gid: '{{ luna_group_id }}'
+#    state: present
+#
+#- name: Create a user for luna
+#  user:
+#    name: luna
+#    uid: '{{ luna_user_id }}'
+#    home: '{{ luna.cluster.path }}'
+#    group: luna
+#    shell: /sbin/nologin
+#    system: yes
+#    state: present
 
 #- name: Install pymongo3 dependency
 #  pip:
@@ -41,16 +29,16 @@
 #    executable: /usr/bin/pip2
 #    state: latest
 
-- name: Create a user for luna in MongoDB
-  mongodb_user:
-    login_database: "admin"
-    login_user: "root"
-    login_password: "{{ mongo_root_pwd }}"
-    name: "luna"
-    database: "luna"
-    roles: [ "dbOwner" ]
-    password: "{{ luna_db_pwd }}"
-  when: primary | default(True)
+#- name: Create a user for luna in MongoDB
+#  mongodb_user:
+#    login_database: "admin"
+#    login_user: "root"
+#    login_password: "{{ mongo_root_pwd }}"
+#    name: "luna"
+#    database: "luna"
+#    roles: [ "dbOwner" ]
+#    password: "{{ luna_db_pwd }}"
+#  when: primary | default(True)
 
 - name: Install luna packages
   yum:
@@ -71,6 +59,11 @@
     state: present
     enablerepo: rhel-7-server-optional-rpms
   when: ansible_distribution == "RedHat"
+
+- name: Ensure /var/log/luna exists
+  file:
+    path: '/var/log/luna'
+    state: directory
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
@@ -95,14 +88,23 @@
     dest: /tftpboot/luna_undionly.kpxe
     mode: '0444'
 
-- name: Render /etc/luna.conf
+#- name: Render /etc/luna.conf
+#  template:
+#    src: 'luna.conf.j2'
+#    dest: '/etc/luna.conf'
+#    owner: luna
+#    group: luna
+#    mode: 0400
+#  notify: restart luna
+
+- name: Render /trinity/local/luna2-daemon/daemon/config/bootstrap.ini
   template:
     src: 'luna.conf.j2'
-    dest: '/etc/luna.conf'
-    owner: luna
-    group: luna
-    mode: 0400
-  notify: restart luna
+    dest: '/trinity/local/luna2-daemon/daemon/config/bootstrap.ini'
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart luna2-daemon
 
 - name: Include luna's DNS zone file in named conf
   lineinfile:
@@ -124,27 +126,26 @@
   with_items:
     - xinetd
     - dhcpd
-    - lweb
-    - ltorrent
+    - luna2-daemon
 
-- name: Explicitly disable xinetd
-  service:
-    name: xinetd
-    enabled: no
-  when: ha|default(False)
+#- name: Explicitly disable xinetd
+#  service:
+#    name: xinetd
+#    enabled: no
+#  when: ha|default(False)
 
-- name: Get /etc/dhcp status
-  stat:
-    path: '/etc/dhcp'
-  register: default_dhcp_path
+#- name: Get /etc/dhcp status
+#  stat:
+#    path: '/etc/dhcp'
+#  register: default_dhcp_path
 
-# Some PXE ROMs in some NICs do not send tftp replies using the FIP
-# of the controllers. This workaround ensures that we SNAT those replies.
-# TODO: delete workaround when no longer required.
-- name: Get provisioning interface name
-  shell: "ip -o addr show to {{ trix_cluster_net }}/{{ trix_cluster_netprefix }} | awk '{ print $2 }' | head -1"
-  register: luna_prov_nic
-  changed_when: False
+## Some PXE ROMs in some NICs do not send tftp replies using the FIP
+## of the controllers. This workaround ensures that we SNAT those replies.
+## TODO: delete workaround when no longer required.
+#- name: Get provisioning interface name
+#  shell: "ip -o addr show to {{ trix_cluster_net }}/{{ trix_cluster_netprefix }} | awk '{ print $2 }' | head -1"
+#  register: luna_prov_nic
+#  changed_when: False
 
 - name: Workaround PXE boot issue when doing HA and masquerading is enabled
   template:
@@ -157,41 +158,41 @@
   notify: reload firewalld
 ###
 
-- block:
+#- block:
 
-  - name: Ensure {{ luna.dhcp.conf_path }} exists
-    file:
-      path: '{{ luna.dhcp.conf_path }}'
-      state: directory
+#  - name: Ensure {{ luna.dhcp.conf_path }} exists
+#    file:
+#      path: '{{ luna.dhcp.conf_path }}'
+#      state: directory
 
-  - name: Copy default dhcp configuraion to {{ luna.dhcp.conf_path }}
-    shell: rsync -raW -AX /etc/dhcp/* {{ luna.dhcp.conf_path }}
-    args:
-      creates: '{{ luna.dhcp.conf_path }}/dhclient.d'
-    when: primary|default(True)
+#  - name: Copy default dhcp configuraion to {{ luna.dhcp.conf_path }}
+#    shell: rsync -raW -AX /etc/dhcp/* {{ luna.dhcp.conf_path }}
+#    args:
+#      creates: '{{ luna.dhcp.conf_path }}/dhclient.d'
+#    when: primary|default(True)
 
-  - name: Delete default configuration
-    file:
-      path: '/etc/dhcp'
-      state: absent
+#  - name: Delete default configuration
+#    file:
+#      path: '/etc/dhcp'
+#      state: absent
 
-  - name: Replace default dhcp configuration path with symlink to {{ luna.dhcp.conf_path }}
-    file:
-      src: '{{ luna.dhcp.conf_path }}'
-      dest: '/etc/dhcp'
-      state: link
-      force: yes
+#  - name: Replace default dhcp configuration path with symlink to {{ luna.dhcp.conf_path }}
+#    file:
+#      src: '{{ luna.dhcp.conf_path }}'
+#      dest: '/etc/dhcp'
+#      state: link
+#      force: yes
 
-  when: luna.dhcp.conf_path|string not in '/etc/dhcp'
-        and default_dhcp_path.stat.isdir
+#  when: luna.dhcp.conf_path|string not in '/etc/dhcp'
+#        and default_dhcp_path.stat.isdir
 
 - block:
 
   - name: Ensure {{ luna.cluster.path }} exists
     file:
       path: '{{ luna.cluster.path }}'
-      owner: luna
-      group: luna
+      owner: root
+      group: root
       mode: 0755
       state: directory
 
@@ -222,57 +223,57 @@
 #      lweb_num_proc: '{{ luna.cluster.lweb_num_proc }}'
 #      state: present
 
-  - name: Initialize luna cluster
-    ansible.builtin.shell:
-      cmd: "/sbin/luna cluster init --frontend_address {{ luna.cluster.frontend_address }} --path {{ luna.cluster.path }} --user luna --nodeprefix node --nodedigits 3"
-    register: initialize_output
-    failed_when: false
-    changed_when: '"is already created" not in initialize_output.stderr'
+#  - name: Initialize luna cluster
+#    ansible.builtin.shell:
+#      cmd: "/sbin/luna cluster init --frontend_address {{ luna.cluster.frontend_address }} --path {{ luna.cluster.path }} --user luna --nodeprefix node --nodedigits 3"
+#    register: initialize_output
+#    failed_when: false
+#    changed_when: '"is already created" not in initialize_output.stderr'
 
-  - name: Set luna cluster named include file
-    ansible.builtin.shell:
-      cmd: "/sbin/luna cluster change --named_include_file {{ luna.cluster.named_include_file }}"
-    register: initialize_output
-    failed_when: false
-    changed_when: '"is already created" not in initialize_output.stderr'
+#  - name: Set luna cluster named include file
+#    ansible.builtin.shell:
+#      cmd: "/sbin/luna cluster change --named_include_file {{ luna.cluster.named_include_file }}"
+#    register: initialize_output
+#    failed_when: false
+#    changed_when: '"is already created" not in initialize_output.stderr'
 
-  - name: Set luna cluster named zone dir
-    ansible.builtin.shell:
-      cmd: "/sbin/luna cluster change --named_zone_dir {{ luna.cluster.named_zone_dir }}"
-    register: initialize_output
-    failed_when: false
-    changed_when: '"is already created" not in initialize_output.stderr'
+#  - name: Set luna cluster named zone dir
+#    ansible.builtin.shell:
+#      cmd: "/sbin/luna cluster change --named_zone_dir {{ luna.cluster.named_zone_dir }}"
+#    register: initialize_output
+#    failed_when: false
+#    changed_when: '"is already created" not in initialize_output.stderr'
+
+##  - name: Create luna networks
+##    luna_network:
+##      name: "{{ item.name }}"
+##      network: "{{ item.ip }}"
+##      prefix: "{{ item.prefix }}"
+##      ns_ip: "{{ item.ns_ip  | default(None) }}"
+##      state: present
+##    with_items: "{{ luna.networks }}"
 
 #  - name: Create luna networks
-#    luna_network:
-#      name: "{{ item.name }}"
-#      network: "{{ item.ip }}"
-#      prefix: "{{ item.prefix }}"
-#      ns_ip: "{{ item.ns_ip  | default(None) }}"
-#      state: present
+#    ansible.builtin.shell:
+#      cmd: "/sbin/luna network add --name {{ item.name }} --network {{ item.ip }} --prefix {{ item.prefix }} --ns_ip {{ item.ns_ip }}"
 #    with_items: "{{ luna.networks }}"
+#    register: networks_output
+#    failed_when: false
+#    changed_when: '"is already created" not in networks_output.stderr'
 
-  - name: Create luna networks
-    ansible.builtin.shell:
-      cmd: "/sbin/luna network add --name {{ item.name }} --network {{ item.ip }} --prefix {{ item.prefix }} --ns_ip {{ item.ns_ip }}"
-    with_items: "{{ luna.networks }}"
-    register: networks_output
-    failed_when: false
-    changed_when: '"is already created" not in networks_output.stderr'
+##  - name: Run luna cluster makedhcp
+##    luna_cluster:
+##      makedhcp: true
+##      dhcp_net: "{{ luna.dhcp.network }}"
+##      dhcp_range_start: "{{ luna.dhcp.start_ip }}"
+##      dhcp_range_end: "{{ luna.dhcp.end_ip }}"
 
 #  - name: Run luna cluster makedhcp
-#    luna_cluster:
-#      makedhcp: true
-#      dhcp_net: "{{ luna.dhcp.network }}"
-#      dhcp_range_start: "{{ luna.dhcp.start_ip }}"
-#      dhcp_range_end: "{{ luna.dhcp.end_ip }}"
-
-  - name: Run luna cluster makedhcp
-    ansible.builtin.shell:
-      cmd: "/sbin/luna cluster makedhcp --network {{ luna.dhcp.network }} --start_ip {{ luna.dhcp.start_ip }} --end_ip {{ luna.dhcp.end_ip }}"
-    register: dhcp_output
-    failed_when: false
-    changed_when: '"is already created" not in dhcp_output.stderr'
+#    ansible.builtin.shell:
+#      cmd: "/sbin/luna cluster makedhcp --network {{ luna.dhcp.network }} --start_ip {{ luna.dhcp.start_ip }} --end_ip {{ luna.dhcp.end_ip }}"
+#    register: dhcp_output
+#    failed_when: false
+#    changed_when: '"is already created" not in dhcp_output.stderr'
 
   - name: Start luna services
     service:
@@ -281,33 +282,32 @@
     with_items:
       - xinetd
       - dhcpd
-      - lweb
-      - ltorrent
+      - luna2-daemon
 
-  - name: Add dependency pacemaker resources
-    pcs_resource:
-      name: '{{ item }}'
-      resource_class: 'systemd'
-      resource_type: 'systemd:{{ item }}'
-      options: 'op monitor interval=30 --group Trinity-stack'
-      state: present
-    when: ha | default(False)
-    with_items:
-      - xinetd
-      - dhcpd
-    tags: pcs
+#  - name: Add dependency pacemaker resources
+#    pcs_resource:
+#      name: '{{ item }}'
+#      resource_class: 'systemd'
+#      resource_type: 'systemd:{{ item }}'
+#      options: 'op monitor interval=30 --group Trinity-stack'
+#      state: present
+#    when: ha | default(False)
+#    with_items:
+#      - xinetd
+#      - dhcpd
+#    tags: pcs
 
-  - name: Add luna pacemaker resources
-    pcs_resource:
-      name: '{{ item }}'
-      resource_class: 'systemd'
-      resource_type: 'systemd:{{ item }}'
-      options: 'op monitor interval=30 op start timeout=120 --group Trinity-stack'
-      state: present
-    when: ha | default(False)
-    with_items:
-      - lweb
-      - ltorrent
-    tags: pcs
+#  - name: Add luna pacemaker resources
+#    pcs_resource:
+#      name: '{{ item }}'
+#      resource_class: 'systemd'
+#      resource_type: 'systemd:{{ item }}'
+#      options: 'op monitor interval=30 op start timeout=120 --group Trinity-stack'
+#      state: present
+#    when: ha | default(False)
+#    with_items:
+#      - lweb
+#      - ltorrent
+#    tags: pcs
 
   when: primary | default(True)
