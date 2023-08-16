@@ -1,64 +1,30 @@
 ---
 # tasks file for luna 
 
-#- name: Create a group for luna
-#  group:
-#    name: luna
-#    gid: '{{ luna_group_id }}'
-#    state: present
-#
-#- name: Create a user for luna
-#  user:
-#    name: luna
-#    uid: '{{ luna_user_id }}'
-#    home: '{{ luna.cluster.path }}'
-#    group: luna
-#    shell: /sbin/nologin
-#    system: yes
-#    state: present
-
-#- name: Install pymongo3 dependency
-#  pip:
-#    name: 'pymongo<4'
-#    executable: /usr/bin/pip3
-#    state: latest
-
-#- name: Install pymongo2 dependency
-#  pip:
-#    name: 'pymongo<4'
-#    executable: /usr/bin/pip2
-#    state: latest
-
-#- name: Create a user for luna in MongoDB
-#  mongodb_user:
-#    login_database: "admin"
-#    login_user: "root"
-#    login_password: "{{ mongo_root_pwd }}"
-#    name: "luna"
-#    database: "luna"
-#    roles: [ "dbOwner" ]
-#    password: "{{ luna_db_pwd }}"
-#  when: primary | default(True)
-
-- name: Install luna packages
+- name: Install luna2 packages
   yum:
-    name: '{{ luna_packages }}'
+    name: '{{ luna2_packages }}'
     state: present
-  when: ansible_distribution == "CentOS"
+    enablerepo: luna2
+#  when: ansible_distribution == "CentOS"
 
-- name: Install luna packages
-  yum:
-    name: '{{ luna_packages }}'
-    state: present
-    enablerepo: trix
-  when: ansible_distribution == "Rocky"
+# TODO: better way than below
+- name: Install luna2 daemon
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install {{ luna2_noarch_pip_repository }}/daemon/{{ luna2_daemon_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
 
-- name: Install luna packages
-  yum:
-    name: '{{ luna_packages }}'
-    state: present
-    enablerepo: rhel-7-server-optional-rpms
-  when: ansible_distribution == "RedHat"
+# TODO: better way than below
+- name: Install luna2 cli
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install {{ luna2_noarch_pip_repository }}/cli/{{ luna2_cli_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
 
 - name: Ensure /var/log/luna exists
   file:
@@ -88,18 +54,9 @@
     dest: /tftpboot/luna_undionly.kpxe
     mode: '0444'
 
-#- name: Render /etc/luna.conf
-#  template:
-#    src: 'luna.conf.j2'
-#    dest: '/etc/luna.conf'
-#    owner: luna
-#    group: luna
-#    mode: 0400
-#  notify: restart luna
-
 - name: Render /trinity/local/luna2-daemon/daemon/config/bootstrap.ini
   template:
-    src: 'luna.conf.j2'
+    src: 'luna2.conf.j2'
     dest: '/trinity/local/luna2-daemon/daemon/config/bootstrap.ini'
     owner: root
     group: root
@@ -114,15 +71,15 @@
 
 - name: Add luna's server configuration to nginx
   template:
-    src: 'nginx-luna.conf.j2'
-    dest: '/etc/nginx/conf.d/nginx-luna.conf'
+    src: 'nginx-luna2.conf.j2'
+    dest: '/etc/nginx/conf.d/nginx-luna2.conf'
   notify: reload nginx
 
 - name: Enable luna services
   service:
     name: '{{ item }}'
     enabled: yes
-  when: not ha
+#  when: not ha
   with_items:
     - xinetd
     - dhcpd
@@ -147,15 +104,16 @@
 #  register: luna_prov_nic
 #  changed_when: False
 
-- name: Workaround PXE boot issue when doing HA and masquerading is enabled
-  template:
-    src: 'firewalld_direct.xml.j2'
-    dest: '/etc/firewalld/direct.xml'
-    owner: 'root'
-    group: 'root'
-    mode: '0644'
-  when: ha|default(False)
-  notify: reload firewalld
+# TODO
+#- name: Workaround PXE boot issue when doing HA and masquerading is enabled
+#  template:
+#    src: 'firewalld_direct.xml.j2'
+#    dest: '/etc/firewalld/direct.xml'
+#    owner: 'root'
+#    group: 'root'
+#    mode: '0644'
+#  when: ha|default(False)
+#  notify: reload firewalld
 ###
 
 #- block:
