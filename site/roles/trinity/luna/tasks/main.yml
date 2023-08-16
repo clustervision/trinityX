@@ -6,7 +6,16 @@
     name: '{{ luna2_packages }}'
     state: present
     enablerepo: luna2
-#  when: ansible_distribution == "CentOS"
+
+- name: Install required packages
+  yum:
+    name: '{{ required_packages }}'
+    state: present
+
+- name: Get python libdir
+  shell: "echo /trinity/local/python/lib/python*"
+  register: luna2_python_dir
+  changed_when: False
 
 # TODO: better way than below
 - name: Install luna2 daemon
@@ -17,6 +26,13 @@
   args:
     executable: /bin/bash
 
+- name: create symlink from site-packages/daemon to luna2 dir
+  file:
+    src: '{{ luna2_python_dir.stdout }}/site-packages/daemon'
+    dest: '{{ trix_luna }}/daemon'
+    state: link
+    force: yes
+
 # TODO: better way than below
 - name: Install luna2 cli
   ansible.builtin.shell: |
@@ -25,6 +41,14 @@
     exit $?
   args:
     executable: /bin/bash
+
+#TODO better way than below
+- name: create symlink from site-packages/cli to luna2 dir
+  file:
+    src: '{{ luna2_python_dir.stdout }}/site-packages/luna'
+    dest: '{{ trix_luna }}/cli'
+    state: link
+    force: yes
 
 - name: Ensure /var/log/luna exists
   file:
@@ -54,10 +78,26 @@
     dest: /tftpboot/luna_undionly.kpxe
     mode: '0444'
 
-- name: Render /trinity/local/luna2-daemon/daemon/config/bootstrap.ini
+- name: Render /etc/systemd/system/luna2-daemon.service
+  template:
+    src: 'luna2-daemon-service.j2'
+    dest: '/etc/systemd/system/luna2-daemon.service'
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Create luna.key
+  copy:
+    dest: "{{ trix_ssl }}/luna.key"
+    content: "{{ luna2_key }}"
+
+- debug:
+    msg: "{{ luna2_cluster }}"
+
+- name: Render /trinity/local/luna//daemon/config/bootstrap.ini
   template:
     src: 'luna2.conf.j2'
-    dest: '/trinity/local/luna2-daemon/daemon/config/bootstrap.ini'
+    dest: '/trinity/local/luna/daemon/config/bootstrap.ini'
     owner: root
     group: root
     mode: 0644
@@ -75,26 +115,6 @@
     dest: '/etc/nginx/conf.d/nginx-luna2.conf'
   notify: reload nginx
 
-- name: Enable luna services
-  service:
-    name: '{{ item }}'
-    enabled: yes
-#  when: not ha
-  with_items:
-    - xinetd
-    - dhcpd
-    - luna2-daemon
-
-#- name: Explicitly disable xinetd
-#  service:
-#    name: xinetd
-#    enabled: no
-#  when: ha|default(False)
-
-#- name: Get /etc/dhcp status
-#  stat:
-#    path: '/etc/dhcp'
-#  register: default_dhcp_path
 
 ## Some PXE ROMs in some NICs do not send tftp replies using the FIP
 ## of the controllers. This workaround ensures that we SNAT those replies.
@@ -116,156 +136,39 @@
 #  notify: reload firewalld
 ###
 
-#- block:
+- name: Selinux fcontext on files
+  sefcontext:
+    target: "/etc/named.luna.zones"
+    setype: named_zone_t
 
-#  - name: Ensure {{ luna.dhcp.conf_path }} exists
-#    file:
-#      path: '{{ luna.dhcp.conf_path }}'
-#      state: directory
+- name: Check File exists or not
+  stat:
+    path: '{{ trix_local }}/etc/named.luna.zones'
+  register: luna_dns_placeholder
 
-#  - name: Copy default dhcp configuraion to {{ luna.dhcp.conf_path }}
-#    shell: rsync -raW -AX /etc/dhcp/* {{ luna.dhcp.conf_path }}
-#    args:
-#      creates: '{{ luna.dhcp.conf_path }}/dhclient.d'
-#    when: primary|default(True)
+- name: Add a placeholder for luna's DNS zone file
+  file:
+    path: '/etc/named.luna.zones'
+    setype: named_zone_t
+    group: named
+    state: touch
+  when: luna_dns_placeholder.stat.exists == false
 
-#  - name: Delete default configuration
-#    file:
-#      path: '/etc/dhcp'
-#      state: absent
+- name: Enable luna services
+  service:
+    name: '{{ item }}'
+    enabled: yes
+#  when: not ha
+  with_items:
+    - xinetd
+    - dhcpd
+    - luna2-daemon
 
-#  - name: Replace default dhcp configuration path with symlink to {{ luna.dhcp.conf_path }}
-#    file:
-#      src: '{{ luna.dhcp.conf_path }}'
-#      dest: '/etc/dhcp'
-#      state: link
-#      force: yes
+- name: Start luna services
+  service:
+    name: '{{ item }}'
+    state: started
+  with_items:
+    - xinetd
+    - luna2-daemon
 
-#  when: luna.dhcp.conf_path|string not in '/etc/dhcp'
-#        and default_dhcp_path.stat.isdir
-
-- block:
-
-  - name: Ensure {{ luna.cluster.path }} exists
-    file:
-      path: '{{ luna.cluster.path }}'
-      owner: root
-      group: root
-      mode: 0755
-      state: directory
-
-  - name: Selinux fcontext on files
-    sefcontext:
-      target: "{{ trix_local }}/etc/named.luna.zones"
-      setype: named_zone_t
-
-  - name: Check File exists or not
-    stat:
-      path: '{{ trix_local }}/etc/named.luna.zones'
-    register: luna_dns_placeholder
-
-  - name: Add a placeholder for luna's DNS zone file
-    file:
-      path: '{{ trix_local }}/etc/named.luna.zones'
-      setype: named_zone_t
-      group: named
-      state: touch
-    when: luna_dns_placeholder.stat.exists == false
-
-#  - name: Initialize luna cluster
-#    luna_cluster:
-#      frontend_address: "{{ luna.cluster.frontend_address }}"
-#      path: "{{ luna.cluster.path }}"
-#      named_include_file: '{{ luna.cluster.named_include_file }}'
-#      named_zone_dir: '{{ luna.cluster.named_zone_dir }}'
-#      lweb_num_proc: '{{ luna.cluster.lweb_num_proc }}'
-#      state: present
-
-#  - name: Initialize luna cluster
-#    ansible.builtin.shell:
-#      cmd: "/sbin/luna cluster init --frontend_address {{ luna.cluster.frontend_address }} --path {{ luna.cluster.path }} --user luna --nodeprefix node --nodedigits 3"
-#    register: initialize_output
-#    failed_when: false
-#    changed_when: '"is already created" not in initialize_output.stderr'
-
-#  - name: Set luna cluster named include file
-#    ansible.builtin.shell:
-#      cmd: "/sbin/luna cluster change --named_include_file {{ luna.cluster.named_include_file }}"
-#    register: initialize_output
-#    failed_when: false
-#    changed_when: '"is already created" not in initialize_output.stderr'
-
-#  - name: Set luna cluster named zone dir
-#    ansible.builtin.shell:
-#      cmd: "/sbin/luna cluster change --named_zone_dir {{ luna.cluster.named_zone_dir }}"
-#    register: initialize_output
-#    failed_when: false
-#    changed_when: '"is already created" not in initialize_output.stderr'
-
-##  - name: Create luna networks
-##    luna_network:
-##      name: "{{ item.name }}"
-##      network: "{{ item.ip }}"
-##      prefix: "{{ item.prefix }}"
-##      ns_ip: "{{ item.ns_ip  | default(None) }}"
-##      state: present
-##    with_items: "{{ luna.networks }}"
-
-#  - name: Create luna networks
-#    ansible.builtin.shell:
-#      cmd: "/sbin/luna network add --name {{ item.name }} --network {{ item.ip }} --prefix {{ item.prefix }} --ns_ip {{ item.ns_ip }}"
-#    with_items: "{{ luna.networks }}"
-#    register: networks_output
-#    failed_when: false
-#    changed_when: '"is already created" not in networks_output.stderr'
-
-##  - name: Run luna cluster makedhcp
-##    luna_cluster:
-##      makedhcp: true
-##      dhcp_net: "{{ luna.dhcp.network }}"
-##      dhcp_range_start: "{{ luna.dhcp.start_ip }}"
-##      dhcp_range_end: "{{ luna.dhcp.end_ip }}"
-
-#  - name: Run luna cluster makedhcp
-#    ansible.builtin.shell:
-#      cmd: "/sbin/luna cluster makedhcp --network {{ luna.dhcp.network }} --start_ip {{ luna.dhcp.start_ip }} --end_ip {{ luna.dhcp.end_ip }}"
-#    register: dhcp_output
-#    failed_when: false
-#    changed_when: '"is already created" not in dhcp_output.stderr'
-
-  - name: Start luna services
-    service:
-      name: '{{ item }}'
-      state: started
-    with_items:
-      - xinetd
-      - dhcpd
-      - luna2-daemon
-
-#  - name: Add dependency pacemaker resources
-#    pcs_resource:
-#      name: '{{ item }}'
-#      resource_class: 'systemd'
-#      resource_type: 'systemd:{{ item }}'
-#      options: 'op monitor interval=30 --group Trinity-stack'
-#      state: present
-#    when: ha | default(False)
-#    with_items:
-#      - xinetd
-#      - dhcpd
-#    tags: pcs
-
-#  - name: Add luna pacemaker resources
-#    pcs_resource:
-#      name: '{{ item }}'
-#      resource_class: 'systemd'
-#      resource_type: 'systemd:{{ item }}'
-#      options: 'op monitor interval=30 op start timeout=120 --group Trinity-stack'
-#      state: present
-#    when: ha | default(False)
-#    with_items:
-#      - lweb
-#      - ltorrent
-#    tags: pcs
-
-  when: primary | default(True)
