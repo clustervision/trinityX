@@ -8,7 +8,7 @@
 - debug:
     msg: "{{ trinityx_repositories }}"
 
-block:
+- block:
   - name: Configure repos
     ansible.builtin.yum_repository:
       name: "{{ item.name }}"
@@ -29,8 +29,8 @@ block:
       name: "/tmp/{{ item.name }}"
       state: present
     with_items: "{{ external_repository_rpms }}"
-when: ansible_facts[‘os_family’] == "RedHat"
-tags: install-only
+  when: ansible_facts[‘os_family’] == "RedHat"
+  tags: install-only
 
 
 
