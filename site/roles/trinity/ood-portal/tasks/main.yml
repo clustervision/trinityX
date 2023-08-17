@@ -1,39 +1,192 @@
 ---
-# tasks file for ood-portal
+##### Old tasks file for ood-portal (2.0 on CentOS)
 
-- name: Install dependencies
+# - name: Install dependencies
+#   yum:
+#     name: python-firewall
+#     state: present
+#   when: ansible_virtualization_type != 'docker'
+
+# - name: Install centos-release-scl repo
+#   yum:
+#     name: centos-release-scl
+#     state: present
+#   when: ansible_distribution == "CentOS"
+
+# - name: Install OOD Repo rpm
+#   yum:
+#     name: https://yum.osc.edu/ondemand/2.0/ondemand-release-web-2.0-1.noarch.rpm
+#     state: present
+
+# - name: Install OOD
+#   yum:
+#     name: ondemand
+#     state: present
+#   when: ansible_distribution == "CentOS"
+
+# - name: Install OOD
+#   yum:
+#     name: ondemand
+#     state: present
+#     enablerepo:
+#       - rhel-server-rhscl-7-eus-rpms
+#       - rhel-7-server-optional-rpms
+#   when: ansible_distribution == "RedHat"
+
+# - name: Ensure ood config paths exist
+#   file:
+#     path: '{{ item }}'
+#     owner: root
+#     group: root
+#     mode: 0755
+#     state: directory
+#   with_items:
+#     - '/etc/ood/config/'
+#     - '/etc/ood/config/clusters.d'
+#     - '/etc/ood/config/apps'
+#     - '/etc/ood/config/apps/bc_desktop'
+
+# - name: Render ood_portal config file
+#   template:
+#     src: 'ood_portal.yml.j2'
+#     dest: '{{ ood_portal_cfg_path }}/ood_portal.yml'
+#     mode: '0644'
+#     owner: root
+#     group: root
+#   notify: run update_ood_portal
+
+# - name: remove default apache pages
+#   file:
+#     path: '{{ item }}'
+#     state: absent
+#   with_items:
+#     - /opt/rh/httpd24/root/etc/httpd/conf.d/welcome.conf
+#     - /opt/rh/httpd24/root/etc/httpd/conf.d/userdir.conf
+#     - /opt/rh/httpd24/root/etc/httpd/conf.d/ssl.conf
+#     - /opt/rh/httpd24/root/etc/httpd/conf.d/autoindex.conf
+
+# - name: Render ood_portal cluster config file
+#   template:
+#     src: 'cluster_definition.yml.j2'
+#     dest: '{{ ood_portal_cfg_path }}/clusters.d/{{ cluster_name }}.yml'
+#     mode: '0644'
+#     owner: root
+#     group: root
+
+# - name: Render ood_portal remote_desktop config file
+#   template:
+#     src: 'bc_desktop_definition.yml.j2'
+#     dest: '{{ ood_portal_cfg_path }}/apps/bc_desktop/{{ cluster_name }}.yml'
+#     mode: '0644'
+#     owner: root
+#     group: root
+#     backup: "yes"
+#   when: ood_enable_vnc_to_nodes == true
+#   notify: run update_ood_portal
+
+# - name: Copy TrinityX branding  to /var/www/ood/public
+#   copy:
+#     src: TrinityX/{{ item }}
+#     dest: /var/www/ood/public/{{ item }}
+#   with_items:
+#     - favicon.ico
+#     - trix_logo.png
+#     - logo_trinityx.png
+#   when: ood_portal_brand == "TrinityX"
+#   notify: run update_ood_portal
+
+# - name: Apply TrinityX welcome_html branding if appropriate
+#   replace:
+#     path: '/var/www/ood/apps/sys/dashboard/config/locales/en.yml'
+#     regexp: '(    welcome_html: \|\n)(      .+\n)+'
+#     replace: '\1      {{ ood_welcome_text_branding.trinityx|join("\n      ")}}\n'
+#     backup: "yes"
+#   when: ood_portal_brand == "TrinityX"
+#   notify: run update_ood_portal
+
+# - name: Apply TrinityX pun_custom_env branding if appropriate
+#   blockinfile:
+#     path: '/etc/ood/config/nginx_stage.yml'
+#     block: '{{ ood_pun_custom_env_branding.trinityx }}'
+#     marker: "# {mark} ANSIBLE MANAGED BLOCK for pun_custom_env"
+#     backup: "yes"
+#   when: '"cloudcontroller" not in group_names'
+#   notify: run update_ood_portal
+
+# - name: Configure firewalld
+#   firewalld:
+#     state: enabled
+#     port: "{{ ood_port }}/tcp"
+#     permanent: "yes"
+#     immediate: "yes"
+#   when: ansible_virtualization_type != 'docker'
+
+# - name: enable ood webserver by default
+#   service:
+#     name: httpd24-httpd
+#     enabled: "yes"
+#     state: started
+
+
+
+
+##### New tasks file for ood-portal (3.0 on RockyLinux-8)
+
+- name: Ensure ssl certificate and key exists
+  file:
+    path: '{{ item }}'
+    state: file
+  with_items:
+    - "{{ ssl_certificate }}"
+    - "{{ ssl_certificate_key }}"
+  when: enable_ssl == true
+
+- name: Enable powertools repo
+  community.general.ini_file:
+    path:       /etc/yum.repos.d/Rocky-PowerTools.repo
+    section:    powertools
+    option:     enabled
+    value:      1
+    create:     no
+
+- name: Enable default ruby module
+  copy:
+    dest: /etc/dnf/modules.d/ruby.module
+    content: |
+      [ruby]
+      name=ruby
+      stream=3.0
+      profiles=
+      state=enabled
+
+- name: Enable default nodejs module
+  copy:
+    dest: /etc/dnf/modules.d/nodejs.module
+    content: |
+      [nodejs]
+      name=nodejs
+      stream=14
+      profiles=
+      state=enabled
+
+- name: Install required yum packages ( no gpg check )
   yum:
-    name: python-firewall
+    name: 
+      - 'https://yum.osc.edu/ondemand/3.0/ondemand-release-web-3.0-1.noarch.rpm'
+      - 'https://updates.clustervision.com/luna/2/luna2-python-3.10.3-rocky8.x86_64.rpm'
     state: present
-  when: ansible_virtualization_type != 'docker'
+    disable_gpg_check: true
 
-- name: Install centos-release-scl repo
+- name: Install required yum packages
   yum:
-    name: centos-release-scl
+    name: 
+      - 'epel-release'
+      - 'ondemand'
+      - 'ondemand-dex' 
     state: present
-  when: ansible_distribution == "CentOS"
+  
 
-- name: Install OOD Repo rpm
-  yum:
-    name: https://yum.osc.edu/ondemand/2.0/ondemand-release-web-2.0-1.noarch.rpm
-    state: present
-
-- name: Install OOD
-  yum:
-    name: ondemand
-    state: present
-  when: ansible_distribution == "CentOS"
-
-- name: Install OOD
-  yum:
-    name: ondemand
-    state: present
-    enablerepo:
-      - rhel-server-rhscl-7-eus-rpms
-      - rhel-7-server-optional-rpms
-  when: ansible_distribution == "RedHat"
-
-- name: Ensure ood config paths exist
+- name: Ensure OOD config paths exist
   file:
     path: '{{ item }}'
     owner: root
@@ -46,7 +199,18 @@
     - '/etc/ood/config/apps'
     - '/etc/ood/config/apps/bc_desktop'
 
-- name: Render ood_portal config file
+- name: Remove default apache pages
+  file:
+    path: '{{ item }}'
+    state: absent
+  with_items:
+    - /etc/httpd/conf.d/welcome.conf
+    - /etc/httpd/conf.d/userdir.conf
+    - /etc/httpd/conf.d/ssl.conf
+    - /etc/httpd/conf.d/autoindex.conf
+
+
+- name: Render OOD config file
   template:
     src: 'ood_portal.yml.j2'
     dest: '{{ ood_portal_cfg_path }}/ood_portal.yml'
@@ -55,25 +219,16 @@
     group: root
   notify: run update_ood_portal
 
-- name: remove default apache pages
-  file:
-    path: '{{ item }}'
-    state: absent
-  with_items:
-    - /opt/rh/httpd24/root/etc/httpd/conf.d/welcome.conf
-    - /opt/rh/httpd24/root/etc/httpd/conf.d/userdir.conf
-    - /opt/rh/httpd24/root/etc/httpd/conf.d/ssl.conf
-    - /opt/rh/httpd24/root/etc/httpd/conf.d/autoindex.conf
-
-- name: Render ood_portal cluster config file
+- name: Render OOD cluster config file
   template:
     src: 'cluster_definition.yml.j2'
     dest: '{{ ood_portal_cfg_path }}/clusters.d/{{ cluster_name }}.yml'
     mode: '0644'
     owner: root
     group: root
+  notify: run update_ood_portal
 
-- name: Render ood_portal remote_desktop config file
+- name: Render OOD remote_desktop config file
   template:
     src: 'bc_desktop_definition.yml.j2'
     dest: '{{ ood_portal_cfg_path }}/apps/bc_desktop/{{ cluster_name }}.yml'
@@ -81,10 +236,11 @@
     owner: root
     group: root
     backup: "yes"
-  when: enable_vnc_to_nodes == true
+  when: ood_enable_vnc_to_nodes == true
   notify: run update_ood_portal
 
-- name: Copy TrinityX branding  to /var/www/ood/public
+
+- name: Copy TrinityX branding to /var/www/ood/public
   copy:
     src: TrinityX/{{ item }}
     dest: /var/www/ood/public/{{ item }}
@@ -113,6 +269,40 @@
   when: '"cloudcontroller" not in group_names'
   notify: run update_ood_portal
 
+
+- name: Clone TrinityX-OOD custom apps repo
+  ansible.builtin.git:
+    repo: git@gitlab.taurusgroup.one:clustervision/trinity-ood.git
+    dest: /trinity/shared/apps/ood
+  environment:
+    GIT_TERMINAL_PROMPT: 0
+
+- name: Install TrinityX-OOD custom apps python requirements 
+  ansible.builtin.pip:
+    requirements: /trinity/shared/apps/ood/{{ item }}/requirements.txt
+    virtualenv: /trinity/local/python/
+  with_items:
+    - bmcsetup
+    - network
+    - osimage
+    - otherdev
+    - sensu
+    - switch
+
+- name: Install TrinityX-OOD custom apps
+  file:
+    src: "/trinity/shared/apps/ood/{{ item }}"
+    dest: "/var/www/ood/apps/sys/trinity_{{ item }}"
+    state: link
+  with_items:
+    - bmcsetup
+    - network
+    - osimage
+    - otherdev
+    - sensu
+    - switch
+  notify: run update_ood_portal
+
 - name: Configure firewalld
   firewalld:
     state: enabled
@@ -121,8 +311,14 @@
     immediate: "yes"
   when: ansible_virtualization_type != 'docker'
 
-- name: enable ood webserver by default
+- name: Enable OOD webserver on startup 
   service:
-    name: httpd24-httpd
+    name: httpd
+    enabled: "yes"
+    state: started
+
+- name: Enable ondemand-dex service on startup 
+  service:
+    name: ondemand-dex
     enabled: "yes"
     state: started
