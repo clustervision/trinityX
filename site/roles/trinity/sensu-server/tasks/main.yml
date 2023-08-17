@@ -52,6 +52,14 @@
   - 4567/tcp
   - 3001/tcp
 
+- name: Get Sensu rexml/ruby version
+  shell: "(/opt/sensu/embedded/bin/gem list --local|grep rexml|grep -oE '\\([0-9\\.]+\\)' || echo 0) | tr -d '(.)'"
+  register: rexml_version
+
+- name: Update Sensu rexml
+  shell: "/opt/sensu/embedded/bin/gem install rexml -v 3.2.5"
+  when: rexml_version.stdout|int < 325
+
 - name: Install Sensu plugins
   gem:
     executable: /opt/sensu/embedded/bin/gem

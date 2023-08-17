@@ -1,26 +1,39 @@
 ---
-# vars file for luna
+# vars file for luna2
 
-luna_packages:
-  - luna
+luna2_packages:
+  - luna2-python
+#  - luna2-daemon
+#  - luna2-cli
 
-luna_user_id: 2008
-luna_group_id: 2008
+required_packages:
+  - dhcp-server
+  - xinetd
+  - sqlite
 
-luna:
-  cluster:
-    frontend_address: '10.141.255.252'
-    path: '/opt/luna'
-    named_include_file: '/trinity/local/etc/named.luna.zones'
-    named_zone_dir: '/trinity/local/var/lib/named'
-  dhcp: 
-    conf_path: '/etc/dhcp'
-    network: 'cluster'
-    start_ip: '10.141.128.0'
-    end_ip:  '10.141.140.0'
+luna2_daemon_pip: daemon-2.0-py3-none-any.whl
+luna2_cli_pip: luna2_cli-2.0.27-py3-none-any.whl
+
+luna2_named_include_file: /etc/named.luna.zones
+luna2_named_zone_dir: /var/lib/named
+
+luna2_cluster:
+  frontend_address: '{{ trix_ctrl_ip }}'
   networks:
-    - name: 'cluster'
-      ip: '10.141.0.0'
-      prefix: '16'
+  - name: '{{ trix_domain }}'
+    ip: '{{ trix_cluster_net }}'
+    prefix: '{{ trix_cluster_netprefix }}'
+    start_ip: '{{ trix_cluster_dhcp_start }}'
+    end_ip:  '{{ trix_cluster_dhcp_end }}'
+  - name: 'ipmi'
+    ip: '10.148.0.0'
+    prefix: '16'
+  - name: 'ib'
+    ip: '10.149.0.0'
+    prefix: '16'
 
-luna_repository: https://updates.clustervision.com/trix/trix.repo
+luna2_noarch_pip_repository: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/noarch/pip
+
+luna2_key: CwSQcHNqiLSHXQaCDtAF2414e3muXgmpht6ocVA2xGs=
+
+#luna_repository: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/

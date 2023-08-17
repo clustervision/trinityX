@@ -1,0 +1,41 @@
+server {
+    listen 7051;
+
+    # Allow file uploads
+    client_max_body_size 0M;
+
+    root /trinity/local/luna/files;
+
+    location = /filesauth {
+        internal;
+        proxy_pass http://127.0.0.1:7050/filesauth;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header X-Original-URI $request_uri;
+        proxy_set_header CallType $calltype;
+    }
+
+    location /files/ {
+        set $calltype "MAJOR";
+        proxy_pass_request_headers on;
+        auth_request /filesauth;
+        alias /trinity/local/luna/daemon/files/;
+        if ($query_string) {
+            expires max;
+        }
+    }
+
+    location / {
+    }
+
+    # or just the below section if no authentication is needed at all
+#    location /files/ {
+#        alias /trinity/local/luna/daemon/files/;
+#        if ($query_string) {
+#            expires max;
+#        }
+#    }
+
+}
+
+
