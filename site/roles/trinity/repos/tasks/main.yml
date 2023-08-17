@@ -63,15 +63,3 @@
 
   when: local_install | default(False)
 
-- name: Download Elrepo RPM
-  copy: 
-    src: https://www.elrepo.org/elrepo-release-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.elrepo.noarch.rpm
-    dst: /tmp/elrepo-release-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.elrepo.noarch.rpm
-  when: ansible_facts[‘os_family’] == "RedHat"
-
-- name: Install Elrepo 
-  yum:
-   name: /tmp/elrepo-release-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.elrepo.noarch.rpm
-   state: present
-  when: ansible_facts[‘os_family’] == "RedHat"
-
