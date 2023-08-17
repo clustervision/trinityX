@@ -21,12 +21,12 @@
   - name: Download external repo RPMS
     copy: 
       src: "{{ item.name }}"
-      dst: "/tmp/{{ item.name }}"
+      dst: "/tmp/{{ item.file }}"
     with_items: "{{ external_repository_rpms }}"
 
   - name: Install external repo RPMS
     yum:
-      name: "/tmp/{{ item.name }}"
+      name: "/tmp/{{ item.file }}"
       state: present
     with_items: "{{ external_repository_rpms }}"
   when: ansible_facts['os_family'] == "RedHat"
