@@ -8,16 +8,34 @@
 - debug:
     msg: "{{ trinityx_repositories }}"
 
-- name: Configure repo
-  trix_repos:
-    remote_repo: "{{ item.repo }}"
-    remote_key:  "{{ item.key | default(None)}}"
-    local_repo:  "{{ trix_local_repo_baseurl }}"
-    local_key:   "{{ trix_local_repo_key | default(None) }}"
-    name:        "{{ item.name | default(None) }}"
-    use_local:   "{{ local_install | default(False) }}"
-  with_items: "{{ trinityx_repositories }}"
-  tags: install-only
+block:
+  - name: Configure repos
+    ansible.builtin.yum_repository:
+      name: "{{ item.name }}"
+      description: "{{ item.name }}"
+      baseurl: "{{ item.repo }}"
+      gpgcheck: "{{ item.gpgcheck | default(False) }}"
+      gpgkey: "{{ item.gpgkey | default('') }}"
+    with_items: "{{ trinityx_repositories }}"
+
+  - name: Download external repo RPMS
+    copy: 
+      src: "{{ item.name }}"
+      dst: "/tmp/{{ item.name }}"
+    with_items: "{{ external_repository_rpms }}"
+
+  - name: Install external repo RPMS
+    yum:
+      name: "/tmp/{{ item.name }}"
+      state: present
+    with_items: "{{ external_repository_rpms }}"
+when: ansible_facts[‘os_family’] == "RedHat"
+tags: install-only
+
+
+
+# reposdir
+
 
 # Disable all remote repos (without *-local suffix)
 # If we have local install
@@ -43,3 +61,16 @@
       warn: no
 
   when: local_install | default(False)
+
+- name: Download Elrepo RPM
+  copy: 
+    src: https://www.elrepo.org/elrepo-release-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.elrepo.noarch.rpm
+    dst: /tmp/elrepo-release-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.elrepo.noarch.rpm
+  when: ansible_facts[‘os_family’] == "RedHat"
+
+- name: Install Elrepo 
+  yum:
+   name: /tmp/elrepo-release-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.elrepo.noarch.rpm
+   state: present
+  when: ansible_facts[‘os_family’] == "RedHat"
+
