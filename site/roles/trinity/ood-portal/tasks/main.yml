@@ -272,14 +272,14 @@
 
 - name: Clone TrinityX-OOD custom apps repo
   ansible.builtin.git:
-    repo: git@gitlab.taurusgroup.one:clustervision/trinity-ood.git
-    dest: /trinity/shared/apps/ood
+    repo: git@192.168.166.101:clustervision/trinity-ood.git
+    dest: /trinity/local/ondemand/{{ ood_version }}
   environment:
     GIT_TERMINAL_PROMPT: 0
 
 - name: Install TrinityX-OOD custom apps python requirements 
   ansible.builtin.pip:
-    requirements: /trinity/shared/apps/ood/{{ item }}/requirements.txt
+    requirements: /trinity/local/ondemand/{{ ood_version }}/{{ item }}/requirements.txt
     virtualenv: /trinity/local/python/
   with_items:
     - bmcsetup
@@ -291,7 +291,7 @@
 
 - name: Install TrinityX-OOD custom apps
   file:
-    src: "/trinity/shared/apps/ood/{{ item }}"
+    src: "/trinity/local/ondemand/{{ ood_version }}/{{ item }}"
     dest: "/var/www/ood/apps/sys/trinity_{{ item }}"
     state: link
   with_items:
