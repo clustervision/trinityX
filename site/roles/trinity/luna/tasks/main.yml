@@ -12,6 +12,11 @@
     name: '{{ required_packages }}'
     state: present
 
+- name: Ensure /var/log/luna exists
+  file:
+    path: '/var/log/luna'
+    state: directory
+
 - name: Get python libdir
   shell: "echo /trinity/local/python/lib/python*"
   register: luna2_python_dir
@@ -108,6 +113,25 @@
 
 # ----------------------------------------------------
 
+- name: Create luna.key
+  copy:
+    dest: "{{ trix_ssl }}/luna.key"
+    content: "{{ luna2_key }}"
+
+- debug:
+    msg: "{{ luna2_cluster }}"
+
+- name: Render /trinity/local/luna//daemon/config/bootstrap.ini
+  template:
+    src: 'luna2.conf.j2'
+    dest: '/trinity/local/luna/daemon/config/bootstrap.ini'
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart luna2-daemon
+
+# ----------------------------------------------------
+
 - name: Render /usr/bin/luna
   template:
     src: 'luna2-cli-wrapper.j2'
@@ -115,11 +139,6 @@
     owner: root
     group: root
     mode: 0755
-
-- name: Ensure /var/log/luna exists
-  file:
-    path: '/var/log/luna'
-    state: directory
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
@@ -151,23 +170,6 @@
     owner: root
     group: root
     mode: 0644
-
-- name: Create luna.key
-  copy:
-    dest: "{{ trix_ssl }}/luna.key"
-    content: "{{ luna2_key }}"
-
-- debug:
-    msg: "{{ luna2_cluster }}"
-
-- name: Render /trinity/local/luna//daemon/config/bootstrap.ini
-  template:
-    src: 'luna2.conf.j2'
-    dest: '/trinity/local/luna/daemon/config/bootstrap.ini'
-    owner: root
-    group: root
-    mode: 0644
-  notify: restart luna2-daemon
 
 - name: Include luna's DNS zone file in named conf
   lineinfile:
