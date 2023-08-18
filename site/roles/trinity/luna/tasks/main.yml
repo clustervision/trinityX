@@ -116,6 +116,16 @@
     group: root
     mode: '0640'
 
+- stat: 
+    path: '{{ trix_luna }}/cli/config'
+  register: cli_config_dir
+
+- name: Remove cli config dir symlink
+  file:
+    path: '{{ trix_luna }}/cli/config/'
+    state: absent
+  when: cli_config_dir.stat.islnk is defined and cli_config_dir.stat.islnk
+
 - name: verify if cli config file exists
   stat: 
     path: '{{ trix_luna }}/cli/config/luna.ini'
