@@ -19,16 +19,14 @@
 
 # ----------------- stop if we exist -----------------
 
-- name: Verifying if luna service exists
-  stat: 
-    path: /etc/systemd/system/luna2-daemon.service
-  register: luna_service
+- name: Populate service facts
+  service_facts:
 
 - name: Stop luna daemon
   service:
     name: luna2-daemon
     state: stopped
-  when: luna_service.stat.exists
+  when: ansible_facts.services['luna2-daemon.service'] is defined
 
 # ----------------------------------------------------
 
