@@ -4,7 +4,12 @@
     name: CV-Sensu
     description: ClusterVision Sensu Repository
     baseurl:  "{{ sensu_repo }}"
-    gpgkey: https://updates.clustervision.com/trinityx/external/monitoring/sensu/sensu-pubkey.gpg
+    gpgkey: "{{ sensu_gpg_key }}"
+
+- name: Add GPG keys to RPM DB
+  ansible.builtin.rpm_key:
+    state: present
+    key: "{{ sensu_gpg_key }}"
 
 - name: Install Sensu
   yum:
