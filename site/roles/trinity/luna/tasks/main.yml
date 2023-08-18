@@ -50,11 +50,15 @@
     state: link
     force: yes
 
+- name: Generate Luna Secret Key
+  set_fact:
+    luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+
 - name: configure secret key for daemon API
   ansible.builtin.lineinfile:
     path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^SECRET_KEY='
-    line: "SECRET_KEY={{ luna_secret_key }}"
+    regexp: '^SECRET_KEY\s*='
+    line: "SECRET_KEY = {{ luna_secret_key }}"
 
 - name: verify if cli config file exists
   stat: 
@@ -64,8 +68,8 @@
 - name: configure secret key for cli API
   ansible.builtin.lineinfile:
     path: '{{ trix_luna }}/cli/config/luna.ini'
-    regexp: '^SECRET_KEY='
-    line: "SECRET_KEY={{ luna_secret_key }}"
+    regexp: '^SECRET_KEY\s*='
+    line: "SECRET_KEY = {{ luna_secret_key }}"
   when: cli_config_file.stat.exists
 
 - name: Render /usr/bin/luna
