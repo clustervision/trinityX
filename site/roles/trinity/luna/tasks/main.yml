@@ -17,6 +17,19 @@
     path: '/var/log/luna'
     state: directory
 
+# ----------------- stop if we exist -----------------
+
+- name: Populate service facts
+  service_facts:
+
+- name: Start luna services
+  service:
+    name: luna2-daemon
+    state: stopped
+  when: "'luna2-daemon' in services"
+
+# ----------------------------------------------------
+
 - name: Get python libdir
   shell: "echo /trinity/local/python/lib/python*"
   register: luna2_python_dir
@@ -82,6 +95,13 @@
 - name: Ensuring luna ini file is unix
   shell: "dos2unix {{ trix_luna }}/daemon/config/luna.ini"
 
+- name: Change file permissions of daemon luna ini file
+  ansible.builtin.file:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    owner: root
+    group: root
+    mode: '0640'
+
 - name: verify if cli config file exists
   stat: 
     path: '{{ trix_luna }}/cli/config/luna.ini'
@@ -108,6 +128,13 @@
 
   - name: Ensuring luna ini file is unix
     shell: "dos2unix {{ trix_luna }}/cli/config/luna.ini"
+
+  - name: Change file permissions of cli luna ini file
+    ansible.builtin.file:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      owner: root
+      group: root
+      mode: '0640'
 
   when: cli_config_file.stat.exists
 
