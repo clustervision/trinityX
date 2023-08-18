@@ -32,12 +32,18 @@
       state: present
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
     with_items: "{{ external_repository_rpms }}"
+
+  - name: Install external repo Packages
+    dnf:
+      name: "{{ item.name }}"
+#      disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+      state: present
+      installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
+    with_items: "{{ package_based_repositories }}"
+
   when: ansible_facts['os_family'] == "RedHat"
   tags: install-only
 
-
-
-# reposdir
 
 
 # Disable all remote repos (without *-local suffix)
