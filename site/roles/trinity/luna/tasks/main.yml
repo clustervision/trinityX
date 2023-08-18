@@ -12,6 +12,24 @@
     name: '{{ required_packages }}'
     state: present
 
+- name: Ensure /var/log/luna exists
+  file:
+    path: '/var/log/luna'
+    state: directory
+
+# ----------------- stop if we exist -----------------
+
+- name: Populate service facts
+  service_facts:
+
+- name: Stop luna daemon
+  service:
+    name: luna2-daemon
+    state: stopped
+  when: ansible_facts.services['luna2-daemon.service'] is defined and ansible_facts.services['luna2-daemon.service'].status != 'not-found'
+
+# ----------------------------------------------------
+
 - name: Get python libdir
   shell: "echo /trinity/local/python/lib/python*"
   register: luna2_python_dir
@@ -50,23 +68,104 @@
     state: link
     force: yes
 
+- name: Render /etc/systemd/system/luna2-daemon.service
+  template:
+    src: 'luna2-daemon-service.j2'
+    dest: '/etc/systemd/system/luna2-daemon.service'
+    owner: root
+    group: root
+    mode: 0644
+
+# ------------------- luna.ini ---------------------
+
+- name: Generate Luna Secret Key
+  set_fact:
+    luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+
 - name: configure secret key for daemon API
   ansible.builtin.lineinfile:
     path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^SECRET_KEY='
-    line: "SECRET_KEY={{ luna_secret_key }}"
+    regexp: '^SECRET_KEY\s*='
+    line: "SECRET_KEY = {{ luna_secret_key }}"
+
+- name: configure luna username for daemon API
+  ansible.builtin.lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^USERNAME\s*='
+    line: "USERNAME = {{ luna_username }}"
+
+- name: configure luna password for daemon API
+  ansible.builtin.lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^PASSWORD\s*='
+    line: "PASSWORD = {{ luna_password }}"
+
+- name: Ensuring luna ini file is unix
+  shell: "dos2unix {{ trix_luna }}/daemon/config/luna.ini"
+
+- name: Change file permissions of daemon luna ini file
+  ansible.builtin.file:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    owner: root
+    group: root
+    mode: '0640'
 
 - name: verify if cli config file exists
   stat: 
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    path: '{{ trix_luna }}/cli/config/luna.ini'
   register: cli_config_file
 
-- name: configure secret key for cli API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/cli/config/luna.ini'
-    regexp: '^SECRET_KEY='
-    line: "SECRET_KEY={{ luna_secret_key }}"
-  when: cli_config_file.stat.exists == True
+- block:
+  - name: configure secret key for cli API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^SECRET_KEY\s*='
+      line: "SECRET_KEY = {{ luna_secret_key }}"
+
+  - name: configure luna username for cli API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^USERNAME\s*='
+      line: "USERNAME = {{ luna_username }}"
+
+  - name: configure luna password for cli API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^PASSWORD\s*='
+      line: "PASSWORD = {{ luna_password }}"
+
+  - name: Ensuring luna ini file is unix
+    shell: "dos2unix {{ trix_luna }}/cli/config/luna.ini"
+
+  - name: Change file permissions of cli luna ini file
+    ansible.builtin.file:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      owner: root
+      group: root
+      mode: '0640'
+
+  when: cli_config_file.stat.exists
+
+# ----------------------------------------------------
+
+- name: Create luna.key
+  copy:
+    dest: "{{ trix_ssl }}/luna.key"
+    content: "{{ luna2_key }}"
+
+- debug:
+    msg: "{{ luna2_cluster }}"
+
+- name: Render /trinity/local/luna//daemon/config/bootstrap.ini
+  template:
+    src: 'luna2.conf.j2'
+    dest: '/trinity/local/luna/daemon/config/bootstrap.ini'
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart luna2-daemon
+
+# ----------------------------------------------------
 
 - name: Render /usr/bin/luna
   template:
@@ -75,11 +174,6 @@
     owner: root
     group: root
     mode: 0755
-
-- name: Ensure /var/log/luna exists
-  file:
-    path: '/var/log/luna'
-    state: directory
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
@@ -103,31 +197,6 @@
     url: http://boot.ipxe.org/undionly.kpxe
     dest: /tftpboot/luna_undionly.kpxe
     mode: '0444'
-
-- name: Render /etc/systemd/system/luna2-daemon.service
-  template:
-    src: 'luna2-daemon-service.j2'
-    dest: '/etc/systemd/system/luna2-daemon.service'
-    owner: root
-    group: root
-    mode: 0644
-
-- name: Create luna.key
-  copy:
-    dest: "{{ trix_ssl }}/luna.key"
-    content: "{{ luna2_key }}"
-
-- debug:
-    msg: "{{ luna2_cluster }}"
-
-- name: Render /trinity/local/luna//daemon/config/bootstrap.ini
-  template:
-    src: 'luna2.conf.j2'
-    dest: '/trinity/local/luna/daemon/config/bootstrap.ini'
-    owner: root
-    group: root
-    mode: 0644
-  notify: restart luna2-daemon
 
 - name: Include luna's DNS zone file in named conf
   lineinfile:

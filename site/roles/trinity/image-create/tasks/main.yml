@@ -205,21 +205,18 @@
     key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
     path: "{{ image_path }}/root/.ssh/authorized_keys"
 
-#- name: Add the image to luna
-#  luna_osimage:
-#    name: "{{ image_name }}"
-#    path: "{{ image_path }}"
+- name: Kernel version in image
+  shell: "ls {{ image_path }}/lib/modules|sort|tail -n1"
+  register: kernel_version
+  changed_when: False
 
-- name: Add the image to luna
+- name: Set the kernel version for image
   ansible.builtin.shell:
-    cmd: "/sbin/luna osimage add --name {{ image_name }} --path {{ image_path }}"
-  register: osimage_output
-  failed_when: false
-  changed_when: '"is already created" not in osimage_output.stderr'
+    cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
 
 - name: Pack the image
   ansible.builtin.shell:
-    cmd: "/sbin/luna osimage pack {{ image_name }}"
+    cmd: "luna osimage pack {{ image_name }}"
 
 - name: Refresh the list of hosts in the inventory
   meta: refresh_inventory
