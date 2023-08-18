@@ -74,6 +74,9 @@
     regexp: '^PASSWORD\s*='
     line: "PASSWORD = {{ luna_password }}"
 
+- name: Ensuring luna ini file is unix
+  shell: "dos2unix {{ trix_luna }}/daemon/config/luna.ini"
+
 - name: verify if cli config file exists
   stat: 
     path: '{{ trix_luna }}/cli/config/luna.ini'
@@ -97,6 +100,9 @@
       path: '{{ trix_luna }}/cli/config/luna.ini'
       regexp: '^PASSWORD\s*='
       line: "PASSWORD = {{ luna_password }}"
+
+  - name: Ensuring luna ini file is unix
+    shell: "dos2unix {{ trix_luna }}/cli/config/luna.ini"
 
   when: cli_config_file.stat.exists
 
