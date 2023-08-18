@@ -7,6 +7,12 @@
     baseurl:  "{{ sensu_repo }}"
     gpgkey: https://updates.clustervision.com/trinityx/external/monitoring/sensu/sensu-pubkey.gpg
 
+  - name: Add GPG keys to RPM DB
+    ansible.builtin.rpm_key:
+      state: present
+      key: https://updates.clustervision.com/trinityx/external/monitoring/sensu/sensu-pubkey.gpg
+    ignore_errors: True
+
 - name: Install redis
   yum:
     name: redis
