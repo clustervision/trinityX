@@ -69,6 +69,14 @@
     state: link
     force: yes
 
+- name: Render /etc/systemd/system/luna2-daemon.service
+  template:
+    src: 'luna2-daemon-service.j2'
+    dest: '/etc/systemd/system/luna2-daemon.service'
+    owner: root
+    group: root
+    mode: 0644
+
 # ------------------- luna.ini ---------------------
 
 - name: Generate Luna Secret Key
@@ -190,14 +198,6 @@
     url: http://boot.ipxe.org/undionly.kpxe
     dest: /tftpboot/luna_undionly.kpxe
     mode: '0444'
-
-- name: Render /etc/systemd/system/luna2-daemon.service
-  template:
-    src: 'luna2-daemon-service.j2'
-    dest: '/etc/systemd/system/luna2-daemon.service'
-    owner: root
-    group: root
-    mode: 0644
 
 - name: Include luna's DNS zone file in named conf
   lineinfile:
