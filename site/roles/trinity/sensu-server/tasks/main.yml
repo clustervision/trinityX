@@ -1,16 +1,27 @@
 ---
 
+- block:
+  - name: Install Sensu Repo (CV)
+    yum_repository:
+      name: CV-Sensu
+      description: ClusterVision Sensu Repository
+      baseurl:  "{{ sensu_repo }}"
+      gpgkey: "{{ sensu_gpg_key }}"
+
+#  - name: Add GPG keys to RPM DB
+#    ansible.builtin.rpm_key:
+#      state: present
+#      key: "{{ sensu_gpg_key }}"
+
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version'] < 9
+
 - name: Install Sensu Repo (CV)
   yum_repository:
     name: CV-Sensu
     description: ClusterVision Sensu Repository
     baseurl:  "{{ sensu_repo }}"
-    gpgkey: "{{ sensu_gpg_key }}"
-
-- name: Add GPG keys to RPM DB
-  ansible.builtin.rpm_key:
-    state: present
-    key: "{{ sensu_gpg_key }}"
+    gpgcheck: False
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version'] > 8
 
 - name: Install redis
   yum:
