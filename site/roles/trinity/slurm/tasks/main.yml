@@ -2,7 +2,7 @@
 # tasks file for slurm
 - name: Install ohpc-release
   yum:
-    name: https://github.com/openhpc/ohpc/releases/download/v1.3.GA/ohpc-release-1.3-1.el7.x86_64.rpm
+    name: http://repos.openhpc.community/OpenHPC/2/CentOS_8/x86_64/ohpc-release-2-1.el8.x86_64.rpm
     state: installed
 
 - name: Install PyMSQL
@@ -59,11 +59,9 @@
   tags: install-only
   when: enable_openhpc == true
 
-- name: ensure legacy munge rpms are not installed before configuring ohpc versions
+- name: ensure legacy rpms are not installed before configuring ohpc versions
   yum:
     name:
-      - munge
-      - munge-libs
       - pmix
       - pmix-devel
     state: removed
@@ -77,6 +75,13 @@
     enablerepo: rhel-7-server-optional-rpms
   tags: install-only
   when: enable_openhpc == true and ansible_distribution == "RedHat"
+
+- name: Install ohpc slurm packages
+  yum:
+    name: '{{ slurm_packages_ohpc }}'
+    state: present
+  tags: install-only
+  when: enable_openhpc == true and ansible_distribution == "Rocky"
 
 - name: Install ohpc slurm packages
   yum:
@@ -278,7 +283,7 @@
         backup: "yes"
       with_together:
         - ['slurm.conf', 'slurmdbd.conf']
-        - ['0644', '0640']
+        - ['0644', '0600']
       notify: restart slurm
 
     - name: Set UsePAM to 1 in slurm-user.conf
@@ -337,8 +342,7 @@
         and not compute|default(False)
 
 - name: Enable munge service on passive slurm nodes (portal services etc)
-  service:
-    daemon_reload: "yes"
+  systemd:
     name: '{{ item }}'
     enabled: true
   when: not on_controller|bool
@@ -347,8 +351,7 @@
     - munge
 
 - name: start munge service on passive slurm nodes (portal services etc)
-  service:
-    daemon_reload: "yes"
+  systemd:
     name: '{{ item }}'
     state: started
   when: not on_controller|bool
@@ -367,7 +370,7 @@
 
     - name: Requests dependency
       yum:
-        name: python34-requests
+        name: python3-requests
         state: present
 
     - name: Create systemd targets

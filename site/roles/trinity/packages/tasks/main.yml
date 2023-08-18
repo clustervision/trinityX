@@ -1,17 +1,20 @@
 ---
 # Install additional packages and tunables
 
-- name: Install prereq packages
+- name: Install additional packages
   yum:
-    name: "{{ packages_packages }}"
+    name: "{{ tunables_packages }}"
     state: present
+    enablerepo: powertools
+    disable_gpg_check: true
   tags: install-only
+  when: ansible_distribution == "Rocky"
 
 - name: Install additional packages
   yum:
     name: "{{ tunables_packages }}"
     state: present
-    enablerepo: rhel-7-server-optional-rpms
+    disable_gpg_check: true
   tags: install-only
   when: ansible_distribution == "RedHat"
 
@@ -19,6 +22,7 @@
   yum:
     name: "{{ tunables_packages }}"
     state: present
+    disable_gpg_check: true
   tags: install-only
   when: ansible_distribution == "CentOS"
 

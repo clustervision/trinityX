@@ -43,15 +43,6 @@
     backup: yes
   notify: restart mariadb
 
-- name: Render /root/.my.cnf
-  template:
-    src: my.cnf.j2
-    dest: /root/.my.cnf
-    owner: root
-    group: root
-    mode: 0600
-    backup: yes
-
 - name: Enable MariaDB service
   service:
     name: mariadb
@@ -66,6 +57,26 @@
       state: started
   
   - meta: flush_handlers
+
+  - name: Set MariaDB's root pasword
+    mysql_user:
+      login_user: root
+      login_password: ""
+      name: root
+      password: '{{ mysql_root_pwd }}'
+      host_all: yes
+      check_implicit_admin: yes
+      state: present
+    failed_when: false
+
+  - name: Render /root/.my.cnf
+    template:
+      src: my.cnf.j2
+      dest: /root/.my.cnf
+      owner: root
+      group: root
+      mode: 0600
+      backup: yes
 
   - name: Set MariaDB's root pasword
     mysql_user: 

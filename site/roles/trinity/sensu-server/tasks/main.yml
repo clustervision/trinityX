@@ -1,10 +1,11 @@
 ---
+
 - name: Install Sensu Repo (CV)
   yum_repository:
     name: CV-Sensu
     description: ClusterVision Sensu Repository
-    baseurl: https://updates.clustervision.com/mirror/sensu-centos7
-    gpgkey: https://updates.clustervision.com/mirror/sensu-pubkey.gpg
+    baseurl:  "{{ sensu_repo }}"
+    gpgkey: https://updates.clustervision.com/trinityx/external/monitoring/sensu/sensu-pubkey.gpg
 
 - name: Install redis
   yum:
@@ -51,6 +52,14 @@
   with_items:
   - 4567/tcp
   - 3001/tcp
+
+- name: Get Sensu rexml/ruby version
+  shell: "(/opt/sensu/embedded/bin/gem list --local|grep rexml|grep -oE '\\([0-9\\.]+\\)' || echo 0) | tr -d '(.)'"
+  register: rexml_version
+
+- name: Update Sensu rexml
+  shell: "/opt/sensu/embedded/bin/gem install rexml -v 3.2.5"
+  when: rexml_version.stdout|int < 325
 
 - name: Install Sensu plugins
   gem:

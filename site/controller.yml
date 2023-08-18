@@ -12,24 +12,10 @@
     - role: trinity/sensu-client
       tags: monitoring
 
-    - role: trinity/local_repo
-      tags: local_repo
-      when: local_install
-
     - role: trinity/trix-tree
       tags: trix-tree
 
     - role: trinity/repos
-      repos:
-        - repo: '{{ trix_local_repo_baseurl }}'
-          name: '{{ trix_local_reponame }}'
-      tags: local_repo
-      when: local_install
-
-    - role: trinity/repos
-      repos:
-        - repo: epel-release
-        - repo: '{{ luna_repo }}'
       tags: repos
 
     - role: trinity/cv_support
@@ -56,23 +42,26 @@
     - role: trinity/ssh
       tags: ssh
 
-    - role: trinity/fail2ban
-      tags: fail2ban
-
-    - role: trinity/pacemaker
-      when: ha
-      fence_ipmilan_enabled: 'false'
-      fence_ipmilan_login: 'user'
-      fence_ipmilan_passwd: 'password'
-      tags: pcs
-
-    - role: trinity/drbd
-      when: ha
-      tags: drbd
-
-    - role: trinity/beegfs
-      when: ha and beegfs
-      tags: beegfs
+    # -----
+#    - role: trinity/fail2ban
+#      tags: fail2ban
+#
+     # HA to be solved by luna daemon itself
+#    - role: trinity/pacemaker
+#      when: ha
+#      fence_ipmilan_enabled: 'false'
+#      fence_ipmilan_login: 'user'
+#      fence_ipmilan_passwd: 'password'
+#      tags: pcs
+#
+#    - role: trinity/drbd
+#      when: ha
+#      tags: drbd
+#
+#    - role: trinity/beegfs
+#      when: ha and beegfs
+#      tags: beegfs
+    # -----
 
     - role: trinity/nfs
       nfs_rpccount: 256
@@ -142,29 +131,7 @@
       tags: slurm, sbank
       when: workload_manager == "slurm"
 
-    - role: trinity/pbspro
-      when: workload_manager == 'pbspro'
-      tags: pbspro
-      pbspro_ctrl: '{{ trix_ctrl_hostname }}'
-
     - role: trinity/luna
-      luna:
-        cluster:
-          frontend_address: '{{ trix_ctrl_ip }}'
-          path: '{{ trix_local }}/luna'
-          named_include_file: '{{ trix_local }}/etc/named.luna.zones'
-          named_zone_dir: '{{ trix_local }}/var/lib/named'
-          lweb_num_proc: 4
-        dhcp:
-          conf_path: '{{ trix_local }}/etc/dhcp'
-          network: '{{ trix_domain }}'
-          start_ip: '{{ trix_cluster_dhcp_start }}'
-          end_ip: '{{ trix_cluster_dhcp_end }}'
-        networks:
-          - name: '{{ trix_domain }}'
-            ip: '{{ trix_cluster_net }}'
-            prefix: '{{ trix_cluster_netprefix }}'
-            ns_ip: '{{ trix_ctrl_ip }}'
       tags: luna
 
     - role: trinity/rsyslog
@@ -184,24 +151,27 @@
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
       tags: rsyslog
 
-
-    - role: trinity/docker-registry
-      when: enable_docker
-      docker_registry_path: '{{ trix_local }}/docker-registry'
-      docker_ssl_path: '{{ ssl_cert_path }}'
-      docker_ssl_cert: '{{ ansible_fqdn }}.crt'
-      docker_ssl_key: '{{ ansible_fqdn }}.key'
-      tags: docker-registry
-
+    # ----------
+#    - role: trinity/docker-registry
+#      when: enable_docker
+#      docker_registry_path: '{{ trix_local }}/docker-registry'
+#      docker_ssl_path: '{{ ssl_cert_path }}'
+#      docker_ssl_cert: '{{ ansible_fqdn }}.crt'
+#      docker_ssl_key: '{{ ansible_fqdn }}.key'
+#      tags: docker-registry
+    # ------------
 
     - role: trinity/wrapup
       tags: wrapup
 
-    - role: trinity/ood-portal
-      tags: ood-portal
-      enable_ssl: true
-      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+    # -------
+    # New OOD portal module to be added
+#    - role: trinity/ood-portal
+#      tags: ood-portal
+#      enable_ssl: true
+#      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+#      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+    # -------
 
     - role: trinity/telegraf
       tags: monitoring
@@ -223,3 +193,4 @@
       enable_ssl: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+

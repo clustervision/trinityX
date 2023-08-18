@@ -1,57 +1,179 @@
 ---
 # tasks file for luna 
 
-- name: Generate root password for MongoDB and save it to /etc/trinity/passwords
-  set_fact:
-    tmp_pwd: "{{ lookup('password',
-                          '/etc/trinity/passwords/mongo/luna.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
-
-- name: Get root password for MongoDB from /etc/trinity/passwords
-  set_fact:
-    luna_db_pwd: "{{ lookup('password',
-                          '/etc/trinity/passwords/mongo/luna.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
-
-- name: Create a group for luna
-  group:
-    name: luna
-    gid: '{{ luna_group_id }}'
-    state: present
-
-- name: Create a user for luna
-  user:
-    name: luna
-    uid: '{{ luna_user_id }}'
-    home: '{{ luna.cluster.path }}'
-    group: luna
-    shell: /sbin/nologin
-    system: yes
-    state: present
-
-- name: Create a user for luna in MongoDB
-  mongodb_user:
-    login_database: "admin"
-    login_user: "root"
-    login_password: "{{ mongo_root_pwd }}"
-    name: "luna"
-    database: "luna"
-    roles: [ "dbOwner" ]
-    password: "{{ luna_db_pwd }}"
-  when: primary | default(True)
-
-- name: Install luna packages
+- name: Install luna2 packages
   yum:
-    name: '{{ luna_packages }}'
+    name: '{{ luna2_packages }}'
     state: present
-  when: ansible_distribution == "CentOS"
+    enablerepo: luna2
 
-- name: Install luna packages
+- name: Install required packages
   yum:
-    name: '{{ luna_packages }}'
+    name: '{{ required_packages }}'
     state: present
-    enablerepo: rhel-7-server-optional-rpms
-  when: ansible_distribution == "RedHat"
+
+- name: Ensure /var/log/luna exists
+  file:
+    path: '/var/log/luna'
+    state: directory
+
+# ----------------- stop if we exist -----------------
+
+- name: Populate service facts
+  service_facts:
+
+- name: Stop luna daemon
+  service:
+    name: luna2-daemon
+    state: stopped
+  when: ansible_facts.services['luna2-daemon.service'] is defined and ansible_facts.services['luna2-daemon.service'].status != 'not-found'
+
+# ----------------------------------------------------
+
+- name: Get python libdir
+  shell: "echo /trinity/local/python/lib/python*"
+  register: luna2_python_dir
+  changed_when: False
+
+# TODO: better way than below
+- name: Install luna2 daemon
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install {{ luna2_noarch_pip_repository }}/daemon/{{ luna2_daemon_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+
+- name: create symlink from site-packages/daemon to luna2 dir
+  file:
+    src: '{{ luna2_python_dir.stdout }}/site-packages/daemon'
+    dest: '{{ trix_luna }}/daemon'
+    state: link
+    force: yes
+
+# TODO: better way than below
+- name: Install luna2 cli
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install {{ luna2_noarch_pip_repository }}/cli/{{ luna2_cli_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+
+#TODO better way than below
+- name: create symlink from site-packages/cli to luna2 dir
+  file:
+    src: '{{ luna2_python_dir.stdout }}/site-packages/luna'
+    dest: '{{ trix_luna }}/cli'
+    state: link
+    force: yes
+
+- name: Render /etc/systemd/system/luna2-daemon.service
+  template:
+    src: 'luna2-daemon-service.j2'
+    dest: '/etc/systemd/system/luna2-daemon.service'
+    owner: root
+    group: root
+    mode: 0644
+
+# ------------------- luna.ini ---------------------
+
+- name: Generate Luna Secret Key
+  set_fact:
+    luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+
+- name: configure secret key for daemon API
+  ansible.builtin.lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^SECRET_KEY\s*='
+    line: "SECRET_KEY = {{ luna_secret_key }}"
+
+- name: configure luna username for daemon API
+  ansible.builtin.lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^USERNAME\s*='
+    line: "USERNAME = {{ luna_username }}"
+
+- name: configure luna password for daemon API
+  ansible.builtin.lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^PASSWORD\s*='
+    line: "PASSWORD = {{ luna_password }}"
+
+- name: Ensuring luna ini file is unix
+  shell: "dos2unix {{ trix_luna }}/daemon/config/luna.ini"
+
+- name: Change file permissions of daemon luna ini file
+  ansible.builtin.file:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: verify if cli config file exists
+  stat: 
+    path: '{{ trix_luna }}/cli/config/luna.ini'
+  register: cli_config_file
+
+- block:
+  - name: configure secret key for cli API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^SECRET_KEY\s*='
+      line: "SECRET_KEY = {{ luna_secret_key }}"
+
+  - name: configure luna username for cli API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^USERNAME\s*='
+      line: "USERNAME = {{ luna_username }}"
+
+  - name: configure luna password for cli API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^PASSWORD\s*='
+      line: "PASSWORD = {{ luna_password }}"
+
+  - name: Ensuring luna ini file is unix
+    shell: "dos2unix {{ trix_luna }}/cli/config/luna.ini"
+
+  - name: Change file permissions of cli luna ini file
+    ansible.builtin.file:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      owner: root
+      group: root
+      mode: '0640'
+
+  when: cli_config_file.stat.exists
+
+# ----------------------------------------------------
+
+- name: Create luna.key
+  copy:
+    dest: "{{ trix_ssl }}/luna.key"
+    content: "{{ luna2_key }}"
+
+- debug:
+    msg: "{{ luna2_cluster }}"
+
+- name: Render /trinity/local/luna//daemon/config/bootstrap.ini
+  template:
+    src: 'luna2.conf.j2'
+    dest: '/trinity/local/luna/daemon/config/bootstrap.ini'
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart luna2-daemon
+
+# ----------------------------------------------------
+
+- name: Render /usr/bin/luna
+  template:
+    src: 'luna2-cli-wrapper.j2'
+    dest: '/usr/bin/luna'
+    owner: root
+    group: root
+    mode: 0755
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
@@ -76,183 +198,72 @@
     dest: /tftpboot/luna_undionly.kpxe
     mode: '0444'
 
-- name: Render /etc/luna.conf
-  template:
-    src: 'luna.conf.j2'
-    dest: '/etc/luna.conf'
-    owner: luna
-    group: luna
-    mode: 0400
-  notify: restart luna
-
 - name: Include luna's DNS zone file in named conf
   lineinfile:
     path: '/etc/named.conf'
-    line: 'include "{{ luna.cluster.named_include_file }}";'
+    line: 'include "{{ luna2_named_include_file }}";'
   notify: restart named
 
 - name: Add luna's server configuration to nginx
   template:
-    src: 'nginx-luna.conf.j2'
-    dest: '/etc/nginx/conf.d/nginx-luna.conf'
+    src: 'nginx-luna2.conf.j2'
+    dest: '/etc/nginx/conf.d/nginx-luna2.conf'
   notify: reload nginx
+
+
+## Some PXE ROMs in some NICs do not send tftp replies using the FIP
+## of the controllers. This workaround ensures that we SNAT those replies.
+## TODO: delete workaround when no longer required.
+#- name: Get provisioning interface name
+#  shell: "ip -o addr show to {{ trix_cluster_net }}/{{ trix_cluster_netprefix }} | awk '{ print $2 }' | head -1"
+#  register: luna_prov_nic
+#  changed_when: False
+
+# TODO
+#- name: Workaround PXE boot issue when doing HA and masquerading is enabled
+#  template:
+#    src: 'firewalld_direct.xml.j2'
+#    dest: '/etc/firewalld/direct.xml'
+#    owner: 'root'
+#    group: 'root'
+#    mode: '0644'
+#  when: ha|default(False)
+#  notify: reload firewalld
+###
+
+- name: Selinux fcontext on files
+  sefcontext:
+    target: "/etc/named.luna.zones"
+    setype: named_zone_t
+
+- name: Check File exists or not
+  stat:
+    path: '/etc/named.luna.zones'
+  register: luna_dns_placeholder
+
+- name: Add a placeholder for luna's DNS zone file
+  file:
+    path: '/etc/named.luna.zones'
+    setype: named_zone_t
+    group: named
+    state: touch
+  when: luna_dns_placeholder.stat.exists == false
 
 - name: Enable luna services
   service:
     name: '{{ item }}'
     enabled: yes
-  when: not ha
+#  when: not ha
   with_items:
     - xinetd
     - dhcpd
-    - lweb
-    - ltorrent
+    - luna2-daemon
 
-- name: Explicitly disable xinetd
+- name: Start luna services
   service:
-    name: xinetd
-    enabled: no
-  when: ha|default(False)
+    name: '{{ item }}'
+    state: started
+  with_items:
+    - xinetd
+    - luna2-daemon
 
-- name: Get /etc/dhcp status
-  stat:
-    path: '/etc/dhcp'
-  register: default_dhcp_path
-
-# Some PXE ROMs in some NICs do not send tftp replies using the FIP
-# of the controllers. This workaround ensures that we SNAT those replies.
-# TODO: delete workaround when no longer required.
-- name: Get provisioning interface name
-  shell: "ip -o addr show to {{ trix_cluster_net }}/{{ trix_cluster_netprefix }} | awk '{ print $2 }' | head -1"
-  register: luna_prov_nic
-  changed_when: False
-
-- name: Workaround PXE boot issue when doing HA and masquerading is enabled
-  template:
-    src: 'firewalld_direct.xml.j2'
-    dest: '/etc/firewalld/direct.xml'
-    owner: 'root'
-    group: 'root'
-    mode: '0644'
-  when: ha|default(False)
-  notify: reload firewalld
-###
-
-- block:
-
-  - name: Ensure {{ luna.dhcp.conf_path }} exists
-    file:
-      path: '{{ luna.dhcp.conf_path }}'
-      state: directory
-
-  - name: Copy default dhcp configuraion to {{ luna.dhcp.conf_path }}
-    shell: rsync -raW -AX /etc/dhcp/* {{ luna.dhcp.conf_path }}
-    args:
-      creates: '{{ luna.dhcp.conf_path }}/dhclient.d'
-    when: primary|default(True)
-
-  - name: Delete default configuration
-    file:
-      path: '/etc/dhcp'
-      state: absent
-
-  - name: Replace default dhcp configuration path with symlink to {{ luna.dhcp.conf_path }}
-    file:
-      src: '{{ luna.dhcp.conf_path }}'
-      dest: '/etc/dhcp'
-      state: link
-      force: yes
-
-  when: luna.dhcp.conf_path|string not in '/etc/dhcp'
-        and default_dhcp_path.stat.isdir
-
-- block:
-
-  - name: Ensure {{ luna.cluster.path }} exists
-    file:
-      path: '{{ luna.cluster.path }}'
-      owner: luna
-      group: luna
-      mode: 0755
-      state: directory
-
-  - name: Selinux fcontext on files
-    sefcontext:
-      target: "{{ trix_local }}/etc/named.luna.zones"
-      setype: named_zone_t
-
-  - name: Check File exists or not
-    stat:
-      path: '{{ trix_local }}/etc/named.luna.zones'
-    register: luna_dns_placeholder
-
-  - name: Add a placeholder for luna's DNS zone file
-    file:
-      path: '{{ trix_local }}/etc/named.luna.zones'
-      setype: named_zone_t
-      group: named
-      state: touch
-    when: luna_dns_placeholder.stat.exists == false
-
-  - name: Initialize luna cluster
-    luna_cluster:
-      frontend_address: "{{ luna.cluster.frontend_address }}"
-      path: "{{ luna.cluster.path }}"
-      named_include_file: '{{ luna.cluster.named_include_file }}'
-      named_zone_dir: '{{ luna.cluster.named_zone_dir }}'
-      lweb_num_proc: '{{ luna.cluster.lweb_num_proc }}'
-      state: present
-
-  - name: Create luna networks
-    luna_network:
-      name: "{{ item.name }}"
-      network: "{{ item.ip }}"
-      prefix: "{{ item.prefix }}"
-      ns_ip: "{{ item.ns_ip  | default(None) }}"
-      state: present
-    with_items: "{{ luna.networks }}"
-
-  - name: Run luna cluster makedhcp
-    luna_cluster:
-      makedhcp: true
-      dhcp_net: "{{ luna.dhcp.network }}"
-      dhcp_range_start: "{{ luna.dhcp.start_ip }}"
-      dhcp_range_end: "{{ luna.dhcp.end_ip }}"
-
-  - name: Start luna services
-    service:
-      name: '{{ item }}'
-      state: started
-    with_items:
-      - xinetd
-      - dhcpd
-      - lweb
-      - ltorrent
-
-  - name: Add dependency pacemaker resources
-    pcs_resource:
-      name: '{{ item }}'
-      resource_class: 'systemd'
-      resource_type: 'systemd:{{ item }}'
-      options: 'op monitor interval=30 --group Trinity-stack'
-      state: present
-    when: ha | default(False)
-    with_items:
-      - xinetd
-      - dhcpd
-    tags: pcs
-
-  - name: Add luna pacemaker resources
-    pcs_resource:
-      name: '{{ item }}'
-      resource_class: 'systemd'
-      resource_type: 'systemd:{{ item }}'
-      options: 'op monitor interval=30 op start timeout=120 --group Trinity-stack'
-      state: present
-    when: ha | default(False)
-    with_items:
-      - lweb
-      - ltorrent
-    tags: pcs
-
-  when: primary | default(True)
