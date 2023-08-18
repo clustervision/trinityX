@@ -13,7 +13,7 @@
 #      state: present
 #      key: "{{ sensu_gpg_key }}"
 
-  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version'] < 9
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
 - name: Install Sensu Repo (CV)
   yum_repository:
@@ -21,7 +21,7 @@
     description: ClusterVision Sensu Repository
     baseurl:  "{{ sensu_repo }}"
     gpgcheck: False
-  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version'] > 8
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - name: Install redis
   yum:
