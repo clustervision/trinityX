@@ -58,7 +58,7 @@
 
 - name: verify if cli config file exists
   stat: 
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    path: '{{ trix_luna }}/cli/config/luna.ini'
   register: cli_config_file
 
 - name: configure secret key for cli API
@@ -66,7 +66,7 @@
     path: '{{ trix_luna }}/cli/config/luna.ini'
     regexp: '^SECRET_KEY='
     line: "SECRET_KEY={{ luna_secret_key }}"
-  when: cli_config_file.stat.exists == True
+  when: cli_config_file.stat.exists
 
 - name: Render /usr/bin/luna
   template:
