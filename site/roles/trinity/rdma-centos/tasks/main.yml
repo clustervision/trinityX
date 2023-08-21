@@ -1,8 +1,14 @@
 ---
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+
 - name: Install rdma packages
   yum:
-    name: '{{ rdma_centos_packages }}'
+    name: '{{ rdma_packages }}'
     state: present
   tags: install-only
 

@@ -39,7 +39,7 @@
 - name: Install luna2 daemon
   ansible.builtin.shell: |
     source /trinity/local/python/bin/activate
-    pip3 install {{ luna2_noarch_pip_repository }}/daemon/{{ luna2_daemon_pip }}
+    pip3 install --upgrade {{ luna2_noarch_pip_repository }}/daemon/{{ luna2_daemon_pip }}
     exit $?
   args:
     executable: /bin/bash
@@ -55,7 +55,7 @@
 - name: Install luna2 cli
   ansible.builtin.shell: |
     source /trinity/local/python/bin/activate
-    pip3 install {{ luna2_noarch_pip_repository }}/cli/{{ luna2_cli_pip }}
+    pip3 install --upgrade {{ luna2_noarch_pip_repository }}/cli/{{ luna2_cli_pip }}
     exit $?
   args:
     executable: /bin/bash
@@ -100,6 +100,12 @@
     regexp: '^PASSWORD\s*='
     line: "PASSWORD = {{ luna_password }}"
 
+- name: configure endpoint for daemon API
+  ansible.builtin.lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^ENDPOINT\s*='
+    line: "ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050"
+
 - name: Ensuring luna ini file is unix
   shell: "dos2unix {{ trix_luna }}/daemon/config/luna.ini"
 
@@ -110,10 +116,37 @@
     group: root
     mode: '0640'
 
+- stat: 
+    path: '{{ trix_luna }}/cli/config'
+  register: cli_config_dir
+
+- name: Remove cli config dir symlink
+  file:
+    path: '{{ trix_luna }}/cli/config'
+    state: absent
+  when: cli_config_dir.stat.islnk is defined and cli_config_dir.stat.islnk
+
 - name: verify if cli config file exists
   stat: 
     path: '{{ trix_luna }}/cli/config/luna.ini'
   register: cli_config_file
+
+- block:
+  - name: Create cli config directory
+    file:
+      path: '{{ trix_luna }}/cli/config/'
+      state: directory
+
+  - name: Render cli luna.ini
+    template:
+      src: 'luna2.ini.j2'
+      dest: '{{ trix_luna }}/cli/config/luna.ini'
+      owner: root
+      group: root
+      mode: 0640
+
+  when: not cli_config_file.stat.exists
+
 
 - block:
   - name: configure secret key for cli API
@@ -143,6 +176,12 @@
       owner: root
       group: root
       mode: '0640'
+
+  - name: configure endpoint for daemon API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^ENDPOINT\s*='
+      line: "ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050"
 
   when: cli_config_file.stat.exists
 
