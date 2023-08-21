@@ -140,36 +140,71 @@
   notify: run update_ood_portal
 
 
-- name: Clone TrinityX-OOD custom apps repo
+- name: Clone trinity-ood custom apps repo
   ansible.builtin.git:
     repo: git@192.168.166.101:clustervision/trinity-ood.git
     dest: "{{ trix_ood }}/{{ ood_version }}"
   environment:
     GIT_TERMINAL_PROMPT: 0
 
-- name: Install TrinityX-OOD custom apps python requirements 
+- name: Install trinity-ood custom apps python requirements 
   ansible.builtin.pip:
     requirements: "{{ trix_ood }}/{{ ood_version }}/{{ item }}/requirements.txt"
     virtualenv: /trinity/local/python/
   with_items:
     - bmcsetup
+    - cluster
+    - group
     - network
+    - node
     - osimage
     - otherdev
+    - secrets
     - sensu
+    - service
     - switch
 
-- name: Install TrinityX-OOD custom apps
+- name: Install trinity-ood custom apps
   file:
     src: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     dest: "/var/www/ood/apps/sys/trinity_{{ item }}"
     state: link
   with_items:
     - bmcsetup
+    - cluster
+    - group
     - network
+    - node
     - osimage
     - otherdev
+    - secrets
     - sensu
+    - service
+    - switch
+  notify: run update_ood_portal
+
+- name: Fix trinity-ood installation (pt1)
+  file:
+    path: "/trinity/local/luna/config"
+    state: directory
+    mode: '0755'
+
+- name: Fix trinity-ood installation (pt2)
+  file:
+    src: /tmp/token.txt
+    dest: "/var/www/ood/apps/sys/trinity_{{ item }}/token.txt"
+    state: link
+  with_items:
+    - bmcsetup
+    - cluster
+    - group
+    - network
+    - node
+    - osimage
+    - otherdev
+    - secrets
+    - sensu
+    - service
     - switch
   notify: run update_ood_portal
 
