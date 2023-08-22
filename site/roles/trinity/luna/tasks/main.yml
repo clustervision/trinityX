@@ -118,10 +118,10 @@
 
 - name: Prepare utils file names
   set_fact:
-     luna2_utils_grep: "{{ luna2_utils | join('* ') }}"
+     luna2_utils_grep: "{{ luna2_utils | join('|') }}"
 
 - name: Collect utils file names
-  shell: "ls {{ luna2_python_dir.stdout }}/site-packages/utils/ | grep {{ luna2_utils_grep }}"
+  shell: "ls {{ luna2_python_dir.stdout }}/site-packages/utils/ | grep -E '{{ luna2_utils_grep }}'"
   register: luna2_utils_names
   changed_when: False
   when: luna2_utils_grep is defined
