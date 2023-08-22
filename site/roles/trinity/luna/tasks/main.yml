@@ -86,7 +86,6 @@
     executable: /bin/bash
   when: luna2_cli_pip is undefined
 
-#TODO better way than below
 - name: create symlink from site-packages/cli to luna2 dir
   file:
     src: '{{ luna2_python_dir.stdout }}/site-packages/luna'
@@ -127,10 +126,19 @@
   when: luna2_utils_grep is defined
 
 - name: Create symlink from site-pacakges/utils to /usr/sbin
-  shell: "ln -s {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }} /usr/local/bin/{{ item.split('.') | first }}"
+  file:
+    src: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+    dest: "/usr/local/bin/{{ item.split('.') | first }}"
+    state: link
+    force: yes
   with_items: 
     - "{{ luna2_utils_names.stdout_lines }}"
   when: luna2_utils_names is defined
+
+#  shell: "ln -s {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }} /usr/local/bin/{{ item.split('.') | first }}"
+#  with_items: 
+#    - "{{ luna2_utils_names.stdout_lines }}"
+#  when: luna2_utils_names is defined
 
 
 # -- done with pip
