@@ -125,10 +125,26 @@
   changed_when: False
   when: luna2_utils_grep is defined
 
+- name: Ensuring luna utils files are unix
+  shell: "dos2unix {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+  with_items: 
+    - "{{ luna2_utils_names.stdout_lines }}"
+  when: luna2_utils_names is defined
+
+- name: Ensuring luna utils files are executable
+  ansible.builtin.file:
+    path: {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+    owner: root
+    group: root
+    mode: '0755'
+  with_items: 
+    - "{{ luna2_utils_names.stdout_lines }}"
+  when: luna2_utils_names is defined
+
 - name: Create symlink from site-pacakges/utils to /usr/sbin
   file:
     src: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
-    dest: "/usr/local/bin/{{ item.split('.') | first }}"
+    dest: "/usr/sbin/{{ item.split('.') | first }}"
     state: link
     force: yes
   with_items: 
