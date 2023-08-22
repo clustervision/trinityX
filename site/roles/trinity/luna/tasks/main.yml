@@ -116,6 +116,22 @@
     executable: /bin/bash
   when: luna2_utils_pip is undefined
 
+- name: Prepare utils file names
+  set_fact:
+     luna_utils_grep: "{{ luna_utils | join('* ') }}"
+
+- name: Collect utils file names
+  shell: "ls {{ luna2_python_dir.stdout }}/site-packages/utils/ | grep {{ luna_utils_grep }}"
+  register: luna2_utils_names
+  changed_when: False
+  when: luna_utils_grep is defined
+
+- name: Create symlink from site-pacakges/utils to /usr/sbin
+  shell: "ln -s {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }} /usr/local/bin/{{ item.split('.') | first }}"
+  with_items: {{ luna2_utils_names.stdout_lines }}
+  when: luna2_utils_names is defined
+
+
 # -- done with pip
 
 - name: Render /etc/systemd/system/luna2-daemon.service
