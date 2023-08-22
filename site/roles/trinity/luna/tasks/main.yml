@@ -43,6 +43,17 @@
     exit $?
   args:
     executable: /bin/bash
+  when: luna2_daemon_pip is defined
+
+# TODO: better way than below
+- name: Install luna2 daemon
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade {{ luna2_noarch_pip_repository }}/daemon/
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_daemon_pip is undefined
 
 - name: create symlink from site-packages/daemon to luna2 dir
   file:
@@ -59,6 +70,17 @@
     exit $?
   args:
     executable: /bin/bash
+  when: luna2_cli_pip is defined
+
+# TODO: better way than below
+- name: Install luna2 cli
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade {{ luna2_noarch_pip_repository }}/cli/
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_cli_pip is undefined
 
 #TODO better way than below
 - name: create symlink from site-packages/cli to luna2 dir
