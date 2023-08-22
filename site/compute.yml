@@ -18,12 +18,26 @@
     - role: trinity/wrapup-images
       tags: wrapup-images
 
-- hosts:
-    - "controller1"
-  roles:
-    - role: trinity/pack-images
-      vars:
-         params:
-            image_name: "{{ image_name|default('compute') }}"
-      tags: pack-images
+
+- name: Pack image
+  ansible.builtin.include_role:
+    name: trinity/pack-images
+    vars:
+       params:
+          image_name: "{{ image_name|default('compute') }}"
+    tags: pack-images
+#  vars:
+#    params:
+#       install_root: "{{ image_path }}"
+#  tags: repos
+
+
+#- hosts:
+#    - "controller1"
+#  roles:
+#    - role: trinity/pack-images
+#      vars:
+#         params:
+#            image_name: "{{ image_name|default('compute') }}"
+#      tags: pack-images
 
