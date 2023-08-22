@@ -35,6 +35,8 @@
   register: luna2_python_dir
   changed_when: False
 
+# -- daemon
+
 # TODO: better way than below
 - name: Install luna2 daemon
   ansible.builtin.shell: |
@@ -61,6 +63,8 @@
     dest: '{{ trix_luna }}/daemon'
     state: link
     force: yes
+
+# -- cli
 
 # TODO: better way than below
 - name: Install luna2 cli
@@ -89,6 +93,30 @@
     dest: '{{ trix_luna }}/cli'
     state: link
     force: yes
+
+# -- utils
+
+# TODO: better way than below
+- name: Install luna2 utils
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade {{ luna2_noarch_pip_repository }}/utils/{{ luna2_utils_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_utils_pip is defined
+
+# TODO: better way than below
+- name: Install luna2 utils
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/utils luna2_utils
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_utils_pip is undefined
+
+# -- done with pip
 
 - name: Render /etc/systemd/system/luna2-daemon.service
   template:
