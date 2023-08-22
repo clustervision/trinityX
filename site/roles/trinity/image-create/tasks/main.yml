@@ -105,13 +105,15 @@
     - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
 
 
-- name: Include trinity/roles
-  ansible.builtin.include_role:
-    name: trinity/repos
-  vars:
-    params:
-       install_root: "{{ image_path }}"
-  tags: repos
+# commented block not needed? image setup will generate repos and below is using repos on controller - Antoine
+#
+#- name: Include trinity/roles
+#  ansible.builtin.include_role:
+#    name: trinity/repos
+#  vars:
+#    params:
+#       install_root: "{{ image_path }}"
+#  tags: repos
 
 - block:
 
@@ -134,12 +136,6 @@
       warn: no
 
   when: local_install | default(False)
-
-#- name: Install epel manually
-#  dnf:
-#    name: epel-release
-#    installroot: "{{ image_path }}"
-#    state: present
 
 - name: Disable epel repo for local installation
   shell: >
@@ -214,9 +210,10 @@
   ansible.builtin.shell:
     cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
 
-- name: Pack the image
-  ansible.builtin.shell:
-    cmd: "luna osimage pack {{ image_name }}"
+# needs to be done after image setup - Antoine
+#- name: Pack the image
+#  ansible.builtin.shell:
+#    cmd: "luna osimage pack {{ image_name }}"
 
 - name: Refresh the list of hosts in the inventory
   meta: refresh_inventory

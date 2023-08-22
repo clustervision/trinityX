@@ -3,7 +3,7 @@ import json
 import subprocess
 
 images = list()
-subprocess = subprocess.Popen("luna osimage list | tail -n +4 | head -n -1 | awk '{ print $2 }'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+subprocess = subprocess.Popen("luna osimage list --raw | grep -vE '^\\||\\+' | jq --raw-output '.[] | .name'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 subprocess_return = subprocess.stdout.read()
 for line in subprocess_return.decode("utf-8").split("\n"):
   if line!="":
