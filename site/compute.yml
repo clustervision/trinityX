@@ -2,9 +2,9 @@
 - import_playbook: trinity-image-create.yml
   vars:
     image_name: compute
-#    # The password to set up for the root user in the image.
-#    # If empty, it will be generated at random.
-#    #
+    # The password to set up for the root user in the image.
+    # If empty, it will be generated at random.
+    #
     image_password:
 
 
@@ -14,7 +14,20 @@
 
 - hosts:
     - "{{ image_name|default('compute') }}.osimages.luna"
-
   roles:
     - role: trinity/wrapup-images
       tags: wrapup-images
+
+- hosts:
+    - "controllor"
+  roles:
+    - role: trinity/pack-images
+      vars:
+         params:
+            image_name: "{{ image_name|default('compute') }}"
+      tags: pack-images
+
+# needs to be done after image setup - Antoine
+#- name: Pack the image
+#  ansible.builtin.shell:
+#    cmd: "luna osimage pack {{ image_name }}"
