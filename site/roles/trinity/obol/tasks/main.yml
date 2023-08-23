@@ -26,13 +26,30 @@
       - retrying
     executable: pip3
 
-- name: Install obol to /usr/local/bin
+#- name: Install obol to /usr/local/bin
+#  copy:
+#    src: 'obol'
+#    dest: '/usr/local/bin'
+#    owner: 'root'
+#    group: 'root'
+#    mode: '0750'
+
+- name: Determine the installed python3 version
+  shell: "rpm -q python3|grep -oE '[0-9]+\\.[0-9]+'|head -n1"
+  register: python3_version
+
+- name: Install Obol
+  shell: "pip3 install obol"
+  when: python3_version is defined
+
+- name: Copy Obol patch
   copy:
-    src: 'obol'
-    dest: '/usr/local/bin'
-    owner: 'root'
-    group: 'root'
-    mode: '0750'
+    src: 'obol.patch'
+    dest: '/tmp/'
+
+- name: Patch Obol to be python3 compliant
+  shell: "patch /usr/local/lib/python{{ python3_version }}/site-packages/obol/main.py < /tmp/obol.patch"
+  when: python3_version is defined
 
 - name: Add default configuration to {{ obol_conf_path }}
   template:
