@@ -80,7 +80,7 @@
 #     - /etc/httpd/conf.d/autoindex.conf
 
 
-- name: Render OOD config file
+- name: Render OOD ood_portal.yml config file
   template:
     src: 'ood_portal.yml.j2'
     dest: '{{ ood_portal_cfg_path }}/ood_portal.yml'
@@ -88,6 +88,16 @@
     owner: root
     group: root
   notify: run update_ood_portal
+
+- name: Render OOD nginx_stage.yml config file
+  template:
+    src: 'nginx_stage.yml.j2'
+    dest: '{{ ood_portal_cfg_path }}/nginx_stage.yml'
+    mode: '0644'
+    owner: root
+    group: root
+  notify: run update_ood_portal
+
 
 - name: Render OOD cluster config file
   template:
@@ -106,9 +116,15 @@
     owner: root
     group: root
     backup: "yes"
-  when: ood_enable_vnc == true
+  when: enable_ood_vnc == true
   notify: run update_ood_portal
 
+- name: Remove OOD remote_desktop if vnc not enabled
+  file:
+    path: '{{ ood_portal_cfg_path }}/apps/bc_desktop/{{ cluster_name }}.yml'
+    state: absent
+  when: enable_ood_vnc != true
+  notify: run update_ood_portal
 
 - name: Copy TrinityX branding to /var/www/ood/public
   copy:
@@ -130,14 +146,14 @@
   when: ood_portal_brand == "TrinityX"
   notify: run update_ood_portal
 
-- name: Apply TrinityX pun_custom_env branding if appropriate
-  blockinfile:
-    path: '/etc/ood/config/nginx_stage.yml'
-    block: '{{ ood_pun_custom_env_branding.trinityx }}'
-    marker: "# {mark} ANSIBLE MANAGED BLOCK for pun_custom_env"
-    backup: "yes"
-  when: '"cloudcontroller" not in group_names'
-  notify: run update_ood_portal
+# - name: Apply TrinityX pun_custom_env branding if appropriate
+#   blockinfile:
+#     path: '/etc/ood/config/nginx_stage.yml'
+#     block: '{{ ood_pun_custom_env_branding.trinityx }}'
+#     marker: "# {mark} ANSIBLE MANAGED BLOCK for pun_custom_env"
+#     backup: "yes"
+#   when: '"cloudcontroller" not in group_names'
+#   notify: run update_ood_portal
 
 
 - name: Clone trinity-ood custom apps repo
@@ -164,7 +180,7 @@
     - service
     - switch
 
-- name: Install trinity-ood custom apps
+- name: Copy trinity-ood custom apps
   file:
     src: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     dest: "/var/www/ood/apps/sys/trinity_{{ item }}"
@@ -185,28 +201,28 @@
 
 - name: Fix trinity-ood installation (pt1)
   file:
-    path: "/trinity/local/luna/config"
+    path: "/trinity/local/luna/daemon"
     state: directory
-    mode: '0755'
+    mode: '0644'
 
-- name: Fix trinity-ood installation (pt2)
-  file:
-    src: /tmp/token.txt
-    dest: "/var/www/ood/apps/sys/trinity_{{ item }}/token.txt"
-    state: link
-  with_items:
-    - bmcsetup
-    - cluster
-    - group
-    - network
-    - node
-    - osimage
-    - otherdev
-    - secrets
-    - sensu
-    - service
-    - switch
-  notify: run update_ood_portal
+# - name: Fix trinity-ood installation (pt2)
+#   file:
+#     src: /tmp/token.txt
+#     dest: "/var/www/ood/apps/sys/trinity_{{ item }}/token.txt"
+#     state: link
+#   with_items:
+#     - bmcsetup
+#     - cluster
+#     - group
+#     - network
+#     - node
+#     - osimage
+#     - otherdev
+#     - secrets
+#     - sensu
+#     - service
+#     - switch
+#   notify: run update_ood_portal
 
 - name: Configure firewalld
   firewalld:
