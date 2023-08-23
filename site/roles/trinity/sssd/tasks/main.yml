@@ -38,6 +38,7 @@
     state: started
   when: ansible_connection not in 'chroot'
 
+  # For now we ignore obol for redhat 9+. too many issues. pending. -Antoine
 - name: Adding access controler groups to the system
   shell: 'obol group list | grep {{ item }} || obol group add {{ item }}'
   register: obol_result
@@ -48,6 +49,7 @@
         and not compute|default(False)
         and sss_allowed_groups is defined
         and sss_allowed_groups is iterable
+        and ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update

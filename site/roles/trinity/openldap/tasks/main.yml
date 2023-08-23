@@ -28,6 +28,15 @@
       - powertools
   tags: install-only
 
+- name: Determine openldap version
+  shell: "rpm -q openldap-servers|grep -oE '[0-9]\\.[0-9]'|tr -d '.'"
+  register: openldap_version
+  when: ansible_facts['os_family'] == "RedHat"
+
+- debug:
+    msg: "Openldap release {{ openldap_version.stdout }}"
+  when: openldap_version is defined
+
 - block:
     - name: Selinux fcontext on files
       sefcontext:
@@ -67,7 +76,6 @@
 #    msg: "openldap_server_conf_path: {{ openldap_server_conf_path }}"
 
 - block:
-
     - name: Ensure OpenLDAP configuration directory exists
       file:
         path: '{{ openldap_server_conf_path }}'
@@ -110,100 +118,170 @@
     groups: '{{ ssl_cert_group }}'
 
 - block:
+  - name: Ensure OpenLDAP data directory exists
+    file:
+      path: '{{ openldap_server_dir_path }}'
+      state: directory
+      owner: '{{ openldap_default_user }}'
+      group: '{{ openldap_default_group }}'
+      setype: slapd_db_t
+      seuser: system_u
 
-    - name: Ensure OpenLDAP data directory exists
-      file:
-        path: '{{ openldap_server_dir_path }}'
-        state: directory
-        owner: '{{ openldap_default_user }}'
-        group: '{{ openldap_default_group }}'
-        setype: slapd_db_t
-        seuser: system_u
+  - name: Start OpenLDAP service
+    systemd:
+      name: slapd
+      state: started
+      enabled: "yes"
 
-    - name: Start OpenLDAP service
-      systemd:
-        name: slapd
-        state: started
-        enabled: "yes"
-
-    - name: Copy OpenLDAP schemas
-      copy:
-        src: '{{ item }}'
-        dest: '/etc/openldap/schema/'
-        owner: '{{ openldap_default_user }}'
-        group: '{{ openldap_default_group }}'
-        mode: '0644'
-      with_items:
-        - rfc2307bis.ldif
-        - autoinc.ldif
-        - local_schema.ldif
-
-    - name: Load OpenLDAP schemas
-      command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/openldap/schema/{{ item }}.ldif
-      args:
-        creates: '/etc/openldap/slapd.d/cn=config/cn=schema/cn={?}{{ item }}.ldif'
-      with_items: '{{ openldap_schemas }}'
-
-    - name: Render OpenLDAP configuration
-      template:
-        src: '{{ item }}.j2'
-        dest: '/tmp/{{ item }}'
-      with_items:
-        - config.ldif
-        - local.ldif
-        - proxy.ldif
-      changed_when: false
-
-    - name: Copy OpenLDAP overlay configurations
-      copy:
-        src: '{{ item }}'
-        dest: '/tmp/'
-      with_items:
-        - ppolicy.ldif
-        - memberof.ldif
-
-    - name: Load OpenLDAP global configuration
-      command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
-      args:
-        creates: '/etc/openldap/slapd.d/cn=config.ldif'
-      notify: restart openldap
-
-    - name: Load OpenLDAP local configuration
-      command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
-      args:
-        creates: '/etc/openldap/slapd.d/cn=config/olcDatabase={?}hdb/olcOverlay={0}memberof.ldif'
-      with_items:
-        - config.ldif
-        - local.ldif
-        - proxy.ldif
-        - ppolicy.ldif
-        - memberof.ldif
-      notify: restart openldap
-
-    - name: Check local schemas
-      command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
-      register: ldapsearch
-      failed_when: false
-      changed_when: false
-
-        #ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
-    - name: Load OpenLDAP local schema
-      command: >
-        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
-                             -f /etc/openldap/schema/local_schema.ldif
-      ignore_errors: "yes"
-      when: ldapsearch.rc == 32
-
-    - name: Add pacemaker resource
-      pcs_resource:
-        name: 'openldap'
-        resource_class: 'systemd'
-        resource_type: 'systemd:slapd'
-        options: 'op monitor interval=30 --group Trinity-stack'
-        state: present
-      when: ha | default(False)
-      tags: pcs
-
+  - name: Copy OpenLDAP schemas
+    copy:
+      src: '{{ item }}'
+      dest: '/etc/openldap/schema/'
+      owner: '{{ openldap_default_user }}'
+      group: '{{ openldap_default_group }}'
+      mode: '0644'
+    with_items:
+      - rfc2307bis.ldif
+      - autoinc.ldif
+      - local_schema.ldif
   when: primary | default(True)
 
+# ------------------------------- openldap <= 2.4
+- block:
+  - name: Load OpenLDAP schemas
+    command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/openldap/schema/{{ item }}.ldif
+    args:
+      creates: '/etc/openldap/slapd.d/cn=config/cn=schema/cn={?}{{ item }}.ldif'
+    with_items:
+      - cosine
+      - inetorgperson
+      - rfc2307bis
+      - autoinc
+      - ppolicy
+
+  - name: Render OpenLDAP configuration
+    template:
+      src: '{{ item }}.j2'
+      dest: '/tmp/{{ item }}'
+    with_items:
+      - config.ldif
+      - local.ldif
+      - proxy.ldif
+    changed_when: false
+
+  - name: Copy OpenLDAP overlay configurations
+    copy:
+      src: '{{ item }}'
+      dest: '/tmp/'
+    with_items:
+      - ppolicy.ldif
+      - memberof.ldif
+
+  - name: Load OpenLDAP global configuration
+    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
+    args:
+      creates: '/etc/openldap/slapd.d/cn=config.ldif'
+    notify: restart openldap
+
+  - name: Load OpenLDAP local configuration
+    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
+    args:
+      creates: '/etc/openldap/slapd.d/cn=config/olcDatabase={?}hdb/olcOverlay={0}memberof.ldif'
+    with_items:
+      - config.ldif
+      - local.ldif
+      - proxy.ldif
+      - ppolicy.ldif
+      - memberof.ldif
+    notify: restart openldap
+
+  - name: Check local schemas
+    command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
+    register: ldapsearch
+    failed_when: false
+    changed_when: false
+
+      #ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+  - name: Load OpenLDAP local schema
+    command: >
+      ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+                               -f /etc/openldap/schema/local_schema.ldif
+    ignore_errors: "yes"
+    when: ldapsearch.rc == 32
+  when: (primary | default(True)) and (openldap_version is defined and openldap_version.stdout|int < 25)
+
+# ------------------------------- openldap 2.5+
+- block:
+  - name: Load OpenLDAP schemas
+    command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/openldap/schema/{{ item }}.ldif
+    args:
+      creates: '/etc/openldap/slapd.d/cn=config/cn=schema/cn={?}{{ item }}.ldif'
+    with_items:
+      - cosine
+      - inetorgperson
+      - rfc2307bis
+      - autoinc
+
+  - name: Render OpenLDAP configuration
+    template:
+      src: '{{ item }}-25.j2'
+      dest: '/tmp/{{ item }}'
+    with_items:
+      - config.ldif
+      - local.ldif
+      - proxy.ldif
+    changed_when: false
+
+  - name: Copy OpenLDAP overlay configurations
+    copy:
+      src: '{{ item }}'
+      dest: "/tmp/{{ item.split('-') | first }}"
+    with_items:
+      - memberof.ldif-25
+
+  - name: Load OpenLDAP global configuration
+    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
+    args:
+      creates: '/etc/openldap/slapd.d/cn=config.ldif'
+    notify: restart openldap
+
+  - name: Load OpenLDAP local configuration
+    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
+    args:
+      creates: '/etc/openldap/slapd.d/cn=config/olcDatabase={?}mdb/olcOverlay={0}memberof.ldif'
+    with_items:
+      - config.ldif
+      - local.ldif
+      - proxy.ldif
+      - memberof.ldif
+    notify: restart openldap
+
+  - name: Check local schemas
+    command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
+    register: ldapsearch
+    failed_when: false
+    changed_when: false
+
+      #ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+  - name: Load OpenLDAP local schema
+    command: >
+      ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+                               -f /etc/openldap/schema/local_schema.ldif
+    ignore_errors: "yes"
+    when: ldapsearch.rc == 32
+  when: (primary | default(True)) and (openldap_version is defined and openldap_version.stdout|int > 24)
+
+# ---------------------
+
+- name: Add pacemaker resource
+  pcs_resource:
+    name: 'openldap'
+    resource_class: 'systemd'
+    resource_type: 'systemd:slapd'
+    options: 'op monitor interval=30 --group Trinity-stack'
+    state: present
+  when: (primary | default(True)) and (ha | default(False))
+  tags: pcs
+
 - meta: flush_handlers
+
