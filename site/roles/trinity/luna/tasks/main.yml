@@ -35,6 +35,8 @@
   register: luna2_python_dir
   changed_when: False
 
+# -- daemon
+
 # TODO: better way than below
 - name: Install luna2 daemon
   ansible.builtin.shell: |
@@ -43,6 +45,17 @@
     exit $?
   args:
     executable: /bin/bash
+  when: luna2_daemon_pip is defined
+
+# TODO: better way than below
+- name: Install luna2 daemon
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/daemon daemon
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_daemon_pip is undefined
 
 - name: create symlink from site-packages/daemon to luna2 dir
   file:
@@ -50,6 +63,8 @@
     dest: '{{ trix_luna }}/daemon'
     state: link
     force: yes
+
+# -- cli
 
 # TODO: better way than below
 - name: Install luna2 cli
@@ -59,14 +74,90 @@
     exit $?
   args:
     executable: /bin/bash
+  when: luna2_cli_pip is defined
 
-#TODO better way than below
+# TODO: better way than below
+- name: Install luna2 cli
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/cli luna
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_cli_pip is undefined
+
 - name: create symlink from site-packages/cli to luna2 dir
   file:
     src: '{{ luna2_python_dir.stdout }}/site-packages/luna'
     dest: '{{ trix_luna }}/cli'
     state: link
     force: yes
+
+# -- utils
+
+# TODO: better way than below
+- name: Install luna2 utils
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade {{ luna2_noarch_pip_repository }}/utils/{{ luna2_utils_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_utils_pip is defined
+
+# TODO: better way than below
+- name: Install luna2 utils
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/utils luna2_utils
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_utils_pip is undefined
+
+- name: Prepare utils file names
+  set_fact:
+     luna2_utils_grep: "{{ luna2_utils | join('|') }}"
+
+- name: Collect utils file names
+  shell: "ls {{ luna2_python_dir.stdout }}/site-packages/utils/ | grep -E '{{ luna2_utils_grep }}' | grep -E '^([a-zA-Z0-9\\-]+|.+\\.py|.+\\.sh)$'"
+  register: luna2_utils_names
+  changed_when: False
+  when: luna2_utils_grep is defined
+
+- name: Ensuring luna utils files are unix
+  shell: "dos2unix {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+  with_items: 
+    - "{{ luna2_utils_names.stdout_lines }}"
+  when: luna2_utils_names is defined
+
+- name: Ensuring luna utils files are executable
+  ansible.builtin.file:
+    path: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+    owner: root
+    group: root
+    mode: '0755'
+  with_items: 
+    - "{{ luna2_utils_names.stdout_lines }}"
+  when: luna2_utils_names is defined
+
+- name: Create symlink from site-pacakges/utils to /usr/sbin
+  file:
+    src: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+    dest: "/usr/sbin/{{ item.split('.') | first }}"
+    state: link
+    force: yes
+  with_items: 
+    - "{{ luna2_utils_names.stdout_lines }}"
+  when: luna2_utils_names is defined
+
+#  shell: "ln -s {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }} /usr/local/bin/{{ item.split('.') | first }}"
+#  with_items: 
+#    - "{{ luna2_utils_names.stdout_lines }}"
+#  when: luna2_utils_names is defined
+
+
+# -- done with pip
 
 - name: Render /etc/systemd/system/luna2-daemon.service
   template:

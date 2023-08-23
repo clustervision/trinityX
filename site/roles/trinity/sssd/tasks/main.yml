@@ -36,7 +36,7 @@
   systemd:
     name: sssd
     state: started
-  when: ansible_connection not in 'lchroot'
+  when: ansible_connection not in 'chroot'
 
 - name: Adding access controler groups to the system
   shell: 'obol group list | grep {{ item }} || obol group add {{ item }}'
@@ -44,7 +44,7 @@
   with_items: '{{ sss_allowed_groups }}'
   changed_when: item not in obol_result.stdout
   when: primary|default(True)
-        and ansible_connection not in 'lchroot'
+        and ansible_connection not in 'chroot'
         and not compute|default(False)
         and sss_allowed_groups is defined
         and sss_allowed_groups is iterable

@@ -65,6 +65,14 @@
   systemd:
     name: "{{ item }}"
     state: started
+  with_items:
+    - sensu-client
+  when: ansible_connection not in 'chroot'
+
+- name: Enable sensu client
+  systemd:
+    name: "{{ item }}"
     enabled: true
   with_items:
     - sensu-client
+

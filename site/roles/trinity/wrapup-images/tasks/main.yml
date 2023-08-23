@@ -3,11 +3,15 @@
   - name: Cleanup the image
     command: yum clean all
 
-  - block:
-    - name: Pack the image
-      run_once: true
-      ansible.builtin.shell:
-        cmd: "luna osimage pack {{ image_name }}"
+  - name: Cleanup /tmp
+    command: rm -f /tmp/*
+
+# cannot be done from within image - Antoine
+#  - block:
+#    - name: Pack the image
+#      run_once: true
+#      ansible.builtin.shell:
+#        cmd: "luna osimage pack {{ image_name }}"
 
   when: ansible_connection in 'chroot'
   tags: always

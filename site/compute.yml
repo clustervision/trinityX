@@ -7,13 +7,23 @@
     #
     image_password:
 
+
 - import_playbook: trinity-image-setup.yml
   vars:
     hostlist: "{{ image_name|default('compute') }}.osimages.luna"
 
 - hosts:
     - "{{ image_name|default('compute') }}.osimages.luna"
-
   roles:
     - role: trinity/wrapup-images
       tags: wrapup-images
+
+
+- hosts: controllers
+  roles:
+    - role: trinity/pack-images
+      vars:
+         params:
+            image_name: "{{ image_name|default('compute') }}"
+      tags: pack-images
+
