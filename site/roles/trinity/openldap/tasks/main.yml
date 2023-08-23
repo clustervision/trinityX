@@ -30,8 +30,12 @@
 
 - name: Determine openldap version
   shell: "rpm -q openldap-servers|grep -oE '[0-9]\\.[0-9]'|tr -d '.'"
-  register: openldap-version
+  register: openldap_version
   when: ansible_facts['os_family'] == "RedHat"
+
+- debug:
+    msg: "Openldap release {{ openldap_version.stdout }}"
+  when: openldap_version is defined
 
 - block:
     - name: Selinux fcontext on files
@@ -205,7 +209,7 @@
                                -f /etc/openldap/schema/local_schema.ldif
     ignore_errors: "yes"
     when: ldapsearch.rc == 32
-  when: (primary | default(True)) and (openldap-version is defined and "{{ openldap-version.stdout|int }}" < 25)
+  when: (primary | default(True)) and (openldap_version is defined and "{{ openldap_version.stdout|int }}" < 25)
 
 # ------------------------------- openldap 2.5+
 - block:
@@ -266,7 +270,7 @@
                                -f /etc/openldap/schema/local_schema.ldif
     ignore_errors: "yes"
     when: ldapsearch.rc == 32
-  when: (primary | default(True)) and (openldap-version is defined and "{{ openldap-version.stdout|int }}" > 24)
+  when: (primary | default(True)) and (openldap_version is defined and "{{ openldap_version.stdout|int }}" > 24)
 
 # ---------------------
 
