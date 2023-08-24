@@ -6,22 +6,18 @@ v2:
     host: "{{ login_host }}"
   job:
     adapter: "slurm"
-    cluster: "cluster"
     bin: "/bin/"
     conf: "/etc/slurm/slurm.conf"
     bin_overrides:
-      sbatch: "/bin/sbatch"
-      squeue: "/bin/squeue"
-      scontrol: "/bin/scontrol"
-      scancel: "/bin/scancel"
+      sbatch: "/usr/bin/sbatch"
+      squeue: "/usr/bin/squeue"
+      scontrol: "/usr/bin/scontrol"
+      scancel: "/usr/bin/scancel"
   batch_connect:
     basic:
       script_wrapper: |
         module purge
         %s
-    vnc:
-      script_wrapper: |
-        module purge
-        module add TurboVNC websockify
-        export WEBSOCKIFY_CMD="websockify"
-        %s
+#    vnc:
+#      script_wrapper: "module add ood-vnc\n%s"      
+
