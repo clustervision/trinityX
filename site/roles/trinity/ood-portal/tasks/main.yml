@@ -158,10 +158,23 @@
 
 - name: Clone trinity-ood custom apps repo
   ansible.builtin.git:
-    repo: git@192.168.166.101:clustervision/trinity-ood.git
+    repo: "{{ ood_gitrepo_url }}"
     dest: "{{ trix_ood }}/{{ ood_version }}"
   environment:
     GIT_TERMINAL_PROMPT: 0
+  when: ood_download_url is not defined
+
+- block:
+  - name: Download trinity-ood custom apps
+    get_url: 
+      url: "{{ ood_download_url }}"
+      dest: "/tmp/"
+
+  - name: Unpack download
+    ansible.builtin.unarchive:
+      src: "/tmp/{{ ood_download_url.split('/') | last }}"
+      dest: "{{ trix_ood }}/{{ ood_version }}"
+  when: ood_download_url is defined
 
 - name: Install trinity-ood custom apps python requirements 
   ansible.builtin.pip:
