@@ -4,7 +4,7 @@ server {
     # Allow file uploads
     client_max_body_size 0M;
 
-    root /trinity/local/luna/files;
+    root {{ trix_luna }}/daemon/files;
 
     location = /filesauth {
         internal;
@@ -19,7 +19,7 @@ server {
         set $calltype "MAJOR";
         proxy_pass_request_headers on;
         auth_request /filesauth;
-        alias /trinity/local/luna/daemon/files/;
+        alias {{ trix_luna }}/daemon/files/;
         if ($query_string) {
             expires max;
         }
@@ -30,7 +30,7 @@ server {
 
     # or just the below section if no authentication is needed at all
 #    location /files/ {
-#        alias /trinity/local/luna/daemon/files/;
+#        alias {{ trix_luna }}/daemon/files/;
 #        if ($query_string) {
 #            expires max;
 #        }
