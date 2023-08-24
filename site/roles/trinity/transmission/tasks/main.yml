@@ -1,0 +1,38 @@
+---
+# tasks file for transmission
+- name: Install Transmission
+  yum:
+    name: 
+      - transmission-daemon
+      - transmission-cli
+    state: present
+
+- name: Make sure transmission is not running
+  service:
+    name: transmission-daemon
+    state: stopped
+  ignore_errors: true
+  
+- name: "Create transmission-daemon overwrite systemd config directory"
+  file:
+    path: "/etc/systemd/system/transmission-daemon.service.d"
+    state: directory
+    mode: '0755'
+
+- name: Render systemd configuration file
+  template:
+    src: 'transmission-daemon.service.j2'
+    dest: /etc/systemd/system/transmission-daemon.service.d/transmission-daemon.service
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+    backup: yes
+  notify:
+    - reload transmission
+
+- name: Start transmission
+  service:
+    name: transmission-daemon
+    enabled: true
+    state: started
+  
