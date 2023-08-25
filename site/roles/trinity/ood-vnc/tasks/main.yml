@@ -1,0 +1,44 @@
+---
+# tasks file for ood-vnc
+- name: Install ood-vnc requirements ( on machine whoose desktop is forwarded)
+  block:
+    - name: Install required yum repos
+      yum:
+        name: 
+          - 'https://yum.osc.edu/ondemand/latest/ondemand-release-compute-3.0-1.noarch.rpm'
+        state: present
+        disable_gpg_check: true
+
+    - name: Install required yum packages
+      yum:
+        name: 
+          - "@{{ood_vnc_desktop_package}}" # -> groupinstall xfce
+          - turbovnc
+          - python3-websockify
+        state: present
+        disable_gpg_check: true
+
+    - name: Render ood-vnc-module-load.sh template file
+      template:
+        src: 'ood-vnc-module-load.sh.j2'
+        dest:  /etc/profile.d/zz_trinityx_ood_vnc.sh
+        mode: '0644'
+        owner: root
+        group: root
+    
+  when: 
+    - enable_ood_vnc == true
+    - ansible_connection in 'lchroot'
+
+# This should be done by compute node because /trinity/shared is not mounted on compute node
+- name: Render ood-vnc-module.tcl template file
+  template:
+    src: 'ood-vnc-module.tcl.j2'
+    dest: /trinity/shared/modulefiles/ood-vnc.tcl
+    mode: '0644'
+    owner: root
+    group: root
+  
+  when: 
+    - enable_ood_vnc == true
+    - ansible_connection not in 'lchroot'
