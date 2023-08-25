@@ -112,6 +112,11 @@
       when: enable_openhpc
       tags: openhpc
 
+#   it's unclear if we need the below role. it seems to depend on old rpms - Antoine
+#    - role: trinity/environment-modules
+#      when: enable_openhpc
+#      tags: modulefiles
+
     - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'
       slurm_ctrl_ip: '{{ trix_ctrl_ip }}'
@@ -164,9 +169,11 @@
     - role: trinity/ood-portal
       tags: ood
       enable_ssl: true
-      enable_ood_vnc: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+
+    - role: trinity/ood-vnc
+      tags: ood 
 
     - role: trinity/telegraf
       tags: monitoring
