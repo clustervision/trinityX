@@ -39,13 +39,12 @@
       profiles=
       state=enabled
 
-- name: Install required yum packages ( no gpg check )
+- name: Install required yum repos
   yum:
-    name: 
-      - 'https://yum.osc.edu/ondemand/3.0/ondemand-release-web-3.0-1.noarch.rpm'
-      - 'https://updates.clustervision.com/luna/2/luna2-python-3.10.3-rocky8.x86_64.rpm'
+    name: "{{ item.name }}"
     state: present
-    disable_gpg_check: true
+    disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+  with_items: "{{ ood_web_repository_rpms }}"
 
 - name: Install required yum packages
   yum:
