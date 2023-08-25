@@ -4,10 +4,10 @@
   block:
     - name: Install required yum repos
       yum:
-        name: 
-          - 'https://yum.osc.edu/ondemand/latest/ondemand-release-compute-3.0-1.noarch.rpm'
+        name: "{{ item.name }}"
         state: present
-        disable_gpg_check: true
+        disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+        with_items: "{{ ood_compute_repository_rpms }}"
 
     - name: Install required yum packages
       yum:
@@ -28,17 +28,17 @@
     
   when: 
     - enable_ood_vnc == true
-    - ansible_connection in 'lchroot'
+    - ansible_connection in 'chroot'
 
-# This should be done by compute node because /trinity/shared is not mounted on compute node
+# This should be done by controller because /trinity/shared is not mounted on compute node
 - name: Render ood-vnc-module.tcl template file
   template:
     src: 'ood-vnc-module.tcl.j2'
-    dest: /trinity/shared/modulefiles/ood-vnc.tcl
+    dest: '{{ trix_shared }}/modulefiles/ood-vnc.tcl'
     mode: '0644'
     owner: root
     group: root
   
   when: 
     - enable_ood_vnc == true
-    - ansible_connection not in 'lchroot'
+    - ansible_connection not in 'chroot'
