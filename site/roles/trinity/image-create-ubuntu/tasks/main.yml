@@ -13,15 +13,9 @@
     name: "{{ required_packages }}"
     state: present
 
-#- name: Install debootstrap package
-#  dnf:
-#    disable_gpg_check: no
-#    name:
-#      - debootstrap
-#    state: present
 
 - name: Build basic Ubuntu image
-  shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ trix_images }}/{{ image_name }} {{ ubuntu_distribution_source }} | tee /tmp/debootstrap.log"
+  shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ image_path }} {{ ubuntu_distribution_source }} | tee /tmp/debootstrap.log"
   ignore_errors: yes
 
 - name: Verify build
@@ -48,13 +42,16 @@
     - { dev: "ptmx",    mo: "666", t: 'c', ma: 5, mi: 2 }
     - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
 
+- name: Configure repos
+  shell: "echo deb http://archive.ubuntu.com/ubuntu {{ ubuntu_distribution_release }} main universe >> {{ image_path }}/etc/apt/sources.list"
 
-#- name: Install core packages - @core, kernel and grub2
-#  dnf:
-#    disable_gpg_check: yes
-#    name: "{{ image_core_packages }}"
-#    state: present
-#    installroot: "{{ image_path }}"
+- name: Updating Apt
+  shell: "chroot {{ image_path }} \"apt-get update\""
+  ignore_errors: yes
+
+- name: Install core packages - @core, kernel and grub2
+  shell: "chroot {{ image_path }} \"apt-get install {{ item.name }}\""
+  with_items: "{{ image_core_packages }}"
 
 - name: Make .ssh root directory
   file:
