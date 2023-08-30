@@ -27,25 +27,23 @@ import json
 import hashlib
 import argparse
 import configparser
-
+import base64
 
 def make_secret(password):
     """Encodes the given password as a base64 SSHA hash+salt buffer"""
 
-    if password.startswith('{SSHA}'):
+    if password.startswith(b'{SSHA}'):
         return password
 
     salt = os.urandom(4)
-
     # Hash the password and append the salt
     sha = hashlib.sha1(password)
     sha.update(salt)
-
     # Create a base64 encoded string of the concatenated digest + salt
-    digest_b64 = '{}{}'.format(sha.digest(), salt).encode('base64').strip()
+    digest_b64 = base64.b64encode(sha.digest() + salt).strip()
 
     # Tag the digest above with the {SSHA} tag
-    tagged_digest = '{{SSHA}}{}'.format(digest_b64)
+    tagged_digest = b'{SSHA}' + digest_b64
 
     return tagged_digest
 
@@ -137,8 +135,8 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
         add_record.append(('telephoneNumber', [phone.encode('utf-8')]))
 
     if password:
-        password = make_secret(password)
-        add_record.append(('userPassword', [password.encode('utf-8')]))
+        hashed_password = make_secret(password.encode('utf-8'))
+        add_record.append(('userPassword', [hashed_password]))
 
     conn.add_s(dn, add_record)
 

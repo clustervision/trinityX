@@ -14,10 +14,22 @@ v2:
       scontrol: "/usr/bin/scontrol"
       scancel: "/usr/bin/scancel"
   batch_connect:
+    ssh_allow: false
     basic:
-      script_wrapper: |
-        module purge
-        %s
-#    vnc:
-#      script_wrapper: "module add ood-vnc\n%s"      
-
+      script_wrapper: "module restore\n%s"
+    vnc:
+      script_wrapper: "module restore\nmodule load ood-vnc.tcl\n%s"
+  custom:
+    grafana:
+          host: "https://{{ login_host }}:3000"
+          orgId: 1
+          dashboard:
+            name: "workload-management"
+            uid: "trixwrklmgm"
+            panels:
+              cpu: 16
+          labels:
+            cluster: "cluster"
+            host: "host"
+            jobid: "jobid"
+          cluster_override: "defq"
