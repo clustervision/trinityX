@@ -88,8 +88,14 @@
     key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
     path: "{{ image_path }}/root/.ssh/authorized_keys"
 
+- name: Verify if image already exists in luna
+  shell: "luna osimage show {{ image_name }}"
+  register: image_in_luna
+  ignore_errors: yes
+
 - name: Creating image in luna
   shell: "luna osimage add -ge \"/, /boot\" -ge \"/proc/*, /sys/*, /dev/*, /tmp/*, /var/log/*\" -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu {{ image_name }}"
+  when: image_in_luna is defined and image_in_luna.rc|int != 0
 
 # kernel not possible at this stage. it needs to be installed into the image first, i.e. after setup
 #- name: Kernel version in image
