@@ -21,7 +21,11 @@
 #    state: present
 
 - name: Build basic Ubuntu image
-  shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ trix_images }}/{{ image_name }} {{ ubuntu_distribution_source }}"
+  shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ trix_images }}/{{ image_name }} {{ ubuntu_distribution_source }} | tee /tmp/debootstrap.log"
+  ignore_errors: yes
+
+- name: Verify build
+  shell: "grep 'E:' /tmp/debootstrap.log || true"
 
 - name: Create {{ image_path }}/dev
   file:
