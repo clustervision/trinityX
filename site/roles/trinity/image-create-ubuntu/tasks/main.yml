@@ -8,12 +8,17 @@
     name: "{{ image_path }}"
     state: directory
 
-- name: Install debootstrap package
-  dnf:
-    disable_gpg_check: no
-    name:
-      - debootstrap
+- name: Install required packages
+  yum:
+    name: "{{ required_packages }}"
     state: present
+
+#- name: Install debootstrap package
+#  dnf:
+#    disable_gpg_check: no
+#    name:
+#      - debootstrap
+#    state: present
 
 - name: Build basic Ubuntu image
   shell: "debootstrap --variant=buildd {{ ubuntu-distribution-release }} {{ trix_images }}/{{ image_name }} {{ ubuntu-distribution-source }}"
