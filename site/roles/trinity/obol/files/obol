@@ -57,7 +57,7 @@ def exists(key, value):
         elif key == 'username':
             return pwd.getpwnam(value).pw_uid
         elif key == 'gid':
-            return grp.getgrgid(int(value)).gr_gid
+            return grp.getgrgid(int(value.decode())).gr_gid
         elif key == 'groupname':
             return grp.getgrnam(value).gr_gid
 
@@ -74,7 +74,7 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
         if exists('uid', uid) is not False:
             raise Exception('UID %s already exists' % uid)
 
-        uidNumber = uid
+        uidNumber = uid.encode('utf-8')
 
     else:
         uidNumber = increment_id(b, 'uid')
@@ -89,7 +89,7 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
         if exists('gid', gid) is not False:
             raise Exception('GID %s already exists' % gid)
 
-        gidNumber = gid
+        gidNumber = gid.encode('utf-8')
 
     else:
         gidNumber = uidNumber
@@ -111,34 +111,34 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
         expire = '-1'
 
     add_record = [
-     ('objectclass', ['top', 'person', 'organizationalPerson',
-                      'inetOrgPerson', 'posixAccount', 'shadowAccount']),
-     ('uid', [username]),
-     ('cn', [cn]),
-     ('sn', [sn]),
-     ('loginShell', [shell]),
-     ('uidNumber', [str(uidNumber)]),
-     ('gidNumber', [str(gidNumber)]),
-     ('homeDirectory', [home]),
-     ('shadowMin', ['0']),
-     ('shadowMax', ['99999']),
-     ('shadowWarning', ['7']),
-     ('shadowExpire', [str(expire)]),
-     ('shadowLastChange', ['%d' % (time.time() / 86400)])
+     ('objectclass', [b'top', b'person', b'organizationalPerson',
+                      b'inetOrgPerson', b'posixAccount', b'shadowAccount']),
+     ('uid', [username.encode('utf-8')]),
+     ('cn', [cn.encode('utf-8')]),
+     ('sn', [sn.encode('utf-8')]),
+     ('loginShell', [shell.encode('utf-8')]),
+     ('uidNumber', [uidNumber]),
+     ('gidNumber', [gidNumber]),
+     ('homeDirectory', [home.encode('utf-8')]),
+     ('shadowMin', [b'0']),
+     ('shadowMax', [b'99999']),
+     ('shadowWarning', [b'7']),
+     ('shadowExpire', [str(expire).encode('utf-8')]),
+     ('shadowLastChange', [b'%d' % (time.time() / 86400)])
     ]
 
     if givenName:
-        add_record.append(('givenName', [givenName]))
+        add_record.append(('givenName', [givenName.encode('utf-8')]))
 
     if mail:
-        add_record.append(('mail', [mail]))
+        add_record.append(('mail', [mail.encode('utf-8')]))
 
     if phone:
-        add_record.append(('telephoneNumber', [phone]))
+        add_record.append(('telephoneNumber', [phone.encode('utf-8')]))
 
     if password:
         password = make_secret(password)
-        add_record.append(('userPassword', [password]))
+        add_record.append(('userPassword', [password.encode('utf-8')]))
 
     conn.add_s(dn, add_record)
 
@@ -146,9 +146,9 @@ def user_add(b, username, cn, sn, givenName, password, uid, gid, mail, phone,
         # Add the group
         dn = 'cn=%s,ou=Group,%s' % (username, b)
         add_record = [
-            ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
-            ('cn', [username]),
-            ('member', ['uid=%s,ou=People,%s' % (username, b)]),
+            ('objectclass', [b'top', b'groupOfMembers', b'posixGroup']),
+            ('cn', [username.encode('utf-8')]),
+            ('member', [str('uid=%s,ou=People,%s' % (username, b)).encode('utf-8')]),
             ('gidNumber', [gidNumber])
         ]
 
@@ -253,6 +253,7 @@ def user_modify(b, username, **kwargs):
         elif key == 'home':
             key = 'homeDirectory'
 
+        value = value.encode('utf-8')
         if append:
             mod_attrs.append((ldap.MOD_REPLACE, key, value))
 
@@ -307,7 +308,7 @@ def group_add(b, groupname, gid):
         if exists('gid', gid) is not False:
             raise Exception('GID %s already exists' % gid)
 
-        gidNumber = gid
+        gidNumber = gid.encode('utf-8')
 
     else:
         gidNumber = increment_id(b, 'gid')
@@ -315,8 +316,8 @@ def group_add(b, groupname, gid):
     # Add group
     dn = 'cn=%s,ou=Group,%s' % (groupname, b)
     add_record = [
-        ('objectclass', ['top', 'groupOfMembers', 'posixGroup']),
-        ('cn', [groupname]),
+        ('objectclass', [b'top', b'groupOfMembers', b'posixGroup']),
+        ('cn', [groupname.encode('utf-8')]),
         ('gidNumber', [gidNumber])
     ]
 
@@ -337,7 +338,7 @@ def group_addusers(b, groupname, username):
 
             mod_attrs = []
             mod_attrs.append((ldap.MOD_ADD, 'member',
-                              'uid=%s,ou=People,%s' % (name, b)))
+                              str('uid=%s,ou=People,%s' % (name, b)).encode('utf-8')))
             conn.modify_s(dn, mod_attrs)
         except Exception as error:
             print("Error adding %s to %s: %s" % (name, groupname, error))
@@ -351,7 +352,7 @@ def group_delusers(b, groupname, username):
 
     for name in username:
         mod_attrs.append((ldap.MOD_DELETE, 'member',
-                          'uid=%s,ou=People,%s' % (name, b)))
+                          str('uid=%s,ou=People,%s' % (name, b)).encode('utf-8')))
 
     conn.modify_s(dn, mod_attrs)
 
@@ -410,7 +411,7 @@ def increment_id(b, id_type):
         result = conn.search_s(search_dn, ldap.SCOPE_ONELEVEL, filter, attrs)
 
     # Save the next uidNumber to use
-    mod_attrs = [(ldap.MOD_REPLACE, 'uidNumber', str(int(uidNumber) + 1))]
+    mod_attrs = [(ldap.MOD_REPLACE, 'uidNumber', str(int(uidNumber) + 1).encode('utf-8'))]
     conn.modify_s(dn, mod_attrs)
 
     return uidNumber
