@@ -42,15 +42,20 @@
     - { dev: "ptmx",    mo: "666", t: 'c', ma: 5, mi: 2 }
     - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
 
+
 - name: Configure repos
-  shell: "echo deb http://archive.ubuntu.com/ubuntu {{ ubuntu_distribution_release }} main universe >> {{ image_path }}/etc/apt/sources.list"
+  lineinfile:
+    path: "{{ image_path }}/etc/apt/sources.list"
+    line: "deb http://archive.ubuntu.com/ubuntu {{ ubuntu_distribution_release }} main universe"
+    state: present
+    create: 'yes'
 
 - name: Updating Apt
   shell: "chroot {{ image_path }} apt-get update"
   ignore_errors: yes
 
 - name: Install core packages - @core, kernel and grub2
-  shell: "chroot {{ image_path }} apt-get install {{ item }}"
+  shell: "chroot {{ image_path }} apt-get -y install {{ item }}"
   with_items: "{{ image_core_packages }}"
 
 - name: Make .ssh root directory
