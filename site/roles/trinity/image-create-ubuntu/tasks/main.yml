@@ -91,14 +91,15 @@
 - name: Creating image in luna
   shell: "luna osimage add -ge \"/, /boot\" -ge \"/proc/*, /sys/*, /dev/*, /tmp/*, /var/log/*\" -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu {{ image_name }}"
 
-- name: Kernel version in image
-  shell: "ls {{ image_path }}/lib/modules|sort|tail -n1"
-  register: kernel_version
-  changed_when: False
+# kernel not possible at this stage. it needs to be installed into the image first, i.e. after setup
+#- name: Kernel version in image
+#  shell: "ls {{ image_path }}/lib/modules|sort|tail -n1"
+#  register: kernel_version
+#  changed_when: False
 
-- name: Set the kernel version for image
-  ansible.builtin.shell:
-    cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
+#- name: Set the kernel version for image
+#  ansible.builtin.shell:
+#    cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
 
 # needs to be done after image setup - Antoine
 #- name: Pack the image
