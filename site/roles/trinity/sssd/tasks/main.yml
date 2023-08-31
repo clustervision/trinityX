@@ -32,19 +32,19 @@
 
 - name: Ensure certs directory exists
   file:
-    path: '/etc/openldap/certs/'
+    path: "{{ ca_certificate_path }}"
     state: directory
 
 - name: Copy CA certificate
   copy:
     src: "{{ ssl_ca_cert }}"
-    dest: /etc/openldap/certs/cluster-ca.crt
+    dest: "{{ ca_certificate_path }}/cluster-ca.crt"
   when: ssl_ca_cert is defined
 
 - name: Adjust OpenLDAP client TLS configuration
   lineinfile:
-    path: '/etc/openldap/ldap.conf'
-    line: 'TLS_CACERT   /etc/openldap/certs/cluster-ca.crt'
+    path: "{{ ldap_conf }}"
+    line: 'TLS_CACERT   {{ ca_certificate_path }}/cluster-ca.crt'
 
 - name: Enable sssd service
   systemd:
