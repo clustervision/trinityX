@@ -204,6 +204,18 @@
     regexp: '^ENDPOINT\s*='
     line: "ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050"
 
+- name: configure protocol for daemon API
+  ansible.builtin.lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^PROTOCOL\s*='
+    line: "PROTOCOL = {{ luna_protocol }}"
+
+- name: configure verify certificate for daemon API
+  ansible.builtin.lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^VERIFY_CERTIFICATE\s*='
+    line: "VERIFY_CERTIFICATE = {{ luna_verify_certificate }}"
+
 - name: Ensuring luna ini file is unix
   shell: "dos2unix {{ trix_luna }}/daemon/config/luna.ini"
 
@@ -265,6 +277,24 @@
       regexp: '^PASSWORD\s*='
       line: "PASSWORD = {{ luna_password }}"
 
+  - name: configure endpoint for cli API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^ENDPOINT\s*='
+      line: "ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050"
+
+  - name: configure protocol for cli API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^PROTOCOL\s*='
+      line: "PROTOCOL = {{ luna_protocol }}"
+
+  - name: configure verify certificate for cli API
+    ansible.builtin.lineinfile:
+      path: '{{ trix_luna }}/cli/config/luna.ini'
+      regexp: '^VERIFY_CERTIFICATE\s*='
+      line: "VERIFY_CERTIFICATE = {{ luna_verify_certificate }}"
+
   - name: Ensuring luna ini file is unix
     shell: "dos2unix {{ trix_luna }}/cli/config/luna.ini"
 
@@ -274,12 +304,6 @@
       owner: root
       group: root
       mode: '0640'
-
-  - name: configure endpoint for daemon API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^ENDPOINT\s*='
-      line: "ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050"
 
   when: cli_config_file.stat.exists
 
