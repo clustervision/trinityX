@@ -256,12 +256,10 @@
         force: "no"
       with_items:
         - slurm-partitions.conf
-        - slurm-nodes.conf
         - slurm-user.conf
         - slurm-health.conf
         - topology.conf
         - cgroup.conf
-        - acct_gather.conf
       notify: restart slurm
 
     - name: Place SLURM scripts
@@ -276,15 +274,15 @@
         - balance.sh
       notify: restart slurm
 
-    - name: Render slurm.conf and slurmdbd.conf
+    - name: Render slurm.conf, slurm-nodes and others
       template:
         src: '{{ item.0 }}.j2'
         dest: '{{ slurm_conf_path }}/{{ item.0 }}'
         mode: '{{ item.1 }}'
         backup: "yes"
       with_together:
-        - ['slurm.conf', 'slurmdbd.conf']
-        - ['0644', '0600']
+        - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'acct_gather.conf']
+        - ['0644', '0600', '0644', '0644']
       notify: restart slurm
 
     - name: Set UsePAM to 1 in slurm-user.conf
