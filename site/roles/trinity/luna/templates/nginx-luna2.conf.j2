@@ -13,12 +13,12 @@ server {
         proxy_set_header Content-Length "";
         proxy_set_header X-Original-URI $request_uri;
         proxy_set_header CallType $calltype;
-{% if luna_protocol == "https" -%}
+{%- if luna_protocol == "https" -%}
 #        proxy_ssl_server_name on;
-  {% if luna_verify_certificate|lower == "false" or luna_verify_certificate|lower == "no" -%}
-               proxy_ssl_verify off;
+  {%- if luna_verify_certificate|lower == "false" or luna_verify_certificate|lower == "no" -%}
+        proxy_ssl_verify off;
   {% else -%}
-               proxy_ssl_verify on;
+        proxy_ssl_verify on;
   {% endif %}
 {% endif %}
     }
@@ -32,6 +32,20 @@ server {
             expires max;
         }
     }
+
+{%- if luna_protocol == "https" -%}
+    location /boot {
+        proxy_pass https://127.0.0.1:7050/boot;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify off;
+    }
+
+    location /boot/(.*) {
+        proxy_pass https://127.0.0.1:7050/boot/$1;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify off;
+    }
+{% endif %}
 
     location / {
     }
