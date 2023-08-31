@@ -33,19 +33,17 @@ server {
         }
     }
 
-{% if luna_protocol == "https" %}
     location /boot {
-        proxy_pass https://127.0.0.1:7050/boot;
+        proxy_pass {{ luna_protocol }}://127.0.0.1:7050/boot;
         proxy_ssl_server_name on;
         proxy_ssl_verify off;
     }
 
     location /boot/(.*) {
-        proxy_pass https://127.0.0.1:7050/boot/$1;
+        proxy_pass {{ luna_protocol }}://127.0.0.1:7050/boot/$1;
         proxy_ssl_server_name on;
         proxy_ssl_verify off;
     }
-{% endif %}
 
     location / {
     }
