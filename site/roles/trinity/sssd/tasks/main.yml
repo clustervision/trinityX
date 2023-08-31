@@ -71,3 +71,21 @@
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
   changed_when: false
+  when: ansible_facts['os_family'] == "RedHat"
+
+- block:
+  - name: Configure nsswitch.conf
+    template:
+      src: 'nsswitch-manually.conf.j2'
+      dest: '/etc/nsswitch.conf'
+      owner: 'root'
+      group: 'root'
+      mode: '0644'
+
+  - name: Configure pam to use sss
+    shell: "pam-auth-update --enable sss"
+
+  - name: Configure pam to create homedir on first logon
+    shell: "pam-auth-update --enable mkhomedir"
+  when: ansible_facts['os_family'] == "Debian"
+
