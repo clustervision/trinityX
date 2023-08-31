@@ -86,6 +86,10 @@
     dest: '/etc/trinity/passwords/images/{{ image_name }}/root.txt'
   when: image_password|default([])
 
+- name: Disable tinysshd if it is there
+  shell: "chroot {{ image_path }} systemctl disable tinysshd.socket"
+  ignore_errors: yes
+
 - name: Generate SSH keys
   user:
     name: root
