@@ -41,6 +41,7 @@ Steps to install TrinityX
 1. Install CentOS Minimal on your controller(s). It is recommended to put ``/trinity`` and  ``/var/lib/influxdb`` on it's own filesystem.
 
 2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks on the controller(s).
+   Ansible uses the interface address to determine the course of the playbook.
 
 3. Configure passwordless authentication to the controller itself or/and for both controllers in the HA case.
 
@@ -90,11 +91,15 @@ Steps to install TrinityX
 
     **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
 
-8. Create a default OS image::
+8. Create a default RedHat/Rocky OS image::
 
-    # ansible-playbook compute.yml
+    # ansible-playbook compute-redhat.yml
 
-Now you have your controller(s) installed and the default OS image created!
+9. Optionally Create a default Ubuntu OS image::
+
+    # ansible-playbook compute-ubuntu.yml
+
+Now you have your controller(s) installed and the default OS image(s) created!
 
 
 Customizing your installation
