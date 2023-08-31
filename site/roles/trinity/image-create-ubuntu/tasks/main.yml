@@ -61,13 +61,11 @@
 - name: Download luna2-client package
   get_url:
     url: "{{ luna2_client_package }}"
-    dest: "/tmp/{{ luna2_client_package|split('/')|last }}"
-    validate_certs: false
+    dest: "{{ image_path }}/tmp/{{ luna2_client_package|split('/')|last }}"
+#    validate_certs: false
 
 - name: install luna2-client package
-  apt:
-    deb: "/tmp/{{ luna2_client_package|split('/')|last }}"
-    state: present
+  shell: "chroot {{ image_path }} apt -y install /tmp/{{ luna2_client_package|split('/')|last }}"
 
 - name: Make .ssh root directory
   file:
