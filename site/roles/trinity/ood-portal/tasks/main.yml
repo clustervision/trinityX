@@ -189,15 +189,14 @@
       ansible.builtin.unarchive:
         src: "/tmp/{{ ood_download_url.split('/') | last }}"
         dest: "{{ trix_ood }}"
-    when: ood_download_url is defined
 
     - name: Remove version directory
       file:
         state: absent
         path: "{{ trix_ood }}/{{ ood_version }}"
 
-   - name: Symlink to current build
-     file:
+    - name: Symlink to current build
+      file:
         state: link
         src: "{{ trix_ood }}/{{ ood_download_lead_path.stdout }}"
         dest: "{{ trix_ood }}/{{ ood_version }}"
