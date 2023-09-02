@@ -182,8 +182,7 @@
       ansible.builtin.unarchive:
         src: "/tmp/{{ ood_download_url.split('/') | last }}"
         dest: "{{ trix_ood }}/{{ ood_version }}"
-    when: ood_download_url is defined
-  when: ood_download_lead_path.rc != 0
+    when: ood_download_lead_path.rc != 0
 
   - block:
     - name: Unpack download
@@ -202,7 +201,8 @@
         state: link
         src: "{{ trix_ood }}/{{ ood_download_lead_path.stdout }}"
         dest: "{{ trix_ood }}/{{ ood_version }}"
-  when: ood_download_lead_path.rc == 0
+    when: ood_download_lead_path.rc == 0
+  when: ood_download_url is defined
 
 - name: Install trinity-ood custom apps python requirements 
   ansible.builtin.pip:
