@@ -79,22 +79,22 @@
     regexp: "dnssec-validation"
   notify: restart named
 
-- name: Configure named forwarders
-  blockinfile:
-    path: /etc/named.conf
-    insertafter: "recursion yes;"
-    marker: "// {mark} forwarders"
-    block: |
-      {% if ansible_dns["nameservers"] is defined or bind_dns_forwarders %}
-          forwarders {
-            {% if bind_dns_forwarders %}
-              {% for f in bind_dns_forwarders %}{{ f }}; {% endfor %}
-            {% else %}
-              {% for f in ansible_dns["nameservers"] %}{% if f not in ansible_all_ipv4_addresses%}{{ f }};{% endif %} {% endfor %}
-            {% endif %}
-          };
-      {% endif %}
-  notify: restart named
+#- name: Configure named forwarders
+#  blockinfile:
+#    path: /etc/named.conf
+#    insertafter: "recursion yes;"
+#    marker: "// {mark} forwarders"
+#    block: |
+#      {% if ansible_dns["nameservers"] is defined or bind_dns_forwarders %}
+#          forwarders {
+#            {% if bind_dns_forwarders %}
+#              {% for f in bind_dns_forwarders %}{{ f }}; {% endfor %}
+#            {% else %}
+#              {% for f in ansible_dns["nameservers"] %}{% if f not in ansible_all_ipv4_addresses%}{{ f }};{% endif %} {% endfor %}
+#            {% endif %}
+#          };
+#      {% endif %}
+#  notify: restart named
 
 - name: Render /etc/resolv.conf
   template:
