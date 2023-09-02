@@ -433,10 +433,6 @@
     enabled: yes
   with_items: 
     - "{{ enable_services }}"
-#  with_items:
-#    - xinetd
-#    - dhcpd
-#    - luna2-daemon
 ##  when: not ha
 
 - name: Start luna services
@@ -445,6 +441,11 @@
     state: started
   with_items:
     - "{{ start_services }}"
-#    - xinetd
-#    - luna2-daemon
+
+- name: Wait for daemon to settle
+  pause:
+    seconds: 10
+
+- name: Setting default DNS forwarder
+  shell: "luna cluster change -fs 8.8.8.8,8.8.4.4"
 
