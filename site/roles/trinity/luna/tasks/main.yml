@@ -180,51 +180,18 @@
   set_fact:
     luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
 
-- name: configure secret key for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^SECRET_KEY\s*='
-    line: "SECRET_KEY = {{ luna_secret_key }}"
+- name: Create daemon config directory
+  file:
+    path: '{{ trix_luna }}/daemon/config/'
+    state: directory
 
-- name: configure luna username for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^USERNAME\s*='
-    line: "USERNAME = {{ luna_username }}"
-
-- name: configure luna password for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^PASSWORD\s*='
-    line: "PASSWORD = {{ luna_password }}"
-
-- name: configure endpoint for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^ENDPOINT\s*='
-    line: "ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050"
-
-- name: configure protocol for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^PROTOCOL\s*='
-    line: "PROTOCOL = {{ luna_protocol }}"
-
-- name: configure verify certificate for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^VERIFY_CERTIFICATE\s*='
-    line: "VERIFY_CERTIFICATE = {{ luna_verify_certificate }}"
-
-- name: Ensuring luna ini file is unix
-  shell: "dos2unix {{ trix_luna }}/daemon/config/luna.ini"
-
-- name: Change file permissions of daemon luna ini file
-  ansible.builtin.file:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
+- name: Render daemon luna.ini
+  template:
+    src: 'luna2-daemon.ini.j2'
+    dest: '{{ trix_luna }}/daemon/config/luna.ini'
     owner: root
     group: root
-    mode: '0640'
+    mode: 0640
 
 - stat: 
     path: '{{ trix_luna }}/cli/config'
@@ -236,76 +203,19 @@
     state: absent
   when: cli_config_dir.stat.islnk is defined and cli_config_dir.stat.islnk
 
-- name: verify if cli config file exists
-  stat: 
-    path: '{{ trix_luna }}/cli/config/luna.ini'
-  register: cli_config_file
+- name: Create cli config directory
+  file:
+    path: '{{ trix_luna }}/cli/config/'
+    state: directory
 
-- block:
-  - name: Create cli config directory
-    file:
-      path: '{{ trix_luna }}/cli/config/'
-      state: directory
+- name: Render cli luna.ini
+  template:
+    src: 'luna2.ini.j2'
+    dest: '{{ trix_luna }}/cli/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
 
-  - name: Render cli luna.ini
-    template:
-      src: 'luna2.ini.j2'
-      dest: '{{ trix_luna }}/cli/config/luna.ini'
-      owner: root
-      group: root
-      mode: 0640
-
-  when: not cli_config_file.stat.exists
-
-
-- block:
-  - name: configure secret key for cli API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^SECRET_KEY\s*='
-      line: "SECRET_KEY = {{ luna_secret_key }}"
-
-  - name: configure luna username for cli API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^USERNAME\s*='
-      line: "USERNAME = {{ luna_username }}"
-
-  - name: configure luna password for cli API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^PASSWORD\s*='
-      line: "PASSWORD = {{ luna_password }}"
-
-  - name: configure endpoint for cli API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^ENDPOINT\s*='
-      line: "ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050"
-
-  - name: configure protocol for cli API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^PROTOCOL\s*='
-      line: "PROTOCOL = {{ luna_protocol }}"
-
-  - name: configure verify certificate for cli API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^VERIFY_CERTIFICATE\s*='
-      line: "VERIFY_CERTIFICATE = {{ luna_verify_certificate }}"
-
-  - name: Ensuring luna ini file is unix
-    shell: "dos2unix {{ trix_luna }}/cli/config/luna.ini"
-
-  - name: Change file permissions of cli luna ini file
-    ansible.builtin.file:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      owner: root
-      group: root
-      mode: '0640'
-
-  when: cli_config_file.stat.exists
 
 # ------------------ gunicorn config ----------------
 
