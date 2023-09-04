@@ -1,5 +1,16 @@
 ---
 
+- name: Verify if /etc/hosts exists
+  stat:
+    path: /etc/hosts
+  register: etc_hosts
+
+- name: Create empty /etc/hosts
+  file:
+    path: /etc/hosts
+    state: touched
+  when: not etc_hosts.stat.exists
+
 - name: Set HA controllers' domain name
   blockinfile:
     path: /etc/hosts
