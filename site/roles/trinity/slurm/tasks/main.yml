@@ -255,7 +255,6 @@
         dest: '{{ slurm_conf_path }}/{{ item }}'
         force: "no"
       with_items:
-        - slurm-partitions.conf
         - slurm-user.conf
         - slurm-health.conf
         - topology.conf
@@ -281,8 +280,8 @@
         mode: '{{ item.1 }}'
         backup: "yes"
       with_together:
-        - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'acct_gather.conf']
-        - ['0644', '0600', '0644', '0644']
+        - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'slurm-partitions.conf', 'acct_gather.conf']
+        - ['0644', '0600', '0644', '0644', '0644']
       notify: restart slurm
 
     - name: Set UsePAM to 1 in slurm-user.conf
