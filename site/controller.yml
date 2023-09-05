@@ -83,7 +83,6 @@
       bind_dns_forwarders:
         - '8.8.8.8'
         - '8.8.4.4'
-      resolv_server: '{{ trix_ctrl_ip }}'
       tags: bind
 
     - role: trinity/openldap
@@ -134,7 +133,16 @@
       when: workload_manager == "slurm"
 
     - role: trinity/luna
+      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       tags: luna
+
+    - role: trinity/resolv
+      bind_dns_forwarders:
+        - '8.8.8.8'
+        - '8.8.4.4'
+      resolv_server: '{{ trix_ctrl_ip }}'
+      tags: resolv
 
     - role: trinity/rsyslog
       syslog_listeners:
@@ -167,10 +175,10 @@
       tags: transmission
 
     - role: trinity/ood-portal
-      tags: ood
       enable_ssl: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      tags: ood
 
     - role: trinity/ood-vnc
       tags: ood 
