@@ -34,6 +34,15 @@
     dest: /etc/redis.conf
     regexp: '^bind'
     line: 'bind 127.0.0.1'
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
+
+- name: Ensure redis binds to localhost 
+  tags: redis
+  lineinfile:
+    dest: /etc/redis/redis.conf
+    regexp: '^bind'
+    line: 'bind 127.0.0.1'
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - name: Start redis
   systemd:
