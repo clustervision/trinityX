@@ -44,11 +44,11 @@
       disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       state: present
       update_cache: true
-      retries: 3
-      delay: 3
-      register: result
-      until: result.rc == 0
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
+    retries: 3
+    delay: 3
+    register: result
+    until: result.rc == 0
     with_items: "{{ external_repository_rpms }}"
 
   - name: Install external repo Packages
@@ -57,11 +57,11 @@
 #      disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       state: present
       update_cache: true
-      retries: 3
-      delay: 3
-      register: result
-      until: result.rc == 0
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
+    retries: 3
+    delay: 3
+    register: result
+    until: result.rc == 0
     with_items: "{{ package_based_repositories }}"
 
   when: ansible_facts['os_family'] == "RedHat"
