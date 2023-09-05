@@ -287,11 +287,22 @@
     line: 'include "{{ luna2_named_include_file }}";'
   notify: restart named
 
+- name: Stop nginx
+  service:
+    name: nginx
+    state: stopped
+
 - name: Add luna's server configuration to nginx
   template:
     src: 'nginx-luna2.conf.j2'
     dest: '/etc/nginx/conf.d/nginx-luna2.conf'
-  notify: restart nginx
+#  notify: restart nginx
+   # this notify is being ignored. trust me. Antoine
+
+- name: Start nginx
+  service:
+    name: nginx
+    state: started
 
 - name: Copy libluna-fakeuname to lib64
   copy:
