@@ -8,5 +8,5 @@ else
   yum install curl tar ansible git epel-release -y
 #  ansible-galaxy install OndrejHome.pcs-modules-2
   echo "#### Please configure the network before starting Ansible ####"
-  dnf clean all
+#  dnf clean all
 fi
