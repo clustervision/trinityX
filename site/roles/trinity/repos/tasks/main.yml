@@ -6,9 +6,9 @@
     - "{{ ansible_os_family }}.yaml"
   ignore_errors: yes
 
-- name: Clean up all caches and repos
-  shell: "dnf clean all"
-  ignore_errors: True
+#- name: Clean up all caches and repos
+#  shell: "dnf clean all"
+3  ignore_errors: True
 
 #- debug:
 #    msg: "{{ trinityx_repositories }}"
@@ -43,6 +43,7 @@
       name: "{{ item.name }}"
       disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       state: present
+      update_cache: true
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
     with_items: "{{ external_repository_rpms }}"
 
@@ -51,6 +52,7 @@
       name: "{{ item.name }}"
 #      disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       state: present
+      update_cache: true
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
     with_items: "{{ package_based_repositories }}"
 
