@@ -83,7 +83,6 @@
       bind_dns_forwarders:
         - '8.8.8.8'
         - '8.8.4.4'
-      resolv_server: '{{ trix_ctrl_ip }}'
       tags: bind
 
     - role: trinity/openldap
@@ -137,6 +136,13 @@
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       tags: luna
+
+    - role: trinity/resolv
+      bind_dns_forwarders:
+        - '8.8.8.8'
+        - '8.8.4.4'
+      resolv_server: '{{ trix_ctrl_ip }}'
+      tags: resolv
 
     - role: trinity/rsyslog
       syslog_listeners:
