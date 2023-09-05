@@ -6,10 +6,6 @@
     - "{{ ansible_os_family }}.yaml"
   ignore_errors: yes
 
-#- name: Clean up all caches and repos
-#  shell: "dnf clean all"
-#  ignore_errors: True
-
 #- debug:
 #    msg: "{{ trinityx_repositories }}"
 
@@ -50,6 +46,10 @@
     register: result
     until: result.rc == 0
     with_items: "{{ external_repository_rpms }}"
+
+  - name: Make caches
+    shell: "dnf makecache -y"
+    ignore_errors: True
 
   - name: Install external repo Packages
     dnf:
