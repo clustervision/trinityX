@@ -1,0 +1,19 @@
+---
+
+- name: Get image path
+  set_fact:
+    image_path: "{{ trix_images }}/{{ image_name }}"
+
+- name: Read facts
+  slurp:
+    src: "{{ image_path }}/facts.dat"
+  register: slurp_output
+
+- name: Load facts
+  set_fact:
+    data: "{{ slurp_output['content'] | b64decode }}"
+
+- name: Display facts
+  debug:
+    var: data
+
