@@ -2,26 +2,28 @@
 
 # running inside chroot !!
 
-- name: Read facts
-  slurp:
-    src: "/facts.dat"
-  register: slurp_output
+- block:
+  - name: Read facts
+    slurp:
+      src: "/facts.dat"
+    register: slurp_output
 
-- name: Load facts
-  set_fact:
-    data: "{{ slurp_output['content'] | b64decode }}"
+  - name: Load facts
+    set_fact:
+      data: "{{ slurp_output['content'] | b64decode }}"
 
-- name: Display facts
-  debug:
-    var: data
+#  - name: Display facts
+#    debug:
+#      var: data
 
-- name: Set trix_ctrl_hostname fact
-  set_fact:
-     trix_ctrl_hostname: "{{ data['trix_ctrl_hostname'] }}"
+  - name: Set trix_ctrl_hostname fact
+    set_fact:
+       trix_ctrl_hostname: "{{ data['trix_ctrl_hostname'] }}"
 
-- name: Set trix_ctrl_ip fact
-  set_fact:
-     trix_ctrl_ip: "{{ data['trix_ctrl_ip'] }}"
+  - name: Set trix_ctrl_ip fact
+    set_fact:
+       trix_ctrl_ip: "{{ data['trix_ctrl_ip'] }}"
 
-- debug:
-    msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
+  - debug:
+      msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
+  when: ansible_connection in 'chroot'
