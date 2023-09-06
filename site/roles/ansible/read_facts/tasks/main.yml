@@ -5,7 +5,7 @@
 - block:
   - name: Read facts
     slurp:
-      src: "/facts.dat"
+      src: /facts.dat
     register: slurp_output
 
   - name: Load facts
@@ -26,4 +26,10 @@
 
   - debug:
       msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
+
+  - name: Remove no longer needed facts file
+    file:
+      path: /facts.dat
+      state: absent
+
   when: ansible_connection in 'chroot'
