@@ -36,3 +36,15 @@
     opts: '{{ item.options }},proto={{ "rdma" if nfs_enable_rdma else "tcp" }}'
     state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
   with_items: '{{ nfs_mounts }}'
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Setup NFS mounts
+  mount:
+    path: '{{ item.path }}'
+    src: '{{ item.remote }}'
+    fstype: 'nfs'
+    opts: '{{ item.options }}'
+    state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
+  with_items: '{{ nfs_mounts }}'
+  when: ansible_facts['os_family'] == "Debian"
+
