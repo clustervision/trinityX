@@ -264,12 +264,12 @@
   notify: restart xinetd
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
-- name: Ensure /tftpboot exists
-  file:
-    path: '/tftpboot'
-    state: directory
-
 - block:
+  - name: Ensure /tftpboot exists
+    file:
+      path: '/tftpboot'
+      state: directory
+
   - name: Download iPXE EFI image to /tftpboot
     get_url:
       url: http://boot.ipxe.org/ipxe.efi
@@ -284,6 +284,11 @@
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
 - block:
+  - name: Ensure /var/lib/tftpboot exists
+    file:
+      path: '/var/lib/tftpboot'
+      state: directory
+
   - name: Download iPXE EFI image to /var/lib/tftpboot
     get_url:
       url: http://boot.ipxe.org/ipxe.efi
