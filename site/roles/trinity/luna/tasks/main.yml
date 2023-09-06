@@ -269,17 +269,33 @@
     path: '/tftpboot'
     state: directory
 
-- name: Download iPXE EFI image to /tftpboot
-  get_url:
-    url: http://boot.ipxe.org/ipxe.efi
-    dest: /tftpboot/luna_ipxe.efi
-    mode: '0444'
+- block:
+  - name: Download iPXE EFI image to /tftpboot
+    get_url:
+      url: http://boot.ipxe.org/ipxe.efi
+      dest: /tftpboot/luna_ipxe.efi
+      mode: '0444'
 
-- name: Download iPXE legacy image to /tftpboot
-  get_url:
-    url: http://boot.ipxe.org/undionly.kpxe
-    dest: /tftpboot/luna_undionly.kpxe
-    mode: '0444'
+  - name: Download iPXE legacy image to /tftpboot
+    get_url:
+      url: http://boot.ipxe.org/undionly.kpxe
+      dest: /tftpboot/luna_undionly.kpxe
+      mode: '0444'
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
+
+- block:
+  - name: Download iPXE EFI image to /var/lib/tftpboot
+    get_url:
+      url: http://boot.ipxe.org/ipxe.efi
+      dest: /var/lib/tftpboot/luna_ipxe.efi
+      mode: '0444'
+
+  - name: Download iPXE legacy image to /var/lib/tftpboot
+    get_url:
+      url: http://boot.ipxe.org/undionly.kpxe
+      dest: /var/lib/tftpboot/luna_undionly.kpxe
+      mode: '0444'
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - name: Include luna's DNS zone file in named conf
   lineinfile:
