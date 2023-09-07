@@ -4,6 +4,7 @@
   with_first_found:
     - "{{ ansible_distribution }}.yaml"
     - "{{ ansible_os_family }}.yaml"
+  ignore_errors: yes
 
 #- debug:
 #    msg: "{{ trinityx_repositories }}"
@@ -26,26 +27,41 @@
 #    with_items: "{{ trinityx_repositories }}"
 #    ignore_errors: True
 
-  - name: Download external repo RPMS
-    get_url: 
-      url: "{{ item.name }}"
-      dest: "/tmp/{{ item.file }}"
-    with_items: "{{ external_repository_rpms }}"
+#  - name: Download external repo RPMS
+#    get_url: 
+#      url: "{{ item.name }}"
+#      dest: "/tmp/{{ item.file }}"
+#    with_items: "{{ external_repository_rpms }}"
 
   - name: Install external repo RPMS
     dnf:
-      name: "/tmp/{{ item.file }}"
+#      name: "/tmp/{{ item.file }}"
+      name: "{{ item.name }}"
       disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       state: present
+      update_cache: true
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
+    retries: 3
+    delay: 3
+    register: result
+    until: result.rc == 0
     with_items: "{{ external_repository_rpms }}"
+
+  - name: Make caches
+    shell: "dnf makecache -y"
+    ignore_errors: True
 
   - name: Install external repo Packages
     dnf:
       name: "{{ item.name }}"
 #      disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       state: present
+      update_cache: true
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
+    retries: 3
+    delay: 3
+    register: result
+    until: result.rc == 0
     with_items: "{{ package_based_repositories }}"
 
   when: ansible_facts['os_family'] == "RedHat"

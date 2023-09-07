@@ -1,10 +1,23 @@
 ---
 # tasks file for nfs-mounts
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yaml"
+  ignore_errors: yes
+
 - name: Install nfs packages
   yum:
     name: '{{ nfs_packages }}'
     state: present
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Install nfs packages
+  apt:
+    name: '{{ nfs_packages }}'
+    state: present
+  when: ansible_facts['os_family'] == "Debian"
 
 - name: Ensure mountpoints exist
   file:
@@ -23,3 +36,15 @@
     opts: '{{ item.options }},proto={{ "rdma" if nfs_enable_rdma else "tcp" }}'
     state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
   with_items: '{{ nfs_mounts }}'
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Setup NFS mounts
+  mount:
+    path: '{{ item.path }}'
+    src: '{{ item.remote }}'
+    fstype: 'nfs'
+    opts: '{{ item.options }}'
+    state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
+  with_items: '{{ nfs_mounts }}'
+  when: ansible_facts['os_family'] == "Debian"
+

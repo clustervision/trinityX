@@ -1,0 +1,29 @@
+---
+- import_playbook: trinity-ubuntu-image-create.yml
+  vars:
+    image_name: ubuntu
+    # The password to set up for the root user in the image.
+    # If empty, it will be generated at random.
+    #
+    image_password:
+
+
+- import_playbook: trinity-ubuntu-image-setup.yml
+  vars:
+    hostlist: "{{ image_name|default('ubuntu') }}.osimages.luna"
+
+- hosts:
+    - "{{ image_name|default('ubuntu') }}.osimages.luna"
+  roles:
+    - role: trinity/wrapup-images
+      tags: wrapup-images
+
+
+- hosts: controllers
+  roles:
+    - role: trinity/pack-images
+      vars:
+         params:
+            image_name: "{{ image_name|default('ubuntu') }}"
+      tags: pack-images
+

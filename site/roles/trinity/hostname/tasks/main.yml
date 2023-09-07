@@ -1,5 +1,16 @@
 ---
 
+- name: Verify if /etc/hosts exists
+  stat:
+    path: /etc/hosts
+  register: etc_hosts
+
+- name: Create empty /etc/hosts
+  file:
+    path: /etc/hosts
+    state: touch
+  when: not etc_hosts.stat.exists
+
 - name: Set HA controllers' domain name
   blockinfile:
     path: /etc/hosts
@@ -7,7 +18,7 @@
       {{trix_ctrl1_ip}}    {{trix_ctrl1_hostname}}.{{trix_domain}} {{trix_ctrl1_hostname}}
       {{trix_ctrl2_ip}}    {{trix_ctrl2_hostname}}.{{trix_domain}} {{trix_ctrl2_hostname}}
       {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
-      {{ ansible_default_ipv4.address }} {{ ansible_fqdn.split('.') | first }} {{ ansible_fqdn }}
+#      {{ ansible_default_ipv4.address }} {{ ansible_fqdn.split('.') | first }} {{ ansible_fqdn }}
   when: ha|default(False)
 
 - name: Set non-HA controller's domain name
@@ -15,7 +26,7 @@
     path: /etc/hosts
     block: |
       {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
-      {{ ansible_default_ipv4.address }} {{ ansible_fqdn.split('.') | first }} {{ ansible_fqdn }}
+#      {{ ansible_default_ipv4.address }} {{ ansible_fqdn.split('.') | first }} {{ ansible_fqdn }}
   when: not ha|default(False)
 
 

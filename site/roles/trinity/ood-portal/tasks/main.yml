@@ -173,10 +173,34 @@
       url: "{{ ood_download_url }}"
       dest: "/tmp/"
 
-  - name: Unpack download
-    ansible.builtin.unarchive:
-      src: "/tmp/{{ ood_download_url.split('/') | last }}"
-      dest: "{{ trix_ood }}/{{ ood_version }}"
+  - name: Verify leading path in download
+    shell: "tar -tf /tmp/{{ ood_download_url|split('/')|last }} | head -n1 | cut -f1 -d '/' | grep trinity-ood"
+    register: ood_download_lead_path
+
+  - block:
+    - name: Unpack download
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ ood_download_url.split('/') | last }}"
+        dest: "{{ trix_ood }}/{{ ood_version }}"
+    when: ood_download_lead_path.rc != 0
+
+  - block:
+    - name: Unpack download
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ ood_download_url.split('/') | last }}"
+        dest: "{{ trix_ood }}"
+
+    - name: Remove version directory
+      file:
+        state: absent
+        path: "{{ trix_ood }}/{{ ood_version }}"
+
+    - name: Symlink to current build
+      file:
+        state: link
+        src: "{{ trix_ood }}/{{ ood_download_lead_path.stdout }}"
+        dest: "{{ trix_ood }}/{{ ood_version }}"
+    when: ood_download_lead_path.rc == 0
   when: ood_download_url is defined
 
 - name: Install trinity-ood custom apps python requirements 

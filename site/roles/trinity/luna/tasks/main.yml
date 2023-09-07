@@ -6,6 +6,7 @@
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  ignore_errors: yes
 
 - name: Install luna2 packages
   yum:
@@ -179,39 +180,18 @@
   set_fact:
     luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
 
-- name: configure secret key for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^SECRET_KEY\s*='
-    line: "SECRET_KEY = {{ luna_secret_key }}"
+- name: Create daemon config directory
+  file:
+    path: '{{ trix_luna }}/daemon/config/'
+    state: directory
 
-- name: configure luna username for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^USERNAME\s*='
-    line: "USERNAME = {{ luna_username }}"
-
-- name: configure luna password for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^PASSWORD\s*='
-    line: "PASSWORD = {{ luna_password }}"
-
-- name: configure endpoint for daemon API
-  ansible.builtin.lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^ENDPOINT\s*='
-    line: "ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050"
-
-- name: Ensuring luna ini file is unix
-  shell: "dos2unix {{ trix_luna }}/daemon/config/luna.ini"
-
-- name: Change file permissions of daemon luna ini file
-  ansible.builtin.file:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
+- name: Render daemon luna.ini
+  template:
+    src: 'luna2-daemon.ini.j2'
+    dest: '{{ trix_luna }}/daemon/config/luna.ini'
     owner: root
     group: root
-    mode: '0640'
+    mode: 0640
 
 - stat: 
     path: '{{ trix_luna }}/cli/config'
@@ -223,64 +203,30 @@
     state: absent
   when: cli_config_dir.stat.islnk is defined and cli_config_dir.stat.islnk
 
-- name: verify if cli config file exists
-  stat: 
-    path: '{{ trix_luna }}/cli/config/luna.ini'
-  register: cli_config_file
+- name: Create cli config directory
+  file:
+    path: '{{ trix_luna }}/cli/config/'
+    state: directory
 
-- block:
-  - name: Create cli config directory
-    file:
-      path: '{{ trix_luna }}/cli/config/'
-      state: directory
-
-  - name: Render cli luna.ini
-    template:
-      src: 'luna2.ini.j2'
-      dest: '{{ trix_luna }}/cli/config/luna.ini'
-      owner: root
-      group: root
-      mode: 0640
-
-  when: not cli_config_file.stat.exists
+- name: Render cli luna.ini
+  template:
+    src: 'luna2.ini.j2'
+    dest: '{{ trix_luna }}/cli/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
 
 
-- block:
-  - name: configure secret key for cli API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^SECRET_KEY\s*='
-      line: "SECRET_KEY = {{ luna_secret_key }}"
+# ------------------ gunicorn config ----------------
 
-  - name: configure luna username for cli API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^USERNAME\s*='
-      line: "USERNAME = {{ luna_username }}"
+- name: Render gunicorn config file
+  template:
+    src: 'gunicorn.py.j2'
+    dest: "{{ trix_luna }}/daemon/config/gunicorn.py"
+    owner: root
+    group: root
+    mode: 0644
 
-  - name: configure luna password for cli API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^PASSWORD\s*='
-      line: "PASSWORD = {{ luna_password }}"
-
-  - name: Ensuring luna ini file is unix
-    shell: "dos2unix {{ trix_luna }}/cli/config/luna.ini"
-
-  - name: Change file permissions of cli luna ini file
-    ansible.builtin.file:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      owner: root
-      group: root
-      mode: '0640'
-
-  - name: configure endpoint for daemon API
-    ansible.builtin.lineinfile:
-      path: '{{ trix_luna }}/cli/config/luna.ini'
-      regexp: '^ENDPOINT\s*='
-      line: "ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050"
-
-  when: cli_config_file.stat.exists
 
 # ----------------------------------------------------
 
@@ -299,7 +245,7 @@
     owner: root
     group: root
     mode: 0644
-  notify: restart luna2-daemon
+#  notify: restart luna2-daemon
 
 # ----------------------------------------------------
 
@@ -318,22 +264,43 @@
   notify: restart xinetd
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
-- name: Ensure /tftpboot exists
-  file:
-    path: '/tftpboot'
-    state: directory
+- block:
+  - name: Ensure /tftpboot exists
+    file:
+      path: '/tftpboot'
+      state: directory
 
-- name: Download iPXE EFI image to /tftpboot
-  get_url:
-    url: http://boot.ipxe.org/ipxe.efi
-    dest: /tftpboot/luna_ipxe.efi
-    mode: '0444'
+  - name: Download iPXE EFI image to /tftpboot
+    get_url:
+      url: http://boot.ipxe.org/ipxe.efi
+      dest: /tftpboot/luna_ipxe.efi
+      mode: '0444'
 
-- name: Download iPXE legacy image to /tftpboot
-  get_url:
-    url: http://boot.ipxe.org/undionly.kpxe
-    dest: /tftpboot/luna_undionly.kpxe
-    mode: '0444'
+  - name: Download iPXE legacy image to /tftpboot
+    get_url:
+      url: http://boot.ipxe.org/undionly.kpxe
+      dest: /tftpboot/luna_undionly.kpxe
+      mode: '0444'
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
+
+- block:
+  - name: Ensure /var/lib/tftpboot exists
+    file:
+      path: '/var/lib/tftpboot'
+      state: directory
+
+  - name: Download iPXE EFI image to /var/lib/tftpboot
+    get_url:
+      url: http://boot.ipxe.org/ipxe.efi
+      dest: /var/lib/tftpboot/luna_ipxe.efi
+      mode: '0444'
+
+  - name: Download iPXE legacy image to /var/lib/tftpboot
+    get_url:
+      url: http://boot.ipxe.org/undionly.kpxe
+      dest: /var/lib/tftpboot/luna_undionly.kpxe
+      mode: '0444'
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - name: Include luna's DNS zone file in named conf
   lineinfile:
@@ -341,11 +308,17 @@
     line: 'include "{{ luna2_named_include_file }}";'
   notify: restart named
 
+- name: Stop nginx
+  service:
+    name: nginx
+    state: stopped
+
 - name: Add luna's server configuration to nginx
   template:
     src: 'nginx-luna2.conf.j2'
     dest: '/etc/nginx/conf.d/nginx-luna2.conf'
-  notify: reload nginx
+#  notify: restart nginx
+   # this notify is being ignored. trust me. Antoine
 
 - name: Copy libluna-fakeuname to lib64
   copy:
@@ -397,10 +370,6 @@
     enabled: yes
   with_items: 
     - "{{ enable_services }}"
-#  with_items:
-#    - xinetd
-#    - dhcpd
-#    - luna2-daemon
 ##  when: not ha
 
 - name: Start luna services
@@ -409,6 +378,12 @@
     state: started
   with_items:
     - "{{ start_services }}"
-#    - xinetd
-#    - luna2-daemon
+
+- name: Wait 10s for daemon to settle
+  wait_for:
+    timeout: 10
+
+- name: Setting default DNS forwarder
+  shell: "luna cluster change -fs \"{{ trix_dns_forwarders }}\""
+  when: trix_dns_forwarders is defined
 

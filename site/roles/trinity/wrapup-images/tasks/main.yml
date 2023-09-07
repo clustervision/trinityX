@@ -2,6 +2,11 @@
 - block:
   - name: Cleanup the image
     command: yum clean all
+    when: ansible_facts['os_family'] == "RedHat"
+
+  - name: Cleanup the image
+    command: apt-get clean
+    when: ansible_facts['os_family'] == "Debian"
 
   - name: Cleanup /tmp
     command: rm -f /tmp/*

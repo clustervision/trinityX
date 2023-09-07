@@ -9,26 +9,26 @@
     - role: trinity/init
       tags: init
 
-    - role: trinity/sensu-client
-      tags: monitoring
-
-    - role: trinity/trix-tree
-      tags: trix-tree
+    - role: trinity/hostname
+      tags: hostname
 
     - role: trinity/repos
       tags: repos
 
+    - role: trinity/trix-tree
+      tags: trix-tree
+
     - role: trinity/cv_support
       tags: cv_support
+
+    - role: trinity/sensu-client
+      tags: monitoring
 
     - role: trinity/packages
       tags: packages
 
     - role: trinity/tunables
       tags: tunables
-
-    - role: trinity/hostname
-      tags: hostname
 
     - role: trinity/firewalld
       tags: firewalld
@@ -83,7 +83,6 @@
       bind_dns_forwarders:
         - '8.8.8.8'
         - '8.8.4.4'
-      resolv_server: '{{ trix_ctrl_ip }}'
       tags: bind
 
     - role: trinity/openldap
@@ -127,14 +126,23 @@
       slurmdbd_sql_user: 'slurm_accounting'
       slurmdbd_sql_db: 'slurm_accounting'
       tags: slurm
-      when: workload_manager == "slurm"
+      when: workload_manager == "slurm" and ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
     - role: trinity/slurm-sbank
       tags: slurm, sbank
       when: workload_manager == "slurm"
 
     - role: trinity/luna
+      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       tags: luna
+
+    - role: trinity/resolv
+      bind_dns_forwarders:
+        - '8.8.8.8'
+        - '8.8.4.4'
+      resolv_server: '{{ trix_ctrl_ip }}'
+      tags: resolv
 
     - role: trinity/rsyslog
       syslog_listeners:
@@ -167,12 +175,14 @@
       tags: transmission
 
     - role: trinity/ood-portal
-      tags: ood
       enable_ssl: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
+      tags: ood
 
     - role: trinity/ood-vnc
+      when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
       tags: ood 
 
     - role: trinity/telegraf
