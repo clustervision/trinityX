@@ -37,11 +37,39 @@
   - debug:
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}"
 
-  - name: Generate Luna Secret Key
-    set_fact:
-      luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
-  
   tags: always
+
+
+- block:
+  - name: Verify if luna secret vault exists
+    stat:
+      path: '{{ trix_ssl }}/secret.key"
+    register: stat_secret_key
+
+  - block:
+    - name: Generate Luna Secret Key
+      set_fact:
+        luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+
+    - name: Write luna secret key to vault
+      copy:
+        dest: "{{ trix_ssl }}/secret.key"
+        content: "{{ luna_secret_key }}"
+    when: not stat_secret_key.stat.exists
+
+  - block
+    - name: Import luna secret key
+      slurp:
+        src: "{{ trix_ssl }}/secret.key"
+      register: luna_secret_key_b64
+
+    - name: Set Luna secret key
+      set_fact:
+        stat_secret_key: "{{ luna_secret_key_b64['content'] | b64decode }}"
+    when: stat_secret_key.stat.exists
+
+  tags: always
+
 
 - name: Toggle selinux state
   selinux:
