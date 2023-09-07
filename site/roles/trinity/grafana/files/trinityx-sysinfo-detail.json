@@ -15,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
-  "iteration": 1613478176451,
+  "iteration": 1693406364958,
   "links": [],
   "panels": [
     {
@@ -125,7 +124,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -252,7 +251,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -379,7 +378,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -506,7 +505,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -633,7 +632,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -760,7 +759,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -893,7 +892,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         },
@@ -942,7 +941,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -1130,7 +1129,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -1305,7 +1304,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -1381,8 +1380,8 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 11,
+        "h": 9,
+        "w": 14,
         "x": 0,
         "y": 11
       },
@@ -1619,7 +1618,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             },
             {
               "condition": "AND",
@@ -1676,13 +1675,287 @@
       }
     },
     {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {},
+          "links": [],
+          "mappings": [],
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 95
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 4,
+        "x": 15,
+        "y": 11
+      },
+      "id": 33,
+      "interval": "30s",
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
+      },
+      "pluginVersion": "7.4.1",
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "alias": "$tag_host $tag_cpu $col",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "cpu"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "cpu",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT (mean(\"usage_guest\") + mean(\"usage_guest_nice\") + mean(\"usage_iowait\") +  mean(\"usage_irq\") + mean(\"usage_nice\") +  mean(\"usage_softirq\") + mean(\"usage_steal\") + mean(\"usage_system\") + mean(\"usage_user\") ) AS \"usage\" FROM \"cpu\" WHERE (\"host\" =~ /^$hostname[.]?/ AND \"cpu\" = 'cpu-total') AND $timeFilter GROUP BY time($__interval), \"cpu\", \"host\" fill(null)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "usage_guest"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "usage_guest"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "usage_guest_nice"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "usage_guest_nice"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "usage_iowait"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "usage_iowait"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "usage_irq"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "usage_irq"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "usage_nice"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "usage_nice"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "usage_softirq"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "usage_softirq"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "usage_steal"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "usage_steal"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "usage_system"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "usage_system"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "usage_user"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "usage_user"
+                ],
+                "type": "alias"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hostname[.]?/"
+            },
+            {
+              "condition": "AND",
+              "key": "cpu",
+              "operator": "=",
+              "value": "cpu-total"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "CPU Usage for $hostname",
+      "transparent": true,
+      "type": "gauge"
+    },
+    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 20
       },
       "id": 11,
       "panels": [],
@@ -1709,7 +1982,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 20
+        "y": 21
       },
       "hiddenSeries": false,
       "id": 9,
@@ -1818,7 +2091,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -1827,7 +2100,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Memory free $hostname",
+      "title": "Memory free for $hostname",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1890,7 +2163,7 @@
         "h": 8,
         "w": 5,
         "x": 12,
-        "y": 20
+        "y": 21
       },
       "id": 28,
       "interval": null,
@@ -1979,14 +2252,14 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Memory free $hostname",
+      "title": "Memory free for $hostname",
       "transparent": true,
       "type": "grafana-piechart-panel",
       "valueName": "current"
@@ -2013,7 +2286,7 @@
         "h": 8,
         "w": 5,
         "x": 17,
-        "y": 20
+        "y": 21
       },
       "id": 29,
       "interval": null,
@@ -2102,14 +2375,14 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Swap usage $hostname",
+      "title": "Swap usage for $hostname",
       "transparent": true,
       "type": "grafana-piechart-panel",
       "valueName": "current"
@@ -2121,7 +2394,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 29
       },
       "id": 15,
       "panels": [],
@@ -2161,7 +2434,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 30
       },
       "id": 4,
       "options": {
@@ -2183,8 +2456,8 @@
       "scopedVars": {
         "hostname": {
           "selected": true,
-          "text": "controller01.cluster",
-          "value": "controller01.cluster"
+          "text": "controller1",
+          "value": "controller1"
         }
       },
       "targets": [
@@ -2239,7 +2512,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -2270,7 +2543,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 37
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 17,
@@ -2399,7 +2672,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -2469,7 +2742,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 37
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 18,
@@ -2598,7 +2871,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -2669,7 +2942,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 37
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 19,
@@ -2798,7 +3071,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -2859,8 +3132,8 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "text": "controller01.cluster",
-          "value": "controller01.cluster"
+          "text": "controller1",
+          "value": "controller1"
         },
         "datasource": "TrinityX-InfluxDB",
         "definition": "SHOW TAG VALUES WITH KEY = \"host\"",
@@ -2874,7 +3147,7 @@
         "options": [],
         "query": "SHOW TAG VALUES WITH KEY = \"host\"",
         "refresh": 2,
-        "regex": "",
+        "regex": "/([-_a-zA-Z0-9]*)/",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
@@ -2886,7 +3159,7 @@
     ]
   },
   "time": {
-    "from": "now-15m",
+    "from": "2023-08-30T13:26:19.000Z",
     "to": "now"
   },
   "timepicker": {
@@ -2906,5 +3179,5 @@
   "timezone": "",
   "title": "TrinityX - system information (detailed)",
   "uid": "trixsysinfo",
-  "version": 2
+  "version": 5
 }
