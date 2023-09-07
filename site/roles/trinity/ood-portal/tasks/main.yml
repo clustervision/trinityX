@@ -39,14 +39,20 @@
       profiles=
       state=enabled
 
-- name: Install required yum repos
+- name: Install ood packages
+  yum:
+    name: '{{ ood_packages }}'
+    state: present
+    enablerepo: luna2
+
+- name: Install required repos
   yum:
     name: "{{ item.name }}"
     state: present
     disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
   with_items: "{{ ood_web_repository_rpms }}"
 
-- name: Install required yum packages
+- name: Install required packages
   yum:
     name: 
       - 'epel-release'
@@ -202,6 +208,19 @@
         dest: "{{ trix_ood }}/{{ ood_version }}"
     when: ood_download_lead_path.rc == 0
   when: ood_download_url is defined
+
+- name: Create trinity-ood luna2 app config directory
+  file:
+    path: '{{ trix_ood }}/{{ ood_version }}/config/'
+    state: directory
+
+- name: Render trinity-ood luna app luna.ini
+  template:
+    src: 'luna2.ini.j2'
+    dest: '{{ trix_ood }}/{{ ood_version }}/config/luna.ini'
+    owner: root
+    group: "{{ admin_group }}"
+    mode: 0640
 
 - name: Install trinity-ood custom apps python requirements 
   ansible.builtin.pip:
