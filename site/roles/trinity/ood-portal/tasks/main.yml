@@ -203,6 +203,13 @@
     when: ood_download_lead_path.rc == 0
   when: ood_download_url is defined
 
+- name: Set permissions for ood apps 
+  file:
+    path: "{{ trix_ood }}/{{ ood_version }}"
+    mode: '0640'
+    group: admins
+    recurse: true
+
 - name: Install trinity-ood custom apps python requirements 
   ansible.builtin.pip:
     requirements: "{{ trix_ood }}/{{ ood_version }}/{{ item }}/requirements.txt"
@@ -225,6 +232,9 @@
     src: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     dest: "/var/www/ood/apps/sys/trinity_{{ item }}"
     state: link
+    mode: '0644'
+    owner: root
+    group: root
   with_items:
     - bmcsetup
     - cluster
@@ -239,12 +249,12 @@
     - switch
   notify: run update_ood_portal
 
-- name: Fix trinity-ood installation (pt1)
-  file:
-    path: "/trinity/local/luna/daemon/"
-    state: directory
-    recurse: true 
-    mode: u=rwX,g=rX,o=rX
+# - name: Fix trinity-ood installation (pt1)
+#   file:
+#     path: "/trinity/local/luna/daemon/"
+#     state: directory
+#     recurse: true 
+#     mode: u=rwX,g=rX,o=rX
 
 # - name: Fix trinity-ood installation (pt2)
 #   file:
