@@ -233,7 +233,7 @@ class Obol:
 
         users = []
         for _, attrs in self.conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter):
-            fields = ['cn', 'uid', 'uidNumber', ]
+            fields = ['uid', 'uidNumber', 'gidNumber']
             user = { k:[vi.decode('utf8') for vi in v][0] for k,v in attrs.items() if k in fields }
             users.append(user)
 
@@ -510,6 +510,7 @@ class Obol:
 
         # Ensure user exists
         existing_user = self.user_show(username,)
+        existing_groups = self.group_list()
         
         primary_group_changed = False
         mod_attrs = []
@@ -529,7 +530,7 @@ class Obol:
                 raise ValueError('UID %s already exists' % uid)
             mod_attrs.append((ldap.MOD_REPLACE, 'uidNumber', uid.encode('utf-8')))
         if gid or groupname:
-            existing_groups = self.group_list()
+            
             mod_attrs.append((ldap.MOD_REPLACE, 'gidNumber', gid.encode('utf-8')))
             primary_group_changed = True
         if groupname:
@@ -566,8 +567,13 @@ class Obol:
             incorrect_groupnames = [g for g in groups if g not in existing_groupnames]
             if len(incorrect_groupnames) > 0:
                 raise ValueError("Groups '%s' do not exist" % ', '.join(incorrect_groupnames))
+            
+            primary_group = [g['cn'] for g in existing_groups if g['gidNumber'] == existing_user['gidNumber']][0]
+
             groups_to_add = [g for g in groups if g not in existing_user['groups']]
-            groups_to_del = [g for g in existing_user['groups'] if g not in groups]
+            groups_to_del = [g for g in existing_user['groups'] if (g not in groups) and (g != primary_group)]
+
+            
 
         # Modify the user in LDAP
         dn = 'uid=%s,ou=People,%s' % (username, self.base_dn)
@@ -598,27 +604,21 @@ class Obol:
         users_to_del = []
         
         if gid:
-            gids = [g['gidNumber'] for g in self.group_list()]
-            # Ensuer gid's uniqueness
-            if gid in gids:
-                raise ValueError('GID %s already exists' % gid)
-            group_mod_attrs.append((ldap.MOD_REPLACE, 'gidNumber', gid.encode('utf-8')))
-
-            # Update gid on groups whoose primaryGroup is this group
-            for username in existing_group['users']:
-                user = self.user_show(username,)
-                if user['gidNumber'] == existing_group['gidNumber']:
-                    user_dn = 'uid=%s,ou=People,%s' % (user['uid'], self.base_dn)
-                    users_mod_attrs[user_dn] = [(ldap.MOD_REPLACE, 'gidNumber', gid.encode('utf-8'))]
+            # Not implemented yet
+            raise NotImplementedError("changing GID of existing group is not supported yet")
        
         if users:
             # Ensure users exist
-            existing_usernames = [u['uid'] for u in self.user_list()]
+            existing_users = self.user_list()
+            existing_usernames = [u['uid'] for u in existing_users]
             incorrect_usernames = [u for u in users if u not in existing_usernames]
             if len(incorrect_usernames) > 0:
                 raise ValueError("Users '%s' do not exist" % ', '.join(incorrect_usernames))
-            users_to_add = [u for u in users if u not in existing_group['users']]
-            users_to_del = [u for u in existing_group['users'] if u not in users]
+            
+            existing_group_usernames = existing_group['users']
+            existing_primary_group_usernames = [u['uid'] for u in existing_users if u['gidNumber'] == existing_group['gidNumber'] ]
+            users_to_add = [u for u in users if u not in existing_group_usernames]
+            users_to_del = [u for u in existing_group['users'] if (u not in existing_group_usernames) and (u not in existing_primary_group_usernames )]            
 
         # Modify the group
         group_dn = 'cn=%s,ou=Group,%s' % (groupname, self.base_dn)
@@ -658,19 +658,23 @@ class Obol:
         """Remove users from a group"""
 
         # Ensure group exists
-        _ = self.group_show(groupname,)
+        existing_group = self.group_show(groupname,)
 
         # Ensure users exist
-        existing_usernames = [u['uid'] for u in self.user_list()]
+        existing_users = self.user_list()
+        existing_usernames = [u['uid'] for u in existing_users]
         incorrect_usernames = [u for u in usernames if u not in existing_usernames]
         if len(incorrect_usernames) > 0:
             raise LookupError("Users '%s' do not exist" % ', '.join(incorrect_usernames))
 
         mod_attrs = []
-        for name in usernames:
-            mod_attrs.append((ldap.MOD_DELETE, 'member',
-                            str('uid=%s,ou=People,%s' % (name, self.base_dn)).encode('utf-8')))
-        
+        for user in existing_users:
+            if user['uid'] in usernames:
+                if user['gidNumber'] == existing_group['gidNumber']: 
+                    print(f"[Warning] You removed user {user['uid']} from its primary group")
+                mod_attrs.append((ldap.MOD_DELETE, 'member',
+                                str('uid=%s,ou=People,%s' % (user['uid'], self.base_dn)).encode('utf-8')))
+            
         group_dn = 'cn=%s,ou=Group,%s' % (groupname, self.base_dn)
         self.conn.modify_s(group_dn, mod_attrs)
 
