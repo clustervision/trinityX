@@ -258,6 +258,21 @@
     - control
     - users
 
+- name: Create a directory for grafana if it does not exist
+  ansible.builtin.file:
+    path: '{{ trix_ood }}/{{ ood_version }}/grafana'
+    state: directory
+    mode: 0750
+
+- name: Render grafana manifest to create button in the menu
+  template:
+    src: 'grafana_manifest.yml.j2'
+    dest: '{{ trix_ood }}/{{ ood_version }}/grafana/manifest.yml'
+    owner: root
+    group: "{{ admin_group }}"
+    mode: 0640
+
+
 - name: Symlink trinity-ood custom apps
   file:
     src: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
@@ -280,7 +295,17 @@
     - switch
     - control
     - users
+    - grafana
   notify: run update_ood_portal
+
+- name: Create a directory for static files if it does not exist
+  ansible.builtin.file:
+    path: '{{ trix_ood }}/{{ ood_version }}/{{item}}/static'
+    state: directory
+    mode: 0750
+  with_items:
+    - sensu
+    - users
 
 - name: Symlink shared templates
   file:
