@@ -207,6 +207,12 @@
         state: link
         src: "{{ trix_ood }}/{{ ood_download_lead_path.stdout }}"
         dest: "{{ trix_ood }}/{{ ood_version }}"
+
+    - name: Reset luna app directory permissions
+      shell: "find {{ trix_ood }}/{{ ood_version }}/ -type d -exec chmod 755 {} \\;"
+
+    - name: Reset luna app file permissions
+      shell: "find {{ trix_ood }}/{{ ood_version }}/ -type f -exec chmod 644 {} \\;"
     when: ood_download_lead_path.rc == 0
   when: ood_download_url is defined
 
@@ -272,7 +278,7 @@
     dest: '{{ trix_ood }}/{{ ood_version }}/grafana/manifest.yml'
     owner: root
     group: "{{ admin_group }}"
-    mode: 0640
+    mode: 0644
 
 
 - name: Symlink trinity-ood custom apps
