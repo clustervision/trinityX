@@ -262,7 +262,9 @@
   ansible.builtin.file:
     path: '{{ trix_ood }}/{{ ood_version }}/grafana'
     state: directory
-    mode: 0750
+    mode: 0755
+    owner: root
+    group: root
 
 - name: Render grafana manifest to create button in the menu
   template:
@@ -302,7 +304,9 @@
   ansible.builtin.file:
     path: '{{ trix_ood }}/{{ ood_version }}/{{item}}/static'
     state: directory
-    mode: 0750
+    mode: 0755
+    owner: root
+    group: root
   with_items:
     - sensu
     - users
@@ -333,12 +337,49 @@
     - users
   notify: run update_ood_portal
 
-- name: Set permissions for ood apps 
+  # ----------------------------------------------------------------------
+  # ensuring ood app root dir is open
+- name: Set permissions for all ood apps root directory
   file:
-    path: "{{ trix_ood }}/{{ ood_version }}/"
+    path: "{{ trix_ood }}/{{ ood_version }}"
+    mode: 0755
+    owner: root
+    group: "{{ admin_group }}"
+
+  # ----------------------------------------------------------------------
+  # master block for apps that require special access. NOT for common users.
+- name: Set permissions for admin ood apps 
+  file:
+    path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     mode: 0750
     owner: root
     group: "{{ admin_group }}"
+  with_items:
+    - bmcsetup
+    - cluster
+    - group
+    - network
+    - node
+    - osimage
+    - otherdev
+    - secrets
+    - service
+    - switch
+    - control
+    - users
+
+  # ----------------------------------------------------------------------
+  # permission to allow access to apps for everyone
+- name: Set permissions for all user ood apps 
+  file:
+    path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
+    mode: 0755
+    owner: root
+    group: "{{ admin_group }}"
+  with_items:
+    - sensu
+    - grafana
+
 
 - name: Configure firewalld
   firewalld:
