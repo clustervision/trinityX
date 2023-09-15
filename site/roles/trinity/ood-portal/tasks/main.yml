@@ -174,41 +174,41 @@
     GIT_TERMINAL_PROMPT: 0
   when: ood_download_url is not defined
 
-# - block:
-#   - name: Download trinity-ood custom apps
-#     get_url: 
-#       url: "{{ ood_download_url }}"
-#       dest: "/tmp/"
+- block:
+  - name: Download trinity-ood custom apps
+    get_url: 
+      url: "{{ ood_download_url }}"
+      dest: "/tmp/"
 
-#   - name: Verify leading path in download
-#     shell: "tar -tf /tmp/{{ ood_download_url|split('/')|last }} | head -n1 | cut -f1 -d '/' | grep trinity-ood"
-#     register: ood_download_lead_path
+  - name: Verify leading path in download
+    shell: "tar -tf /tmp/{{ ood_download_url|split('/')|last }} | head -n1 | cut -f1 -d '/' | grep trinity-ood"
+    register: ood_download_lead_path
 
-#   - block:
-#     - name: Unpack download
-#       ansible.builtin.unarchive:
-#         src: "/tmp/{{ ood_download_url.split('/') | last }}"
-#         dest: "{{ trix_ood }}/{{ ood_version }}"
-#     when: ood_download_lead_path.rc != 0
+  - block:
+    - name: Unpack download
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ ood_download_url.split('/') | last }}"
+        dest: "{{ trix_ood }}/{{ ood_version }}"
+    when: ood_download_lead_path.rc != 0
 
-#   - block:
-#     - name: Unpack download
-#       ansible.builtin.unarchive:
-#         src: "/tmp/{{ ood_download_url.split('/') | last }}"
-#         dest: "{{ trix_ood }}"
+  - block:
+    - name: Unpack download
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ ood_download_url.split('/') | last }}"
+        dest: "{{ trix_ood }}"
 
-#     - name: Remove current build directory if it exists
-#       file:
-#         state: absent
-#         path: "{{ trix_ood }}/{{ ood_version }}"
+    - name: Remove current build directory if it exists
+      file:
+        state: absent
+        path: "{{ trix_ood }}/{{ ood_version }}"
 
-#     - name: Symlink to current build
-#       file:
-#         state: link
-#         src: "{{ trix_ood }}/{{ ood_download_lead_path.stdout }}"
-#         dest: "{{ trix_ood }}/{{ ood_version }}"
-#     when: ood_download_lead_path.rc == 0
-#   when: ood_download_url is defined
+    - name: Symlink to current build
+      file:
+        state: link
+        src: "{{ trix_ood }}/{{ ood_download_lead_path.stdout }}"
+        dest: "{{ trix_ood }}/{{ ood_version }}"
+    when: ood_download_lead_path.rc == 0
+  when: ood_download_url is defined
 
 - name: Create trinity-ood luna2 app config directory
   file:
