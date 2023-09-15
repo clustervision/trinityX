@@ -207,6 +207,12 @@
         state: link
         src: "{{ trix_ood }}/{{ ood_download_lead_path.stdout }}"
         dest: "{{ trix_ood }}/{{ ood_version }}"
+
+    - name: Reset luna app directory permissions
+      shell: "find {{ trix_ood }}/{{ ood_version }}/ -type d -exec chmod 755 {} \\;"
+
+    - name: Reset luna app file permissions
+      shell: "find {{ trix_ood }}/{{ ood_version }}/ -type f -exec chmod 644 {} \\;"
     when: ood_download_lead_path.rc == 0
   when: ood_download_url is defined
 
@@ -237,7 +243,7 @@
     dest: '{{ trix_ood }}/{{ ood_version }}/config/sensu.toml'
     owner: root
     group: "{{ admin_group }}"
-    mode: 0640
+    mode: 0644
 
 - name: Install trinity-ood custom apps python requirements 
   ansible.builtin.pip:
@@ -262,7 +268,9 @@
   ansible.builtin.file:
     path: '{{ trix_ood }}/{{ ood_version }}/grafana'
     state: directory
-    mode: 0750
+    mode: 0755
+    owner: root
+    group: root
 
 - name: Render grafana manifest to create button in the menu
   template:
@@ -270,7 +278,7 @@
     dest: '{{ trix_ood }}/{{ ood_version }}/grafana/manifest.yml'
     owner: root
     group: "{{ admin_group }}"
-    mode: 0640
+    mode: 0644
 
 
 - name: Symlink trinity-ood custom apps
@@ -302,7 +310,9 @@
   ansible.builtin.file:
     path: '{{ trix_ood }}/{{ ood_version }}/{{item}}/static'
     state: directory
-    mode: 0750
+    mode: 0755
+    owner: root
+    group: root
   with_items:
     - sensu
     - users
@@ -333,12 +343,49 @@
     - users
   notify: run update_ood_portal
 
-- name: Set permissions for ood apps 
+  # ----------------------------------------------------------------------
+  # ensuring ood app root dir is open
+- name: Set permissions for all ood apps root directory
   file:
-    path: "{{ trix_ood }}/{{ ood_version }}/"
+    path: "{{ trix_ood }}/{{ ood_version }}"
+    mode: 0755
+    owner: root
+    group: "{{ admin_group }}"
+
+  # ----------------------------------------------------------------------
+  # master block for apps that require special access. NOT for common users.
+- name: Set permissions for admin ood apps 
+  file:
+    path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     mode: 0750
     owner: root
     group: "{{ admin_group }}"
+  with_items:
+    - bmcsetup
+    - cluster
+    - group
+    - network
+    - node
+    - osimage
+    - otherdev
+    - secrets
+    - service
+    - switch
+    - control
+    - users
+
+  # ----------------------------------------------------------------------
+  # permission to allow access to apps for everyone
+- name: Set permissions for all user ood apps 
+  file:
+    path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
+    mode: 0755
+    owner: root
+    group: "{{ admin_group }}"
+  with_items:
+    - sensu
+    - grafana
+
 
 - name: Configure firewalld
   firewalld:
