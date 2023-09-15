@@ -197,7 +197,7 @@
         src: "/tmp/{{ ood_download_url.split('/') | last }}"
         dest: "{{ trix_ood }}"
 
-    - name: Remove version directory
+    - name: Remove current build directory if it exists
       file:
         state: absent
         path: "{{ trix_ood }}/{{ ood_version }}"
@@ -223,6 +223,22 @@
     group: "{{ admin_group }}"
     mode: 0640
 
+- name: Render trinity-ood luna app osusers.toml
+  template:
+    src: 'osusers.toml.j2'
+    dest: '{{ trix_ood }}/{{ ood_version }}/config/osusers.toml'
+    owner: root
+    group: "{{ admin_group }}"
+    mode: 0640
+  
+- name: Render trinity-ood luna app sensu.toml
+  template:
+    src: 'sensu.toml.j2'
+    dest: '{{ trix_ood }}/{{ ood_version }}/config/sensu.toml'
+    owner: root
+    group: "{{ admin_group }}"
+    mode: 0640
+
 - name: Install trinity-ood custom apps python requirements 
   ansible.builtin.pip:
     requirements: "{{ trix_ood }}/{{ ood_version }}/{{ item }}/requirements.txt"
@@ -242,7 +258,7 @@
     - control
     - users
 
-- name: Copy trinity-ood custom apps
+- name: Symlink trinity-ood custom apps
   file:
     src: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     dest: "/var/www/ood/apps/sys/trinity_{{ item }}"
@@ -266,33 +282,38 @@
     - users
   notify: run update_ood_portal
 
+- name: Symlink shared templates
+  file:
+    src: "{{ trix_ood }}/{{ ood_version }}/_base/templates"
+    dest: "/var/www/ood/apps/sys/trinity_{{ item }}/templates/base"
+    state: link
+    mode: 0755
+    owner: root
+    group: root
+  with_items:
+    - sensu
+    - users
+  notify: run update_ood_portal
+
+- name: Symlink shared static assets
+  file:
+    src: "{{ trix_ood }}/{{ ood_version }}/_base/static"
+    dest: "/var/www/ood/apps/sys/trinity_{{ item }}/static/base"
+    state: link
+    mode: 0755
+    owner: root
+    group: root
+  with_items:
+    - sensu
+    - users
+  notify: run update_ood_portal
+
 - name: Set permissions for ood apps 
   file:
     path: "{{ trix_ood }}/{{ ood_version }}/"
     mode: 0750
     owner: root
     group: "{{ admin_group }}"
-
-# - name: Fix trinity-ood installation (pt2)
-#   file:
-#     src: /tmp/token.txt
-#     dest: "/var/www/ood/apps/sys/trinity_{{ item }}/token.txt"
-#     state: link
-#   with_items:
-#     - bmcsetup
-#     - cluster
-#     - group
-#     - network
-#     - node
-#     - osimage
-#     - otherdev
-#     - secrets
-#     - sensu
-#     - service
-#     - switch
-#     - control
-#     - users
-#   notify: run update_ood_portal
 
 - name: Configure firewalld
   firewalld:
