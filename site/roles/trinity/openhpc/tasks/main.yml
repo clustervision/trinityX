@@ -44,14 +44,14 @@
   yum:
     name: ohpc-base
     state: installed
-  when: ansible_connection not in 'chroot' and ansible_distribution == "CentOS"
+  when: ansible_connection not in 'chroot'
 
-- name: Install ohpc-base
-  yum:
-    name: ohpc-base
-    state: installed
-    enablerepo: rhel-7-server-optional-rpms
-  when: ansible_connection not in 'chroot' and ansible_distribution == "RedHat"
+#- name: Install ohpc-base
+#  yum:
+#    name: ohpc-base
+#    state: installed
+#    enablerepo: rhel-7-server-optional-rpms
+#  when: ansible_connection not in 'chroot' and ansible_distribution == "RedHat"
 
 - name: Install ohpc-base-compute
   yum:
@@ -84,7 +84,6 @@
     name: lmod-ohpc
     state: installed
     enablerepo: powertools
-#  when: ansible_connection in 'chroot'
 
 - name: Install profile for modules
   template:
@@ -95,7 +94,7 @@
   template:
     src: OHPC_exports.j2
     dest: '{{ nfs_exports_path }}/ohpc.exports'
-  when: primary | default(True) and ansible_connection not in 'chroot'
+  when: ansible_connection not in 'chroot'
   notify:
     - Export NFS
 
@@ -104,7 +103,7 @@
     dest: '/etc/exports.d/ohpc.exports'
     state: link
     force: "yes"
-  when: primary | default(True) and ansible_connection not in 'chroot'
+  when: ansible_connection not in 'chroot'
   notify:
     - Export NFS
 
