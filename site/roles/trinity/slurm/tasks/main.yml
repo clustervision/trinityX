@@ -1,13 +1,14 @@
 ---
 # tasks file for slurm
+# note: it's ohpc-release-2-1, not 2.1 ... 2-1 _is_ the latest.
 - name: Install ohpc-release
   yum:
-    name: http://repos.openhpc.community/OpenHPC/2/CentOS_8/x86_64/ohpc-release-2-1.el8.x86_64.rpm
+    name: "{{ openhpc_release_rpm }}"
     state: installed
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
 - name: Install PyMSQL
   yum:
-#    name: python2-PyMySQL
     name: python3-PyMySQL
     state: installed
 
