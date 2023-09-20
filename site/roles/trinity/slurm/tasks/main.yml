@@ -1,13 +1,14 @@
 ---
 # tasks file for slurm
-- name: Install ohpc-release
-  yum:
-    name: http://repos.openhpc.community/OpenHPC/2/CentOS_8/x86_64/ohpc-release-2-1.el8.x86_64.rpm
-    state: installed
+- name: Create OpenHPC repo
+  ansible.builtin.yum_repository:
+    name: "openhpc"
+    description: "OpenHPC repo"
+    baseurl: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repo') }}"
+    gpgcheck: false
 
 - name: Install PyMSQL
   yum:
-#    name: python2-PyMySQL
     name: python3-PyMySQL
     state: installed
 

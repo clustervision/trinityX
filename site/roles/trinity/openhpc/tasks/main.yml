@@ -7,7 +7,7 @@
     group: root
     state: directory
     mode: '0755'
-  when: '"controllers" in group_names'
+  when: ansible_connection not in 'chroot'
 
 - name: Create link so openhpc ends up on /trinity filesystem
   file:
@@ -16,14 +16,14 @@
     owner: root
     group: root
     state: link
-  when: ansible_connection not in 'chroot' and "controllers" in group_names
+  when: ansible_connection not in 'chroot'
 
-
-- name: Install ohpc-release
-  yum:
-    name: https://github.com/openhpc/ohpc/releases/download/v2.4.GA/ohpc-release-2-1.el8.x86_64.rpm
-    state: installed
-    disable_gpg_check: yes
+- name: Create OpenHPC repo
+  ansible.builtin.yum_repository:
+    name: "openhpc"
+    description: "OpenHPC repo"
+    baseurl: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repo') }}"
+    gpgcheck: false
 
 - name: Ensure conflicting rpms from legacy TrinityX are not installed
   yum:
@@ -36,20 +36,20 @@
   yum:
     name: ohpc-base
     state: installed
-  when: ansible_connection not in 'chroot' and "controllers" in group_names and ansible_distribution == "CentOS"
+  when: ansible_connection not in 'chroot'
 
-- name: Install ohpc-base
-  yum:
-    name: ohpc-base
-    state: installed
-    enablerepo: rhel-7-server-optional-rpms
-  when: ansible_connection not in 'chroot' and "controllers" in group_names and ansible_distribution == "RedHat"
+#- name: Install ohpc-base
+#  yum:
+#    name: ohpc-base
+#    state: installed
+#    enablerepo: rhel-7-server-optional-rpms
+#  when: ansible_connection not in 'chroot' and ansible_distribution == "RedHat"
 
 - name: Install ohpc-base-compute
   yum:
     name: ohpc-base-compute
     state: installed
-  when: ansible_connection not in 'chroot' and "controllers" in group_names
+  when: ansible_connection not in 'chroot'
 
 - name: Install lmod dependencies on non-controller nodes
   yum:
@@ -58,7 +58,7 @@
       - lua-posix
     enablerepo: powertools
     state: installed
-  when: ansible_connection in 'chroot' or "controllers" not in group_names
+  when: ansible_connection in 'chroot'
 
 - name: Create symlinks for pdsh and pdcp
   file:
@@ -76,7 +76,6 @@
     name: lmod-ohpc
     state: installed
     enablerepo: powertools
-  when: ansible_connection in 'chroot' or "controllers" not in group_names
 
 - name: Install profile for modules
   template:
@@ -87,7 +86,7 @@
   template:
     src: OHPC_exports.j2
     dest: '{{ nfs_exports_path }}/ohpc.exports'
-  when: primary | default(True) and ansible_connection not in 'chroot'
+  when: ansible_connection not in 'chroot'
   notify:
     - Export NFS
 
@@ -96,6 +95,7 @@
     dest: '/etc/exports.d/ohpc.exports'
     state: link
     force: "yes"
-  when: primary | default(True) and ansible_connection not in 'chroot'
+  when: ansible_connection not in 'chroot'
   notify:
     - Export NFS
+
