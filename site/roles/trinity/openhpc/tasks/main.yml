@@ -18,12 +18,19 @@
     state: link
   when: ansible_connection not in 'chroot' and "controllers" in group_names
 
+- name: Create OpenHPC repo
+  ansible.builtin.yum_repository:
+    name: "OpenHPC 3.0"
+    baseurl: "https://updates.clustervision.com/trinityx/external/openhpc/{{ ansible_os_family|lower }}/{{ ansible_distribution_major_version }}"
+    gpgcheck: false
+  when: ansible_connection not in 'chroot' and "controllers" in group_names 
 
 - name: Install ohpc-release
   yum:
     name: https://github.com/openhpc/ohpc/releases/download/v2.4.GA/ohpc-release-2-1.el8.x86_64.rpm
     state: installed
-    disable_gpg_check: yes
+    disable_gpg_check: true
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
 - name: Ensure conflicting rpms from legacy TrinityX are not installed
   yum:
