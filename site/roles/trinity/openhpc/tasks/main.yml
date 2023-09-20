@@ -21,10 +21,10 @@
 - name: Create OpenHPC repo
   ansible.builtin.yum_repository:
     name: "openhpc"
-    description: "OpenHPC 3.0 repo hosted by CV"
-    baseurl: "https://updates.clustervision.com/trinityx/external/openhpc/{{ ansible_os_family|lower }}/{{ ansible_distribution_major_version }}"
+    description: "OpenHPC 3.0 repo"
+    baseurl: "{{ lookup('ansible.builtin.vars', 'EL' + distribution_major_version + '_openhpc_release_repo') }}"
     gpgcheck: false
-  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
+#  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - block:
   - name: Create OpenHPC repo
