@@ -7,7 +7,7 @@
     group: root
     state: directory
     mode: '0755'
-  when: '"controllers" in group_names'
+  when: ansible_connection not in 'chroot'
 
 - name: Create link so openhpc ends up on /trinity filesystem
   file:
@@ -16,7 +16,7 @@
     owner: root
     group: root
     state: link
-  when: ansible_connection not in 'chroot' and "controllers" in group_names
+  when: ansible_connection not in 'chroot'
 
 - name: Create OpenHPC repo
   ansible.builtin.yum_repository:
@@ -44,20 +44,20 @@
   yum:
     name: ohpc-base
     state: installed
-  when: ansible_connection not in 'chroot' and "controllers" in group_names and ansible_distribution == "CentOS"
+  when: ansible_connection not in 'chroot' and ansible_distribution == "CentOS"
 
 - name: Install ohpc-base
   yum:
     name: ohpc-base
     state: installed
     enablerepo: rhel-7-server-optional-rpms
-  when: ansible_connection not in 'chroot' and "controllers" in group_names and ansible_distribution == "RedHat"
+  when: ansible_connection not in 'chroot' and ansible_distribution == "RedHat"
 
 - name: Install ohpc-base-compute
   yum:
     name: ohpc-base-compute
     state: installed
-  when: ansible_connection not in 'chroot' and "controllers" in group_names
+  when: ansible_connection not in 'chroot'
 
 - name: Install lmod dependencies on non-controller nodes
   yum:
@@ -66,7 +66,7 @@
       - lua-posix
     enablerepo: powertools
     state: installed
-  when: ansible_connection in 'chroot' or "controllers" not in group_names
+  when: ansible_connection in 'chroot'
 
 - name: Create symlinks for pdsh and pdcp
   file:
@@ -84,7 +84,7 @@
     name: lmod-ohpc
     state: installed
     enablerepo: powertools
-  when: ansible_connection in 'chroot' or "controllers" not in group_names
+  when: ansible_connection in 'chroot'
 
 - name: Install profile for modules
   template:
