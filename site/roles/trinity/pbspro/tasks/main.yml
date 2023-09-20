@@ -1,20 +1,21 @@
 ---
-# tasks file for slurm
+# tasks file for pbspro
 - name: Install ohpc-release
   yum:
-    name: https://github.com/openhpc/ohpc/releases/download/v1.3.GA/ohpc-release-1.3-1.el7.x86_64.rpm
+    name: "{{ openhpc_release_rpm }}"
     state: installed
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
-- name: Install pbspro-server
+- name: Install Openpbs-server
   yum:
-    name: pbspro-server-ohpc
+    name: openpbs-server-ohpc
     state: present
   tags: install-only
   when: on_controller|default(True)
 
-- name: Install pbspro-execution
+- name: Install openpbs-execution-ohpc
   yum:
-    name: pbspro-execution-ohpc
+    name: openpbs-execution-ohpc
     state: present
   tags: install-only
   when: compute|default(False)
