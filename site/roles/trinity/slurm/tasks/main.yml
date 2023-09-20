@@ -1,10 +1,28 @@
 ---
 # tasks file for slurm
-# note: it's ohpc-release-2-1, not 2.1 ... 2-1 _is_ the latest.
-- name: Install ohpc-release
-  yum:
-    name: "{{ openhpc_release_rpm }}"
-    state: installed
+- name: Create OpenHPC repo
+  ansible.builtin.yum_repository:
+    name: "openhpc"
+    description: "OpenHPC 3.0 repo hosted by CV"
+    baseurl: "https://updates.clustervision.com/trinityx/external/openhpc/{{ ansible_os_family|lower }}/{{ ansible_distribution_major_version }}"
+    gpgcheck: false
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
+
+- block:
+  - name: Create OpenHPC repo
+    ansible.builtin.yum_repository:
+      name: "openhpc"
+      description: "OpenHPC repo"
+      baseurl: "{{ openhpc_release_repo }}"
+      gpgcheck: false
+    when: openhpc_release_repo is defined
+
+  - name: Install ohpc-release
+    yum:
+      name: "{{ openhpc_release_rpm }}"
+      state: installed
+      disable_gpg_check: true
+    when: openhpc_release_repo is undefined
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
 - name: Install PyMSQL
