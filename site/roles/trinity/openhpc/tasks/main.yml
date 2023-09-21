@@ -1,5 +1,12 @@
 ---
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  ignore_errors: yes
+
 - name: Create trinity/ohpc dir for opt link to point at
   file:
     path: '{{ trix_ohpc }}'
@@ -18,12 +25,14 @@
     state: link
   when: ansible_connection not in 'chroot'
 
-- name: Create OpenHPC repo
+- name: Configure OpenHPC repos
   ansible.builtin.yum_repository:
-    name: "openhpc"
-    description: "OpenHPC repo"
-    baseurl: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repo') }}"
-    gpgcheck: false
+    name: "openhpc-{{ item.name }}"
+    description: "openhpc-{{ item.name }}"
+    baseurl: "{{ item.repo }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ item.gpgkey | default('') }}"
+  with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
 
 - name: Ensure conflicting rpms from legacy TrinityX are not installed
   yum:
@@ -36,6 +45,7 @@
   yum:
     name: ohpc-base
     state: installed
+    enablerepo: powertools
   when: ansible_connection not in 'chroot'
 
 #- name: Install ohpc-base
@@ -44,6 +54,13 @@
 #    state: installed
 #    enablerepo: rhel-7-server-optional-rpms
 #  when: ansible_connection not in 'chroot' and ansible_distribution == "RedHat"
+
+- name: Install required Packages
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items: "{{ required_packages }}" 
+  when: required_packages is defined and required_packages != None
 
 - name: Install ohpc-base-compute
   yum:

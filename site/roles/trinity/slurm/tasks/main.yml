@@ -1,11 +1,14 @@
 ---
 # tasks file for slurm
-- name: Create OpenHPC repo
+
+- name: Configure OpenHPC repos
   ansible.builtin.yum_repository:
-    name: "openhpc"
-    description: "OpenHPC repo"
-    baseurl: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repo') }}"
-    gpgcheck: false
+    name: "openhpc-{{ item.name }}"
+    description: "openhpc-{{ item.name }}"
+    baseurl: "{{ item.repo }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ item.gpgkey | default('') }}"
+  with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
 
 - name: Install PyMSQL
   yum:
