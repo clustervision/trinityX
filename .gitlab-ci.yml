@@ -9,18 +9,21 @@ ansible-rocky8:
     - luna2
   image:
     name: geerlingguy/docker-rockylinux8-ansible
+  variables:
+   JOB_VAR: ANSIBLE_CONFIG=site/ansible.cfg
   script:
     - ls
     - bash prepare.sh
     - cd site   
     - cp -a hosts.example hosts
     - cp -a group_vars/all.yml.example group_vars/all.yml 
-    - sed -i "s/controller1/localhost/g" hosts
-    - sed -i "s/controller1/localhost/g" group_vars/all.yml
+    - sed -i "s/controller1/${HOSTNAME}/g" hosts
+    - sed -i "s/controller1/${HOSTNAME}/g" group_vars/all.yml
     - pwd
     - cat hosts
     - ping -c 1 localhost
     - ansible-playbook controller.yml
+    - ANSIBLE_CONFIG=./ansible.cfg ansible-playbook controller.yml
     - ansible-playbook compute-redhat.yml
 
 ansible-rocky9:
