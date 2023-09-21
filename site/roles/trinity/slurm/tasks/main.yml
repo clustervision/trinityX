@@ -74,23 +74,8 @@
   yum:
     name: '{{ slurm_packages_ohpc }}'
     state: present
-    enablerepo: rhel-7-server-optional-rpms
   tags: install-only
-  when: enable_openhpc == true and ansible_distribution == "RedHat"
-
-- name: Install ohpc slurm packages
-  yum:
-    name: '{{ slurm_packages_ohpc }}'
-    state: present
-  tags: install-only
-  when: enable_openhpc == true and ansible_distribution == "Rocky"
-
-- name: Install ohpc slurm packages
-  yum:
-    name: '{{ slurm_packages_ohpc }}'
-    state: present
-  tags: install-only
-  when: enable_openhpc == true and ansible_distribution == "CentOS"
+  when: enable_openhpc == true
 
 - name: Create systemd unit dirs
   file:
@@ -393,3 +378,4 @@
   when: primary|default(True)
         and ansible_connection not in 'chroot'
         and not compute|default(False)
+
