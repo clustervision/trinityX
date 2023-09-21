@@ -34,21 +34,6 @@
     gpgkey: "{{ item.gpgkey | default('') }}"
   with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
 
-#- name: Create OpenHPC repo
-#  ansible.builtin.yum_repository:
-#    name: "openhpc"
-#    description: "OpenHPC repo"
-#    baseurl: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
-#    gpgcheck: false
-#
-#- name: Create OpenHPC Updates repo
-#  ansible.builtin.yum_repository:
-#    name: "openhpc-updates"
-#    description: "OpenHPC Updates repo"
-#    baseurl: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_updates_repo') }}"
-#    gpgcheck: false
-#  when: lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_updates_repo', default='') is defined
-
 - name: Ensure conflicting rpms from legacy TrinityX are not installed
   yum:
     name:
