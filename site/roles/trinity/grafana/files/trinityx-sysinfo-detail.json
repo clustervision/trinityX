@@ -62,7 +62,7 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 0
       },
@@ -176,7 +176,7 @@
       "gridPos": {
         "h": 2,
         "w": 4,
-        "x": 4,
+        "x": 3,
         "y": 0
       },
       "id": 25,
@@ -289,7 +289,7 @@
       "gridPos": {
         "h": 2,
         "w": 4,
-        "x": 8,
+        "x": 7,
         "y": 0
       },
       "id": 26,
@@ -401,8 +401,8 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 3,
-        "x": 12,
+        "w": 4,
+        "x": 11,
         "y": 0
       },
       "id": 31,
@@ -472,7 +472,6 @@
         }
       ],
       "title": "Available memory",
-      "transparent": true,
       "type": "stat"
     },
     {
@@ -699,7 +698,6 @@
         }
       ],
       "title": "Swap usage",
-      "transparent": true,
       "type": "stat"
     },
     {
@@ -942,7 +940,6 @@
         }
       ],
       "title": "System processes",
-      "transparent": true,
       "type": "timeseries"
     },
     {
@@ -1128,7 +1125,6 @@
         }
       ],
       "title": "System load for $hostname",
-      "transparent": true,
       "type": "timeseries"
     },
     {
@@ -1302,7 +1298,6 @@
         }
       ],
       "title": "Kernel statistics $hostname",
-      "transparent": true,
       "type": "timeseries"
     },
     {
@@ -1334,6 +1329,7 @@
         "type": "influxdb",
         "uid": "P2AEA19AFD95365FD"
       },
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1419,7 +1415,7 @@
       "repeatDirection": "h",
       "targets": [
         {
-          "alias": "$tag_host $tag_cpu $col",
+          "alias": "$col",
           "datasource": {
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
@@ -1635,7 +1631,6 @@
         }
       ],
       "title": "CPU Usage for $hostname",
-      "transparent": true,
       "type": "timeseries"
     },
     {
@@ -1843,7 +1838,6 @@
         }
       ],
       "title": "Memory free for $hostname",
-      "transparent": true,
       "type": "timeseries"
     },
     {
@@ -1984,7 +1978,6 @@
         }
       ],
       "title": "Memory free for $hostname",
-      "transparent": true,
       "type": "piechart"
     },
     {
@@ -2125,7 +2118,6 @@
         }
       ],
       "title": "Swap usage for $hostname",
-      "transparent": true,
       "type": "piechart"
     },
     {
@@ -2273,7 +2265,6 @@
         }
       ],
       "title": "Disk usage for $hostname",
-      "transparent": true,
       "type": "bargauge"
     },
     {
@@ -2287,7 +2278,7 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisCenteredZero": false,
+            "axisCenteredZero": true,
             "axisColorMode": "text",
             "axisLabel": "< Write | Read > ",
             "axisPlacement": "auto",
@@ -2326,10 +2317,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
@@ -2411,7 +2398,7 @@
           "measurement": "diskio",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"read_bytes\"), 1s) AS \"read_bytes\", -non_negative_derivative(mean(\"write_bytes\"), 1s) AS \"write_bytes\" FROM \"diskio\" WHERE (\"host\" =~ /^$hostname[.]?/) AND $timeFilter GROUP BY time($__interval), \"name\", \"host\" fill(null)",
+          "query": "SELECT non_negative_derivative(mean(\"read_bytes\"), 1s) AS \"read_bytes\", non_negative_derivative(mean(\"write_bytes\"), 1s) AS \"write_bytes\" FROM \"diskio\" WHERE (\"host\" =~ /^$hostname[.]?/) AND $timeFilter GROUP BY time($__interval), \"name\", \"host\" fill(null)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -2475,7 +2462,6 @@
         }
       ],
       "title": "DIsk I/O (RW) in bytes for $hostname",
-      "transparent": true,
       "type": "timeseries"
     },
     {
@@ -2489,7 +2475,7 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisCenteredZero": false,
+            "axisCenteredZero": true,
             "axisColorMode": "text",
             "axisLabel": "< Write | Read > ",
             "axisPlacement": "auto",
@@ -2675,7 +2661,6 @@
         }
       ],
       "title": "DIsk I/O (RW) #operations for $hostname",
-      "transparent": true,
       "type": "timeseries"
     },
     {
@@ -2690,7 +2675,7 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisCenteredZero": false,
+            "axisCenteredZero": true,
             "axisColorMode": "text",
             "axisLabel": "< Write | Read > ",
             "axisPlacement": "auto",
@@ -2876,11 +2861,10 @@
         }
       ],
       "title": "DIsk I/O (RW) time for $hostname",
-      "transparent": true,
       "type": "timeseries"
     }
   ],
-  "refresh": "30s",
+  "refresh": false,
   "schemaVersion": 38,
   "style": "dark",
   "tags": [],
@@ -2915,8 +2899,8 @@
     ]
   },
   "time": {
-    "from": "2023-08-30T13:26:19.000Z",
-    "to": "now"
+    "from": "2023-09-20T04:37:34.256Z",
+    "to": "2023-09-21T20:41:05.191Z"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -2935,6 +2919,6 @@
   "timezone": "",
   "title": "TrinityX - System Information (Detailed)",
   "uid": "trixsysinfo",
-  "version": 6,
+  "version": 7,
   "weekStart": ""
 }
