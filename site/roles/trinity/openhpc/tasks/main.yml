@@ -25,6 +25,14 @@
     baseurl: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repo') }}"
     gpgcheck: false
 
+- name: Create OpenHPC Updates repo
+  ansible.builtin.yum_repository:
+    name: "openhpc-updates"
+    description: "OpenHPC Updates repo"
+    baseurl: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_updates_repo') }}"
+    gpgcheck: false
+  when: lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_updates_repo') is defined
+
 - name: Ensure conflicting rpms from legacy TrinityX are not installed
   yum:
     name:
