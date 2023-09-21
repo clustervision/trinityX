@@ -18,6 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 4,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -53,8 +54,8 @@
         "uid": "P2AEA19AFD95365FD"
       },
       "gridPos": {
-        "h": 9,
-        "w": 7,
+        "h": 8,
+        "w": 5,
         "x": 0,
         "y": 1
       },
@@ -88,9 +89,9 @@
         "uid": "P2AEA19AFD95365FD"
       },
       "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 7,
+        "h": 2,
+        "w": 4,
+        "x": 5,
         "y": 1
       },
       "id": 23,
@@ -123,9 +124,9 @@
         "uid": "P2AEA19AFD95365FD"
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 7,
-        "x": 10,
+        "x": 9,
         "y": 1
       },
       "id": 4,
@@ -170,22 +171,24 @@
         "uid": "P2AEA19AFD95365FD"
       },
       "gridPos": {
-        "h": 17,
-        "w": 7,
-        "x": 17,
+        "h": 8,
+        "w": 8,
+        "x": 16,
         "y": 1
       },
       "id": 5,
       "options": {
+        "folderId": 1,
         "includeVars": false,
         "keepTime": false,
-        "maxItems": 10,
-        "query": "",
-        "showHeadings": true,
+        "maxItems": 5,
+        "showHeadings": false,
         "showRecentlyViewed": false,
         "showSearch": true,
         "showStarred": false,
-        "tags": []
+        "tags": [
+          "Statistics"
+        ]
       },
       "pluginVersion": "10.1.2",
       "tags": [],
@@ -199,112 +202,8 @@
         }
       ],
       "title": "Available dashboards",
+      "transparent": true,
       "type": "dashlist"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "P2AEA19AFD95365FD"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 7,
-        "y": 4
-      },
-      "id": 8,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "/^sum$/",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "P2AEA19AFD95365FD"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$interval"
-              ],
-              "type": "time"
-            }
-          ],
-          "limit": "1",
-          "measurement": "system",
-          "orderByTime": "DESC",
-          "policy": "default",
-          "query": "SELECT sum(\"last\") FROM (SELECT last(\"total\") FROM \"mem\" GROUP BY \"host\" ORDER BY time LIMIT 1)",
-          "rawQuery": true,
-          "refId": "A",
-          "resultFormat": "table",
-          "select": [
-            [
-              {
-                "params": [
-                  "n_cpus"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "title": "Available memory",
-      "type": "stat"
     },
     {
       "datasource": {
@@ -347,9 +246,9 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 3,
-        "x": 7,
-        "y": 7
+        "w": 4,
+        "x": 5,
+        "y": 3
       },
       "id": 7,
       "links": [],
@@ -421,134 +320,57 @@
           "color": {
             "mode": "thresholds"
           },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": false,
-            "inspect": true
-          },
-          "mappings": [],
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
-          }
+          },
+          "unit": "bytes"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "free"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bytes"
-              },
-              {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "custom.align",
-                "value": "right"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "used"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bytes"
-              },
-              {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "custom.align"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "used %"
-            },
-            "properties": [
-              {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "custom.align",
-                "value": "right"
-              },
-              {
-                "id": "max",
-                "value": 100
-              },
-              {
-                "id": "custom.inspect",
-                "value": true
-              },
-              {
-                "id": "unit",
-                "value": "%"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "path"
-            },
-            "properties": []
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 17,
-        "x": 0,
-        "y": 10
+        "h": 3,
+        "w": 4,
+        "x": 5,
+        "y": 6
       },
-      "id": 20,
+      "id": 8,
+      "links": [],
+      "maxDataPoints": 100,
       "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": true,
-          "fields": "",
-          "reducer": [
-            "sum"
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
           ],
-          "show": false
+          "fields": "/^sum$/",
+          "values": false
         },
-        "showHeader": true,
-        "sortBy": []
+        "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -560,80 +382,38 @@
           "groupBy": [
             {
               "params": [
-                "path"
+                "$interval"
               ],
-              "type": "tag"
+              "type": "time"
             }
           ],
           "limit": "1",
-          "measurement": "disk",
-          "orderByTime": "ASC",
+          "measurement": "system",
+          "orderByTime": "DESC",
           "policy": "default",
+          "query": "SELECT sum(\"last\") FROM (SELECT last(\"total\") FROM \"mem\" GROUP BY \"host\" ORDER BY time LIMIT 1)",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "table",
           "select": [
             [
               {
                 "params": [
-                  "free"
+                  "n_cpus"
                 ],
                 "type": "field"
               },
               {
-                "params": [
-                  "free"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "used"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [
-                  "used"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "used_percent"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [
-                  "used %"
-                ],
-                "type": "alias"
+                "params": [],
+                "type": "last"
               }
             ]
           ],
-          "tags": [
-            {
-              "key": "fstype",
-              "operator": "=",
-              "value": "nfs4"
-            }
-          ]
+          "tags": []
         }
       ],
-      "title": "NFS and other (non-local) filesystems",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {
-            "reducers": []
-          }
-        }
-      ],
-      "type": "table"
+      "title": "Available memory",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -826,7 +606,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 9
       },
       "id": 10,
       "options": {
@@ -1034,7 +814,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 16
       },
       "id": 18,
       "panels": [],
@@ -1049,6 +829,223 @@
       ],
       "title": "Trinity Filesystems",
       "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P2AEA19AFD95365FD"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "free"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.align"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "used %"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              },
+              {
+                "id": "unit",
+                "value": "%"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 14,
+        "x": 0,
+        "y": 17
+      },
+      "id": 20,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P2AEA19AFD95365FD"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "path"
+              ],
+              "type": "tag"
+            }
+          ],
+          "limit": "1",
+          "measurement": "disk",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "free"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [
+                  "free"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "used"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [
+                  "used"
+                ],
+                "type": "alias"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "used_percent"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [
+                  "used %"
+                ],
+                "type": "alias"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "fstype",
+              "operator": "=",
+              "value": "nfs4"
+            }
+          ]
+        }
+      ],
+      "title": "NFS and other (non-local) filesystems",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {
+            "reducers": []
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -1074,10 +1071,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 26
+        "h": 7,
+        "w": 10,
+        "x": 14,
+        "y": 17
       },
       "id": 12,
       "links": [],
@@ -1086,7 +1083,7 @@
         "legend": {
           "calcs": [],
           "displayMode": "table",
-          "placement": "right",
+          "placement": "bottom",
           "showLegend": true,
           "values": [
             "value",
@@ -1191,7 +1188,7 @@
       "type": "piechart"
     }
   ],
-  "refresh": false,
+  "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [],
@@ -1246,6 +1243,6 @@
   "timezone": "",
   "title": "TrinityX - Home",
   "uid": "trixhome",
-  "version": 5,
+  "version": 6,
   "weekStart": ""
 }
