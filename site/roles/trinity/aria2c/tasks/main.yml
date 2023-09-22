@@ -1,0 +1,40 @@
+---
+# tasks file for transmission
+- name: Install Transmission
+  yum:
+    name: 
+      - transmission-common
+    state: present
+
+- name: Make sure aria is not running
+  service:
+    name: aria2c
+    state: stopped
+  ignore_errors: true
+  
+- name: Render aria2c daemon script
+  template:
+    src: 'aria2c-daemon.sh.j2'
+    dest: "{{ trix_sbin }}/aria2c-daemon.sh"
+    owner: 'root'
+    group: 'root'
+    mode: '0755'
+    backup: no
+
+- name: Render systemd configuration file
+  template:
+    src: 'aria2c.service.j2'
+    dest: /etc/systemd/system/aria2c.service
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+    backup: no
+  notify:
+    - reload aria2c
+
+- name: Start aria2c
+  service:
+    name: aria2c
+    enabled: true
+    state: started
+  
