@@ -7,10 +7,14 @@
       - transmission-common
     state: present
 
+- name: Populate service facts
+  service_facts:
+
 - name: Stop aria2c
   service:
     name: aria2c
     state: stopped
+  when: ansible_facts.services['aria2c.service'] is defined and ansible_facts.services['aria2c.service'].status != 'not-found'
   ignore_errors: true
   
 - name: Render aria2c daemon script
