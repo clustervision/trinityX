@@ -7,7 +7,7 @@
       - transmission-common
     state: present
 
-- name: Make sure aria2c is not running
+- name: Stop aria2c
   service:
     name: aria2c
     state: stopped
@@ -30,12 +30,11 @@
     group: 'root'
     mode: '0644'
     backup: no
-  notify:
-    - reload aria2c
 
 - name: Start aria2c
   service:
     name: aria2c
     enabled: true
     state: started
+  ignore_errors: true
   
