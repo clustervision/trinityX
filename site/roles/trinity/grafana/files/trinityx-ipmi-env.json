@@ -87,11 +87,12 @@
       "options": {
         "legend": {
           "calcs": [
+            "mean",
             "lastNotNull",
             "max"
           ],
           "displayMode": "table",
-          "placement": "right",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
@@ -102,6 +103,7 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
+          "alias": "($tag_host) $tag_name",
           "datasource": {
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
@@ -136,7 +138,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "query": "SELECT mean(\"value\") FROM \"ipmi_sensor\" WHERE (\"name\" =~ /^cpu[0-9]*_temp$/ ) AND $timeFilter GROUP BY time($__interval), \"host\", \"name\" fill(null)",
-          "rawQuery": true,
+          "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -157,13 +159,19 @@
             {
               "key": "name",
               "operator": "=~",
-              "value": "/cpu/"
+              "value": " /^cpu[0-9]*_temp$/"
             },
             {
               "condition": "AND",
               "key": "unit",
               "operator": "=",
               "value": "degrees_c"
+            },
+            {
+              "condition": "AND",
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -237,11 +245,12 @@
       "options": {
         "legend": {
           "calcs": [
+            "mean",
             "lastNotNull",
             "max"
           ],
           "displayMode": "table",
-          "placement": "right",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
@@ -252,7 +261,7 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "$tag_host $tag_name",
+          "alias": "($tag_host) $tag_name",
           "datasource": {
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
@@ -307,19 +316,19 @@
           "tags": [
             {
               "key": "name",
-              "operator": "=",
-              "value": "system_temp"
+              "operator": "=~",
+              "value": "/^system_temp|inlet_air_temp$/"
             },
             {
-              "condition": "OR",
-              "key": "name",
-              "operator": "=",
-              "value": "inlet_air_temp"
+              "condition": "AND",
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
       ],
-      "title": "System or air inlet",
+      "title": "System / Air Inlet Templerature",
       "type": "timeseries"
     },
     {
@@ -375,10 +384,36 @@
           },
           "unit": "celsius"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "(burnmaster.cv.taurusgroup.one) dimma1_temp",
+                  "(burnmaster.cv.taurusgroup.one) dimma2_temp"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 12,
         "x": 0,
         "y": 13
@@ -388,11 +423,12 @@
       "options": {
         "legend": {
           "calcs": [
+            "mean",
             "lastNotNull",
             "max"
           ],
           "displayMode": "table",
-          "placement": "right",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
@@ -403,7 +439,7 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "$tag_host $tag_name",
+          "alias": "($tag_host) $tag_name",
           "datasource": {
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
@@ -464,6 +500,12 @@
               "key": "unit",
               "operator": "=",
               "value": "degrees_c"
+            },
+            {
+              "condition": "AND",
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -527,7 +569,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 12,
         "x": 12,
         "y": 13
@@ -537,11 +579,12 @@
       "options": {
         "legend": {
           "calcs": [
+            "mean",
             "lastNotNull",
             "max"
           ],
           "displayMode": "table",
-          "placement": "right",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
@@ -552,7 +595,7 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "$tag_host $tag_name",
+          "alias": "($tag_host) $tag_name",
           "datasource": {
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
@@ -586,7 +629,7 @@
           "measurement": "ipmi_sensor",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"value\") FROM \"ipmi_sensor\" WHERE (\"name\" = 'system_temp' OR \"name\" = 'inlet_air_temp') AND $timeFilter GROUP BY time($__interval), \"host\", \"name\" fill(null)",
+          "query": "SELECT mean(\"value\") FROM \"ipmi_sensor\" WHERE (\"name\" =~ /^hdd[0-9]*_temp$/) AND $timeFilter GROUP BY time($__interval), \"host\", \"name\" fill(null)",
           "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
@@ -608,7 +651,13 @@
             {
               "key": "name",
               "operator": "=~",
-              "value": "/hdd/"
+              "value": "/^hdd.*_temp/"
+            },
+            {
+              "condition": "AND",
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -663,7 +712,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -672,10 +722,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 11,
         "w": 12,
         "x": 0,
-        "y": 21
+        "y": 23
       },
       "id": 8,
       "interval": "30s",
@@ -685,7 +735,7 @@
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "right",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
@@ -696,7 +746,7 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "$tag_host $tag_name",
+          "alias": "($tag_host) $tag_name",
           "datasource": {
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
@@ -730,6 +780,8 @@
           "measurement": "ipmi_sensor",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "SELECT mean(\"value\") FROM \"ipmi_sensor\" WHERE (\"name\" =~ /fan/ AND \"host\" =~  /^$hostname[.]?\\$/) AND $timeFilter GROUP BY time($__interval), \"host\", \"name\" fill(null)\n",
+          "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -756,7 +808,7 @@
               "condition": "AND",
               "key": "host",
               "operator": "=~",
-              "value": "/^$hostname[.]?$/"
+              "value": "/^$hostname[.]?/"
             }
           ]
         }
@@ -769,13 +821,14 @@
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
-    "statistics", "ipmi"
+    "statistics",
+    "ipmi"
   ],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "All",
           "value": "$__all"
         },
@@ -810,6 +863,6 @@
   "timezone": "",
   "title": "TrinityX - IPMI Environmentals",
   "uid": "oVhtvu1Gk",
-  "version": 6,
+  "version": 10,
   "weekStart": ""
 }
