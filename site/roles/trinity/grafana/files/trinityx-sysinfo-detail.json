@@ -90,8 +90,7 @@
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
           },
-          "groupBy": [
-          ],
+          "groupBy": [],
           "measurement": "system",
           "orderByTime": "ASC",
           "policy": "default",
@@ -191,8 +190,7 @@
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
           },
-          "groupBy": [
-          ],
+          "groupBy": [],
           "measurement": "mem",
           "orderByTime": "ASC",
           "policy": "default",
@@ -292,8 +290,7 @@
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
           },
-          "groupBy": [
-          ],
+          "groupBy": [],
           "measurement": "mem",
           "orderByTime": "ASC",
           "policy": "default",
@@ -393,8 +390,7 @@
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
           },
-          "groupBy": [
-          ],
+          "groupBy": [],
           "measurement": "mem",
           "orderByTime": "ASC",
           "policy": "default",
@@ -494,8 +490,7 @@
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
           },
-          "groupBy": [
-          ],
+          "groupBy": [],
           "measurement": "swap",
           "orderByTime": "ASC",
           "policy": "default",
@@ -595,8 +590,7 @@
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
           },
-          "groupBy": [
-          ],
+          "groupBy": [],
           "measurement": "swap",
           "orderByTime": "ASC",
           "policy": "default",
@@ -768,7 +762,12 @@
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
             {
               "params": [
                 "host"
@@ -794,50 +793,34 @@
                   "running"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "running"
+                ],
+                "type": "alias"
               }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "host",
-              "operator": "=~",
-              "value": "/^$hostname[.]?/"
-            }
-          ]
-        },
-        {
-          "alias": "$col",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "P2AEA19AFD95365FD"
-          },
-          "groupBy": [
-            
-            {
-              "params": [
-                "host"
-              ],
-              "type": "tag"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "processes",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "B",
-          "resultFormat": "time_series",
-          "select": [
+            ],
             [
               {
                 "params": [
                   "total"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "total"
+                ],
+                "type": "alias"
               }
             ]
           ],
@@ -946,7 +929,12 @@
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
             {
               "params": [
                 "host"
@@ -972,8 +960,17 @@
                   "load1"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "load1"
+                ],
+                "type": "alias"
               }
-              
             ],
             [
               {
@@ -981,6 +978,16 @@
                   "load5"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "load5"
+                ],
+                "type": "alias"
               }
             ],
             [
@@ -989,8 +996,17 @@
                   "load15"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "load15"
+                ],
+                "type": "alias"
               }
-
             ]
           ],
           "tags": [
@@ -1100,7 +1116,7 @@
           "groupBy": [
             {
               "params": [
-                "10s"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -1299,13 +1315,18 @@
       "repeatDirection": "h",
       "targets": [
         {
-          "alias": "$col",
+          "alias": "usage $col",
           "datasource": {
             "type": "influxdb",
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
             {
               "params": [
                 "cpu"
@@ -1337,6 +1358,16 @@
                   "usage_guest"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "alias"
+                ],
+                "type": "alias"
               }
             ],
             [
@@ -1345,6 +1376,16 @@
                   "usage_guest_nice"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "guest_nic"
+                ],
+                "type": "alias"
               }
             ],
             [
@@ -1353,6 +1394,16 @@
                   "usage_iowait"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "iowait"
+                ],
+                "type": "alias"
               }
             ],
             [
@@ -1361,6 +1412,16 @@
                   "usage_irq"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "irq"
+                ],
+                "type": "alias"
               }
             ],
             [
@@ -1369,6 +1430,16 @@
                   "usage_nice"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "nice"
+                ],
+                "type": "alias"
               }
             ],
             [
@@ -1377,6 +1448,16 @@
                   "usage_softirq"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "softirq"
+                ],
+                "type": "alias"
               }
             ],
             [
@@ -1385,6 +1466,16 @@
                   "usage_steal"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "steal"
+                ],
+                "type": "alias"
               }
             ],
             [
@@ -1393,6 +1484,16 @@
                   "usage_system"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "system"
+                ],
+                "type": "alias"
               }
             ],
             [
@@ -1401,6 +1502,16 @@
                   "usage_user"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "user"
+                ],
+                "type": "alias"
               }
             ]
           ],
@@ -1556,7 +1667,12 @@
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
             {
               "params": [
                 "host"
@@ -1690,7 +1806,6 @@
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
             {
               "params": [
                 "host"
@@ -1825,7 +1940,6 @@
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
             {
               "params": [
                 "host"
@@ -1939,7 +2053,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1985,7 +2100,6 @@
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
             {
               "params": [
                 "path"
@@ -2084,7 +2198,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -2109,7 +2224,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 45
+        "y": 53
       },
       "id": 17,
       "interval": "30s",
@@ -2138,7 +2253,12 @@
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
             {
               "params": [
                 "name"
@@ -2162,7 +2282,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "query": "SELECT non_negative_derivative(mean(\"read_bytes\"), 1s) AS \"read_bytes\", non_negative_derivative(mean(\"write_bytes\"), 1s) AS \"write_bytes\" FROM \"diskio\" WHERE (\"host\" =~ /^$hostname[.]?/) AND $timeFilter GROUP BY time($__interval), \"name\", \"host\" fill(null)",
-          "rawQuery": true,
+          "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -2275,7 +2395,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2304,7 +2425,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 45
+        "y": 53
       },
       "id": 18,
       "interval": "30s",
@@ -2333,7 +2454,12 @@
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
             {
               "params": [
                 "name"
@@ -2469,7 +2595,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2498,7 +2625,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 45
+        "y": 53
       },
       "id": 19,
       "interval": "30s",
@@ -2527,7 +2654,12 @@
             "uid": "P2AEA19AFD95365FD"
           },
           "groupBy": [
-            
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
             {
               "params": [
                 "name"
@@ -2625,7 +2757,7 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "controller1",
           "value": "controller1"
         },
@@ -2672,6 +2804,6 @@
   "timezone": "",
   "title": "TrinityX - System Information (Detailed)",
   "uid": "trixsysinfo",
-  "version": 17,
+  "version": 37,
   "weekStart": ""
 }
