@@ -119,9 +119,23 @@
       when: workload_manager == "slurm"
       tags: slurm, sbank
 
-    - role: trinity/luna
+    - role: trinity/luna2
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      luna2_cluster:
+        frontend_address: '{{ trix_ctrl_ip }}'
+        networks:
+        - name: '{{ trix_domain }}'
+          ip: '{{ trix_cluster_net }}'
+          prefix: '{{ trix_cluster_netprefix }}'
+          start_ip: '{{ trix_cluster_dhcp_start }}'
+          end_ip:  '{{ trix_cluster_dhcp_end }}'
+        - name: 'ipmi'
+          ip: '10.148.0.0'
+          prefix: '16'
+        - name: 'ib'
+          ip: '10.149.0.0'
+          prefix: '16'
       tags: luna
 
     - role: trinity/resolv
