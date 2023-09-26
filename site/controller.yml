@@ -53,6 +53,10 @@
       nfs_export_shared: true
       nfs_export_home: true
       nfs_exports_path: '{{ trix_local }}/etc/exports.d'
+      nfs_mounts:
+        - path: '/trinity/shared'
+          remote: '{{ trix_ctrl_hostname }}:/trinity/shared'
+          options: 'defaults,nfsvers=4,ro,retrans=4'
       tags: nfs
 
     - role: trinity/ssl-cert
@@ -75,6 +79,7 @@
     - role: trinity/openldap
       openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
       openldap_server_conf_path: '{{ trix_local }}/etc/openldap/slapd.d'
+      openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       tags: openldap
 
     - role: trinity/obol
@@ -107,16 +112,30 @@
       munge_conf_path: '{{ trix_shared }}/etc/munge'
       slurmdbd_sql_user: 'slurm_accounting'
       slurmdbd_sql_db: 'slurm_accounting'
-      tags: slurm
       when: workload_manager == "slurm"
+      tags: slurm
 
     - role: trinity/slurm-sbank
-      tags: slurm, sbank
       when: workload_manager == "slurm"
+      tags: slurm, sbank
 
-    - role: trinity/luna
+    - role: trinity/luna2
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      luna2_cluster:
+        frontend_address: '{{ trix_ctrl_ip }}'
+        networks:
+        - name: '{{ trix_domain }}'
+          ip: '{{ trix_cluster_net }}'
+          prefix: '{{ trix_cluster_netprefix }}'
+          start_ip: '{{ trix_cluster_dhcp_start }}'
+          end_ip:  '{{ trix_cluster_dhcp_end }}'
+        - name: 'ipmi'
+          ip: '10.148.0.0'
+          prefix: '16'
+        - name: 'ib'
+          ip: '10.149.0.0'
+          prefix: '16'
       tags: luna
 
     - role: trinity/resolv
@@ -163,6 +182,8 @@
       enable_ssl: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      login_host: "{{ ansible_fqdn }}"
+      ldap_host: "{{ trix_ctrl_ip }}"
       admin_group: admins
       tags: ood
 
