@@ -88,7 +88,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
+        "w": 2,
         "x": 0,
         "y": 1
       },
@@ -102,9 +102,9 @@
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "last"
           ],
-          "fields": "/^count$/",
+          "fields": "/^resources\\.partitions$/",
           "values": false
         },
         "text": {},
@@ -117,41 +117,45 @@
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
+          "groupBy": [],
+          "measurement": "resources",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select count(distinct(\"part\")) from (select \"running\", \"part\" from squeue)",
-          "rawQuery": true,
+          "query": "select count(distinct(\"partition\")) from (select \"cpus\", \"partition\" from system)",
+          "rawQuery": false,
           "refId": "A",
-          "resultFormat": "table",
+          "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "value"
+                  "_partition"
                 ],
                 "type": "field"
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "distinct"
+              },
+              {
+                "params": [],
+                "type": "count"
+              },
+              {
+                "params": [
+                  "partitions"
+                ],
+                "type": "alias"
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
         }
       ],
       "title": "Partitions",
@@ -167,17 +171,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -193,23 +187,21 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 4,
+        "w": 3,
+        "x": 2,
         "y": 1
       },
-      "id": 25,
-      "links": [],
-      "maxDataPoints": 100,
+      "id": 89,
       "options": {
         "colorMode": "none",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/^Allocated nodes$/",
           "values": false
         },
         "textMode": "auto"
@@ -221,43 +213,119 @@
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "sinfo_nodes",
+          "groupBy": [],
+          "hide": false,
+          "measurement": "resources",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "SELECT count(distinct(\"_hostname\")) FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval) fill(previous)",
+          "rawQuery": false,
           "refId": "A",
-          "resultFormat": "time_series",
+          "resultFormat": "table",
           "select": [
             [
               {
                 "params": [
-                  "nodes_total"
+                  "_hostname"
                 ],
                 "type": "field"
               },
               {
-                "params": [],
-                "type": "mean"
+                "params": [
+                  "allocated_hostnames"
+                ],
+                "type": "alias"
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "PFAAC3528D56451CB"
+          },
+          "groupBy": [],
+          "hide": false,
+          "measurement": "resources",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT count(distinct(\"_hostname\")) FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval) fill(previous)",
+          "rawQuery": false,
+          "refId": "B",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "_hostname"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [
+                  "total_hostnames"
+                ],
+                "type": "alias"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
         }
       ],
-      "title": "Total nodes",
+      "title": "Total Nodes",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "allocated_hostnames": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "total_hostnames": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "allocated_hostnames (count)": "Allocated nodes",
+              "total_hostnames (count)": "Total nodes"
+            }
+          }
+        }
+      ],
       "transparent": true,
       "type": "stat"
     },
@@ -271,17 +339,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -297,23 +355,21 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 9,
+        "w": 3,
+        "x": 5,
         "y": 1
       },
-      "id": 28,
-      "links": [],
-      "maxDataPoints": 100,
+      "id": 88,
       "options": {
         "colorMode": "none",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/^Allocated nodes$/",
           "values": false
         },
         "textMode": "auto"
@@ -325,43 +381,125 @@
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "sinfo_nodes",
+          "groupBy": [],
+          "hide": false,
+          "measurement": "resources",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "SELECT count(distinct(\"_hostname\")) FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval) fill(previous)",
+          "rawQuery": false,
           "refId": "A",
-          "resultFormat": "time_series",
+          "resultFormat": "table",
           "select": [
             [
               {
                 "params": [
-                  "nodes_allocated"
+                  "_hostname"
                 ],
                 "type": "field"
               },
               {
-                "params": [],
-                "type": "mean"
+                "params": [
+                  "allocated_hostnames"
+                ],
+                "type": "alias"
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            },
+            {
+              "condition": "AND",
+              "key": "state::tag",
+              "operator": "=",
+              "value": "allocated"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "PFAAC3528D56451CB"
+          },
+          "groupBy": [],
+          "hide": false,
+          "measurement": "resources",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT count(distinct(\"_hostname\")) FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval) fill(previous)",
+          "rawQuery": false,
+          "refId": "B",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "_hostname"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [
+                  "total_hostnames"
+                ],
+                "type": "alias"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
         }
       ],
-      "title": "Allocated nodes",
+      "title": "Node Allocations",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "allocated_hostnames": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "total_hostnames": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "allocated_hostnames (count)": "Allocated nodes",
+              "total_hostnames (count)": "Total nodes"
+            }
+          }
+        }
+      ],
       "type": "stat"
     },
     {
@@ -391,226 +529,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 5,
-        "x": 14,
-        "y": 1
-      },
-      "id": 26,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PFAAC3528D56451CB"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "sinfo_cpus",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "cpu_total"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "title": "Total CPU's",
-      "transparent": true,
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "PFAAC3528D56451CB"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 5,
-        "x": 19,
-        "y": 1
-      },
-      "id": 27,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PFAAC3528D56451CB"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "sinfo_cpus",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "cpu_allocated"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "title": "Allocated CPU's",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "PFAAC3528D56451CB"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "rgb(31, 120, 193)",
-            "mode": "fixed"
-          },
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
@@ -621,10 +539,10 @@
       "gridPos": {
         "h": 3,
         "w": 4,
-        "x": 0,
-        "y": 4
+        "x": 8,
+        "y": 1
       },
-      "id": 56,
+      "id": 77,
       "links": [],
       "maxDataPoints": 100,
       "options": {
@@ -634,9 +552,9 @@
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
-          "fields": "/^sdiag\\.mean$/",
+          "fields": "",
           "values": false
         },
         "textMode": "auto"
@@ -651,48 +569,359 @@
           "groupBy": [
             {
               "params": [
-                "$__interval"
+                "hostname::field"
               ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
+              "type": "tag"
             }
           ],
-          "measurement": "sdiag",
+          "measurement": "resources",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"jobs_running\") FROM \"sdiag\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
-          "rawQuery": true,
+          "query": "SELECT last(\"cpus\") FROM \"system\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY \"partition\"::tag",
+          "rawQuery": false,
           "refId": "A",
-          "resultFormat": "time_series",
+          "resultFormat": "table",
           "select": [
             [
               {
                 "params": [
-                  "jobs_running"
+                  "cpus"
                 ],
                 "type": "field"
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "last"
               }
             ]
           ],
           "tags": [
             {
-              "key": "part",
+              "key": "partition::tag",
               "operator": "=~",
               "value": "/^$partition$/"
             }
           ]
         }
       ],
-      "title": "Total Running jobs",
+      "title": "Total CPUs",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "PFAAC3528D56451CB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 78,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "PFAAC3528D56451CB"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "hostname::field"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "resources",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT last(\"cpus\") FROM \"system\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY \"partition\"::tag",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "alloc_cpus"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
+        }
+      ],
+      "title": "Allocated CPUs",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "PFAAC3528D56451CB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decmbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 79,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "PFAAC3528D56451CB"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "hostname::field"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "resources",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT last(\"cpus\") FROM \"system\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY \"partition\"::tag",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "memory"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
+        }
+      ],
+      "title": "Total Memory",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "PFAAC3528D56451CB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decmbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 80,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "PFAAC3528D56451CB"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "hostname::field"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "resources",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT last(\"cpus\") FROM \"system\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY \"partition\"::tag",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "alloc_memory"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
+        }
+      ],
+      "title": "Allocated Memory",
       "type": "stat"
     },
     {
@@ -727,7 +956,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -736,7 +965,6 @@
               "mode": "off"
             }
           },
-          "links": [],
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -744,17 +972,56 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total nodes"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Allocated nodes"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 6,
-        "w": 10,
-        "x": 4,
+        "h": 10,
+        "w": 8,
+        "x": 0,
         "y": 4
       },
       "id": 23,
@@ -764,121 +1031,140 @@
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "right",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi",
+          "mode": "single",
           "sort": "none"
         }
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "$col nodes",
           "datasource": {
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "sinfo_nodes",
+          "groupBy": [],
+          "hide": false,
+          "measurement": "resources",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"cpu_total\") AS \"Total CPU's\", mean(\"cpu_allocated\") AS \"Allocated\", mean(\"cpu_other\") AS \"Other\", mean(\"cpu_idle\") AS \"Idle\" FROM \"sinfo_cpus\" WHERE $timeFilter GROUP BY time($__interval), \"hostname\" fill(null)",
+          "query": "SELECT count(distinct(\"_hostname\")) FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval) fill(previous)",
           "rawQuery": false,
           "refId": "A",
-          "resultFormat": "time_series",
+          "resultFormat": "table",
           "select": [
             [
               {
                 "params": [
-                  "nodes_total"
+                  "_hostname"
                 ],
                 "type": "field"
               },
               {
-                "params": [],
-                "type": "mean"
-              },
-              {
                 "params": [
-                  "Total nodes"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "nodes_allocated"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "Allocated"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "nodes_other"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "Other"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "nodes_idle"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "Idle"
+                  "allocated_hostnames"
                 ],
                 "type": "alias"
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            },
+            {
+              "condition": "AND",
+              "key": "state::tag",
+              "operator": "=",
+              "value": "allocated"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "PFAAC3528D56451CB"
+          },
+          "groupBy": [],
+          "hide": false,
+          "measurement": "resources",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT count(distinct(\"_hostname\")) FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval) fill(previous)",
+          "rawQuery": false,
+          "refId": "B",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "_hostname"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [
+                  "total_hostnames"
+                ],
+                "type": "alias"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
         }
       ],
-      "title": "Total Node Allocations",
+      "title": "Node Allocations",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "allocated_hostnames": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "total_hostnames": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "allocated_hostnames (count)": "Allocated nodes",
+              "total_hostnames (count)": "Total nodes"
+            }
+          }
+        }
+      ],
       "type": "timeseries"
     },
     {
@@ -906,7 +1192,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -933,138 +1219,190 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total CPUs"
+            },
+            "properties": [
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 6,
-        "w": 10,
-        "x": 14,
+        "h": 10,
+        "w": 8,
+        "x": 8,
         "y": 4
       },
-      "id": 22,
+      "id": 73,
       "options": {
         "legend": {
           "calcs": [
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Name",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "$col CPUs",
           "datasource": {
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "sinfo_cpus",
+          "groupBy": [],
+          "measurement": "resources",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"cpu_total\") AS \"Total CPU's\", mean(\"cpu_allocated\") AS \"Allocated\", mean(\"cpu_other\") AS \"Other\", mean(\"cpu_idle\") AS \"Idle\" FROM \"sinfo_cpus\" WHERE $timeFilter GROUP BY time($__interval), \"hostname\" fill(null)",
+          "query": "SELECT \"cpus\", \"alloc_cpus\" FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY \"hostname\"::tag",
           "rawQuery": false,
           "refId": "A",
-          "resultFormat": "time_series",
+          "resultFormat": "table",
           "select": [
             [
               {
                 "params": [
-                  "cpu_total"
+                  "cpus"
                 ],
                 "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "Total"
-                ],
-                "type": "alias"
               }
             ],
             [
               {
                 "params": [
-                  "cpu_allocated"
+                  "alloc_cpus"
                 ],
                 "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "Allocated"
-                ],
-                "type": "alias"
               }
             ],
             [
               {
                 "params": [
-                  "cpu_other"
+                  "_hostname"
                 ],
                 "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "Other"
-                ],
-                "type": "alias"
               }
             ],
             [
               {
                 "params": [
-                  "cpu_idle"
+                  "_partition"
                 ],
                 "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "Idle"
-                ],
-                "type": "alias"
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
         }
       ],
-      "title": "Total CPU Allocations",
+      "title": "CPUs Allocation",
+      "transformations": [
+        {
+          "disabled": true,
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "_hostname": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "_partition": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "alloc_cpus": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "cpus": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "hostname": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "_hostname": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "alloc_cpus": {
+                "aggregations": [
+                  "mean"
+                ],
+                "operation": "aggregate"
+              },
+              "cpus": {
+                "aggregations": [
+                  "mean"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "disabled": true,
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_hostname": true,
+              "hostname": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "alloc_cpus (distinctCount)": "Allocated CPUs",
+              "alloc_cpus (mean)": "Allocated CPUs",
+              "alloc_cpus (sum)": "Allocated CPUs",
+              "cpus (distinctCount)": "Total CPUs",
+              "cpus (mean)": "Total CPUs",
+              "cpus (sum)": "Total CPUs",
+              "hostname": ""
+            }
+          }
+        }
+      ],
       "type": "timeseries"
     },
     {
@@ -1075,59 +1413,89 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "rgb(31, 120, 193)",
-            "mode": "fixed"
+            "mode": "palette-classic"
           },
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
             }
-          ],
+          },
+          "links": [],
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
-          "unit": "none"
+          "unit": "decmbytes"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Memory"
+            },
+            "properties": [
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 0,
-        "y": 7
+        "h": 10,
+        "w": 8,
+        "x": 16,
+        "y": 4
       },
-      "id": 55,
-      "links": [],
-      "maxDataPoints": 100,
+      "id": 90,
       "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
+        "legend": {
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
-          "values": false
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Name",
+          "sortDesc": true
         },
-        "textMode": "auto"
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -1136,46 +1504,169 @@
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "sdiag",
+          "groupBy": [],
+          "measurement": "resources",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"jobs_pending\") FROM \"sdiag\" WHERE  $timeFilter GROUP BY time($__interval) fill(null)",
-          "rawQuery": true,
+          "query": "SELECT \"cpus\", \"alloc_cpus\" FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY \"hostname\"::tag",
+          "rawQuery": false,
           "refId": "A",
-          "resultFormat": "time_series",
+          "resultFormat": "table",
           "select": [
             [
               {
                 "params": [
-                  "jobs_pending"
+                  "memory"
                 ],
                 "type": "field"
-              },
+              }
+            ],
+            [
               {
-                "params": [],
-                "type": "mean"
+                "params": [
+                  "alloc_memory"
+                ],
+                "type": "field"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "_hostname"
+                ],
+                "type": "field"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "_partition"
+                ],
+                "type": "field"
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
         }
       ],
-      "title": "Total Pending jobs",
-      "type": "stat"
+      "title": "Memory Allocation",
+      "transformations": [
+        {
+          "disabled": true,
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "_hostname": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "_partition": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "alloc_cpus": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "alloc_memory": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "cpus": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "hostname": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "memory": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "_hostname": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "alloc_cpus": {
+                "aggregations": [
+                  "mean"
+                ],
+                "operation": "aggregate"
+              },
+              "alloc_memory": {
+                "aggregations": [
+                  "mean"
+                ],
+                "operation": "aggregate"
+              },
+              "cpus": {
+                "aggregations": [
+                  "mean"
+                ],
+                "operation": "aggregate"
+              },
+              "memory": {
+                "aggregations": [
+                  "mean"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_hostname": true,
+              "hostname": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "alloc_cpus (distinctCount)": "Allocated CPUs",
+              "alloc_cpus (mean)": "Allocated CPUs",
+              "alloc_cpus (sum)": "Allocated CPUs",
+              "alloc_memory (mean)": "Allocated Memory",
+              "cpus (distinctCount)": "Total CPUs",
+              "cpus (mean)": "Total CPUs",
+              "cpus (sum)": "Total CPUs",
+              "hostname": "",
+              "memory (mean)": "Total Memory"
+            }
+          }
+        }
+      ],
+      "type": "timeseries"
     },
     {
       "collapsed": false,
@@ -1187,7 +1678,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 14
       },
       "id": 45,
       "panels": [],
@@ -1211,101 +1702,72 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "rgb(31, 120, 193)",
+            "mode": "fixed"
           },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
             }
-          },
-          "links": [],
-          "mappings": [],
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 11,
+        "h": 4,
+        "w": 5,
         "x": 0,
-        "y": 11
+        "y": 15
       },
-      "id": 37,
+      "id": 55,
+      "links": [],
+      "maxDataPoints": 100,
       "options": {
-        "legend": {
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
+          "fields": "/^Value \\(distinctCount\\)$/",
+          "values": false
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
+        "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "$col jobs",
           "datasource": {
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": false,
-          "measurement": "squeue",
+          "groupBy": [],
+          "measurement": "jobs",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"running\") AS \"running\", mean(\"pending\") AS \"pending\" FROM \"squeue\" WHERE (\"part\" =~ /^$partition$/) AND $timeFilter GROUP BY time($__interval) fill(null)",
+          "query": "SELECT count(distinct(\"_job_id\")) FROM \"jobs\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval), \"state\"::tag",
           "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1313,51 +1775,52 @@
             [
               {
                 "params": [
-                  "running"
+                  "_job_id"
                 ],
                 "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "running"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "pending"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "pending"
-                ],
-                "type": "alias"
               }
             ]
           ],
           "tags": [
             {
-              "key": "part",
+              "key": "partition::tag",
               "operator": "=~",
               "value": "/^$partition$/"
+            },
+            {
+              "condition": "AND",
+              "key": "state::tag",
+              "operator": "=",
+              "value": "running"
             }
           ]
         }
       ],
-      "title": "($partition) Running vs Pending jobs ",
-      "type": "timeseries"
+      "title": "Total Running jobs",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "$tag_state": {
+                "aggregations": [],
+                "operation": "aggregate"
+              },
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Value": {
+                "aggregations": [
+                  "distinctCount"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "type": "stat"
     },
     {
       "datasource": {
@@ -1394,7 +1857,7 @@
             "spanNulls": true,
             "stacking": {
               "group": "A",
-              "mode": "none"
+              "mode": "normal"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -1407,7 +1870,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1416,58 +1880,247 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 13,
-        "x": 11,
-        "y": 11
+        "h": 8,
+        "w": 19,
+        "x": 5,
+        "y": 15
       },
       "id": 30,
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "displayMode": "table",
           "placement": "right",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Last *",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "$col jobs",
           "datasource": {
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "hostname"
-              ],
-              "type": "tag"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "squeue",
+          "groupBy": [],
+          "measurement": "jobs",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"cancelled\") AS \"cancelled\", mean(\"completed\") AS \"completed\", mean(\"completing\") AS \"completing\", mean(\"configuring\") AS \"configuring\", mean(\"failed\") AS \"failed\", mean(\"node_fail\") AS \"node_fail\", mean(\"pending\") AS \"pending\", mean(\"preempted\") AS \"preempted\", mean(\"running\") AS \"running\", mean(\"suspended\") AS \"suspended\", mean(\"timeout\") AS \"timeout\" FROM \"squeue\" WHERE (\"part\" =~ /^$partition$/) AND $timeFilter GROUP BY time($__interval), \"hostname\" fill(null)",
+          "query": "SELECT count(distinct(\"_job_id\")) FROM \"jobs\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval), \"state\"::tag",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "_job_id"
+                ],
+                "type": "field"
+              }
+            ],
+            [
+              {
+                "params": [
+                  "_state"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "partition::tag",
+              "operator": "=~",
+              "value": "/^$partition$/"
+            }
+          ]
+        }
+      ],
+      "title": "Jobs",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "_job_id": {
+                "aggregations": [
+                  "distinctCount"
+                ],
+                "operation": "aggregate"
+              },
+              "_state": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "completed": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "jobs._job_id": {
+                "aggregations": [
+                  "distinctCount"
+                ],
+                "operation": "aggregate"
+              },
+              "jobs._state": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "jobs.distinct {state: completed}": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "jobs.distinct {state: pending}": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "jobs.distinct {state: running}": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "pending": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "running": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "_state",
+            "emptyValue": "null",
+            "rowField": "Time",
+            "valueField": "_job_id (distinctCount)"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Time\\_state": "Time"
+            }
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "time",
+                "targetField": "Time"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "PFAAC3528D56451CB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "rgb(31, 120, 193)",
+            "mode": "fixed"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 19
+      },
+      "id": 87,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "/^Value \\(distinctCount\\)$/",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "PFAAC3528D56451CB"
+          },
+          "groupBy": [],
+          "measurement": "jobs",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT count(distinct(\"_job_id\")) FROM \"jobs\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval), \"state\"::tag",
           "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1475,213 +2128,52 @@
             [
               {
                 "params": [
-                  "cancelled"
+                  "_job_id"
                 ],
                 "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "cancelled"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "completed"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "completed"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "completing"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "completing"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "configuring"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "configuring"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "failed"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "failed"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "node_fail"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "node_fail"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "pending"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "pending"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "preempted"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "preempted"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "running"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "running"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "suspended"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "suspended"
-                ],
-                "type": "alias"
-              }
-            ],
-            [
-              {
-                "params": [
-                  "timeout"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              },
-              {
-                "params": [
-                  "timeout"
-                ],
-                "type": "alias"
               }
             ]
           ],
           "tags": [
             {
-              "key": "part",
+              "key": "partition::tag",
               "operator": "=~",
               "value": "/^$partition$/"
+            },
+            {
+              "condition": "AND",
+              "key": "state::tag",
+              "operator": "=",
+              "value": "pending"
             }
           ]
         }
       ],
-      "title": "($partition) Queue statistics",
-      "type": "timeseries"
+      "title": "Total Pending jobs",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "$tag_state": {
+                "aggregations": [],
+                "operation": "aggregate"
+              },
+              "Time": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Value": {
+                "aggregations": [
+                  "distinctCount"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "type": "stat"
     },
     {
       "collapsed": false,
@@ -1693,7 +2185,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 23
       },
       "id": 64,
       "panels": [],
@@ -1770,7 +2262,7 @@
         "h": 8,
         "w": 11,
         "x": 0,
-        "y": 21
+        "y": 24
       },
       "id": 2,
       "options": {
@@ -1895,7 +2387,7 @@
         "h": 8,
         "w": 13,
         "x": 11,
-        "y": 21
+        "y": 24
       },
       "id": 10,
       "options": {
@@ -2035,7 +2527,7 @@
         "h": 8,
         "w": 11,
         "x": 0,
-        "y": 29
+        "y": 32
       },
       "id": 4,
       "options": {
@@ -2210,7 +2702,7 @@
         "h": 8,
         "w": 13,
         "x": 11,
-        "y": 29
+        "y": 32
       },
       "id": 6,
       "options": {
@@ -2309,13 +2801,13 @@
           "type": "influxdb",
           "uid": "PFAAC3528D56451CB"
         },
-        "definition": "SHOW TAG VALUES WITH KEY = \"part\"",
+        "definition": "SHOW TAG VALUES WITH KEY = \"partition\"",
         "hide": 0,
         "includeAll": true,
         "multi": false,
         "name": "partition",
         "options": [],
-        "query": "SHOW TAG VALUES WITH KEY = \"part\"",
+        "query": "SHOW TAG VALUES WITH KEY = \"partition\"",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -2328,7 +2820,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {
@@ -2348,6 +2840,6 @@
   "timezone": "",
   "title": "TrinityX - Workload management",
   "uid": "trixwrklmgm",
-  "version": 11,
+  "version": 5,
   "weekStart": ""
 }
