@@ -1682,7 +1682,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "rgb(31, 120, 193)",
+            "fixedColor": "semi-dark-yellow",
             "mode": "fixed"
           },
           "mappings": [
@@ -1850,7 +1850,68 @@
           },
           "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "running"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "semi-dark-yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cancelled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "completing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -1980,7 +2041,7 @@
         "x": 0,
         "y": 19
       },
-      "id": 91,
+      "id": 97,
       "links": [],
       "maxDataPoints": 100,
       "options": {
@@ -1992,7 +2053,7 @@
           "calcs": [
             "last"
           ],
-          "fields": "/^pending$/",
+          "fields": "/^jobs\\.count$/",
           "values": false
         },
         "textMode": "auto"
@@ -2000,7 +2061,6 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "$tag_state",
           "datasource": {
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
@@ -2011,12 +2071,6 @@
                 "$interval"
               ],
               "type": "time"
-            },
-            {
-              "params": [
-                "state::tag"
-              ],
-              "type": "tag"
             }
           ],
           "measurement": "jobs",
@@ -2049,6 +2103,12 @@
               "key": "partition::tag",
               "operator": "=~",
               "value": "/^$partition$/"
+            },
+            {
+              "condition": "AND",
+              "key": "state::tag",
+              "operator": "=",
+              "value": "pending"
             }
           ]
         }
@@ -2858,7 +2918,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": false,
+  "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
@@ -2915,6 +2975,6 @@
   "timezone": "",
   "title": "TrinityX - Workload management",
   "uid": "trixwrklmgm",
-  "version": 8,
+  "version": 9,
   "weekStart": ""
 }
