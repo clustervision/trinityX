@@ -985,7 +985,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Total nodes"
+              "options": "Total Nodes"
             },
             "properties": [
               {
@@ -1004,7 +1004,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Allocated nodes"
+              "options": "Allocated Nodes"
             },
             "properties": [
               {
@@ -1042,11 +1042,19 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
+          "alias": "Allocated Nodes",
           "datasource": {
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [],
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            }
+          ],
           "hide": false,
           "measurement": "resources",
           "orderByTime": "ASC",
@@ -1054,7 +1062,7 @@
           "query": "SELECT count(distinct(\"_hostname\")) FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval) fill(previous)",
           "rawQuery": false,
           "refId": "A",
-          "resultFormat": "table",
+          "resultFormat": "time_series",
           "select": [
             [
               {
@@ -1064,10 +1072,12 @@
                 "type": "field"
               },
               {
-                "params": [
-                  "allocated_hostnames"
-                ],
-                "type": "alias"
+                "params": [],
+                "type": "distinct"
+              },
+              {
+                "params": [],
+                "type": "count"
               }
             ]
           ],
@@ -1086,11 +1096,19 @@
           ]
         },
         {
+          "alias": "Total Nodes",
           "datasource": {
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [],
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            }
+          ],
           "hide": false,
           "measurement": "resources",
           "orderByTime": "ASC",
@@ -1098,7 +1116,7 @@
           "query": "SELECT count(distinct(\"_hostname\")) FROM \"resources\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval) fill(previous)",
           "rawQuery": false,
           "refId": "B",
-          "resultFormat": "table",
+          "resultFormat": "time_series",
           "select": [
             [
               {
@@ -1108,10 +1126,12 @@
                 "type": "field"
               },
               {
-                "params": [
-                  "total_hostnames"
-                ],
-                "type": "alias"
+                "params": [],
+                "type": "distinct"
+              },
+              {
+                "params": [],
+                "type": "count"
               }
             ]
           ],
@@ -1125,46 +1145,7 @@
         }
       ],
       "title": "Node Allocations",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "Time": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "allocated_hostnames": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              },
-              "total_hostnames": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              }
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {},
-            "renameByName": {
-              "allocated_hostnames (count)": "Allocated nodes",
-              "total_hostnames (count)": "Total nodes"
-            }
-          }
-        }
-      ],
+      "transformations": [],
       "type": "timeseries"
     },
     {
@@ -1383,7 +1364,6 @@
           }
         },
         {
-          "disabled": true,
           "id": "organize",
           "options": {
             "excludeByName": {
@@ -1751,7 +1731,7 @@
           "calcs": [
             "last"
           ],
-          "fields": "/^Value \\(distinctCount\\)$/",
+          "fields": "/^jobs\\.count$/",
           "values": false
         },
         "textMode": "auto"
@@ -1763,7 +1743,14 @@
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [],
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            }
+          ],
           "measurement": "jobs",
           "orderByTime": "ASC",
           "policy": "default",
@@ -1778,6 +1765,14 @@
                   "_job_id"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "distinct"
+              },
+              {
+                "params": [],
+                "type": "count"
               }
             ]
           ],
@@ -1790,36 +1785,14 @@
             {
               "condition": "AND",
               "key": "state::tag",
-              "operator": "=",
-              "value": "running"
+              "operator": "=~",
+              "value": "/completing|running/"
             }
           ]
         }
       ],
       "title": "Total Running jobs",
-      "transformations": [
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "$tag_state": {
-                "aggregations": [],
-                "operation": "aggregate"
-              },
-              "Time": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "Value": {
-                "aggregations": [
-                  "distinctCount"
-                ],
-                "operation": "aggregate"
-              }
-            }
-          }
-        }
-      ],
+      "transformations": [],
       "type": "stat"
     },
     {
@@ -1905,18 +1878,32 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
+          "alias": "$tag_state",
           "datasource": {
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [],
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "state::tag"
+              ],
+              "type": "tag"
+            }
+          ],
           "measurement": "jobs",
           "orderByTime": "ASC",
           "policy": "default",
           "query": "SELECT count(distinct(\"_job_id\")) FROM \"jobs\" WHERE (\"partition\"::tag =~ /^$partition$/) AND $timeFilter GROUP BY time($interval), \"state\"::tag",
           "rawQuery": false,
           "refId": "A",
-          "resultFormat": "table",
+          "resultFormat": "time_series",
           "select": [
             [
               {
@@ -1924,14 +1911,14 @@
                   "_job_id"
                 ],
                 "type": "field"
-              }
-            ],
-            [
+              },
               {
-                "params": [
-                  "_state"
-                ],
-                "type": "field"
+                "params": [],
+                "type": "distinct"
+              },
+              {
+                "params": [],
+                "type": "count"
               }
             ]
           ],
@@ -1945,106 +1932,7 @@
         }
       ],
       "title": "Jobs",
-      "transformations": [
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "Time": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "_job_id": {
-                "aggregations": [
-                  "distinctCount"
-                ],
-                "operation": "aggregate"
-              },
-              "_state": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "completed": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              },
-              "jobs._job_id": {
-                "aggregations": [
-                  "distinctCount"
-                ],
-                "operation": "aggregate"
-              },
-              "jobs._state": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "jobs.distinct {state: completed}": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              },
-              "jobs.distinct {state: pending}": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              },
-              "jobs.distinct {state: running}": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              },
-              "pending": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              },
-              "running": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              }
-            }
-          }
-        },
-        {
-          "id": "groupingToMatrix",
-          "options": {
-            "columnField": "_state",
-            "emptyValue": "null",
-            "rowField": "Time",
-            "valueField": "_job_id (distinctCount)"
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {},
-            "renameByName": {
-              "Time\\_state": "Time"
-            }
-          }
-        },
-        {
-          "id": "convertFieldType",
-          "options": {
-            "conversions": [
-              {
-                "destinationType": "time",
-                "targetField": "Time"
-              }
-            ],
-            "fields": {}
-          }
-        }
-      ],
+      "transformations": [],
       "type": "timeseries"
     },
     {
@@ -2092,7 +1980,7 @@
         "x": 0,
         "y": 19
       },
-      "id": 87,
+      "id": 91,
       "links": [],
       "maxDataPoints": 100,
       "options": {
@@ -2104,7 +1992,7 @@
           "calcs": [
             "last"
           ],
-          "fields": "/^Value \\(distinctCount\\)$/",
+          "fields": "/^pending$/",
           "values": false
         },
         "textMode": "auto"
@@ -2112,11 +2000,25 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
+          "alias": "$tag_state",
           "datasource": {
             "type": "influxdb",
             "uid": "PFAAC3528D56451CB"
           },
-          "groupBy": [],
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "state::tag"
+              ],
+              "type": "tag"
+            }
+          ],
           "measurement": "jobs",
           "orderByTime": "ASC",
           "policy": "default",
@@ -2131,6 +2033,14 @@
                   "_job_id"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "distinct"
+              },
+              {
+                "params": [],
+                "type": "count"
               }
             ]
           ],
@@ -2139,40 +2049,12 @@
               "key": "partition::tag",
               "operator": "=~",
               "value": "/^$partition$/"
-            },
-            {
-              "condition": "AND",
-              "key": "state::tag",
-              "operator": "=",
-              "value": "pending"
             }
           ]
         }
       ],
       "title": "Total Pending jobs",
-      "transformations": [
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "$tag_state": {
-                "aggregations": [],
-                "operation": "aggregate"
-              },
-              "Time": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "Value": {
-                "aggregations": [
-                  "distinctCount"
-                ],
-                "operation": "aggregate"
-              }
-            }
-          }
-        }
-      ],
+      "transformations": [],
       "type": "stat"
     },
     {
@@ -2204,7 +2086,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "cb975b21-a712-48a6-9d99-1cb40f816aca"
+        "uid": "P97A5B9D2A816F7B3"
       },
       "fieldConfig": {
         "defaults": {
@@ -2236,7 +2118,7 @@
             "spanNulls": true,
             "stacking": {
               "group": "A",
-              "mode": "none"
+              "mode": "normal"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -2260,7 +2142,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 11,
+        "w": 12,
         "x": 0,
         "y": 24
       },
@@ -2274,7 +2156,7 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "10.1.2",
@@ -2283,7 +2165,7 @@
           "alias": "Job($tag_job)",
           "datasource": {
             "type": "influxdb",
-            "uid": "cb975b21-a712-48a6-9d99-1cb40f816aca"
+            "uid": "P97A5B9D2A816F7B3"
           },
           "groupBy": [
             {
@@ -2333,140 +2215,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "cb975b21-a712-48a6-9d99-1cb40f816aca"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "decimals": 2,
-          "displayName": "",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Time"
-              },
-              {
-                "id": "unit",
-                "value": "time: YYYY-MM-DD HH:mm:ss"
-              },
-              {
-                "id": "custom.align"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 13,
-        "x": 11,
-        "y": 24
-      },
-      "id": 10,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "alias": "Job($tag_job)",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "cb975b21-a712-48a6-9d99-1cb40f816aca"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "1d"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "job"
-              ],
-              "type": "tag"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "CPUTime",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "sum"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "title": "CPU Time per job",
-      "transformations": [
-        {
-          "id": "seriesToRows",
-          "options": {
-            "reducers": []
-          }
-        }
-      ],
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "cb975b21-a712-48a6-9d99-1cb40f816aca"
+        "uid": "P97A5B9D2A816F7B3"
       },
       "fieldConfig": {
         "defaults": {
@@ -2490,7 +2239,7 @@
             "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 5,
+            "pointSize": 6,
             "scaleDistribution": {
               "type": "linear"
             },
@@ -2498,7 +2247,7 @@
             "spanNulls": true,
             "stacking": {
               "group": "A",
-              "mode": "none"
+              "mode": "normal"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -2506,30 +2255,27 @@
           },
           "links": [],
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
-          "unit": "short"
+          "unit": "µs"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 11,
-        "x": 0,
-        "y": 32
+        "w": 12,
+        "x": 12,
+        "y": 24
       },
-      "id": 4,
+      "id": 92,
       "options": {
         "legend": {
           "calcs": [],
@@ -2539,16 +2285,403 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "alias": "Job($tag_job): Read",
+          "alias": "Job($tag_job)",
           "datasource": {
             "type": "influxdb",
-            "uid": "cb975b21-a712-48a6-9d99-1cb40f816aca"
+            "uid": "P97A5B9D2A816F7B3"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "job"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "CPUUtilization",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "CPU usage per job",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P97A5B9D2A816F7B3"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 6,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "id": 94,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "alias": "Job($tag_job)",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P97A5B9D2A816F7B3"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "job"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "RSS",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "RSS per job",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P97A5B9D2A816F7B3"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 6,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "id": 96,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "alias": "Job($tag_job)",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P97A5B9D2A816F7B3"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "job"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "VMSize",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "VM size per job",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P97A5B9D2A816F7B3"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 6,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decmbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "id": 93,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "alias": "Job($tag_job)",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P97A5B9D2A816F7B3"
           },
           "groupBy": [
             {
@@ -2590,12 +2723,94 @@
             ]
           ],
           "tags": []
+        }
+      ],
+      "title": "ReadMB per job",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P97A5B9D2A816F7B3"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 6,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decmbytes"
         },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "id": 95,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
         {
-          "alias": "Job($tag_job): Write",
+          "alias": "Job($tag_job)",
           "datasource": {
             "type": "influxdb",
-            "uid": "cb975b21-a712-48a6-9d99-1cb40f816aca"
+            "uid": "P97A5B9D2A816F7B3"
           },
           "groupBy": [
             {
@@ -2620,146 +2835,6 @@
           "measurement": "WriteMB",
           "orderByTime": "ASC",
           "policy": "default",
-          "refId": "B",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "title": "ReadMB/WriteMB",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "cb975b21-a712-48a6-9d99-1cb40f816aca"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 13,
-        "x": 11,
-        "y": 32
-      },
-      "id": 6,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "alias": "Job($tag_job)",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "cb975b21-a712-48a6-9d99-1cb40f816aca"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "job"
-              ],
-              "type": "tag"
-            },
-            {
-              "params": [
-                "step"
-              ],
-              "type": "tag"
-            },
-            {
-              "params": [
-                "task"
-              ],
-              "type": "tag"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "VMSize",
-          "orderByTime": "ASC",
-          "policy": "default",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -2779,11 +2854,11 @@
           "tags": []
         }
       ],
-      "title": "VMSize",
+      "title": "WriteMB per job",
       "type": "timeseries"
     }
   ],
-  "refresh": "10s",
+  "refresh": false,
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
@@ -2820,7 +2895,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -2840,6 +2915,6 @@
   "timezone": "",
   "title": "TrinityX - Workload management",
   "uid": "trixwrklmgm",
-  "version": 5,
+  "version": 8,
   "weekStart": ""
 }
