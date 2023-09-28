@@ -32,9 +32,16 @@ import base64
 from typing import List, Dict, Union
 from pprint import pprint
 
+def print_warning(msg, name="Warning"):
+    """Print a warning message to stderr"""
+    print("[%s] %s" % (name, msg), file=sys.stderr)
+
+def print_error(msg, name="Error"):
+    """Print an error message to stderr"""
+    print("[%s] %s" % (name, msg), file=sys.stderr)
+
 def print_table(item: Union[List, Dict]):
     """Print a list of dicts as a table, dict as a transposed table"""
-
     if isinstance(item, list):
         if len(item) == 0: 
             print('No results')
@@ -409,6 +416,11 @@ class Obol:
         for group in (groups or []) + [groupname]:
             self.group_addusers(group, [username])
 
+        # Create the user's home directory
+        if not os.path.exists(home):
+            os.mkdir(home)
+            os.chown(home, int(uid), int(gid))
+
     def group_add(self,
                 groupname=None,
                 gid=None,
@@ -529,23 +541,29 @@ class Obol:
             if uid in uids:
                 raise ValueError('UID %s already exists' % uid)
             mod_attrs.append((ldap.MOD_REPLACE, 'uidNumber', uid.encode('utf-8')))
-        if gid or groupname:
-            
-            mod_attrs.append((ldap.MOD_REPLACE, 'gidNumber', gid.encode('utf-8')))
-            primary_group_changed = True
+
         if groupname:
-            # if only groupname is specified: groupname should exist
-            existing_group = self.group_show(groupname,)
-        if groupname and gid:
-            # if both groupname and gid are specified: should refer to same group
-            if existing_group['gidNumber'] != gid:
+            # if groupname is specified: groupname should exist
+            if not self._groupname_exists(groupname, _groups=existing_groups):
+                raise ValueError('Group %s does not exist' % groupname)
+            
+            _gid = [g['gidNumber'] for g in existing_groups if g['cn'] == groupname][0]
+            # if also gid is specified: should refer to same group
+            if gid and (gid != _gid):
                 raise ValueError('Group %s does not have gid %s' % (groupname, gid))
+            gid = _gid
+
         elif gid:
             # if only gid is specified: gid should exist
-            if gid not in [g['gidNumber'] for g in existing_groups]:
+            if not self._gid_exists(gid, _groups=existing_groups):
                 raise ValueError('GID %s does not exist' % gid)
+            
             groupname = [g['cn'] for g in existing_groups if g['gidNumber'] == gid][0]
-            existing_group = self.group_show(groupname,)
+
+        if gid or groupname:
+            mod_attrs.append((ldap.MOD_REPLACE, 'gidNumber', gid.encode('utf-8')))
+            primary_group_changed = True
+
         if mail:
             mod_attrs.append((ldap.MOD_REPLACE, 'mail', mail.encode('utf-8')))
         if phone:
@@ -582,7 +600,7 @@ class Obol:
         if primary_group_changed:
             # Modify the user's primary group
             self.group_addusers(groupname, [username])
-            self.group_delusers(existing_group['cn'], [username])
+            self.group_delusers(groupname, [username])
         for group in groups_to_add:
             self.group_addusers(group, [username])
         for group in groups_to_del:
@@ -654,7 +672,7 @@ class Obol:
         self.conn.modify_s(group_dn, mod_attrs)
 
 
-    def group_delusers(self, groupname, usernames, **kwargs):
+    def group_delusers(self, groupname, usernames, warn=False, **kwargs):
         """Remove users from a group"""
 
         # Ensure group exists
@@ -670,8 +688,9 @@ class Obol:
         mod_attrs = []
         for user in existing_users:
             if user['uid'] in usernames:
-                if user['gidNumber'] == existing_group['gidNumber']: 
-                    print(f"[Warning] You removed user {user['uid']} from its primary group")
+                if user['gidNumber'] == existing_group['gidNumber']:
+                    if warn:
+                        print_warning(f"You removed user {user['uid']} from its primary group")
                 mod_attrs.append((ldap.MOD_DELETE, 'member',
                                 str('uid=%s,ou=People,%s' % (user['uid'], self.base_dn)).encode('utf-8')))
             
@@ -799,15 +818,12 @@ def run():
             exit(1)
         method_name = '%s_%s' % (args['target'], args['command'])
         function = getattr(obol, method_name, None)
-        function(**args)
-    except ValueError as e:
-        print(f"[ValueError] {e}")
-        exit(1)
-    except LookupError as e:
-        print(f"[LookupError] {e}")
+        function(**args, warn=True)
+    except (ValueError, LookupError) as e:
+        print_error(e, type(e).__name__)
         exit(1)
     except Exception as e:
-        print(f"[UnknowError: {type(e).__name__}] {e}")
+        print_error(e, (f"OtherError: {type(e).__name__}"))
         import traceback
         print(traceback.format_exc())
         exit(1)
