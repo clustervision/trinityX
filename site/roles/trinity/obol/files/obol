@@ -16,6 +16,14 @@
 # details.
 ######################################################################
 
+__author__      = 'Diego Sonaglia'
+__copyright__   = 'Copyright 2022, TrinityX'
+__license__     = 'GPL'
+__version__     = '1.5'
+__maintainer__  = 'Diego Sonaglia'
+__email__       = 'diego.sonaglia@clustervision.com'
+__status__      = 'Development'
+
 
 import os
 import sys
@@ -559,8 +567,10 @@ class Obol:
                 raise ValueError('GID %s does not exist' % gid)
             
             groupname = [g['cn'] for g in existing_groups if g['gidNumber'] == gid][0]
+            
 
         if gid or groupname:
+            old_groupname =  [g['cn'] for g in existing_groups if g['gidNumber'] == existing_user['gidNumber']][0]
             mod_attrs.append((ldap.MOD_REPLACE, 'gidNumber', gid.encode('utf-8')))
             primary_group_changed = True
 
@@ -599,8 +609,9 @@ class Obol:
 
         if primary_group_changed:
             # Modify the user's primary group
+            self.group_delusers(old_groupname, [username])
             self.group_addusers(groupname, [username])
-            self.group_delusers(groupname, [username])
+            
         for group in groups_to_add:
             self.group_addusers(group, [username])
         for group in groups_to_del:
@@ -824,8 +835,6 @@ def run():
         exit(1)
     except Exception as e:
         print_error(e, (f"OtherError: {type(e).__name__}"))
-        import traceback
-        print(traceback.format_exc())
         exit(1)
 
 
