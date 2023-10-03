@@ -2,7 +2,9 @@
 
 ######################################################################
 # Obol user management tool
-# Copyright (c) 2016-2023  ClusterVision Solutions B.V.
+#
+# Original work from Hans Then, forked from
+# https://github.com/hansthen/obol/, version 1.2
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +19,7 @@
 ######################################################################
 
 __author__      = 'Diego Sonaglia'
-__copyright__   = 'Copyright 2022, TrinityX'
+__copyright__   = ''
 __license__     = 'GPL'
 __version__     = '1.5'
 __maintainer__  = 'Diego Sonaglia'
@@ -40,13 +42,16 @@ import base64
 from typing import List, Dict, Union
 from pprint import pprint
 
+
 def print_warning(msg, name="Warning"):
     """Print a warning message to stderr"""
     print("[%s] %s" % (name, msg), file=sys.stderr)
 
+
 def print_error(msg, name="Error"):
     """Print an error message to stderr"""
     print("[%s] %s" % (name, msg), file=sys.stderr)
+
 
 def print_table(item: Union[List, Dict]):
     """Print a list of dicts as a table, dict as a transposed table"""
@@ -81,7 +86,7 @@ def show_output(func):
         output = func(obol, *args, **kwargs)
 
         output_type = kwargs.get('output_type')
-        
+
         if output_type == 'json' :
             print(json.dumps(output, indent=2))
         elif output_type == 'table':
@@ -158,7 +163,7 @@ class Obol:
         tagged_digest = f'{{SSHA}}{digest_b64}'
 
         return tagged_digest
-    
+
     def _next_id(self, idlist, id_min=1050, id_max=10000):
         idlist = [int(i) for i in idlist]
         existing_ids = [i for i in range(id_min, id_max) if i not in idlist]
@@ -194,7 +199,7 @@ class Obol:
             if user['uid'] == username:
                 return True
         return False
-    
+
     def _groupname_exists(self, groupname, _groups=None):
         """Check if a groupname exists"""
         groups = _groups or self.group_list()
@@ -210,7 +215,7 @@ class Obol:
             if not self._username_exists(username, _users=users):
                 return False
         return True
-    
+
     def _groupnames_exists(self, groupnames, _groups=None):
         """Check if a ll the groupnames exists"""
         groups = _groups or self.group_list()
@@ -234,9 +239,6 @@ class Obol:
             if group['gidNumber'] == gid:
                 return True
         return False
-
-
-    
 
     ###### List
     @show_output
@@ -303,14 +305,13 @@ class Obol:
         for _, attrs in self.conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter, self.group_fields):
             group = { k:[vi.decode('utf8') for vi in v] for k,v in attrs.items() if k in self.group_fields }
             group = { k:v[0] if not (k=='member') else v for k,v in group.items() }
-            
+
             members = group.pop('member') if 'member' in group else []
-            
+
             group['users'] = [ m.split(',')[0].split('=')[1] for m in members]
             return group
 
         raise LookupError("Group %s does not exist" % groupname)
-
 
     ###### Add
     def user_add(self,
@@ -378,7 +379,7 @@ class Obol:
         sn = sn or username
         home = home or self.config.get("users", "home") + '/' + username
         shell = shell or self.config.get("users", "shell")
-        
+
         if (expire is not None) and (expire != '-1'):
             expire = str(int(expire) + int(time.time() / 86400))
         else:
@@ -441,7 +442,7 @@ class Obol:
 
         if self._groupname_exists(groupname, _groups=existing_groups):
             raise ValueError('Groupname %s already exists' % groupname)
-        
+
         # Ensure gid's uniqueness
         if gid:
             if self._gid_exists(gid, _groups=existing_groups):
@@ -464,11 +465,10 @@ class Obol:
             ('gidNumber', [gid.encode('utf-8')])
         ]
         self.conn.add_s(dn, group_record)
-        
+
         # Add users to group 
         if users:
             self.group_addusers(groupname, users)
-
 
     ###### Delete
     def user_delete(self, username, **kwargs):
@@ -499,7 +499,7 @@ class Obol:
         gropunames = [g['cn'] for g in self.group_list()]
         if groupname not in gropunames:
             raise LookupError("Group '%s' does not exist" % groupname)
-        
+
         # Ensure group has no members
         group = self.group_show(groupname,)
         if len(group['users']) > 0:
@@ -531,7 +531,7 @@ class Obol:
         # Ensure user exists
         existing_user = self.user_show(username,)
         existing_groups = self.group_list()
-        
+
         primary_group_changed = False
         mod_attrs = []
         groups_to_add = []
@@ -554,7 +554,7 @@ class Obol:
             # if groupname is specified: groupname should exist
             if not self._groupname_exists(groupname, _groups=existing_groups):
                 raise ValueError('Group %s does not exist' % groupname)
-            
+
             _gid = [g['gidNumber'] for g in existing_groups if g['cn'] == groupname][0]
             # if also gid is specified: should refer to same group
             if gid and (gid != _gid):
@@ -565,9 +565,8 @@ class Obol:
             # if only gid is specified: gid should exist
             if not self._gid_exists(gid, _groups=existing_groups):
                 raise ValueError('GID %s does not exist' % gid)
-            
+
             groupname = [g['cn'] for g in existing_groups if g['gidNumber'] == gid][0]
-            
 
         if gid or groupname:
             old_groupname =  [g['cn'] for g in existing_groups if g['gidNumber'] == existing_user['gidNumber']][0]
@@ -595,13 +594,12 @@ class Obol:
             incorrect_groupnames = [g for g in groups if g not in existing_groupnames]
             if len(incorrect_groupnames) > 0:
                 raise ValueError("Groups '%s' do not exist" % ', '.join(incorrect_groupnames))
-            
+
             primary_group = [g['cn'] for g in existing_groups if g['gidNumber'] == existing_user['gidNumber']][0]
 
             groups_to_add = [g for g in groups if g not in existing_user['groups']]
             groups_to_del = [g for g in existing_user['groups'] if (g not in groups) and (g != primary_group)]
 
-            
 
         # Modify the user in LDAP
         dn = 'uid=%s,ou=People,%s' % (username, self.base_dn)
@@ -611,7 +609,7 @@ class Obol:
             # Modify the user's primary group
             self.group_delusers(old_groupname, [username])
             self.group_addusers(groupname, [username])
-            
+
         for group in groups_to_add:
             self.group_addusers(group, [username])
         for group in groups_to_del:
@@ -631,11 +629,11 @@ class Obol:
         users_mod_attrs = {}
         users_to_add = []
         users_to_del = []
-        
+
         if gid:
             # Not implemented yet
             raise NotImplementedError("changing GID of existing group is not supported yet")
-       
+
         if users:
             # Ensure users exist
             existing_users = self.user_list()
@@ -643,7 +641,7 @@ class Obol:
             incorrect_usernames = [u for u in users if u not in existing_usernames]
             if len(incorrect_usernames) > 0:
                 raise ValueError("Users '%s' do not exist" % ', '.join(incorrect_usernames))
-            
+
             existing_group_usernames = existing_group['users']
             existing_primary_group_usernames = [u['uid'] for u in existing_users if u['gidNumber'] == existing_group['gidNumber'] ]
             users_to_add = [u for u in users if u not in existing_group_usernames]
@@ -677,7 +675,7 @@ class Obol:
         for name in usernames:
             mod_attrs.append((ldap.MOD_ADD, 'member',
                             str('uid=%s,ou=People,%s' % (name, self.base_dn)).encode('utf-8')))
-        
+
         group_dn = 'cn=%s,ou=Group,%s' % (groupname, self.base_dn)
 
         self.conn.modify_s(group_dn, mod_attrs)
@@ -704,15 +702,16 @@ class Obol:
                         print_warning(f"You removed user {user['uid']} from its primary group")
                 mod_attrs.append((ldap.MOD_DELETE, 'member',
                                 str('uid=%s,ou=People,%s' % (user['uid'], self.base_dn)).encode('utf-8')))
-            
+
         group_dn = 'cn=%s,ou=Group,%s' % (groupname, self.base_dn)
         self.conn.modify_s(group_dn, mod_attrs)
+
 
 def run():
     # Parser
     parser = argparse.ArgumentParser(prog='obol',
                                     description='Manage Cluster Users.')
-    
+
     # LDAP bind parameters override
     parser.add_argument('--bind-dn', '-D', metavar="BIND_DN", help='LDAP bind DN')
     parser.add_argument('--bind-pass', '-w', metavar="BIND_PASSWORD", help='LDAP bind password')
@@ -785,7 +784,7 @@ def run():
     group_add_command.add_argument('--gid', metavar='GROUP ID')
     group_add_command.add_argument('--users', type=lambda s: s.split(','),
                         help='A comma separated list of usernames')
-    
+
     # Group modify command
     group_modify_command = group_commands.add_parser('modify', help='Modify a group')
     group_modify_command.add_argument('groupname')
@@ -836,7 +835,6 @@ def run():
     except Exception as e:
         print_error(e, (f"OtherError: {type(e).__name__}"))
         exit(1)
-
 
 
 if __name__ == '__main__':
