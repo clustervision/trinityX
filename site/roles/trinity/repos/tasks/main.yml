@@ -4,20 +4,70 @@
   with_first_found:
     - "{{ ansible_distribution }}.yaml"
     - "{{ ansible_os_family }}.yaml"
+  ignore_errors: yes
 
-- debug:
-    msg: "{{ repos }}"
+#- debug:
+#    msg: "{{ trinityx_repositories }}"
 
-- name: Configure repo
-  trix_repos:
-    remote_repo: "{{ item.repo }}"
-    remote_key:  "{{ item.key | default(None)}}"
-    local_repo:  "{{ trix_local_repo_baseurl }}"
-    local_key:   "{{ trix_local_repo_key | default(None) }}"
-    name:        "{{ item.name | default(None) }}"
-    use_local:   "{{ local_install | default(False) }}"
-  with_items: "{{ repos }}"
+- block:
+  - name: Configure repos
+    ansible.builtin.yum_repository:
+      name: "{{ item.name }}"
+      description: "{{ item.name }}"
+      baseurl: "{{ item.repo }}"
+      gpgcheck: "{{ item.gpgcheck | default(False) }}"
+      gpgkey: "{{ item.gpgkey | default('') }}"
+      reposdir: "{{ params.install_root + '/etc/yum.repos.d/' if params.install_root is defined else '/etc/yum.repos.d' }}"
+    with_items: "{{ trinityx_repositories }}"
+
+#  - name: Add GPG keys to RPM DB. normally NOT needed - Antoine
+#    ansible.builtin.rpm_key:
+#      state: present
+#      key: "{{ item.gpgkey | default('') }}"
+#    with_items: "{{ trinityx_repositories }}"
+#    ignore_errors: True
+
+#  - name: Download external repo RPMS
+#    get_url: 
+#      url: "{{ item.name }}"
+#      dest: "/tmp/{{ item.file }}"
+#    with_items: "{{ external_repository_rpms }}"
+
+  - name: Install external repo RPMS
+    dnf:
+#      name: "/tmp/{{ item.file }}"
+      name: "{{ item.name }}"
+      disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+      state: present
+      update_cache: true
+      installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
+    retries: 3
+    delay: 3
+    register: result
+    until: result.rc == 0
+    with_items: "{{ external_repository_rpms }}"
+
+  - name: Make caches
+    shell: "dnf makecache -y"
+    ignore_errors: True
+
+  - name: Install external repo Packages
+    dnf:
+      name: "{{ item.name }}"
+#      disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+      state: present
+      update_cache: true
+      installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
+    retries: 3
+    delay: 3
+    register: result
+    until: result.rc == 0
+    with_items: "{{ package_based_repositories }}"
+
+  when: ansible_facts['os_family'] == "RedHat"
   tags: install-only
+
+
 
 # Disable all remote repos (without *-local suffix)
 # If we have local install
@@ -43,3 +93,4 @@
       warn: no
 
   when: local_install | default(False)
+

@@ -2,10 +2,11 @@
 
 - name: Install Influxdata repo
   yum_repository:
-    name: influxdata-el7
+    name: "influxdata-el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}"
     baseurl: "{{ influxdata_repo }}"
     description: Influxdata
     gpgkey: https://repos.influxdata.com/influxdb.key
+    gpgcheck: False
 
 - name: Install InfluxDB
   yum:
@@ -40,13 +41,16 @@
     enabled: "no"
   when: ha|default(False)
 
-- name: Install python2-pip
-  yum:
-    name: python2-pip
-    state: present
+#- name: Install python2-pip
+#  yum:
+#    name: python2-pip
+#    state: present
 
 - name: Install influxdb pip
   pip:
+#    executable: /bin/pip2
+#   OS pip3 or our own?
+    executable: /usr/bin/pip-3
     name: influxdb
     state: present
 
@@ -58,6 +62,7 @@
   with_items:
     - telegraf
     - slurm
+    - slurm_acct
   failed_when: false
 
 - name: Retention
@@ -70,12 +75,3 @@
     default: yes
   failed_when: false
 
-- name: Add influxdb pacemaker resources
-  pcs_resource:
-    name: 'influxdb'
-    resource_class: 'systemd'
-    resource_type: 'systemd:influxdb'
-    options: 'op monitor interval=30 --group Trinity-stack'
-    state: present
-  when: ha|default(False)
-  tags: pcs

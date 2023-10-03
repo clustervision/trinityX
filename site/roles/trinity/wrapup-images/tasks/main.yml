@@ -2,18 +2,21 @@
 - block:
   - name: Cleanup the image
     command: yum clean all
+    when: ansible_facts['os_family'] == "RedHat"
 
-  - block:
-    - name: Pack the image
-      run_once: true
-      luna_osimage:
-        name: '{{ image_name }}'
-        pack: true
+  - name: Cleanup the image
+    command: apt-get clean
+    when: ansible_facts['os_family'] == "Debian"
 
-    - name: Reload ltorrent
-      service:
-        name: ltorrent
-        state: reloaded
-    delegate_to: localhost
-  when: ansible_connection in 'lchroot'
+  - name: Cleanup /tmp
+    command: rm -f /tmp/*
+
+# cannot be done from within image - Antoine
+#  - block:
+#    - name: Pack the image
+#      run_once: true
+#      ansible.builtin.shell:
+#        cmd: "luna osimage pack {{ image_name }}"
+
+  when: ansible_connection in 'chroot'
   tags: always

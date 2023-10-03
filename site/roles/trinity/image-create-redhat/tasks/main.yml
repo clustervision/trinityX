@@ -1,0 +1,232 @@
+---
+- name: Get image path
+  set_fact:
+    image_path: "{{ trix_images }}/{{ image_name }}"
+
+- name: Create dir for compute image
+  file:
+    name: "{{ image_path }}"
+    state: directory
+
+- name: Install dnf-utils
+  dnf:
+    disable_gpg_check: yes
+    name: dnf-utils
+    state: present
+
+- name: Check OS release on controller
+  command: rpm -qf /etc/os-release --qf '%{NAME}'
+  register: os_release_rpm
+  changed_when: False
+
+- name: Copy local dnf.conf
+  copy:
+    src: "/etc/dnf/dnf.conf"
+    dest: "{{ image_path }}/etc/dnf/"
+
+- name: Copy local dnf variables
+  copy:
+    src: "/etc/dnf/vars"
+    dest: "{{ image_path }}/etc/dnf/"
+
+##
+## The new releasever option in the dnf module actually doesn't do anything...
+## Workaround until it's fixed.
+##
+
+- name: Create dnf base directory
+  file:
+    path: "{{ image_path }}/etc/dnf/vars/"
+    state: directory
+  when: ansible_distribution == "RedHat"
+
+- name: Add releasever variable
+  copy:
+    content: "{{ ansible_distribution_major_version }}"
+    dest: "{{ image_path }}/etc/dnf/vars/releasever"
+  when: ansible_distribution == "CentOS"
+
+- name: Add releasever variable
+  copy:
+    content: "7Server\n"
+    dest: "{{ image_path }}/etc/dnf/vars/releasever"
+  when: ansible_distribution == "RedHat"
+
+- name: Touch config files for RedHat 
+  file:
+    path: "{{ item }}"
+    state: touch
+  with_items:
+    - /etc/sysconfig/network
+    - /etc/resolv.conf
+  when: ansible_distribution == "RedHat"
+
+- name: Install {{ os_release_rpm.stdout }} package in {{ image_path }}
+  dnf:
+    disable_gpg_check: yes
+    name: "{{ os_release_rpm.stdout }}"
+    #releasever: "{{ ansible_distribution_major_version }}"
+    installroot: "{{ image_path }}"
+    state: present
+
+- name: Install dnf package in {{ image_path }}
+  dnf:
+    disable_gpg_check: yes
+    name:
+      - yum
+      - dnf
+    installroot: "{{ image_path }}"
+    state: present
+
+- synchronize:
+    src: "/etc/pki/"
+    dest: "{{ image_path }}/etc/pki/"
+  when: ansible_distribution == "RedHat"
+
+- name: Create {{ image_path }}/dev
+  file:
+    path: "{{ image_path }}/dev/"
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Create basic /dev files
+  command: "/usr/bin/mknod {{ image_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates={{ image_path }}/dev/{{ item.dev }}"
+  args:
+    creates: "{{ image_path }}/dev/{{ item.dev }}"
+  with_items:
+    - { dev: "null",    mo: "666", t: 'c', ma: 1, mi: 3 } # device, mode, type, major, minor
+    - { dev: "zero",    mo: "666", t: 'c', ma: 1, mi: 5 }
+    - { dev: "random",  mo: "666", t: 'c', ma: 1, mi: 8 }
+    - { dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9 }
+    - { dev: "console", mo: "600", t: 'c', ma: 5, mi: 1 }
+    - { dev: "ptmx",    mo: "666", t: 'c', ma: 5, mi: 2 }
+    - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
+
+
+# commented block not needed? image setup will generate repos and below is using repos on controller - Antoine
+#
+#- name: Include trinity/roles
+#  ansible.builtin.include_role:
+#    name: trinity/repos
+#  vars:
+#    params:
+#       install_root: "{{ image_path }}"
+#  tags: repos
+
+- block:
+
+  - name: Set up local repository
+    yum_repository:
+      name: "{{ trix_local_reponame }}"
+      baseurl: "{{ trix_local_repo_baseurl }}"
+      description: "{{ trix_local_reponame }}"
+      gpgcheck: no
+      enabled: yes
+      reposdir: "{{ image_path }}/etc/yum.repos.d"
+
+  - name: Disable all repo without '*-local' suffix
+    shell: >
+      yum-config-manager --installroot={{ image_path }} \
+      | sed -n 's/^\[\(.*\)\]$/\1/p' \
+      | egrep -v "\-local$" \
+      | xargs yum-config-manager --installroot={{ image_path }} --disable {}
+    args:
+      warn: no
+
+  when: local_install | default(False)
+
+- name: Disable epel repo for local installation
+  shell: >
+    yum-config-manager --installroot={{ image_path }} --disable epel
+  args:
+    warn: no
+  when: local_install | default(False)
+
+- name: Install core packages - @core, kernel and grub2
+  dnf:
+    disable_gpg_check: yes
+    name: "{{ image_core_packages }}"
+    state: present
+    installroot: "{{ image_path }}"
+
+- name: Install missing elfutils-libs on RedHat
+  dnf:
+    disable_gpg_check: yes
+    name: "elfutils-libs"
+    state: present
+    installroot: "{{ image_path }}"
+  when: ansible_distribution == "RedHat"
+
+- name: Add dracut.conf.d entries
+  template:
+    src: trinity.conf.j2
+    dest: "{{ image_path}}/etc/dracut.conf.d/trinity.conf"
+
+#- name: Copy gpg keys
+#  copy:
+#    src: "/etc/pki/rpm-gpg"
+#    dest: "{{ image_path }}/etc/pki/"
+
+- name: Make .ssh root directory
+  file:
+    path: "{{ image_path }}/root/.ssh"
+    mode: 0700
+    owner: root
+    group: root
+    state: directory
+
+- name: Ensure /etc/trinity/passwords/images/{{ image_name }} exists
+  file:
+    path: '/etc/trinity/passwords/images/{{ image_name }}'
+    state: directory
+
+- name: Store root password if defined
+  template:
+    src: root.txt
+    dest: '/etc/trinity/passwords/images/{{ image_name }}/root.txt'
+  when: image_password|default([])
+
+- name: Generate SSH keys
+  user:
+    name: root
+    generate_ssh_key: yes
+    ssh_key_file: "{{ image_path }}/root/.ssh/id_rsa"
+
+- name: Add controller's key to authorized keys
+  authorized_key:
+    user: root
+    state: present
+    key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
+    path: "{{ image_path }}/root/.ssh/authorized_keys"
+
+- name: Create node config directory
+  file:
+    path: '{{ image_path }}/{{ trix_luna }}/node/config/'
+    state: directory
+
+- name: Render node luna.ini
+  template:
+    src: 'luna2.ini.j2'
+    dest: '{{ image_path }}/{{ trix_luna }}/node/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
+
+- name: Kernel version in image
+  shell: "ls {{ image_path }}/lib/modules|sort|tail -n1"
+  register: kernel_version
+  changed_when: False
+
+- name: Set the kernel version for image
+  ansible.builtin.shell:
+    cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
+
+# needs to be done after image setup - Antoine
+#- name: Pack the image
+#  ansible.builtin.shell:
+#    cmd: "luna osimage pack {{ image_name }}"
+
+- name: Refresh the list of hosts in the inventory
+  meta: refresh_inventory

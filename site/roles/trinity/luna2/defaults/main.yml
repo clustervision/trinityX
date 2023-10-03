@@ -1,0 +1,73 @@
+---
+# vars file for luna2
+
+luna2_packages:
+  - luna2-python
+#  - luna2-daemon
+#  - luna2-cli
+
+required_packages:
+  - dhcp-server
+  - xinetd
+  - sqlite
+  - dos2unix
+  - tftp-server
+  - net-snmp-utils
+
+enable_services:
+  - luna2-daemon
+  - xinetd
+  - dhcpd
+  - nginx
+
+start_services:
+  - luna2-daemon
+  - xinetd
+  - nginx
+
+# commenting out both next values will use index/repo defaults, i.e. latest, greatest
+#luna2_daemon_pip: luna2-daemon-2.0.1692801041.tar.gz
+#luna2_cli_pip: luna2-cli-2.0.1692797564.tar.gz
+#luna2_utils_pip: luna2-utils-2.0.1692797415.tar.gz
+luna2_daemon_pip: luna2-daemon-2.0.latest-py3-none-any.whl
+luna2_cli_pip: luna2-cli-2.0.latest-py3-none-any.whl
+luna2_utils_pip: luna2-utils-2.0.latest-py3-none-any.whl
+
+luna2_utils:
+  - lchroot
+  - lcluster
+  - lpower
+  - bootutil
+  - limport
+  - lnode
+  - lslurm
+  - trinity_diagnosis
+
+luna2_named_include_file: /etc/named.luna.zones
+luna2_named_zone_dir: /var/lib/named
+
+luna2_cluster:
+  frontend_address: '10.141.255.254'
+  networks:
+  - name: 'cluster'
+    function: 'default'
+    ip: '10.141.0.0'
+    prefix: '16'
+    start_ip: '10.141.200.1'
+    end_ip:  '10.141.210.254'
+    type: 'ethernet'
+  - name: 'ipmi'
+    function: 'bmc'
+    ip: '10.148.0.0'
+    prefix: '16'
+    type: 'ethernet'
+  - name: 'ib'
+    function: 'low-letancy'
+    ip: '10.149.0.0'
+    prefix: '16'
+    type: 'infiniband'
+
+luna2_noarch_pip_repository: "https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/noarch/pip/{{ trix_stream }}"
+
+luna2_key: CwSQcHNqiLSHXQaCDtAF2414e3muXgmpht6ocVA2xGs=
+

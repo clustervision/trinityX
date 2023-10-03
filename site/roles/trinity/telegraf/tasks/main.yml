@@ -1,11 +1,13 @@
 ---
 
+  # gpg check set to false as there is a problem with the key
 - name: Install Influxdata repo
   yum_repository:
-    name: influxdata-el7
+    name: influxdata-el8
     baseurl: "{{ influxdata_repo }}"
     description: Influxdata
     gpgkey: https://repos.influxdata.com/influxdb.key
+    gpgcheck: False
 
 - name: Install telegraf
   yum:
@@ -29,9 +31,19 @@
     src: sudo.telegraf.j2
     dest: /etc/sudoers.d/telegraf
  
+- name: Place telegraf service config
+  template:
+    src: telegraf.service.j2
+    dest: /usr/lib/systemd/system/telegraf.service
+ 
 - name: Start telegraf
   systemd:
     name: telegraf
     state: started
+  when: ansible_connection not in 'chroot'
+
+- name: Enable telegraf
+  systemd:
+    name: telegraf
     enabled: "yes"
 

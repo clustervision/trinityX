@@ -1,1 +1,0 @@
-../controller/rdma-centos.sh

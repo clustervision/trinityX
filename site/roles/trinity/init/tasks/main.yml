@@ -6,9 +6,11 @@
 
 - name: Install init packages
   yum:
-    name: '{{ init_packages }}'
+    name: '{{ item }}'
     state: present
   tags: install-only
+  with_items: '{{ init_packages }}'
+  when: init_packages is defined
 
 - block:
 
@@ -16,10 +18,6 @@
     set_fact:
       on_controller: '{{ True if "controllers" in group_names else False }}'
 
-  - name: Check if this node is the primary controller
-    set_fact:
-      primary: '{{ True if trix_ctrl_ip in ansible_all_ipv4_addresses and on_controller else False }}'
-  
   - name: Update the trix_ctrl_* variables in case of non-HA setup
     set_fact:
       trix_ctrl_hostname: '{{ trix_ctrl1_hostname }}'
@@ -28,7 +26,51 @@
       trix_ctrl2_ip: ''
     when: not ha|default(False)
 
+  - debug:
+      msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
+
+  - name: Check if this node is the primary controller
+    set_fact:
+      primary: '{{ True if trix_ctrl_ip in ansible_all_ipv4_addresses and on_controller else False }}'
+      on_controller: True
+
+  - debug:
+      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}"
+
   tags: always
+
+
+- block:
+  - name: Verify if luna secret vault exists
+    stat:
+      path: "{{ trix_ssl }}/secret.key"
+    register: stat_secret_key
+
+  - block:
+    - name: Generate Luna Secret Key
+      set_fact:
+        luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+
+    - name: Write luna secret key to vault
+      copy:
+        dest: "{{ trix_ssl }}/secret.key"
+        content: "{{ luna_secret_key }}"
+    when: not stat_secret_key.stat.exists
+
+  - block:
+    - name: Import luna secret key
+      slurp:
+        src: "{{ trix_ssl }}/secret.key"
+      register: luna_secret_key_b64
+
+    - name: Set Luna secret key
+      set_fact:
+        luna_secret_key: "{{ luna_secret_key_b64['content'] | b64decode }}"
+    when: stat_secret_key.stat.exists
+
+  tags: always
+  when: ansible_connection not in 'chroot' and on_controller
+
 
 - name: Toggle selinux state
   selinux:
@@ -37,21 +79,22 @@
 
 # Workaround the issue where NM is left running in the system
 # after it has been removed
-- name: Is NetworkManager running?
-  shell: systemctl status NetworkManager
-  register: NM_service
-  failed_when: false
-  changed_when: false
-  ignore_errors: true
+# - name: Is NetworkManager running?
+#   shell: systemctl status NetworkManager
+#   register: NM_service
+#   failed_when: false
+#   changed_when: false
+#   ignore_errors: true
 
-- name: Stop NetworkManager
-  service:
-    name: NetworkManager
-    state: stopped
-  when: NM_service.rc == 0 and
-        'lchroot' not in ansible_connection
+# - name: Stop NetworkManager
+#   service:
+#     name: NetworkManager
+#     state: stopped
+#   when: NM_service.rc == 0 and
+#         'chroot' not in ansible_connection
 
-- name: Remove NetworkManager
-  yum:
-    name: NetworkManager
-    state: absent
+# - name: Remove NetworkManager
+#   yum:
+#     name: NetworkManager
+#     state: absent
+

@@ -1,0 +1,17 @@
+[Unit]
+Description = Luna 2 Daemon
+After = network.target
+
+[Service]
+PIDFile = /run/trinity/luna.pid
+WorkingDirectory = /trinity/local/luna/daemon
+ExecStartPre = /bin/mkdir /run/trinity
+ExecStart = /bin/bash -c "source /trinity/local/python/bin/activate && /trinity/local/python/bin/gunicorn --config /trinity/local/luna/daemon/config/gunicorn.py 'luna:daemon' --pid /run/trinity/luna.pid"
+ExecReload = /bin/kill -s HUP
+ExecStop = /bin/kill -s TERM
+ExecStopPost = /bin/rm -rf /run/trinity
+StandardOutput=null
+
+[Install]
+
+WantedBy = multi-user.target

@@ -1,11 +1,25 @@
 ---
 # tasks file for sssd
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yaml"
+  ignore_errors: yes
+
 - name: Install sssd packages
   yum:
     name: '{{ sss_packages }}'
     state: present
   tags: install-only
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Install sssd packages
+  apt:
+    name: '{{ sss_packages }}'
+    state: present
+  tags: install-only
+  when: ansible_facts['os_family'] == "Debian"
 
 - name: Add configuration file to /etc/sssd/sssd.conf
   template:
@@ -16,16 +30,21 @@
     mode: '0600'
   notify: restart sssd
 
+- name: Ensure certs directory exists
+  file:
+    path: "{{ ca_certificate_path }}"
+    state: directory
+
 - name: Copy CA certificate
   copy:
     src: "{{ ssl_ca_cert }}"
-    dest: /etc/openldap/certs/cluster-ca.crt
+    dest: "{{ ca_certificate_path }}/cluster-ca.crt"
   when: ssl_ca_cert is defined
 
 - name: Adjust OpenLDAP client TLS configuration
   lineinfile:
-    path: '/etc/openldap/ldap.conf'
-    line: 'TLS_CACERT   /etc/openldap/certs/cluster-ca.crt'
+    path: "{{ ldap_conf }}"
+    line: 'TLS_CACERT   {{ ca_certificate_path }}/cluster-ca.crt'
 
 - name: Enable sssd service
   systemd:
@@ -36,7 +55,7 @@
   systemd:
     name: sssd
     state: started
-  when: ansible_connection not in 'lchroot'
+  when: ansible_connection not in 'chroot'
 
 - name: Adding access controler groups to the system
   shell: 'obol group list | grep {{ item }} || obol group add {{ item }}'
@@ -44,7 +63,7 @@
   with_items: '{{ sss_allowed_groups }}'
   changed_when: item not in obol_result.stdout
   when: primary|default(True)
-        and ansible_connection not in 'lchroot'
+        and ansible_connection not in 'chroot'
         and not compute|default(False)
         and sss_allowed_groups is defined
         and sss_allowed_groups is iterable
@@ -52,3 +71,21 @@
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
   changed_when: false
+  when: ansible_facts['os_family'] == "RedHat"
+
+- block:
+  - name: Configure nsswitch.conf
+    template:
+      src: 'nsswitch-manually.conf.j2'
+      dest: '/etc/nsswitch.conf'
+      owner: 'root'
+      group: 'root'
+      mode: '0644'
+
+  - name: Configure pam to use sss
+    shell: "pam-auth-update --enable sss"
+
+  - name: Configure pam to create homedir on first logon
+    shell: "pam-auth-update --enable mkhomedir"
+  when: ansible_facts['os_family'] == "Debian"
+

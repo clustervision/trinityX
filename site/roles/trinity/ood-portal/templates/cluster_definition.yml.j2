@@ -6,22 +6,31 @@ v2:
     host: "{{ login_host }}"
   job:
     adapter: "slurm"
-    cluster: "cluster"
     bin: "/bin/"
     conf: "/etc/slurm/slurm.conf"
     bin_overrides:
-      sbatch: "/bin/sbatch"
-      squeue: "/bin/squeue"
-      scontrol: "/bin/scontrol"
-      scancel: "/bin/scancel"
+      sbatch: "/usr/bin/sbatch"
+      squeue: "/usr/bin/squeue"
+      scontrol: "/usr/bin/scontrol"
+      scancel: "/usr/bin/scancel"
   batch_connect:
+    ssh_allow: false
     basic:
-      script_wrapper: |
-        module purge
-        %s
+      script_wrapper: "module restore\n%s"
     vnc:
-      script_wrapper: |
-        module purge
-        module add TurboVNC websockify
-        export WEBSOCKIFY_CMD="websockify"
-        %s
+      script_wrapper: "module restore\nmodule load ood-vnc\n%s"
+  custom:
+    grafana:
+          host: "https://{{ login_host }}:3000"
+          orgId: 1
+          dashboard:
+            name: "TrinityX - Workload management (Detailed)"
+            uid: "trixwrklmgmdet"
+            panels:
+              cpu: 2
+              memory: 92
+          labels:
+#            cluster: "{{ cluster_name }}"
+#            host: "hostname"
+            jobid: "job_id"
+

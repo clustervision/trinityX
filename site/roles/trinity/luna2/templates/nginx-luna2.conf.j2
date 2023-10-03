@@ -1,0 +1,67 @@
+server {
+    listen 7051;
+
+    # Allow file uploads
+    client_max_body_size 0M;
+
+    root {{ trix_luna }}/daemon/files;
+
+    location = /filesauth {
+        internal;
+        proxy_pass {{ luna_protocol }}://127.0.0.1:7050/filesauth;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header X-Original-URI $request_uri;
+        proxy_set_header CallType $calltype;
+{% if luna_protocol == "https" %}
+#        proxy_ssl_server_name on;
+  {% if luna_verify_certificate|lower == "false" or luna_verify_certificate|lower == "no" %}
+        proxy_ssl_verify off;
+  {% else %}
+        proxy_ssl_verify on;
+  {% endif %}
+{% endif %}
+    }
+
+    location /files/ {
+        set $calltype "MAJOR";
+        proxy_pass_request_headers on;
+        auth_request /filesauth;
+        alias {{ trix_luna }}/daemon/files/;
+        if ($query_string) {
+            expires max;
+        }
+    }
+
+    location /boot {
+        proxy_pass {{ luna_protocol }}://127.0.0.1:7050/boot;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify off;
+    }
+
+    location /boot/(.*) {
+        proxy_pass {{ luna_protocol }}://127.0.0.1:7050/boot/$1;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify off;
+    }
+
+    location / {
+    }
+
+    # or just the below section if no authentication is needed at all
+#    location /files/ {
+#        alias {{ trix_luna }}/daemon/files/;
+#        if ($query_string) {
+#            expires max;
+#        }
+#    }
+
+    #  other handy parameters:
+#        listen 443 ssl;
+#        ssl_certificate /etc/nginx/server.crt;
+#        ssl_certificate_key /etc/nginx/server.key;
+#        ssl_verify_client off;
+
+}
+
+

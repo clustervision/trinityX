@@ -9,40 +9,26 @@
     - role: trinity/init
       tags: init
 
-    - role: trinity/sensu-client
-      tags: monitoring
-
-    - role: trinity/local_repo
-      tags: local_repo
-      when: local_install
-
-    - role: trinity/trix-tree
-      tags: trix-tree
+    - role: trinity/hostname
+      tags: hostname
 
     - role: trinity/repos
-      repos:
-        - repo: '{{ trix_local_repo_baseurl }}'
-          name: '{{ trix_local_reponame }}'
-      tags: local_repo
-      when: local_install
-
-    - role: trinity/repos
-      repos:
-        - repo: epel-release
-        - repo: '{{ luna_repo }}'
       tags: repos
-
-    - role: trinity/cv_support
-      tags: cv_support
 
     - role: trinity/packages
       tags: packages
 
+    - role: trinity/trix-tree
+      tags: trix-tree
+
+    - role: trinity/cv_support
+      tags: cv_support
+
+    - role: trinity/sensu-client
+      tags: monitoring
+
     - role: trinity/tunables
       tags: tunables
-
-    - role: trinity/hostname
-      tags: hostname
 
     - role: trinity/firewalld
       tags: firewalld
@@ -56,23 +42,10 @@
     - role: trinity/ssh
       tags: ssh
 
-    - role: trinity/fail2ban
-      tags: fail2ban
-
-    - role: trinity/pacemaker
-      when: ha
-      fence_ipmilan_enabled: 'false'
-      fence_ipmilan_login: 'user'
-      fence_ipmilan_passwd: 'password'
-      tags: pcs
-
-    - role: trinity/drbd
-      when: ha
-      tags: drbd
-
-    - role: trinity/beegfs
-      when: ha and beegfs
-      tags: beegfs
+    # -----
+#    - role: trinity/fail2ban
+#      tags: fail2ban
+    # -----
 
     - role: trinity/nfs
       nfs_rpccount: 256
@@ -80,6 +53,10 @@
       nfs_export_shared: true
       nfs_export_home: true
       nfs_exports_path: '{{ trix_local }}/etc/exports.d'
+      nfs_mounts:
+        - path: '/trinity/shared'
+          remote: '{{ trix_ctrl_hostname }}:/trinity/shared'
+          options: 'defaults,nfsvers=4,ro,retrans=4'
       tags: nfs
 
     - role: trinity/ssl-cert
@@ -97,12 +74,12 @@
       bind_dns_forwarders:
         - '8.8.8.8'
         - '8.8.4.4'
-      resolv_server: '{{ trix_ctrl_ip }}'
       tags: bind
 
     - role: trinity/openldap
       openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
       openldap_server_conf_path: '{{ trix_local }}/etc/openldap/slapd.d'
+      openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       tags: openldap
 
     - role: trinity/obol
@@ -135,37 +112,44 @@
       munge_conf_path: '{{ trix_shared }}/etc/munge'
       slurmdbd_sql_user: 'slurm_accounting'
       slurmdbd_sql_db: 'slurm_accounting'
-      tags: slurm
       when: workload_manager == "slurm"
+      tags: slurm
 
     - role: trinity/slurm-sbank
-      tags: slurm, sbank
       when: workload_manager == "slurm"
+      tags: slurm, sbank
 
-    - role: trinity/pbspro
-      when: workload_manager == 'pbspro'
-      tags: pbspro
-      pbspro_ctrl: '{{ trix_ctrl_hostname }}'
-
-    - role: trinity/luna
-      luna:
-        cluster:
-          frontend_address: '{{ trix_ctrl_ip }}'
-          path: '{{ trix_local }}/luna'
-          named_include_file: '{{ trix_local }}/etc/named.luna.zones'
-          named_zone_dir: '{{ trix_local }}/var/lib/named'
-          lweb_num_proc: 4
-        dhcp:
-          conf_path: '{{ trix_local }}/etc/dhcp'
-          network: '{{ trix_domain }}'
-          start_ip: '{{ trix_cluster_dhcp_start }}'
-          end_ip: '{{ trix_cluster_dhcp_end }}'
+    - role: trinity/luna2
+      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      luna2_cluster:
+        frontend_address: '{{ trix_ctrl_ip }}'
         networks:
-          - name: '{{ trix_domain }}'
-            ip: '{{ trix_cluster_net }}'
-            prefix: '{{ trix_cluster_netprefix }}'
-            ns_ip: '{{ trix_ctrl_ip }}'
+        - name: '{{ trix_domain }}'
+          function: 'default'
+          ip: '{{ trix_cluster_net }}'
+          prefix: '{{ trix_cluster_netprefix }}'
+          start_ip: '{{ trix_cluster_dhcp_start }}'
+          end_ip:  '{{ trix_cluster_dhcp_end }}'
+          type: 'ethernet'
+        - name: 'ipmi'
+          function: 'bmc'
+          ip: '10.148.0.0'
+          prefix: '16'
+          type: 'ethernet'
+        - name: 'ib'
+          function: 'low-latency'
+          ip: '10.149.0.0'
+          prefix: '16'
+          type: 'infiniband'
       tags: luna
+
+    - role: trinity/resolv
+      bind_dns_forwarders:
+        - '8.8.8.8'
+        - '8.8.4.4'
+      resolv_server: '{{ trix_ctrl_ip }}'
+      tags: resolv
 
     - role: trinity/rsyslog
       syslog_listeners:
@@ -184,24 +168,33 @@
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
       tags: rsyslog
 
+    - role: trinity/logrotate
+      tags: logrotate
 
-    - role: trinity/docker-registry
-      when: enable_docker
-      docker_registry_path: '{{ trix_local }}/docker-registry'
-      docker_ssl_path: '{{ ssl_cert_path }}'
-      docker_ssl_cert: '{{ ansible_fqdn }}.crt'
-      docker_ssl_key: '{{ ansible_fqdn }}.key'
-      tags: docker-registry
+    # ----------
+#    - role: trinity/docker-registry
+#      when: enable_docker
+#      docker_registry_path: '{{ trix_local }}/docker-registry'
+#      docker_ssl_path: '{{ ssl_cert_path }}'
+#      docker_ssl_cert: '{{ ansible_fqdn }}.crt'
+#      docker_ssl_key: '{{ ansible_fqdn }}.key'
+#      tags: docker-registry
+    # ------------
 
-
-    - role: trinity/wrapup
-      tags: wrapup
+    - role: trinity/aria2c
+      tags: aria2c
 
     - role: trinity/ood-portal
-      tags: ood-portal
       enable_ssl: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      login_host: "{{ ansible_fqdn }}"
+      ldap_host: "{{ trix_ctrl_ip }}"
+      admin_group: admins
+      tags: ood
+
+    - role: trinity/ood-vnc
+      tags: ood 
 
     - role: trinity/telegraf
       tags: monitoring
@@ -223,3 +216,7 @@
       enable_ssl: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+
+    - role: trinity/wrapup
+      tags: wrapup
+    

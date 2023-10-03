@@ -1,10 +1,27 @@
 ---
-- name: Install Sensu Repo (CV)
+
+- block:
+  - name: Install Sensu Repo (CV) for rhel 8 and below
+    yum_repository:
+      name: CV-Sensu
+      description: ClusterVision Sensu Repository
+      baseurl:  "{{ sensu_repo }}"
+      gpgkey: "{{ sensu_gpg_key }}"
+
+#  - name: Add GPG keys to RPM DB
+#    ansible.builtin.rpm_key:
+#      state: present
+#      key: "{{ sensu_gpg_key }}"
+
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
+
+- name: Install Sensu Repo (CV) for rhel 9+
   yum_repository:
     name: CV-Sensu
     description: ClusterVision Sensu Repository
-    baseurl: https://updates.clustervision.com/mirror/sensu-centos7
-    gpgkey: https://updates.clustervision.com/mirror/sensu-pubkey.gpg
+    baseurl:  "{{ sensu_repo }}"
+    gpgcheck: False
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - name: Install redis
   yum:
@@ -17,6 +34,15 @@
     dest: /etc/redis.conf
     regexp: '^bind'
     line: 'bind 127.0.0.1'
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
+
+- name: Ensure redis binds to localhost 
+  tags: redis
+  lineinfile:
+    dest: /etc/redis/redis.conf
+    regexp: '^bind'
+    line: 'bind 127.0.0.1'
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - name: Start redis
   systemd:
@@ -49,8 +75,15 @@
     permanent: yes
     immediate: yes
   with_items:
-  - 4567/tcp
   - 3001/tcp
+
+- name: Get Sensu rexml/ruby version
+  shell: "(/opt/sensu/embedded/bin/gem list --local|grep rexml|grep -oE '\\([0-9\\.]+\\)' || echo 0) | tr -d '(.)'"
+  register: rexml_version
+
+- name: Update Sensu rexml
+  shell: "/opt/sensu/embedded/bin/gem install rexml -v 3.2.5"
+  when: rexml_version.stdout|int < 325
 
 - name: Install Sensu plugins
   gem:
@@ -89,6 +122,16 @@
     - sensu-api.json
     - sensu-checks.json
 
+- block:
+  - name: Copy service files
+    copy:
+      src: 'uchiwa.service'
+      dest: '/etc/systemd/system/uchiwa.service'
+
+  - name: Reload systemd
+    shell: "systemctl daemon-reload"
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
+
 - name: Start sensu componenets
   systemd:
     name: "{{ item }}"
@@ -110,3 +153,14 @@
   with_items:
   - "{{ sensu_jit_clients }}"
   when: sensu_jit_clients is defined
+
+# it's not sure where port 4567 get opened. for now we close it manually.
+- name: Firewalld close external for sensu
+  firewalld:
+    port: "{{ item }}"
+    state: disabled
+    permanent: yes
+    immediate: yes
+  with_items:
+  - 4567/tcp
+

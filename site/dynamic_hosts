@@ -1,0 +1,24 @@
+#!/usr/bin/python3
+import json
+import subprocess
+
+images = list()
+subprocess = subprocess.Popen("luna osimage list --raw | grep -vE '^\\||\\+' | jq --raw-output '.[] | .name+\":\"+.path'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+subprocess_return = subprocess.stdout.read()
+for line in subprocess_return.decode("utf-8").split("\n"):
+  if line!="":
+    images.append(line)
+
+output={}
+output['_meta']={}
+output['_meta']['hostvars']={}
+output['osimages.luna']={}
+output['osimages.luna']['hosts']=[]
+for imagedata in images:
+  image,path = imagedata.split(':')
+  output['_meta']['hostvars'][image+'.osimages.luna']={}
+  output['_meta']['hostvars'][image+'.osimages.luna']['ansible_connection']="chroot"
+  output['_meta']['hostvars'][image+'.osimages.luna']['ansible_host']=path
+  output['osimages.luna']['hosts'].append(image+'.osimages.luna')
+
+print(json.dumps(output, indent=4, sort_keys=True))

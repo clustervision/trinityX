@@ -41,14 +41,4 @@
       state: started
       enabled: "{{ not ha|default(True) }}"
 
-  - name: Add pacemaker resource
-    pcs_resource:
-      name: 'nginx'
-      resource_class: 'systemd'
-      resource_type: 'systemd:nginx'
-      options: 'op monitor interval=30 --group Trinity-stack'
-      state: present
-    when: ha | default(False)
-    tags: pcs
-
   when: primary | default(True)

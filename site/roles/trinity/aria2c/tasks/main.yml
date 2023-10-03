@@ -1,0 +1,44 @@
+---
+# tasks file for Aria2c
+- name: Install Torrent packages
+  yum:
+    name: 
+      - aria2
+      - transmission-common
+    state: present
+
+- name: Populate service facts
+  service_facts:
+
+- name: Stop aria2c
+  service:
+    name: aria2c
+    state: stopped
+  when: ansible_facts.services['aria2c.service'] is defined and ansible_facts.services['aria2c.service'].status != 'not-found'
+  ignore_errors: true
+  
+- name: Render aria2c daemon script
+  template:
+    src: 'aria2c-daemon.sh.j2'
+    dest: "{{ trix_sbin }}/aria2c-daemon.sh"
+    owner: 'root'
+    group: 'root'
+    mode: '0755'
+    backup: no
+
+- name: Render systemd configuration file
+  template:
+    src: 'aria2c.service.j2'
+    dest: /etc/systemd/system/aria2c.service
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+    backup: no
+
+- name: Start aria2c
+  service:
+    name: aria2c
+    enabled: true
+    state: started
+  ignore_errors: true
+  

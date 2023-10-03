@@ -7,37 +7,49 @@
 administrator_email: 'root@localhost'
 
 
+# -----------------------------------------------------------------------
 # Trinity version number
 
+trix_version: '14'
 
-trix_version: '12.0u5'
+# What stream to follow. Stable is the default and recommended.
+trix_stream: 'stable'
 
+# -----------------------------------------------------------------------
 # Project ID or string that'll show up in the default
 # prompt on the controllers.
 
 project_id: '000000'
 
 
+# -----------------------------------------------------------------------
 # Do we want HA?
 # Set to 'False' to disable HA, set to 'True' to enable it.
 
 ha: false
 
 
+# -----------------------------------------------------------------------
 # Should we use content of the installation CD/USB-stick
 # to install TrinityX
 
 local_install: false
 
+
+# -----------------------------------------------------------------------
 # Should Infiniband support packages be installed on the controller and images
 install_infiniband: false 
 
+
+# -----------------------------------------------------------------------
 # A domain name to be assigned to the controller(s) and nodes
 # on the internal network.
 # Luna's provisioning network name will be set to the same value.
 
 trix_domain: cluster
 
+
+# -----------------------------------------------------------------------
 # Default hostname and IP for the controller
 # In an HA pair, those are the hostname and IP for the first controller.
 # Those variables are required, with or without HA.
@@ -72,6 +84,18 @@ trix_cluster_dhcp_start: 10.141.128.0
 trix_cluster_dhcp_end: 10.141.140.0
 
 
+# -----------------------------------------------------------------------
+# DNS forwarders
+trix_dns_forwarders: "8.8.8.8, 8.8.4.4"
+
+
+# -----------------------------------------------------------------------
+# Default search domains to be added to /etc/resolv.conf
+
+resolv_search_domains: '{{ trix_domain }} ipmi'
+
+
+# -----------------------------------------------------------------------
 # Path to which the standard TrinityX files will be installed.
 # If not set, it will default to /trinity
 
@@ -83,6 +107,11 @@ trix_root: '/trinity'
 # - trix_local for configuration files specific to each machine
 # - trix_home for the user home directories
 #
+# Since trix_local will also house the monitoring data, it is recommended to
+# put this on a seperate partition for large installations or extensive
+# monitoring setups.
+# The partitioning on the controller must be set up before starting the installation.
+#
 # By default those exist under trix_root. There are some cases where this is not
 # desirable; the following variables allow you to override the default paths.
 # WARNING: use with caution! It's not well tested and there may be some issues
@@ -91,6 +120,11 @@ trix_root: '/trinity'
 trix_images: '{{ trix_root }}/images'
 trix_shared: '{{ trix_root }}/shared'
 trix_local: '{{ trix_root }}/local'
+trix_luna: '{{ trix_local }}/luna'
+trix_etc:  '{{ trix_local }}/etc'
+trix_sbin: '{{ trix_local }}/sbin'
+trix_ood:  '{{ trix_local }}/ondemand'
+trix_ssl:  '{{ trix_etc }}/ssl'
 trix_home: '{{ trix_root }}/home'
 trix_repos: '{{ trix_root }}/repos'
 trix_ohpc: '{{ trix_root }}/ohpc'
@@ -99,15 +133,24 @@ trix_docs: '{{ trix_shared }}/docs'
 trix_examples: '{{ trix_shared }}/examples'
 trix_modulefiles: '{{ trix_shared }}/modulefiles'
 
-# Backend type and block device to use for the specified backend.
 
-shared_fs_type: 'drbd'
-shared_fs_device: '/dev/vdb'
+# -----------------------------------------------------------------------
+# Luna credentials. These should be changed.
 
-# Default search domains to be added to /etc/resolv.conf
+luna_username: luna
+luna_password: luna
 
-resolv_search_domains: '{{ trix_domain }} ipmi'
 
+# luna's default communication protocol
+# options are: http and https
+# by default the system is using the certificates provides and signed by self-signed CV root ca
+# in this case we do not verify the certificate
+
+luna_protocol: https
+luna_verify_certificate: false
+
+
+# -----------------------------------------------------------------------
 # Default firewalld configuration
 # Only public tcp/udp ports are allowed on the public interfaces
 # whereas everything is allowed on the trusted interfaces
@@ -117,15 +160,13 @@ firewalld_trusted_interfaces: [ens6]
 firewalld_public_tcp_ports: [22, 443]
 firewalld_public_udp_ports: []
 
-
-# All of the following are variables that override values for roles
-# that are only applied as a dependency for another role.
-
-# Default MongoDB data path. Dependency of the luna role.
-
-mongo_db_path: '{{ trix_local }}/var/lib/mongodb'
+# *Note* that depending on selection of roles, the following ports will be open as well:
+# Grafana:       3000/tcp
+# Uchiwa/Sensu:  3001/tcp
+# Open-ondemand: 8080/tcp
 
 
+# -----------------------------------------------------------------------
 # Path in which the generated certificates for the cluster will be installed.
 # ssl_cert_group refers to the UNIX group that has read access to the certs.
 
@@ -134,48 +175,75 @@ ssl_ca_cert: '{{ ssl_cert_path }}/cluster-ca.crt'
 ssl_cert_group: ssl
 
 
+# -----------------------------------------------------------------------
+# OpenHPC repositories. commonly used for openhpc and schedulers
+
+# --- for EL8:
+el8_openhpc_repositories:
+  - name: base
+    repo: http://repos.openhpc.community/OpenHPC/2/EL_8/
+    gpgcheck: False
+  - name: updates
+    repo: http://repos.openhpc.community/OpenHPC/2/update.2.6.1/EL_8/
+    gpgcheck: False
+
+# --- for EL9:
+el9_openhpc_repositories:
+  - name: base
+    repo: https://updates.clustervision.com/trinityx/external/openhpc/redhat/9
+    gpgcheck: False
+
+
+# =======================================================================
 # The following variables give the ability to enable or disable
 # certain features in TrinityX:
 
+# -----------------------------------------------------------------------
 # Whether or not to enable SELinux throughout the cluster
 
 enable_selinux: true 
 
-# Whether or not to enable Slurm PAM module
-# If enabled, sssd's ldap filters will be disabled on the compute nodes
 
-enable_slurm_pam: true
-
+# -----------------------------------------------------------------------
 # Whether or not to configure the corosync heartbeat link (ring 1)
 
 enable_heartbeat_link: true
 
+
+# -----------------------------------------------------------------------
 # Install docker daemon, registry and utilities on the cluster
 
 enable_docker: false
 
+
+# -----------------------------------------------------------------------
 # List of additional environment modules to install
 
 additional_env_modules: []
 
+
+# -----------------------------------------------------------------------
 # Install userspace packages from OpenHPC project
 
 enable_openhpc: true
 
+
+# -----------------------------------------------------------------------
 # Default workload manager. Currently supported are:
 # - slurm
 # - pbspro
 
 workload_manager: 'slurm'
 
-# Local yum repository
+# -----------------------------------------------------------------------
+# Whether or not to enable Slurm PAM module
+# If enabled, sssd's ldap filters will be disabled on the compute nodes
 
-trix_local_reponame: 'trinityx-local'
-repos_port: 8080
-trix_local_repo_baseurl: 'http://{{ trix_ctrl_ip }}:{{ repos_port }}/repos/trinityx/'
+enable_slurm_pam: true
 
-# Repositories to use
 
-luna_repo: 'https://updates.clustervision.com/luna/1.2/centos/luna-1.2.repo'
-trinity_repo: 'https://updates.clustervision.com/trinity/10.2/centos/trinity.repo'
-elrepo_repo: 'http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm'
+# -----------------------------------------------------------------------
+# Enable VNC to nodes on Open OnDemand
+
+enable_ood_vnc: true
+

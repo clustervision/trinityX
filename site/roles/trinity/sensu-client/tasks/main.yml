@@ -1,10 +1,26 @@
 ---
-- name: Install Sensu Repo (CV)
+- block:
+  - name: Install Sensu Repo (CV) for rhel 8 and below
+    yum_repository:
+      name: CV-Sensu
+      description: ClusterVision Sensu Repository
+      baseurl:  "{{ sensu_repo }}"
+      gpgkey: "{{ sensu_gpg_key }}"
+
+#  - name: Add GPG keys to RPM DB
+#    ansible.builtin.rpm_key:
+#      state: present
+#      key: "{{ sensu_gpg_key }}"
+
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
+
+- name: Install Sensu Repo (CV) for rhel 9+
   yum_repository:
     name: CV-Sensu
     description: ClusterVision Sensu Repository
-    baseurl: https://updates.clustervision.com/mirror/sensu-centos7
-    gpgkey: https://updates.clustervision.com/mirror/sensu-pubkey.gpg
+    baseurl:  "{{ sensu_repo }}"
+    gpgcheck: False
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - name: Install Sensu
   yum:
@@ -49,6 +65,14 @@
   systemd:
     name: "{{ item }}"
     state: started
+  with_items:
+    - sensu-client
+  when: ansible_connection not in 'chroot'
+
+- name: Enable sensu client
+  systemd:
+    name: "{{ item }}"
     enabled: true
   with_items:
     - sensu-client
+
