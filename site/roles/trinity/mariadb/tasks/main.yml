@@ -1,16 +1,16 @@
 ---
 # tasks for mariadb role
 
-- name: Generate password for DB root and save it to /etc/trinity/passwords 
+- name: Generate password for DB root and save it to /etc/trinity/passwords
   set_fact:
     tmp_pwd: "{{ lookup('password',
-                          '/etc/trinity/passwords/mysql/root.txt  
+                          '/etc/trinity/passwords/mysql/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
 
 - name: Get root password from /etc/trinity/passwords
   set_fact:
     mysql_root_pwd: "{{ lookup('password',
-                          '/etc/trinity/passwords/mysql/root.txt  
+                          '/etc/trinity/passwords/mysql/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
 
 - name: Install MariaDB packages
@@ -40,13 +40,13 @@
   template:
     src: 'etc_my.cnf.j2'
     dest: '/etc/my.cnf'
-    backup: yes
+    backup: true
   notify: restart mariadb
 
 - name: Enable MariaDB service
   service:
     name: mariadb
-    enabled: yes
+    enabled: true
   when: not ha|default(False)
 
 - block:
@@ -55,7 +55,7 @@
     service:
       name: mariadb
       state: started
-  
+
   - meta: flush_handlers
 
   - name: Set MariaDB's root pasword
@@ -64,8 +64,8 @@
       login_password: ""
       name: root
       password: '{{ mysql_root_pwd }}'
-      host_all: yes
-      check_implicit_admin: yes
+      host_all: true
+      check_implicit_admin: true
       state: present
     failed_when: false
 
@@ -76,28 +76,28 @@
       owner: root
       group: root
       mode: 0600
-      backup: yes
+      backup: true
 
   - name: Set MariaDB's root pasword
-    mysql_user: 
+    mysql_user:
       config_file: '/root/.my.cnf'
       name: root
       password: '{{ mysql_root_pwd }}'
-      host_all: yes
-      check_implicit_admin: yes
+      host_all: true
+      check_implicit_admin: true
       state: present
-  
+
   - name: Remove anonymous users
     mysql_user:
       config_file: '/root/.my.cnf'
       name: ''
-      host_all: yes
+      host_all: true
       state: absent
-  
+
   - name: Remove test db
     mysql_db:
       config_file: '/root/.my.cnf'
       name: test
       state: absent
-  
+
   when: primary | default(True)

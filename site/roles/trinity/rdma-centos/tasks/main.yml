@@ -5,7 +5,7 @@
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Install rdma packages
   yum:
@@ -13,19 +13,19 @@
     state: present
   tags: install-only
 
-#- name: Enable rdma services
+# - name: Enable rdma services
 #  service:
 #    name: '{{ item }}'
 #    state: started
-#    enabled: yes
+#    enabled: true
 #  with_items:
 #    - rdma
 #    - rdma-ndd
- 
+
 - name: Enable rdma services
   systemd:
     name: '{{ item }}'
-    enabled: yes
+    enabled: true
   with_items:
     - rdma-ndd
 
@@ -39,6 +39,6 @@
 
 - name: Place i40iw blacklist
   template:
-    src: i40.conf.j2 
+    src: i40.conf.j2
     dest: /etc/modprobe.d/i40.conf
   when: install_infiniband
