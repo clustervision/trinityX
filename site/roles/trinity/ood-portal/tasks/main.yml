@@ -13,11 +13,11 @@
 
 - name: Enable powertools repo
   community.general.ini_file:
-    path:       /etc/yum.repos.d/Rocky-PowerTools.repo
-    section:    powertools
-    option:     enabled
-    value:      1
-    create:     no
+    path: /etc/yum.repos.d/Rocky-PowerTools.repo
+    section: powertools
+    option: enabled
+    value: 1
+    create: false
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
 - name: Enable default ruby module
@@ -55,12 +55,12 @@
 
 - name: Install required packages
   yum:
-    name: 
+    name:
       - 'epel-release'
       - 'ondemand'
-      - 'ondemand-dex' 
+      - 'ondemand-dex'
     state: present
-  
+
 
 - name: Ensure OOD config paths exist
   file:
@@ -176,7 +176,7 @@
 
 - block:
   - name: Download trinity-ood custom apps
-    get_url: 
+    get_url:
       url: "{{ ood_download_url }}"
       dest: "/tmp/"
 
@@ -236,7 +236,7 @@
     owner: root
     group: "{{ admin_group }}"
     mode: 0640
-  
+
 - name: Render trinity-ood luna app sensu.toml
   template:
     src: 'sensu.toml.j2'
@@ -245,7 +245,7 @@
     group: "{{ admin_group }}"
     mode: 0644
 
-- name: Install trinity-ood custom apps python requirements 
+- name: Install trinity-ood custom apps python requirements
   ansible.builtin.pip:
     requirements: "{{ trix_ood }}/{{ ood_version }}/{{ item }}/requirements.txt"
     virtualenv: /trinity/local/python/
@@ -354,9 +354,10 @@
     owner: root
     group: "{{ admin_group }}"
 
+
+- name: Set permissions for admin ood apps
   # ----------------------------------------------------------------------
   # master block for apps that require special access. NOT for common users.
-- name: Set permissions for admin ood apps 
   file:
     path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     mode: 0750
@@ -377,9 +378,10 @@
     - users
     - osimagetag
 
+
+- name: Set permissions for all user ood apps
   # ----------------------------------------------------------------------
   # permission to allow access to apps for everyone
-- name: Set permissions for all user ood apps 
   file:
     path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     mode: 0755
@@ -398,13 +400,13 @@
     immediate: "yes"
   when: ansible_virtualization_type != 'docker'
 
-- name: Enable OOD webserver on startup 
+- name: Enable OOD webserver on startup
   service:
     name: httpd
     enabled: "yes"
     state: started
 
-- name: Enable ondemand-dex service on startup 
+- name: Enable ondemand-dex service on startup
   service:
     name: ondemand-dex
     enabled: "yes"

@@ -11,17 +11,17 @@
 
     - name: Enable Rocky CRB repo
       community.general.ini_file:
-        path:       /etc/yum.repos.d/rocky.repo
-        section:    crb
-        option:     enabled
-        value:      1
-        create:     no
+        path: /etc/yum.repos.d/rocky.repo
+        section: crb
+        option: enabled
+        value: 1
+        create: false
       when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
     - name: Install required yum packages
       yum:
-        name: 
-          - "@{{ood_vnc_desktop_package}}" # -> groupinstall xfce
+        name:
+          - "@{{ood_vnc_desktop_package}}"  # -> groupinstall xfce
           - turbovnc
           - python3-websockify
         state: present
@@ -29,12 +29,12 @@
     # - name: Render ood-vnc-module-load.sh template file
     #   template:
     #     src: 'ood-vnc-module-load.sh.j2'
-    #     dest:  /etc/profile.d/zz_trinityx_ood_vnc.sh
+    #     dest: /etc/profile.d/zz_trinityx_ood_vnc.sh
     #     mode: '0644'
     #     owner: root
     #     group: root
-    
-  when: 
+
+  when:
     - enable_ood_vnc == true
     - ansible_connection in 'chroot'
 
@@ -46,7 +46,7 @@
     mode: '0644'
     owner: root
     group: root
-  
-  when: 
+
+  when:
     - enable_ood_vnc == true
     - ansible_connection not in 'chroot'
