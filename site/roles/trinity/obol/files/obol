@@ -256,7 +256,7 @@ class Obol:
 
     ###### List
     @show_output
-    def user_list(self):
+    def user_list(self, **kwargs):
         """List users defined in the system"""
 
         base_dn = self.users_dn
@@ -272,7 +272,7 @@ class Obol:
 
 
     @show_output
-    def group_list(self):
+    def group_list(self, **kwargs):
         """List groups defined in the system"""
 
         base_dn = self.groups_dn
@@ -289,7 +289,7 @@ class Obol:
 
     ###### Show
     @show_output
-    def user_show(self, username):
+    def user_show(self, username, **kwargs):
         """Show system user details"""
 
         users_dn = self.users_dn
@@ -312,7 +312,7 @@ class Obol:
         return user
 
     @show_output
-    def group_show(self, groupname):
+    def group_show(self, groupname, **kwargs):
         """
         Show system group details
         """
@@ -346,7 +346,8 @@ class Obol:
                 groupname=None,
                 groups=None,
                 home=None,
-                expire=None):
+                expire=None,
+                **kwargs):
         """Add a user to the LDAP directory"""
         # Ensure username's uniqueness
         existing_users = self.user_list()
@@ -450,7 +451,8 @@ class Obol:
     def group_add(self,
                 groupname=None,
                 gid=None,
-                users=None):
+                users=None,
+                **kwargs):
         """Add a group to the LDAP"""
 
         # Ensure groupname's uniqueness
@@ -487,7 +489,7 @@ class Obol:
             self.group_addusers(groupname, users)
 
     ###### Delete
-    def user_delete(self, username):
+    def user_delete(self, username, **kwargs):
         """Delete a user from the system"""
 
         # Ensure user exists
@@ -508,7 +510,7 @@ class Obol:
         except LookupError:
             pass
 
-    def group_delete(self, groupname):
+    def group_delete(self, groupname, **kwargs):
         """Delete a user from the system"""
 
         # Ensure group exists
@@ -540,7 +542,8 @@ class Obol:
                 groupname=None,
                 groups=None,
                 home=None,
-                expire=None
+                expire=None,
+                **kwargs
                 ):
         """Modify a user"""
 
@@ -638,7 +641,8 @@ class Obol:
     def group_modify(self,
                      groupname,
                      gid=None,
-                     users=None):
+                     users=None,
+                     **kwargs):
         """Modify a group"""
 
         # Ensure group exists
@@ -678,7 +682,8 @@ class Obol:
 
     def group_addusers(self,
                        groupname,
-                       usernames):
+                       usernames,
+                       **kwargs):
         """Add users to a group"""
 
         # Ensure group exists
@@ -703,7 +708,8 @@ class Obol:
     def group_delusers(self,
                        groupname,
                        usernames,
-                       warn=False):
+                       warn=False,
+                       **kwargs):
         """Remove users from a group"""
 
         # Ensure group exists
