@@ -5,13 +5,13 @@
     yum_repository:
       name: CV-Sensu
       description: ClusterVision Sensu Repository
-      baseurl:  "{{ sensu_repo }}"
+      baseurl: "{{ sensu_repo }}"
       gpgkey: "{{ sensu_gpg_key }}"
 
-#  - name: Add GPG keys to RPM DB
-#    ansible.builtin.rpm_key:
-#      state: present
-#      key: "{{ sensu_gpg_key }}"
+  # - name: Add GPG keys to RPM DB
+  #   ansible.builtin.rpm_key:
+  #     state: present
+  #     key: "{{ sensu_gpg_key }}"
 
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
@@ -19,8 +19,8 @@
   yum_repository:
     name: CV-Sensu
     description: ClusterVision Sensu Repository
-    baseurl:  "{{ sensu_repo }}"
-    gpgcheck: False
+    baseurl: "{{ sensu_repo }}"
+    gpgcheck: false
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - name: Install redis
@@ -28,7 +28,7 @@
     name: redis
     state: installed
 
-- name: Ensure redis binds to localhost 
+- name: Ensure redis binds to localhost
   tags: redis
   lineinfile:
     dest: /etc/redis.conf
@@ -36,7 +36,7 @@
     line: 'bind 127.0.0.1'
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
-- name: Ensure redis binds to localhost 
+- name: Ensure redis binds to localhost
   tags: redis
   lineinfile:
     dest: /etc/redis/redis.conf
@@ -55,7 +55,7 @@
     name: "{{ sensu_packages }}"
     state: installed
   vars:
-    sensu_packages: 
+    sensu_packages:
     - sensu
     - uchiwa
 
@@ -72,8 +72,8 @@
   firewalld:
     port: "{{ item }}"
     state: enabled
-    permanent: yes
-    immediate: yes
+    permanent: true
+    immediate: true
   with_items:
   - 3001/tcp
 
@@ -93,7 +93,7 @@
     version: "{{ item.version | default() }}"
     pre_release: "{{ item.pre_release | default('no') }}"
     repository: "{{ item.repository | default('') }}"
-    user_install: no
+    user_install: false
   with_items: "{{ sensu_server_gems }}"
 
 - name: Place mailer configuration
@@ -159,8 +159,7 @@
   firewalld:
     port: "{{ item }}"
     state: disabled
-    permanent: yes
-    immediate: yes
+    permanent: true
+    immediate: true
   with_items:
   - 4567/tcp
-

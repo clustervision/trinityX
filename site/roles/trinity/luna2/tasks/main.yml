@@ -1,12 +1,12 @@
 ---
-# tasks file for luna 
+# tasks file for luna
 
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
   include_vars: "{{ item }}"
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Install luna2 packages
   yum:
@@ -40,7 +40,7 @@
 - name: Get python libdir
   shell: "echo /trinity/local/python/lib/python*"
   register: luna2_python_dir
-  changed_when: False
+  changed_when: false
 
 # -- daemon
 
@@ -69,7 +69,7 @@
     src: '{{ luna2_python_dir.stdout }}/site-packages/daemon'
     dest: '{{ trix_luna }}/daemon'
     state: link
-    force: yes
+    force: true
 
 # -- cli
 
@@ -98,7 +98,7 @@
     src: '{{ luna2_python_dir.stdout }}/site-packages/luna'
     dest: '{{ trix_luna }}/cli'
     state: link
-    force: yes
+    force: true
 
 # -- utils
 
@@ -129,12 +129,12 @@
 - name: Collect utils file names
   shell: "ls {{ luna2_python_dir.stdout }}/site-packages/utils/ | grep -E '{{ luna2_utils_grep }}' | grep -E '^([a-zA-Z0-9\\-]+|.+\\.py|.+\\.sh)$'"
   register: luna2_utils_names
-  changed_when: False
+  changed_when: false
   when: luna2_utils_grep is defined
 
 - name: Ensuring luna utils files are unix
   shell: "dos2unix {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
-  with_items: 
+  with_items:
     - "{{ luna2_utils_names.stdout_lines }}"
   when: luna2_utils_names is defined
 
@@ -144,7 +144,7 @@
     owner: root
     group: root
     mode: '0755'
-  with_items: 
+  with_items:
     - "{{ luna2_utils_names.stdout_lines }}"
   when: luna2_utils_names is defined
 
@@ -153,13 +153,13 @@
     src: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
     dest: "/usr/sbin/{{ item.split('.') | first }}"
     state: link
-    force: yes
-  with_items: 
+    force: true
+  with_items:
     - "{{ luna2_utils_names.stdout_lines }}"
   when: luna2_utils_names is defined
 
 #  shell: "ln -s {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }} /usr/local/bin/{{ item.split('.') | first }}"
-#  with_items: 
+#  with_items:
 #    - "{{ luna2_utils_names.stdout_lines }}"
 #  when: luna2_utils_names is defined
 
@@ -177,7 +177,7 @@
 # ------------------- luna.ini ---------------------
 
 # moved to init
-#- name: Generate Luna Secret Key
+# - name: Generate Luna Secret Key
 #  set_fact:
 #    luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
 
@@ -194,7 +194,7 @@
     group: root
     mode: 0640
 
-- stat: 
+- stat:
     path: '{{ trix_luna }}/cli/config'
   register: cli_config_dir
 
@@ -332,7 +332,7 @@
     src: 'nginx-luna2.conf.j2'
     dest: '/etc/nginx/conf.d/nginx-luna2.conf'
 #  notify: restart nginx
-   # this notify is being ignored. trust me. Antoine
+# this notify is being ignored. trust me. Antoine
 
 - name: Copy libluna-fakeuname to lib64
   copy:
@@ -343,13 +343,13 @@
 ## Some PXE ROMs in some NICs do not send tftp replies using the FIP
 ## of the controllers. This workaround ensures that we SNAT those replies.
 ## TODO: delete workaround when no longer required.
-#- name: Get provisioning interface name
+# - name: Get provisioning interface name
 #  shell: "ip -o addr show to {{ trix_cluster_net }}/{{ trix_cluster_netprefix }} | awk '{ print $2 }' | head -1"
 #  register: luna_prov_nic
 #  changed_when: False
 
 # TODO
-#- name: Workaround PXE boot issue when doing HA and masquerading is enabled
+# - name: Workaround PXE boot issue when doing HA and masquerading is enabled
 #  template:
 #    src: 'firewalld_direct.xml.j2'
 #    dest: '/etc/firewalld/direct.xml'
@@ -358,7 +358,7 @@
 #    mode: '0644'
 #  when: ha|default(False)
 #  notify: reload firewalld
-###
+# ##
 
 - name: Selinux fcontext on files
   sefcontext:
@@ -381,8 +381,8 @@
 - name: Enable luna services
   service:
     name: '{{ item }}'
-    enabled: yes
-  with_items: 
+    enabled: true
+  with_items:
     - "{{ enable_services }}"
 ##  when: not ha
 
@@ -400,4 +400,3 @@
 - name: Setting default DNS forwarder
   shell: "luna cluster change -fs \"{{ trix_dns_forwarders }}\""
   when: trix_dns_forwarders is defined
-

@@ -51,7 +51,7 @@
 
 - name: Adjust OpenLDAP server TLS configuration
   lineinfile:
-    create: yes
+    create: true
     path: '{{ openldap_server_defaults_file }}'
     regexp: '^SLAPD_URLS='
     line: 'SLAPD_URLS="{{ openldap_endpoints }}"'
@@ -72,7 +72,7 @@
     path: '/etc/openldap/slapd.d'
   register: default_openldap_path
 
-#- debug:
+# - debug:
 #    msg: "openldap_server_conf_path: {{ openldap_server_conf_path }}"
 
 - block:
@@ -201,7 +201,7 @@
     failed_when: false
     changed_when: false
 
-      #ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+  # ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
   - name: Load OpenLDAP local schema
     command: >
       ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
@@ -262,7 +262,7 @@
     failed_when: false
     changed_when: false
 
-      #ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+  # ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
   - name: Load OpenLDAP local schema
     command: >
       ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
@@ -274,4 +274,3 @@
 # ---------------------
 
 - meta: flush_handlers
-

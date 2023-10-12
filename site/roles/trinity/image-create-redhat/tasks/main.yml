@@ -10,14 +10,14 @@
 
 - name: Install dnf-utils
   dnf:
-    disable_gpg_check: yes
+    disable_gpg_check: true
     name: dnf-utils
     state: present
 
 - name: Check OS release on controller
   command: rpm -qf /etc/os-release --qf '%{NAME}'
   register: os_release_rpm
-  changed_when: False
+  changed_when: false
 
 - name: Copy local dnf.conf
   copy:
@@ -52,7 +52,7 @@
     dest: "{{ image_path }}/etc/dnf/vars/releasever"
   when: ansible_distribution == "RedHat"
 
-- name: Touch config files for RedHat 
+- name: Touch config files for RedHat
   file:
     path: "{{ item }}"
     state: touch
@@ -63,15 +63,15 @@
 
 - name: Install {{ os_release_rpm.stdout }} package in {{ image_path }}
   dnf:
-    disable_gpg_check: yes
+    disable_gpg_check: true
     name: "{{ os_release_rpm.stdout }}"
-    #releasever: "{{ ansible_distribution_major_version }}"
+    # releasever: "{{ ansible_distribution_major_version }}"
     installroot: "{{ image_path }}"
     state: present
 
 - name: Install dnf package in {{ image_path }}
   dnf:
-    disable_gpg_check: yes
+    disable_gpg_check: true
     name:
       - yum
       - dnf
@@ -96,18 +96,18 @@
   args:
     creates: "{{ image_path }}/dev/{{ item.dev }}"
   with_items:
-    - { dev: "null",    mo: "666", t: 'c', ma: 1, mi: 3 } # device, mode, type, major, minor
-    - { dev: "zero",    mo: "666", t: 'c', ma: 1, mi: 5 }
-    - { dev: "random",  mo: "666", t: 'c', ma: 1, mi: 8 }
-    - { dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9 }
-    - { dev: "console", mo: "600", t: 'c', ma: 5, mi: 1 }
-    - { dev: "ptmx",    mo: "666", t: 'c', ma: 5, mi: 2 }
-    - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
+    - {dev: "null", mo: "666", t: 'c', ma: 1, mi: 3}  # device, mode, type, major, minor
+    - {dev: "zero", mo: "666", t: 'c', ma: 1, mi: 5}
+    - {dev: "random", mo: "666", t: 'c', ma: 1, mi: 8}
+    - {dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9}
+    - {dev: "console", mo: "600", t: 'c', ma: 5, mi: 1}
+    - {dev: "ptmx", mo: "666", t: 'c', ma: 5, mi: 2}
+    - {dev: "tty", mo: "666", t: 'c', ma: 5, mi: 0}
 
 
 # commented block not needed? image setup will generate repos and below is using repos on controller - Antoine
 #
-#- name: Include trinity/roles
+# - name: Include trinity/roles
 #  ansible.builtin.include_role:
 #    name: trinity/repos
 #  vars:
@@ -122,8 +122,8 @@
       name: "{{ trix_local_reponame }}"
       baseurl: "{{ trix_local_repo_baseurl }}"
       description: "{{ trix_local_reponame }}"
-      gpgcheck: no
-      enabled: yes
+      gpgcheck: false
+      enabled: true
       reposdir: "{{ image_path }}/etc/yum.repos.d"
 
   - name: Disable all repo without '*-local' suffix
@@ -133,7 +133,7 @@
       | egrep -v "\-local$" \
       | xargs yum-config-manager --installroot={{ image_path }} --disable {}
     args:
-      warn: no
+      warn: false
 
   when: local_install | default(False)
 
@@ -141,19 +141,19 @@
   shell: >
     yum-config-manager --installroot={{ image_path }} --disable epel
   args:
-    warn: no
+    warn: false
   when: local_install | default(False)
 
 - name: Install core packages - @core, kernel and grub2
   dnf:
-    disable_gpg_check: yes
+    disable_gpg_check: true
     name: "{{ image_core_packages }}"
     state: present
     installroot: "{{ image_path }}"
 
 - name: Install missing elfutils-libs on RedHat
   dnf:
-    disable_gpg_check: yes
+    disable_gpg_check: true
     name: "elfutils-libs"
     state: present
     installroot: "{{ image_path }}"
@@ -164,7 +164,7 @@
     src: trinity.conf.j2
     dest: "{{ image_path}}/etc/dracut.conf.d/trinity.conf"
 
-#- name: Copy gpg keys
+# - name: Copy gpg keys
 #  copy:
 #    src: "/etc/pki/rpm-gpg"
 #    dest: "{{ image_path }}/etc/pki/"
@@ -191,7 +191,7 @@
 - name: Generate SSH keys
   user:
     name: root
-    generate_ssh_key: yes
+    generate_ssh_key: true
     ssh_key_file: "{{ image_path }}/root/.ssh/id_rsa"
 
 - name: Add controller's key to authorized keys
@@ -217,14 +217,14 @@
 - name: Kernel version in image
   shell: "ls {{ image_path }}/lib/modules|sort|tail -n1"
   register: kernel_version
-  changed_when: False
+  changed_when: false
 
 - name: Set the kernel version for image
   ansible.builtin.shell:
     cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
 
 # needs to be done after image setup - Antoine
-#- name: Pack the image
+# - name: Pack the image
 #  ansible.builtin.shell:
 #    cmd: "luna osimage pack {{ image_name }}"
 

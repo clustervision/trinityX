@@ -16,7 +16,7 @@
 - name: Configure listeners
   blockinfile:
     path: '/etc/rsyslog.d/{{ item.proto | lower }}-listeners.conf'
-    create: yes
+    create: true
     owner: root
     group: root
     block: |
@@ -33,7 +33,7 @@
     group: root
   with_items: '{{ syslog_file_template_rules }}'
   notify: restart rsyslog
-  
+
 - name: Add forwarding rules
   template:
     src: 'forwarding.conf.j2'
@@ -51,12 +51,12 @@
     state: present
   with_items: '{{ syslog_forwarding_rules }}'
   when: enable_selinux|default(True)
-  ignore_errors: True
+  ignore_errors: true
 
 - name: Enable rsyslog service
   systemd:
     name: rsyslog
-    enabled: yes
+    enabled: true
 
 - name: Start rsyslog daemon
   service:

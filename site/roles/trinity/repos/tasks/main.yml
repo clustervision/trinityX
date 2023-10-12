@@ -4,9 +4,9 @@
   with_first_found:
     - "{{ ansible_distribution }}.yaml"
     - "{{ ansible_os_family }}.yaml"
-  ignore_errors: yes
+  ignore_errors: true
 
-#- debug:
+# - debug:
 #    msg: "{{ trinityx_repositories }}"
 
 - block:
@@ -20,22 +20,22 @@
       reposdir: "{{ params.install_root + '/etc/yum.repos.d/' if params.install_root is defined else '/etc/yum.repos.d' }}"
     with_items: "{{ trinityx_repositories }}"
 
-#  - name: Add GPG keys to RPM DB. normally NOT needed - Antoine
-#    ansible.builtin.rpm_key:
-#      state: present
-#      key: "{{ item.gpgkey | default('') }}"
-#    with_items: "{{ trinityx_repositories }}"
-#    ignore_errors: True
+  # - name: Add GPG keys to RPM DB. normally NOT needed - Antoine
+  #   ansible.builtin.rpm_key:
+  #     state: present
+  #     key: "{{ item.gpgkey | default('') }}"
+  #   with_items: "{{ trinityx_repositories }}"
+  #   ignore_errors: True
 
-#  - name: Download external repo RPMS
-#    get_url: 
-#      url: "{{ item.name }}"
-#      dest: "/tmp/{{ item.file }}"
-#    with_items: "{{ external_repository_rpms }}"
+  # - name: Download external repo RPMS
+  #   get_url:
+  #     url: "{{ item.name }}"
+  #     dest: "/tmp/{{ item.file }}"
+  #   with_items: "{{ external_repository_rpms }}"
 
   - name: Install external repo RPMS
     dnf:
-#      name: "/tmp/{{ item.file }}"
+      # name: "/tmp/{{ item.file }}"
       name: "{{ item.name }}"
       disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       state: present
@@ -49,12 +49,12 @@
 
   - name: Make caches
     shell: "dnf makecache -y"
-    ignore_errors: True
+    ignore_errors: true
 
   - name: Install external repo Packages
     dnf:
       name: "{{ item.name }}"
-#      disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+      # disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       state: present
       update_cache: true
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
@@ -66,8 +66,6 @@
 
   when: ansible_facts['os_family'] == "RedHat"
   tags: install-only
-
-
 
 # Disable all remote repos (without *-local suffix)
 # If we have local install
@@ -90,7 +88,6 @@
       | xargs yum-config-manager --disable {}
 
     args:
-      warn: no
+      warn: false
 
   when: local_install | default(False)
-

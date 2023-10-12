@@ -16,7 +16,7 @@
     path: '{{ nfs_exports_path }}'
     state: directory
   when: primary | default(True)
-      
+
 - name: Setup NFS exports in {{ nfs_exports_path }}
   template:
     src: '{{ "HA_exports.j2" if ha == true else "nonHA_exports.j2" }}'
@@ -28,8 +28,8 @@
     src: '{{ nfs_exports_path }}/trinity.exports'
     dest: '/etc/exports.d/trinity.exports'
     state: link
-    force: yes
-    follow: no
+    force: true
+    follow: false
   when: nfs_exports_path|string not in '/etc/exports.d'
 
 - name: Render nfsmount.conf configuration file
@@ -41,7 +41,7 @@
   service:
     name: nfs-server
     state: started
-    enabled: yes
+    enabled: true
   when: not ha|default(False)
 
 - block:
@@ -50,5 +50,5 @@
     file:
       path: '{{ trix_local }}/var/lib/nfs'
       state: directory
-  
+
   when: primary|default(True) and ha|default(False)
