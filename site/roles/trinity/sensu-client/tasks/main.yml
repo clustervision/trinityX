@@ -4,13 +4,13 @@
     yum_repository:
       name: CV-Sensu
       description: ClusterVision Sensu Repository
-      baseurl:  "{{ sensu_repo }}"
+      baseurl: "{{ sensu_repo }}"
       gpgkey: "{{ sensu_gpg_key }}"
 
-#  - name: Add GPG keys to RPM DB
-#    ansible.builtin.rpm_key:
-#      state: present
-#      key: "{{ sensu_gpg_key }}"
+  # - name: Add GPG keys to RPM DB
+  #   ansible.builtin.rpm_key:
+  #     state: present
+  #     key: "{{ sensu_gpg_key }}"
 
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
 
@@ -18,8 +18,8 @@
   yum_repository:
     name: CV-Sensu
     description: ClusterVision Sensu Repository
-    baseurl:  "{{ sensu_repo }}"
-    gpgcheck: False
+    baseurl: "{{ sensu_repo }}"
+    gpgcheck: false
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
 
 - name: Install Sensu
@@ -41,7 +41,7 @@
     version: "{{ item.version | default() }}"
     pre_release: "{{ item.pre_release | default('no') }}"
     repository: "{{ item.repository | default('') }}"
-    user_install: no
+    user_install: false
   with_items: "{{ sensu_client_gems }}"
 
 - name: Place configuration files
@@ -75,4 +75,3 @@
     enabled: true
   with_items:
     - sensu-client
-

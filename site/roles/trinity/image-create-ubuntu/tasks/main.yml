@@ -16,7 +16,7 @@
 
 - name: Build basic Ubuntu image
   shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ image_path }} {{ ubuntu_distribution_source }} | tee /tmp/debootstrap.log"
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Verify build
   shell: "grep 'E:' /tmp/debootstrap.log || true"
@@ -34,13 +34,13 @@
   args:
     creates: "{{ image_path }}/dev/{{ item.dev }}"
   with_items:
-    - { dev: "null",    mo: "666", t: 'c', ma: 1, mi: 3 } # device, mode, type, major, minor
-    - { dev: "zero",    mo: "666", t: 'c', ma: 1, mi: 5 }
-    - { dev: "random",  mo: "666", t: 'c', ma: 1, mi: 8 }
-    - { dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9 }
-    - { dev: "console", mo: "600", t: 'c', ma: 5, mi: 1 }
-    - { dev: "ptmx",    mo: "666", t: 'c', ma: 5, mi: 2 }
-    - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
+    - {dev: "null", mo: "666", t: 'c', ma: 1, mi: 3}  # device, mode, type, major, minor
+    - {dev: "zero", mo: "666", t: 'c', ma: 1, mi: 5}
+    - {dev: "random", mo: "666", t: 'c', ma: 1, mi: 8}
+    - {dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9}
+    - {dev: "console", mo: "600", t: 'c', ma: 5, mi: 1}
+    - {dev: "ptmx", mo: "666", t: 'c', ma: 5, mi: 2}
+    - {dev: "tty", mo: "666", t: 'c', ma: 5, mi: 0}
 
 
 - name: Configure repos
@@ -52,7 +52,7 @@
 
 - name: Updating Apt
   shell: "chroot {{ image_path }} apt-get update"
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Install core packages - @core, kernel and grub2
   shell: "chroot {{ image_path }} apt-get -y install {{ item }}"
@@ -88,12 +88,12 @@
 
 - name: Disable tinysshd if it is there
   shell: "chroot {{ image_path }} systemctl disable tinysshd.socket"
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Generate SSH keys
   user:
     name: root
-    generate_ssh_key: yes
+    generate_ssh_key: true
     ssh_key_file: "{{ image_path }}/root/.ssh/id_rsa"
 
 - name: Add controller's key to authorized keys
@@ -106,7 +106,7 @@
 - name: Verify if image already exists in luna
   shell: "luna osimage show {{ image_name }}"
   register: image_in_luna
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Creating image in luna
   shell: "luna osimage add -ge \"/, /boot\" -ge \"/proc/*, /sys/*, /dev/*, /tmp/*, /var/log/*\" -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu {{ image_name }}"
@@ -128,14 +128,14 @@
 - name: Kernel version in image
   shell: "ls {{ image_path }}/lib/modules|sort|tail -n1"
   register: kernel_version
-  changed_when: False
+  changed_when: false
 
 - name: Set the kernel version for image
   ansible.builtin.shell:
     cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
 
 # needs to be done after image setup - Antoine
-#- name: Pack the image
+# - name: Pack the image
 #  ansible.builtin.shell:
 #    cmd: "luna osimage pack {{ image_name }}"
 
