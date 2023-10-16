@@ -14,7 +14,7 @@ Quick start
 
 In standard configuration TrinityX provides the following services to the cluster:
 
-* Luna, our default super-efficient node provisioner https://github.com/clustervision/luna
+* Luna, our default super-efficient node provisioner
 * OpenLDAP
 * SLURM or OpenPBS
 * Telegraf, InfluxDB, Grafana and Sensu Core
