@@ -49,15 +49,16 @@
   with_items: '{{ firewalld_trusted_interfaces }}'
   when: firewalld_update_ifcfg_files
 
-- name: Disable NetworkManager for public and trusted interfaces
-  lineinfile:
-    path: '/etc/sysconfig/network-scripts/ifcfg-{{ item }}'
-    regexp: '^NM_CONTROLLED='
-    line: 'NM_CONTROLLED=no'
-  with_flattened:
-    - '{{ firewalld_public_interfaces }}'
-    - '{{ firewalld_trusted_interfaces }}'
-  when: firewalld_update_ifcfg_files
+# Disabled as latest EL8(.7+?) causes interfaces not to come back after reboot
+#- name: Disable NetworkManager for public and trusted interfaces
+#  lineinfile:
+#    path: '/etc/sysconfig/network-scripts/ifcfg-{{ item }}'
+#    regexp: '^NM_CONTROLLED='
+#    line: 'NM_CONTROLLED=no'
+#  with_flattened:
+#    - '{{ firewalld_public_interfaces }}'
+#    - '{{ firewalld_trusted_interfaces }}'
+#  when: firewalld_update_ifcfg_files
 
 - name: Enable masquerading on the '{{ firewalld_masquerade_zone }}' zone
   firewalld:
