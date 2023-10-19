@@ -65,6 +65,8 @@ Steps to install TrinityX
 
    In case of a single controller (default), we now assume that the shared IP address is also available on the controller node, this is to ease future expansion.
 
+   If applicable, configure the dns forwarders in trix_dns_forwarders when the defaults, 8.8.8.8 and 8.8.4.4 are unreachable.
+
 6. Configure ``hosts`` file to allow ansible to address controllers.
 
        # cp hosts.example hosts
@@ -79,6 +81,7 @@ Steps to install TrinityX
        [controllers]
        controller1 ansible_host=10.141.255.254
        controller2 ansible_host=10.141.255.253
+
 
 7. Start TrinityX installation::
 

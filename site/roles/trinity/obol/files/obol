@@ -35,21 +35,20 @@ import hashlib
 import base64
 import argparse
 import configparser
+import secrets
+import logging
 from typing import List, Dict, Union
 
 import ldap
-
-# Disable pylint warnings for long line, too many arguments and too many local variables
+# pylint: disable=unused-argument,too-many-arguments,too-many-locals,line-too-long,no-member,too-many-statements,too-many-branches
 
 def print_warning(msg, name="Warning"):
     """Print a warning message to stderr"""
     print(f"[{name}] {msg}", file=sys.stderr)
 
-
 def print_error(msg, name="Error"):
     """Print an error message to stderr"""
     print(f"[{name}] {msg}", file=sys.stderr)
-
 
 def print_table(item: Union[List, Dict]):
     """Print a list of dicts as a table, dict as a transposed table"""
@@ -254,33 +253,39 @@ class Obol:
                 return True
         return False
 
+
     ###### List
     @show_output
     def user_list(self, **kwargs):
         """List users defined in the system"""
 
-        base_dn = self.users_dn
-        filter_dn = '(objectclass=posixAccount)'
-
+        # Retrieve users from LDAP
         users = []
-        for _, attrs in self.conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter_dn):
-            fields = ['uid', 'uidNumber', 'gidNumber']
+        fields = ['uid', 'uidNumber', 'gidNumber']
+        filter_dn = '(objectclass=posixAccount)'
+        for _, attrs in self.conn.search_s(self.users_dn,
+                                           ldap.SCOPE_SUBTREE,
+                                           filter_dn,
+                                           fields):
+            # Decode bytes to utf8 and parse data
             user = { k:[vi.decode('utf8') for vi in v][0] for k,v in attrs.items() if k in fields }
             users.append(user)
 
         return users
 
-
     @show_output
     def group_list(self, **kwargs):
         """List groups defined in the system"""
 
-        base_dn = self.groups_dn
-        filter_dn = '(objectclass=posixGroup)'
-
+        # Retrieve groups from LDAP
         groups = []
-        for _, attrs in self.conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter_dn):
-            fields = ['cn', 'gidNumber', ]
+        fields = ['cn', 'gidNumber', ]
+        filter_dn = '(objectclass=posixGroup)'
+        for _, attrs in self.conn.search_s(self.groups_dn,
+                                           ldap.SCOPE_SUBTREE,
+                                           filter_dn,
+                                           fields):
+            # Decode bytes to utf8 and parse data
             group = { k:[vi.decode('utf8') for vi in v][0] for k,v in attrs.items() if k in fields }
             groups.append(group)
 
@@ -292,19 +297,26 @@ class Obol:
     def user_show(self, username, **kwargs):
         """Show system user details"""
 
-        users_dn = self.users_dn
+        # Retrieve first user from LDAP query, raise error if not found
         filter_dn = f'(uid={username})'
-
-        for _, attrs in self.conn.search_s(users_dn, ldap.SCOPE_SUBTREE, filter_dn, self.user_fields):
+        for _, attrs in self.conn.search_s(self.users_dn,
+                                           ldap.SCOPE_SUBTREE,
+                                           filter_dn,
+                                           self.user_fields):
+            # Decode bytes to utf8 and parse data
             user = { k:[vi.decode('utf8') for vi in v][0] for k,v in attrs.items() if k in self.user_fields }
             break
         else:
+            # Raise error if no user found
             raise LookupError(f"User '{username}' does not exist")
 
-        groups_dn = self.groups_dn
-
+        # Retrieve user's groups from LDAP
         user['groups'] = []
-        for _, attrs in self.conn.search_s(groups_dn, ldap.SCOPE_SUBTREE, '(objectclass=groupOfMembers)'):
+        filter_dn = '(objectclass=groupOfMembers)'
+        for _, attrs in self.conn.search_s(self.groups_dn,
+                                           ldap.SCOPE_SUBTREE,
+                                           filter_dn):
+            # Decode bytes to utf8 and parse data
             for member in attrs.get('member', []):
                 if member.decode('utf8').startswith(f'uid={username},'):
                     user['groups'].append(attrs['cn'][0].decode('utf8'))
@@ -317,19 +329,24 @@ class Obol:
         Show system group details
         """
 
-        base_dn = self.groups_dn
+        # Retrieve first group from LDAP query, raise error if not found
         filter_dn = f'(cn={groupname})'
-
-        for _, attrs in self.conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter_dn, self.group_fields):
+        for _, attrs in self.conn.search_s(self.groups_dn,
+                                           ldap.SCOPE_SUBTREE,
+                                           filter_dn,
+                                           self.group_fields):
+            # Decode bytes to utf8 and parse data
             group = { k:[vi.decode('utf8') for vi in v] for k,v in attrs.items() if k in self.group_fields }
             group = { k:v[0] if not (k=='member') else v for k,v in group.items() }
-
             members = group.pop('member') if 'member' in group else []
-
             group['users'] = [ m.split(',')[0].split('=')[1] for m in members]
-            return group
+            break
+        else:
+            # Raise error if no group found
+            raise LookupError(f"Group {groupname} does not exist")
 
-        raise LookupError(f"Group {groupname} does not exist")
+        return group
+
 
     ###### Add
     def user_add(self,
@@ -338,6 +355,7 @@ class Obol:
                 sn=None,
                 given_name=None,
                 password=None,
+                autogen_password=False,
                 uid=None,
                 gid=None,
                 mail=None,
@@ -428,6 +446,10 @@ class Obol:
         if phone:
             user_record.append(('telephoneNumber', [phone.encode('utf-8')]))
 
+        if autogen_password:
+            password = secrets.token_urlsafe(16)
+            print(f"Generated password for user {username}: {password}")
+
         if password:
             hashed_password = self._make_secret(password).encode('utf-8')
             user_record.append(('userPassword', [hashed_password]))
@@ -488,6 +510,7 @@ class Obol:
         if users:
             self.group_addusers(groupname, users)
 
+
     ###### Delete
     def user_delete(self, username, **kwargs):
         """Delete a user from the system"""
@@ -534,6 +557,7 @@ class Obol:
                 sn=None,
                 given_name=None,
                 password=None,
+                autogen_password=False,
                 uid=None,
                 gid=None,
                 mail=None,
@@ -564,11 +588,7 @@ class Obol:
         if given_name:
             mod_attrs.append((ldap.MOD_REPLACE, 'givenName', f"{given_name}".encode('utf-8')))
         if uid:
-            # Ensure uid's uniqueness
-            uids = [u['uidNumber'] for u in self.user_list()]
-            if uid in uids:
-                raise ValueError(f"UID {uid} already exists")
-            mod_attrs.append((ldap.MOD_REPLACE, 'uidNumber', f"{uid}".encode('utf-8')))
+            raise NotImplementedError("changing UID of existing user is not supported")
 
         if groupname:
             # if groupname is specified: groupname should exist
@@ -606,6 +626,9 @@ class Obol:
             if expire != '-1':
                 expire = str(int(expire) + int(time.time() / 86400))
             mod_attrs.append((ldap.MOD_REPLACE, 'shadowExpire', f"{expire}".encode('utf-8')))
+        if autogen_password:
+            password = secrets.token_urlsafe(16)
+            print(f"Generated password for user {username}: {password}")
         if password:
             hashed_password = self._make_secret(password).encode('utf-8')
             mod_attrs.append((ldap.MOD_REPLACE, 'userPassword', hashed_password))
@@ -637,7 +660,6 @@ class Obol:
         for group in groups_to_del:
             self.group_delusers(group, [username])
 
-
     def group_modify(self,
                      groupname,
                      gid=None,
@@ -655,7 +677,7 @@ class Obol:
 
         if gid:
             # Not implemented yet
-            raise NotImplementedError("changing GID of existing group is not supported yet")
+            raise NotImplementedError("changing GID of existing group is not supported")
 
         if users:
             # Ensure users exist
@@ -680,6 +702,28 @@ class Obol:
             self.conn.modify_s(user_dn, user_mod_attrs)
 
 
+    ###### Other
+    def group_rename(self,
+                     groupname,
+                     new_groupname,
+                     **kwargs):
+        """Rename a group"""
+
+        existing_groups = self.group_list()
+        # Ensure group exists
+        if not self._groupname_exists(groupname, _groups=existing_groups):
+            raise LookupError(f"Group '{groupname}' does not exist")
+
+        # Ensure new groupname does not exist
+        if self._groupname_exists(new_groupname, _groups=existing_groups):
+            raise ValueError(f"Group '{new_groupname}' already exists")
+
+        # Rename the group
+        group_dn = f"cn={groupname},{self.groups_dn}"
+        new_group_rdn = f"cn={new_groupname}"
+
+        self.conn.rename_s(group_dn, new_group_rdn, self.groups_dn)
+
     def group_addusers(self,
                        groupname,
                        usernames,
@@ -703,7 +747,6 @@ class Obol:
 
         group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
         self.conn.modify_s(group_dn, mod_attrs)
-
 
     def group_delusers(self,
                        groupname,
@@ -760,7 +803,9 @@ def run():
     # User add command
     user_add_command = user_commands.add_parser('add', help='Add a user')
     user_add_command.add_argument('username')
-    user_add_command.add_argument('--password', '-p')
+    user_add_command_password_group = user_add_command.add_mutually_exclusive_group()
+    user_add_command_password_group.add_argument('--password', '-p')
+    user_add_command_password_group.add_argument('--autogen-password', '--autogen', action='store_true')
     user_add_command.add_argument('--cn', metavar="COMMON NAME")
     user_add_command.add_argument('--sn', metavar="SURNAME")
     user_add_command.add_argument('--givenName', dest='given_name')
@@ -780,7 +825,9 @@ def run():
     # User modify command
     user_modify_command = user_commands.add_parser('modify', help='Modify a user attribute')
     user_modify_command.add_argument('username')
-    user_modify_command.add_argument('--password', '-p')
+    user_modify_command_password_group = user_modify_command.add_mutually_exclusive_group()
+    user_modify_command_password_group.add_argument('--password', '-p')
+    user_modify_command_password_group.add_argument('--autogen-password', '--autogen', action='store_true')
     user_modify_command.add_argument('--cn', metavar="COMMON NAME")
     user_modify_command.add_argument('--sn', metavar="SURNAME")
     user_modify_command.add_argument('--givenName', dest='given_name')
@@ -822,6 +869,11 @@ def run():
     group_modify_command.add_argument('--users', type=lambda s: s.split(','),
                         help='A comma separated list of usernames')
 
+    # Group rename command
+    group_addusers_command = group_commands.add_parser('rename', help='Rename group but keep its GID and users')
+    group_addusers_command.add_argument('groupname')
+    group_addusers_command.add_argument('new_groupname')
+
     # Group addusers command
     group_addusers_command = group_commands.add_parser('addusers', help='Add users to a group')
     group_addusers_command.add_argument('groupname')
@@ -846,6 +898,23 @@ def run():
 
     # Run command
     try:
+        # log executed command but redact password
+        logged_cmd = ''
+        password_argument = False
+
+        for arg in sys.argv:
+            if password_argument:
+                logged_cmd += '<REDACTED> '
+            else:
+                logged_cmd += f'{arg} '
+            password_arguments = ['--password', '-p', '--bind-pass', '-w']
+            password_argument = arg in password_arguments
+        # setup logger
+        logging.basicConfig(filename='/var/log/obol.log',
+                            format='[%(asctime)s][%(levelname)s][%(name)s] %(message)s',
+                            level=logging.INFO)
+        logging.info(f"Executing command '{logged_cmd}'")
+
         args = vars(parser.parse_args())
         obol = Obol('/etc/obol.conf', overrides=args)
         if args['target'] is None or args['command'] is None:
@@ -859,7 +928,9 @@ def run():
         method_name = f"{args['target']}_{ args['command']}"
         function = getattr(obol, method_name, None)
         function(**args, warn=True)
+        logging.info(f"Command '{logged_cmd}' succeeded")
     except Exception as exc:
+        logging.error(f"Command '{logged_cmd}' failed: {exc}")
         print_error(exc, name=type(exc).__name__,)
         sys.exit(1)
 
