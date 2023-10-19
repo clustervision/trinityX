@@ -4,8 +4,6 @@
   register: command_result
   failed_when: "'Completed successfully!' not in command_result.stdout"
   notify:
-    - restart httpd24-httpd
-    - restart httpd24-htcacheclean
     - restart httpd
     - restart htcacheclean
     - restart ondemand-dex
@@ -15,26 +13,12 @@
     name: ondemand-dex
     state: restarted
 
-- name: restart httpd24-httpd
-  systemd:
-    name: httpd24-httpd
-    state: restarted
-  when: ansible_distribution == "CentOS"
-
-- name: restart httpd24-htcacheclean
-  systemd:
-    name: httpd24-htcacheclean
-    state: restarted
-  when: ansible_distribution == "CentOS"
-
 - name: restart httpd
   systemd:
     name: httpd
     state: restarted
-  when: ansible_distribution == "Rocky"
 
 - name: restart htcacheclean
   systemd:
     name: htcacheclean
     state: restarted
-  when: ansible_distribution == "Rocky"

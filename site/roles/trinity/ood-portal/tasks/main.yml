@@ -11,14 +11,18 @@
     - "{{ ssl_certificate_key }}"
   when: enable_ssl == true
 
-- name: Enable powertools repo
+- name: Enable powertools repository
   community.general.ini_file:
     path: /etc/yum.repos.d/Rocky-PowerTools.repo
     section: powertools
     option: enabled
     value: 1
     create: false
-  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
+  when: ansible_distribution == "Rocky" and ansible_facts['distribution_major_version']|int < 9
+
+- name: Enable powertools repository
+  shell: "yum config-manager --set-enabled powertools"
+  when: ansible_distribution == "Centos" or ansible_distribution == "RedHat"
 
 - name: Enable default ruby module
   copy:

@@ -1,0 +1,20 @@
+---
+
+#- debug:
+#    msg: "repo file: {{ item }}"
+#  with_items: "{{ inner_loop_var.stdout_lines }}"
+
+- name: Enabling baseurl
+  replace:
+     path: "{{ item }}"
+     regexp: "^#baseurl"
+     replace: "baseurl"
+  with_items: "{{ inner_loop_var.stdout_lines }}"
+
+- name: Disabling mirrorlist
+  replace:
+     path: "{{ item }}"
+     regexp: "^mirrorlist"
+     replace: "#mirrorlist"
+  with_items: "{{ inner_loop_var.stdout_lines }}"
+
