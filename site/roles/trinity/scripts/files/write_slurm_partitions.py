@@ -105,7 +105,8 @@ class ConfigFile:
         # below commented out, as we prefer the admin/user to handle the default queue. Ansible sets Nodes=ALL anyways
         # managed_lines.append("PartitionName=defq Nodes=ALL Shared=YES MaxTime=INFINITE State=UP Default=YES AllowAccounts=ALL\n")
         for groupname, nodenames in self.groups.items():
-            managed_lines.append(f"PartitionName={groupname} Nodes={','.join(nodenames)} Shared=YES MaxTime=INFINITE State=UP AllowAccounts=ALL\n")
+            if len(nodenames)>0:
+                managed_lines.append(f"PartitionName={groupname} Nodes={','.join(nodenames)} Shared=YES MaxTime=INFINITE State=UP AllowAccounts=ALL\n")
 
         self.managed_lines = managed_lines
 
