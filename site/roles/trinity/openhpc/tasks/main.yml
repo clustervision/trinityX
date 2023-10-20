@@ -47,10 +47,16 @@
     state: installed
   when: ansible_connection not in 'chroot'
 
-- name: Install pdsh-mod-genders-ohpc
-  yum:
-    name: pdsh-mod-genders-ohpc
-    state: installed
+- block:
+  - name: Install pdsh-mod-genders-ohpc
+    yum:
+      name: pdsh-mod-genders-ohpc
+      state: installed
+
+  - name: Create empty pdsh genders file
+    file:
+      path: /etc/genders
+      state: touch
   when: ansible_connection not in 'chroot'
 
 - name: Install lmod dependencies on non-controller nodes
