@@ -1,5 +1,6 @@
 ---
 # tasks file for ood-vnc
+
 - name: Install ood-vnc requirements ( on machine whoose desktop is forwarded )
   block:
     - name: Install required yum repos
@@ -16,7 +17,7 @@
         option: enabled
         value: 1
         create: false
-      when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
+      when: ansible_distribution == "Rocky" and ansible_facts['distribution_major_version']|int > 8
 
     - name: Install required yum packages
       yum:
@@ -34,9 +35,7 @@
     #     owner: root
     #     group: root
 
-  when:
-    - enable_ood_vnc == true
-    - ansible_connection in 'chroot'
+  when: enable_ood_vnc == true and ansible_connection in 'chroot'
 
 # This should be done by controller because /trinity/shared is not mounted on compute node
 - name: Render ood-vnc-module template file
@@ -47,6 +46,4 @@
     owner: root
     group: root
 
-  when:
-    - enable_ood_vnc == true
-    - ansible_connection not in 'chroot'
+  when: enable_ood_vnc == true and ansible_connection not in 'chroot'

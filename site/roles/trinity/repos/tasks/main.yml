@@ -47,10 +47,6 @@
     until: result.rc == 0
     with_items: "{{ external_repository_rpms }}"
 
-  - name: Make caches
-    shell: "dnf makecache -y"
-    ignore_errors: true
-
   - name: Install external repo Packages
     dnf:
       name: "{{ item.name }}"
@@ -63,6 +59,24 @@
     register: result
     until: result.rc == 0
     with_items: "{{ package_based_repositories }}"
+
+  - block:
+    - name: Collect repository information
+      shell: "rpm -qil {{ item.name }} | grep repos | grep etc"
+      register: repo_files
+      with_items: "{{ use_baseurl_repositories }}"
+
+    - name: Calling baseurl task
+      include_tasks: baseurl.yml
+      with_items: "{{ repo_files.results }}"
+      loop_control:
+          loop_var: inner_loop_var
+    when: use_baseurl_repositories is defined
+    ignore_errors: true
+
+  - name: Make caches
+    shell: "dnf makecache -y"
+    ignore_errors: true
 
   when: ansible_facts['os_family'] == "RedHat"
   tags: install-only
