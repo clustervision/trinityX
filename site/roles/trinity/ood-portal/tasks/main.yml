@@ -307,19 +307,40 @@
 
 - name: Create a directory for grafana if it does not exist
   ansible.builtin.file:
-    path: '{{ trix_ood }}/{{ ood_version }}/grafana'
+    path: '/var/www/ood/apps/sys/trinity_grafana'
     state: directory
     mode: 0755
     owner: root
-    group: root
+    group: "{{ admin_group }}"
+  tags: branding
 
 - name: Render grafana manifest to create button in the menu
   template:
-    src: 'grafana_manifest.yml.j2'
-    dest: '{{ trix_ood }}/{{ ood_version }}/grafana/manifest.yml'
+    src: 'manifests/grafana_manifest.yml.j2'
+    dest: '/var/www/ood/apps/sys/trinity_grafana/manifest.yml'
     owner: root
     group: "{{ admin_group }}"
     mode: 0644
+  tags: branding
+
+- name: Render ssh manifest to create button in the menu
+  template:
+    src: 'manifests/shell_manifest.yml.j2'
+    dest: '/var/www/ood/apps/sys/shell/manifest.yml'
+    owner: root
+    group: "{{ admin_group }}"
+    mode: 0644
+  tags: branding
+
+- name: Render bc_desktop manifest to create button in the menu
+  template:
+    src: 'manifests/bc_desktop_manifest.yml.j2'
+    dest: '/var/www/ood/apps/sys/bc_desktop/manifest.yml'
+    owner: root
+    group: "{{ admin_group }}"
+    mode: 0644
+  tags: branding
+
 
 
 - name: Symlink trinityx-ood custom apps
@@ -344,7 +365,6 @@
     - switch
     - control
     - users
-    - grafana
     - osimagetag
   notify: run update_ood_portal
 
@@ -429,7 +449,7 @@
     group: "{{ admin_group }}"
   with_items:
     - sensu
-    - grafana
+
 
 
 - name: Configure firewalld
