@@ -98,15 +98,17 @@
     owner: root
     group: root
   notify: run update_ood_portal
+  tags: branding
 
 - name: Render OOD nginx_stage.yml config file
   template:
-    src: 'nginx_stage.yml.j2'
+    src: 'branding/TrinityX/nginx_stage.yml.j2'
     dest: '{{ ood_portal_cfg_path }}/nginx_stage.yml'
     mode: 0644
     owner: root
     group: root
   notify: run update_ood_portal
+  tags: branding
 
 
 - name: Render OOD cluster config file
@@ -138,23 +140,57 @@
 
 - name: Copy TrinityX branding to /var/www/ood/public
   copy:
-    src: TrinityX/{{ item }}
+    src: branding/TrinityX/{{ item }}
     dest: /var/www/ood/public/{{ item }}
+    mode: 0644
+    owner: root
+    group: root
   with_items:
     - favicon.ico
-    - trix_logo.png
-    - logo_trinityx.png
+    - logo.png
+    - custom.css
   when: ood_portal_brand == "TrinityX"
   notify: run update_ood_portal
+  tags: branding
 
-- name: Apply TrinityX welcome_html branding if appropriate
-  replace:
-    path: '/var/www/ood/apps/sys/dashboard/config/locales/en.yml'
-    regexp: '(    welcome_html: \|\n)(      .+\n)+'
-    replace: '\1      {{ ood_welcome_text_branding.trinityx|join("\n      ")}}\n'
+- name: Apply TrinityX en.yml (welcome_html) branding 
+  template:
+    src: 'branding/TrinityX/en.yml.j2'
+    dest: '/var/www/ood/apps/sys/dashboard/config/locales/en.yml'
+    mode: 0644
+    owner: root
+    group: root
     backup: "yes"
   when: ood_portal_brand == "TrinityX"
-  notify: run update_ood_portal
+  tags: branding
+
+- name: Create /etc/ood/config/ondemand.d if not present
+  file:
+    path: /etc/ood/config/ondemand.d
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  when: ood_portal_brand == "TrinityX"
+  tags: branding
+
+- name: Apply TrinityX ondemand.yml branding 
+  template:
+    src: 'branding/TrinityX/ondemand.yml.j2'
+    dest: '/etc/ood/config/ondemand.d/ondemand.yml'
+    mode: 0644
+    owner: root
+    group: root
+    backup: "yes"
+  when: ood_portal_brand == "TrinityX"
+  tags: branding
+
+- name: Override default 404 page to auto initialize app
+  copy:
+    src: branding/TrinityX/overrides/pun_config_view.rb
+    dest: /opt/ood/nginx_stage/lib/nginx_stage/views/pun_config_view.rb
+  when: ood_portal_brand == "TrinityX"
+  tags: branding
 
 # - name: Apply TrinityX pun_custom_env branding if appropriate
 #   blockinfile:
