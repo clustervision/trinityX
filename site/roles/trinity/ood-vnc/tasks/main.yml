@@ -27,14 +27,6 @@
           - python3-websockify
         state: present
 
-    # - name: Render ood-vnc-module-load.sh template file
-    #   template:
-    #     src: 'ood-vnc-module-load.sh.j2'
-    #     dest: /etc/profile.d/zz_trinityx_ood_vnc.sh
-    #     mode: '0644'
-    #     owner: root
-    #     group: root
-
   when: enable_ood_vnc == true and ansible_connection in 'chroot'
 
 # This should be done by controller because /trinity/shared is not mounted on compute node
@@ -43,6 +35,18 @@
     src: 'ood-vnc-module.j2'
     dest: '{{ trix_shared }}/modulefiles/ood-vnc'
     mode: '0644'
+    owner: root
+    group: root
+
+  when: enable_ood_vnc == true and ansible_connection not in 'chroot'
+
+
+# Fix xfce and other graphical environments using wayland instead of X11
+- name: Override graphical environment scripts
+  copy:
+    src: script.sh.erb
+    dest: /var/www/ood/apps/sys/bc_desktop/template/script.sh.erb
+    mode: '0755'
     owner: root
     group: root
 

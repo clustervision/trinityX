@@ -397,6 +397,14 @@
   wait_for:
     timeout: 10
 
+- name: setting permissions on database
+  file:
+    path: '{{ luna2_python_dir.stdout }}/site-packages/daemon/common/luna.db'
+    owner: root
+    group: root
+    mode: '0600'
+  ignore_errors: true
+
 - name: Setting default DNS forwarder
   shell: "luna cluster change -fs \"{{ trix_dns_forwarders|join(',') }}\""
   when: trix_dns_forwarders is defined
