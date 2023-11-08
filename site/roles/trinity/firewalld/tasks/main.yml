@@ -31,6 +31,11 @@
   with_items: '{{ firewalld_public_interfaces }}'
   when: firewalld_update_ifcfg_files
 
+- name: Add controller internal interface to trusted zone
+  set_fact:
+     firewalld_trusted_interfaces: "{{ trix_ctrl_interface + firewalld_trusted_interfaces }}"
+  when: trix_ctrl_interface is defined and trix_ctrl_interface != ""
+
 - name: Assign interfaces to the trusted zone
   firewalld:
     zone: trusted
@@ -38,7 +43,7 @@
     state: enabled
     permanent: true
     immediate: true
-  with_items: '{{ firewalld_trusted_interfaces }}'
+  with_items: '{{ firewalld_trusted_interfaces|unique }}'
 
 - name: Update ifcfg files for interfaces '{{ firewalld_trusted_interfaces }}'
   lineinfile:
