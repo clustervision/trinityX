@@ -37,6 +37,17 @@
   - debug:
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}"
 
+  - name: Collect controller interface information
+    set_fact:
+      trix_ctrl_interface="{{ item }}"
+    when: item is defined and item != "" and hostvars[inventory_hostname]['ansible_{{item}}']['ipv4']['address'] == target_interface_name
+    with_items:
+      - "{{ trix_ctrl1_ip }}"
+      - "{{ trix_ctrl2_ip }}"
+
+  - debug
+      msg: "trix_ctrl_interface: {{ trix_ctrl_interface }}"
+
   tags: always
 
 
