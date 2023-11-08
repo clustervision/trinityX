@@ -37,16 +37,21 @@
   - debug:
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}"
 
-  - name: Collect controller interface information
-    set_fact:
-      trix_ctrl_interface="{{ item }}"
-    when: item is defined and item != "" and hostvars[inventory_hostname]['ansible_{{item}}']['ipv4']['address'] == target_interface_name
+  - name: Collecting controller interface information
+    include_tasks: interface.yml
     with_items:
       - "{{ trix_ctrl1_ip }}"
       - "{{ trix_ctrl2_ip }}"
+    loop_control:
+      loop_var: inner_loop_var
 
   - debug
       msg: "trix_ctrl_interface: {{ trix_ctrl_interface }}"
+
+  - name: Verify internal controller interface is configured
+    fail:
+      msg: "Interface with config set in 'trix_ctrl1_ip' or 'trix_ctrl2_ip' not found. Please make sure the interface is configured and up"
+    when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
 
   tags: always
 
