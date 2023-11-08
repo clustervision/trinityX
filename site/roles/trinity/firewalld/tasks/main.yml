@@ -1,6 +1,20 @@
 ---
 # tasks file for firewalld
 
+- name: Verify if interfaces in firewalld_trusted_interfaces exist
+  fail:
+    msg: "NOTE: interface {{ item }} defined in trusted zone but it does not exist"
+  when: hostvars[inventory_hostname]['ansible_'+item] is not defined
+  with_items: '{{ firewalld_trusted_interfaces }}'
+  ignore_errors: true
+
+- name: Verify if interfaces in firewalld_public_interfaces exist
+  fail:
+    msg: "NOTE: interface {{ item }} defined in public zone but it does not exist"
+  when: hostvars[inventory_hostname]['ansible_'+item] is not defined
+  with_items: '{{ firewalld_public_interfaces }}'
+  ignore_errors: true
+
 - name: Install firewalld packages
   yum:
     name: '{{ firewalld_packages }}'
@@ -31,6 +45,11 @@
   with_items: '{{ firewalld_public_interfaces }}'
   when: firewalld_update_ifcfg_files
 
+- name: Add controller internal interface to trusted zone
+  set_fact:
+     firewalld_trusted_interfaces: "{{ [trix_ctrl_interface] + firewalld_trusted_interfaces }}"
+  when: trix_ctrl_interface is defined and trix_ctrl_interface != ""
+
 - name: Assign interfaces to the trusted zone
   firewalld:
     zone: trusted
@@ -38,15 +57,15 @@
     state: enabled
     permanent: true
     immediate: true
-  with_items: '{{ firewalld_trusted_interfaces }}'
+  with_items: '{{ firewalld_trusted_interfaces|unique }}'
 
-- name: Update ifcfg files for interfaces '{{ firewalld_trusted_interfaces }}'
+- name: Update ifcfg files for interfaces '{{ firewalld_trusted_interfaces|unique }}'
   lineinfile:
     path: '/etc/sysconfig/network-scripts/ifcfg-{{ item }}'
     regexp: '^ZONE='
     line: 'ZONE=trusted'
     create: true
-  with_items: '{{ firewalld_trusted_interfaces }}'
+  with_items: '{{ firewalld_trusted_interfaces|unique }}'
   when: firewalld_update_ifcfg_files
 
 # Disabled as latest EL8(.7+?) causes interfaces not to come back after reboot
@@ -57,7 +76,7 @@
 #    line: 'NM_CONTROLLED=no'
 #  with_flattened:
 #    - '{{ firewalld_public_interfaces }}'
-#    - '{{ firewalld_trusted_interfaces }}'
+#    - '{{ firewalld_trusted_interfaces|unique }}'
 #  when: firewalld_update_ifcfg_files
 
 - name: Enable masquerading on the '{{ firewalld_masquerade_zone }}' zone

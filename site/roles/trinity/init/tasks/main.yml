@@ -72,6 +72,28 @@
   when: ansible_connection not in 'chroot' and on_controller
 
 
+- block:
+  - name: Collecting controller interface information
+    include_tasks: interface.yml
+    with_items:
+      - "{{ trix_ctrl1_ip }}"
+      - "{{ trix_ctrl2_ip }}"
+    loop_control:
+      loop_var: inner_loop_var
+
+  - debug:
+      msg: "trix_ctrl_interface: {{ trix_ctrl_interface }}"
+    when: trix_ctrl_interface is defined
+
+  - name: Verify internal controller interface is configured
+    fail:
+      msg: "Interface with config set in 'trix_ctrl1_ip' ({{ trix_ctrl1_ip }}) or 'trix_ctrl2_ip' ({{ trix_ctrl2_ip }}) not found. Please make sure the interface is configured and up"
+    when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
+
+  tags: always
+  when: ansible_connection not in 'chroot' and on_controller
+
+
 - name: Toggle selinux state
   selinux:
     state: '{{ "permissive" if enable_selinux else "disabled" }}'

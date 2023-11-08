@@ -11,5 +11,7 @@ commonName          = Common Name (e.g. server FQDN)
 [ req_ext ]               
 subjectAltName = @alt_names                         
 
-[alt_names]               
-DNS.1 = {{ ssl_cert_altname }}
+[alt_names]
+{% for alt_name in ssl_cert_altname|unique -%}
+DNS.{{ loop.index }} = {{ alt_name }}
+{% endfor -%}
