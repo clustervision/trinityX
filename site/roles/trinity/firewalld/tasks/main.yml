@@ -1,6 +1,20 @@
 ---
 # tasks file for firewalld
 
+- name: Verify if interfaces in firewalld_trusted_interfaces exist
+  fail:
+    msg: "NOTE: interface {{ item }} defined in trusted zone but it does not exist"
+  when: hostvars[inventory_hostname]['ansible_'+item] is not defined
+  with_items: '{{ firewalld_trusted_interfaces }}'
+  ignore_errors: true
+
+- name: Verify if interfaces in firewalld_public_interfaces exist
+  fail:
+    msg: "NOTE: interface {{ item }} defined in public zone but it does not exist"
+  when: hostvars[inventory_hostname]['ansible_'+item] is not defined
+  with_items: '{{ firewalld_public_interfaces }}'
+  ignore_errors: true
+
 - name: Install firewalld packages
   yum:
     name: '{{ firewalld_packages }}'
