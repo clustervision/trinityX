@@ -85,6 +85,14 @@ trix_cluster_dhcp_end: 10.141.140.0
 
 
 # -----------------------------------------------------------------------
+# optional hostname/fqdn to be used for services that are outward facing,
+# like open-ondemand. This hostname is in most scenarios the fqdn of the host,
+# but this can be overridden if external resolution/name differs.
+
+trix_external_fqdn: '{{ ansible_fqdn }}'
+
+
+# -----------------------------------------------------------------------
 # DNS forwarders.
 trix_dns_forwarders: 
   - "8.8.8.8"
@@ -175,11 +183,6 @@ firewalld_public_udp_ports: []
 ssl_cert_path: '{{ trix_local }}/etc/ssl'
 ssl_ca_cert: '{{ ssl_cert_path }}/cluster-ca.crt'
 ssl_cert_group: ssl
-
-# additional altname, when e.g. external fqdn does not match with how this host
-# is being resolved outside the cluster
-
-ssl_cert_additional_altname: '{{ ansible_fqdn }}'
 
 
 # -----------------------------------------------------------------------
