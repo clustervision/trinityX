@@ -45,13 +45,13 @@
     immediate: true
   with_items: '{{ firewalld_trusted_interfaces|unique }}'
 
-- name: Update ifcfg files for interfaces '{{ firewalld_trusted_interfaces }}'
+- name: Update ifcfg files for interfaces '{{ firewalld_trusted_interfaces|unique }}'
   lineinfile:
     path: '/etc/sysconfig/network-scripts/ifcfg-{{ item }}'
     regexp: '^ZONE='
     line: 'ZONE=trusted'
     create: true
-  with_items: '{{ firewalld_trusted_interfaces }}'
+  with_items: '{{ firewalld_trusted_interfaces|unique }}'
   when: firewalld_update_ifcfg_files
 
 # Disabled as latest EL8(.7+?) causes interfaces not to come back after reboot
@@ -62,7 +62,7 @@
 #    line: 'NM_CONTROLLED=no'
 #  with_flattened:
 #    - '{{ firewalld_public_interfaces }}'
-#    - '{{ firewalld_trusted_interfaces }}'
+#    - '{{ firewalld_trusted_interfaces|unique }}'
 #  when: firewalld_update_ifcfg_files
 
 - name: Enable masquerading on the '{{ firewalld_masquerade_zone }}' zone
