@@ -24,6 +24,11 @@
     path: '/var/log/luna'
     state: directory
 
+- name: Ensure files directory exists
+  file:
+    path: '{{ trix_luna }}/files'
+    state: directory
+
 # ----------------- stop if we exist -----------------
 
 - name: Populate service facts
@@ -386,16 +391,22 @@
     - "{{ enable_services }}"
 ##  when: not ha
 
-- name: Start luna services
+- name: Start luna daemon
+  service:
+    name: 'luna2-daemon'
+    state: started
+    enabled: true
+
+- name: Wait 10s for daemon to settle
+  wait_for:
+    timeout: 10
+
+- name: Start other luna services
   service:
     name: '{{ item }}'
     state: started
   with_items:
     - "{{ start_services }}"
-
-- name: Wait 10s for daemon to settle
-  wait_for:
-    timeout: 10
 
 - name: setting permissions on database
   file:
