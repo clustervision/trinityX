@@ -105,12 +105,12 @@
 
 - name: Verify if image already exists in luna
   shell: "luna osimage show {{ image_name }}"
-  register: image_in_luna
+  register: ubuntu_image_in_luna
   ignore_errors: true
 
 - name: Creating image in luna
   shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu {{ image_name }}"
-  when: image_in_luna is defined and image_in_luna.rc|int != 0
+  when: ubuntu_image_in_luna is defined and ubuntu_image_in_luna.rc|int != 0
 
 - name: Create node config directory
   file:
