@@ -19,6 +19,13 @@
                           '/etc/trinity/passwords/openldap/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  ignore_errors: true
+
 - name: Install OpenLDAP packages
   yum:
     name: '{{ openldap_packages }}'
