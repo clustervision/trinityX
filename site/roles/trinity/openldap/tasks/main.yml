@@ -256,6 +256,16 @@
       - memberof.ldif
     notify: restart openldap
 
+  - name: Load ppolicy module
+    command: >
+      ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyload.ldif
+    ignore_errors: "yes"
+
+  - name: Load ppolicy overlay
+    command: >
+      ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyoverlay.ldif
+    ignore_errors: "yes"
+      
   - name: Check local schemas
     command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
     register: ldapsearch
