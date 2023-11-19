@@ -97,7 +97,7 @@
 
     - role: trinity/sssd
       sss_allowed_groups:
-        - 'admins'
+        - '{{ admin_group }}'
       sss_ldap_hosts:
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       tags: sssd
@@ -199,7 +199,7 @@
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       login_host: "{{ trix_external_fqdn }}"
       ldap_host: "{{ trix_ctrl_ip }}"
-      admin_group: admins
+      admin_group: "{{ admin_group }}"
       tags: ood
 
     - role: trinity/ood-vnc
@@ -223,6 +223,7 @@
       tags: monitoring
       ldap_auth: true
       enable_ssl: true
+      admin_group: "{{ admin_group }}"
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
 
