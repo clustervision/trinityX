@@ -242,10 +242,10 @@
   ansible.builtin.shell:
     cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
 
-# needs to be done after image setup - Antoine
-# - name: Pack the image
-#  ansible.builtin.shell:
-#    cmd: "luna osimage pack {{ image_name }}"
+- name: Sync RHEL subscription and entitlements
+  shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
+  when: ansible_distribution == "RedHat"
 
 - name: Refresh the list of hosts in the inventory
   meta: refresh_inventory
+
