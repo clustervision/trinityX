@@ -258,30 +258,22 @@
   
   - name: Load ppolicy module if not already loaded
     block:
-    - name: Check if ppolicy module is already loaded
-      command: "ldapsearch -Y EXTERNAL -H ldapi:/// -b cn=config olcModuleLoad | grep ppolicy"
-      register: ppolicy_check
+    - name: Check if module is already loaded
+      command: "slapcat -n 0"
+      register: check
 
     - name: Load ppolicy module
       command: "ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyload.ldif"
       ignore_errors: true
-      when: "ppolicy_check.rc == 1"
+      when: "'ppolicy' not in check.stdout"
       register: ppolicy_load_result
     
-    tags: always 
-
-  - name: Load ppolicy overlay if not already loaded
-    block:
-    - name: Check if ppolicy overlay is already loaded
-      command: "ldapsearch -Y EXTERNAL -H ldapi:/// -b cn=config olcOverlay | grep ppolicy"
-      register: overlay_check
 
     - name: Load ppolicy overlay
       command: "ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyoverlay.ldif"
       ignore_errors: true
-      when: "overlay_check.rc == 1"
+      when: "'ppolicy' not in check.stdout"
       register: overlay_load_result
-
     tags: always
 
   - name: Check local schemas
