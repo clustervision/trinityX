@@ -255,16 +255,40 @@
       - proxy.ldif
       - memberof.ldif
     notify: restart openldap
+  
+
+  - name: Run slapcat and check for "ppolicy" in olcModuleLoad
+    shell: slapcat -n 0 | grep olcModuleLoad | grep ppolicy
+    register: slapcat_output
+    ignore_errors: true
+
+  - name: Set variable if "ppolicy" is found in olcModuleLoad
+    set_fact:
+      module_found: "{{ 'ppolicy' in slapcat_output.stdout }}"
+    when: slapcat_output.rc == 0  # Check if the command ran successfully (exit code 0)
+
+  - name: Run slapcat and check for "ppolicy"
+    shell: slapcat -n 0 | grep olcOverlay | grep ppolicy
+    register: slapcat_output
+    ignore_errors: true
+
+  - name: Set variable if "ppolicy" is found
+    set_fact:
+      overlay_found: "{{ 'ppolicy' in slapcat_output.stdout }}"
+    when: slapcat_output.rc == 0
+
 
   - name: Load ppolicy module
     command: >
       ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyload.ldif
     ignore_errors: "yes"
+    when: not module_found
 
   - name: Load ppolicy overlay
     command: >
       ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyoverlay.ldif
     ignore_errors: "yes"
+    when: not overlay_found
       
   - name: Check local schemas
     command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
