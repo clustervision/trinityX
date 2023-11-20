@@ -256,34 +256,51 @@
       - memberof.ldif
     notify: restart openldap
   
-
   - name: Load ppolicy module if not already loaded
     block:
-    
     - name: Check if ppolicy module is already loaded
       command: "ldapsearch -Y EXTERNAL -H ldapi:/// -b cn=config olcModuleLoad | grep ppolicy"
       register: ppolicy_check
-      changed_when: false
 
     - name: Load ppolicy module
       command: "ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyload.ldif"
       ignore_errors: true
       when: "'ppolicy' not in ppolicy_check.stdout_lines | join(' ')"
+      register: ppolicy_load_result
+
+    - name: Set fact if ppolicy module is loaded
+      set_fact:
+        ppolicy_module_loaded: "{{ 'ppolicy' in ppolicy_check.stdout_lines | join('') }}"
     tags: always
 
   - name: Load ppolicy overlay if not already loaded
     block:
-    
     - name: Check if ppolicy overlay is already loaded
       command: "ldapsearch -Y EXTERNAL -H ldapi:/// -b cn=config olcOverlay | grep ppolicy"
       register: overlay_check
-      changed_when: false
 
-    - name: Load ppolicy module
+    - name: Load ppolicy overlay
       command: "ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyoverlay.ldif"
       ignore_errors: true
       when: "'ppolicy' not in overlay_check.stdout_lines | join(' ')"
+      register: overlay_load_result
+
+    - name: Set fact if ppolicy overlay is loaded
+      set_fact:
+        overlay_module_loaded: "{{ 'ppolicy' in overlay_check.stdout_lines | join('') }}"
     tags: always
+
+- name: Use the facts in subsequent tasks
+  tasks:
+    - name: Debug ppolicy module loaded status
+      debug:
+        msg: "ppolicy module is loaded: {{ ppolicy_module_loaded }}"
+      when: ppolicy_module_loaded
+
+    - name: Debug ppolicy overlay loaded status
+      debug:
+        msg: "ppolicy overlay is loaded: {{ overlay_module_loaded }}"
+      when: overlay_module_loaded
 
   - name: Check local schemas
     command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
