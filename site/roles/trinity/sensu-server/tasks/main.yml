@@ -85,6 +85,20 @@
   shell: "/opt/sensu/embedded/bin/gem install rexml -v 3.2.5"
   when: rexml_version.stdout|int < 325
 
+- name: Verify if Ruby gem domain_name is installed
+  shell: "/opt/sensu/embedded/bin/gem list --local|grep domain_name"
+  register: domain_name_gem
+
+- block:
+  - name: Get Sensu ruby version
+    shell: "(/opt/sensu/embedded/bin/gem --version|grep -oE '[0-9\\.]+' || echo 0) | tr -d '(.)'"
+    register: gem_version
+
+  - name: Install Ruby gem domain_name
+    shell: "/opt/sensu/embedded/bin/gem install domain_name -v 0.5.20190701"
+    when: gem_version.stdout|int < 270
+  when: domain_name_gem.rc != 0
+
 - name: Install Sensu plugins
   gem:
     executable: /opt/sensu/embedded/bin/gem
