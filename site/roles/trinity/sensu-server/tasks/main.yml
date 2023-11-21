@@ -91,12 +91,12 @@
 
 - block:
   - name: Get Sensu ruby version
-    shell: "(/opt/sensu/embedded/bin/gem --version|grep -oE '[0-9\\.]+' || echo 0) | tr -d '(.)'"
-    register: gem_version
+    shell: "(/opt/sensu/embedded/bin/ruby --version|grep -oE '[0-9\\.]+'|head -n1|grep -E '[0-9]' || echo 0)| tr -d '(.)'"
+    register: ruby_version
 
   - name: Install Ruby gem domain_name
     shell: "/opt/sensu/embedded/bin/gem install domain_name -v 0.5.20190701"
-    when: gem_version.stdout|int < 270
+    when: ruby_version.stdout|int < 270
   when: domain_name_gem.rc != 0
 
 - name: Install Sensu plugins
