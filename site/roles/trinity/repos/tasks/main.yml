@@ -2,15 +2,12 @@
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
   include_vars: "{{ item }}"
   with_first_found:
-    - "{{ ansible_distribution }}.yaml"
-    - "{{ ansible_os_family }}.yaml"
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
   ignore_errors: true
 
-# - debug:
-#    msg: "{{ trinityx_repositories }}"
-
 - block:
-  - name: Configure repos
+  - name: Configure TrinityX repos
     ansible.builtin.yum_repository:
       name: "{{ item.name }}"
       description: "{{ item.name }}"
@@ -19,6 +16,14 @@
       gpgkey: "{{ item.gpgkey | default('') }}"
       reposdir: "{{ params.install_root + '/etc/yum.repos.d/' if params.install_root is defined else '/etc/yum.repos.d' }}"
     with_items: "{{ trinityx_repositories }}"
+    when: item.name is defined
+
+  - name: Configure gpg keys for TrinityX repos
+    copy:
+      dest: "{{ item.gpgkey }}"
+      content: "{{ item.gpgdata }}"
+    with_items: "{{ trinityx_repositories }}"
+    when: item.gpgkey is defined and item.gpgdata is defined
 
   # - name: Add GPG keys to RPM DB. normally NOT needed - Antoine
   #   ansible.builtin.rpm_key:
@@ -59,6 +64,7 @@
     register: result
     until: result.rc == 0
     with_items: "{{ package_based_repositories }}"
+    when: item.name is defined
 
   - block:
     - name: Collect repository information
@@ -73,6 +79,25 @@
           loop_var: inner_loop_var
     when: use_baseurl_repositories is defined
     ignore_errors: true
+
+  - name: Configure custom repos
+    ansible.builtin.yum_repository:
+      name: "{{ item.name }}"
+      description: "{{ item.name }}"
+      baseurl: "{{ item.repo }}"
+      enabled: "{{ item.enabled | default(True) }}"
+      gpgcheck: "{{ item.gpgcheck | default(False) }}"
+      gpgkey: "{{ item.gpgkey | default('') }}"
+      reposdir: "{{ params.install_root + '/etc/yum.repos.d/' if params.install_root is defined else '/etc/yum.repos.d' }}"
+    with_items: "{{ custom_repositories }}"
+    when: item.name is defined
+
+  - name: Configure gpg keys for custom repos
+    copy:
+      dest: "{{ item.gpgkey }}"
+      content: "{{ item.gpgdata }}"
+    with_items: "{{ custom_repositories }}"
+    when: item.gpgkey is defined and item.gpgdata is defined
 
   - name: Make caches
     shell: "dnf makecache -y"

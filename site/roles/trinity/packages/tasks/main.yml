@@ -15,27 +15,6 @@
     enablerepo: powertools
     disable_gpg_check: true
   tags: install-only
-  when: ansible_distribution == "Rocky"
-
-- name: Install additional packages
-  yum:
-    name: "{{ tunables_packages }}"
-    state: present
-    disable_gpg_check: true
-  tags: install-only
-  when: ansible_distribution == "RedHat"
-
-- block:
-  - name: Enable powertools repository
-    shell: "yum config-manager --set-enabled powertools"
-
-  - name: Install additional packages
-    yum:
-      name: "{{ tunables_packages }}"
-      state: present
-      disable_gpg_check: true
-    tags: install-only
-  when: ansible_distribution == "CentOS"
 
 - name: Enable haveged service
   service:

@@ -11,18 +11,13 @@
     - "{{ ssl_certificate_key }}"
   when: enable_ssl == true
 
-- name: Enable powertools repository
-  community.general.ini_file:
-    path: /etc/yum.repos.d/Rocky-PowerTools.repo
-    section: powertools
-    option: enabled
-    value: 1
-    create: false
-  when: ansible_distribution == "Rocky" and ansible_facts['distribution_major_version']|int < 9
-
-- name: Enable powertools repository
-  shell: "yum config-manager --set-enabled powertools"
-  when: ansible_distribution == "Centos" or ansible_distribution == "RedHat"
+#- name: Check if powerools repo exists
+#  shell: "yum -v repolist powertools|grep Repo-filename|cut -f2 -d':'"
+#  register: powertools_repo_file
+#
+#- name: Enable powertools repository
+#  shell: "yum config-manager --set-enabled powertools"
+#  when: powertools_repo_file.stdout_lines
 
 - name: Enable default ruby module
   copy:
@@ -64,6 +59,7 @@
       - 'ondemand'
       - 'ondemand-dex'
     state: present
+    enablerepo: powertools
 
 
 - name: Ensure OOD config paths exist
@@ -266,7 +262,7 @@
     src: 'luna2.ini.j2'
     dest: '{{ trix_ood }}/{{ ood_version }}/config/luna.ini'
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
     mode: 0640
 
 - name: Render trinityx-ood luna app osusers.toml
@@ -274,7 +270,7 @@
     src: 'osusers.toml.j2'
     dest: '{{ trix_ood }}/{{ ood_version }}/config/osusers.toml'
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
     mode: 0640
 
 - name: Render trinityx-ood luna app sensu.toml
@@ -282,7 +278,7 @@
     src: 'sensu.toml.j2'
     dest: '{{ trix_ood }}/{{ ood_version }}/config/sensu.toml'
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
     mode: 0644
 
 - name: Install trinityx-ood custom apps python requirements
@@ -304,6 +300,8 @@
     - control
     - users
     - osimagetag
+    - monitor
+    - dns
 
 - name: Create a directory for grafana if it does not exist
   ansible.builtin.file:
@@ -311,7 +309,7 @@
     state: directory
     mode: 0755
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
   tags: branding
 
 - name: Render grafana manifest to create button in the menu
@@ -319,7 +317,7 @@
     src: 'manifests/grafana_manifest.yml.j2'
     dest: '/var/www/ood/apps/sys/trinity_grafana/manifest.yml'
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
     mode: 0644
   tags: branding
 
@@ -328,7 +326,7 @@
     src: 'manifests/shell_manifest.yml.j2'
     dest: '/var/www/ood/apps/sys/shell/manifest.yml'
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
     mode: 0644
   tags: branding
 
@@ -337,7 +335,7 @@
     src: 'manifests/bc_desktop_manifest.yml.j2'
     dest: '/var/www/ood/apps/sys/bc_desktop/manifest.yml'
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
     mode: 0644
   tags: branding
 
@@ -366,6 +364,8 @@
     - control
     - users
     - osimagetag
+    - monitor
+    - dns
   notify: run update_ood_portal
 
 - name: Create a directory for static files if it does not exist
@@ -412,7 +412,7 @@
     path: "{{ trix_ood }}/{{ ood_version }}"
     mode: 0755
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
 
 
 - name: Set permissions for admin ood apps
@@ -422,7 +422,7 @@
     path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     mode: 0750
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
   with_items:
     - bmcsetup
     - cluster
@@ -437,6 +437,8 @@
     - control
     - users
     - osimagetag
+    - monitor
+    - dns
 
 
 - name: Set permissions for all user ood apps
@@ -446,11 +448,9 @@
     path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
     mode: 0755
     owner: root
-    group: "{{ admin_group }}"
+    group: "{{ ood_admin_group }}"
   with_items:
     - sensu
-
-
 
 - name: Configure firewalld
   firewalld:
