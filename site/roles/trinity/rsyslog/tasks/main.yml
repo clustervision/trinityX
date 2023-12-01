@@ -1,11 +1,6 @@
 ---
 # tasks file for rsyslog
 
-- name: Create var/log/cluster-messages directory
-  file:
-    path: /var/log/cluster-messages
-    state: directory
-
 - name: Install rsyslog
   yum:
     name: rsyslog
@@ -29,6 +24,11 @@
       ${{ 'Input' if item.proto|lower == 'tcp' else '' }}{{ item.proto | upper }}ServerRun {{ item.port }}
   with_items: '{{ syslog_listeners }}'
   notify: restart rsyslog
+
+- name: Create cluster-messages log directory
+  file:
+    path: /var/log/cluster-messages
+    state: directory
 
 - name: Add template rules
   template:
