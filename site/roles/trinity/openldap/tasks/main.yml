@@ -201,7 +201,6 @@
     failed_when: false
     changed_when: false
 
-  # ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
   - name: Load OpenLDAP local schema
     command: >
       ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
@@ -255,6 +254,19 @@
       - proxy.ldif
       - memberof.ldif
     notify: restart openldap
+  
+  - name: Load slapcat data
+    command: "slapcat -n 0"
+    register: slapcat_data
+
+  - block:
+    - name: Load ppolicy module
+      command: "ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyload.ldif"
+
+    - name: Load ppolicy overlay
+      command: "ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyoverlay.ldif"
+    when: "'ppolicy' not in slapcat_data.stdout"
+    ignore_errors: true
 
   - name: Check local schemas
     command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
@@ -262,7 +274,6 @@
     failed_when: false
     changed_when: false
 
-  # ldapadd -x -H ldaps:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
   - name: Load OpenLDAP local schema
     command: >
       ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
