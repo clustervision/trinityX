@@ -1,0 +1,21 @@
+---
+# Install config_manager pip package inside the Luna2 virtualenv
+- name: Install config_manager pip package
+  ansible.builtin.pip:
+    name: '{{config_manager_noarch_pip_repository}}/config-manager/{{ config_manager_wheel }}'
+    virtualenv: '{{ trix_local }}/python' 
+    extra_args: "--upgrade"
+
+# Symlink '{{ trix_local }}/python/bin/trix-config-manager' to '{{ trix_local }}/sbin/trix-config-manager'
+- name: Symlink '{{ trix_local }}/python/bin/trix-config-manager' to '{{ trix_local }}/sbin/trix-config-manager'
+  ansible.builtin.file:
+    src: '{{ trix_local }}/python/bin/trix-config-manager'
+    dest: '{{ trix_local }}/sbin/trix-config-manager'
+    state: link
+
+
+# Add the managed block to the managed files
+- name: Fix structure of managed files
+  include_tasks: managed_block.yml
+  loop: "{{ scripts_managed_files }}"
+  
