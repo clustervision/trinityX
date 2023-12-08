@@ -1,0 +1,67 @@
+- name: "Collect info about file existance"
+  stat: "path={{ item }}"
+  register: item_path
+
+- name: "Collect info about bkp file existance"
+  stat: "path={{ item }}.bkp"
+  register: item_bkp_path
+
+- name: "Collect info about managed block"
+  shell: "cat {{ item }} | grep -E '({{ scripts_managed_block_start_regex }}|{{ scripts_managed_block_end_regex }})'|cat"
+  register: grep_managed_block
+  when: item_path.stat.exists
+
+- name: "Set is_managed_block_present"
+  set_fact:
+    is_managed_block_present: "{{ grep_managed_block.stdout != '' }}"
+  when: item_path.stat.exists
+
+
+
+- name: "Ensure file is owned by admins"
+  file:
+    path: "{{ item }}"
+    owner: root
+    group: admins
+    mode: 0660
+  when: item_path.stat.exists
+
+- name: "Ensure backup file is present"
+  copy:
+    src: "{{ item }}"
+    dest: "{{ item }}.bkp"
+    owner: root
+    group: admins
+    mode: 0660
+  when: (item_path.stat.exists) and not (item_bkp_path.stat.exists)
+
+- name: "Ensure comments about managed block is present in (existing) managed files (1)"
+  lineinfile:
+    path: "{{ item }}"
+    line: "{{ scripts_managed_block_comment1 }}" 
+    regex: "{{ scripts_managed_block_comment1 }}"
+    state: present
+  when: item_path.stat.exists
+
+- name: "Ensure comments about managed block is present in (existing) managed files (2)"
+  lineinfile:
+    path: "{{ item }}"
+    line: "{{ scripts_managed_block_comment2 }}" 
+    regex: "{{ scripts_managed_block_comment2 }}"
+    state: present
+    insertafter: "{{ scripts_managed_block_comment1 }}"
+  when: item_path.stat.exists
+
+- name: "Ensure block start delimiter is present in (existing) managed files"
+  lineinfile:
+    path: "{{ item }}"
+    line: "{{ scripts_managed_block_start_delimiter }}"
+    insertafter: "{{ scripts_managed_block_comment2 }}"
+  when: item_path.stat.exists and not is_managed_block_present
+
+- name: "Ensure block end delimiter is present in (existing) managed files"
+  lineinfile:
+    path: "{{ item }}"
+    line: "{{ scripts_managed_block_end_delimiter }}"
+    insertafter: "{{ scripts_managed_block_start_delimiter }}"
+  when: item_path.stat.exists and not is_managed_block_present

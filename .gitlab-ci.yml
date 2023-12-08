@@ -1,8 +1,30 @@
----
 stages:
-  - installation 
+  - installation
+
+.ansible-template: &ansible-template
+  script:
+    - yum install openssh -y
+    - yum install sshpass -y
+    - yum install git -y
+    - yum install python3 -y
+    - git clone https://github.com/vmware/pyvmomi.git
+    - cd pyvmomi
+    - pip install --upgrade pyvmomi
+    - python3 setup.py install
+    - git clone https://github.com/vmware/pyvmomi-community-samples.git
+    - cd pyvmomi-community-samples/samples
+    - echo $CI_COMMIT_BRANCH
+    - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./ci-log.sh  $CI_COMMIT_BRANCH"
+    - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./setup.sh $CI_COMMIT_BRANCH"
+  after_script:
+    - cd pyvmomi/pyvmomi-community-samples/samples
+    - python3 snapshot_operations.py -s $VMWARE_HOST -u "$VMWARE_API_USER" -p "$VMWARE_API_PASSWORD" -nossl -v $VM_name -op revert --snapshot-name init_snap
+    - sleep 10
+    - python3 vm_power_on.py -s $VMWARE_HOST -u "$VMWARE_API_USER" -p "$VMWARE_API_PASSWORD" -nossl -v $VM_name
+    - sleep 2
 
 ansible-rocky8:
+  <<: *ansible-template
   stage: installation
   when: manual
   tags:
@@ -10,28 +32,54 @@ ansible-rocky8:
   image:
     name: geerlingguy/docker-rockylinux8-ansible
   variables:
-   JOB_VAR: ANSIBLE_CONFIG=site/ansible.cfg
-  script:
-    - ls
-    - bash prepare.sh
-    - cd site   
-    - cp -a hosts.example hosts
-    - cp -a group_vars/all.yml.example group_vars/all.yml 
-    - sed -i "s/controller1/${HOSTNAME}/g" hosts
-    - sed -i "s/controller1/${HOSTNAME}/g" group_vars/all.yml
-    - pwd
-    - cat hosts
-    - ping -c 1 localhost
-    - ansible-playbook controller.yml -i hosts
-    - ANSIBLE_CONFIG=./ansible.cfg ansible-playbook controller.yml -i hosts
-    - ansible-playbook compute-redhat.yml
+    VM_name: $VM_ROCKY8_NAME
+    VM_IP: $VM_ROCKY8_IP
 
 ansible-rocky9:
+  <<: *ansible-template
   stage: installation
   when: manual
   tags:
     - luna2
   image:
-    name: geerlingguy/docker-rockylinux9-ansible
-  script:
-    - cd roles/common
+    name: geerlingguy/docker-rockylinux8-ansible
+  variables:
+    VM_name: $VM_ROCKY9_NAME
+    VM_IP: $VM_ROCKY9_IP
+
+ansible-centos8:
+  <<: *ansible-template
+  stage: installation
+  when: manual
+  tags:
+    - luna2
+  image:
+    name: geerlingguy/docker-rockylinux8-ansible
+  variables:
+    VM_name: $VM_CENTOS8_NAME
+    VM_IP: $VM_CENTOS8_IP
+
+ansible-rhel8:
+  <<: *ansible-template
+  stage: installation
+  when: manual
+  tags:
+    - luna2
+  image:
+    name: geerlingguy/docker-rockylinux8-ansible
+  variables:
+    VM_name: $VM_RHEL8_NAME
+    VM_IP: $VM_RHEL8_IP
+
+ansible-rhel9:
+  <<: *ansible-template
+  stage: installation
+  when: manual
+  tags:
+    - luna2
+  image:
+    name: geerlingguy/docker-rockylinux8-ansible
+  variables:
+    VM_name: $VM_RHEL9_NAME
+    VM_IP: $VM_RHEL9_IP
+
