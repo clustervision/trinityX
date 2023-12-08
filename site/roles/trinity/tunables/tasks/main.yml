@@ -44,3 +44,15 @@
   when: ansible_connection not in 'chroot'
   ignore_errors: true
 
+- block:
+  - name: gather info of current configured nfs threads
+    shell: "grep -A100 \"\\[nfsd\\]\" /etc/nfs.conf|grep '# threads'"
+    register: nfs_threads
+
+  - name: Increasing NFS threads on controller
+    lineinfile:
+      path: /etc/nfs.conf
+      regexp: '^{{ nfs_threads.stdout }}'
+      line: 'threads=256'
+    when: nfs_threads is defined and nfs_threads.stdout_lines|length == 1
+  when: ansible_connection not in 'chroot' and on_controller
