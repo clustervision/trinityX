@@ -1,6 +1,21 @@
 ---
 # Install additional packages and tunables
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  ignore_errors: true
+
+- name: Install additional packages
+  yum:
+    name: "{{ tunables_packages }}"
+    state: present
+    enablerepo: powertools
+    disable_gpg_check: true
+  tags: install-only
+
 - name: Copy 91-hpc-limits.conf to /etc/security/limits.d
   template:
     src: '91-hpc-limits.conf.j2'
@@ -18,3 +33,14 @@
     mode: '0644'
     backup: true
   notify: activate sysctls
+
+- name: Setting compute performance tuned profile
+  shell: "tuned-adm profile hpc-compute"
+  when: ansible_connection in 'chroot'
+  ignore_errors: true
+
+- name: Setting controller performance tuned profile
+  shell: "tuned-adm profile hpc-compute"
+  when: ansible_connection not in 'chroot'
+  ignore_errors: true
+
