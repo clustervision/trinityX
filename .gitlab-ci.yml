@@ -4,8 +4,7 @@ stages:
 .ansible-template: &ansible-template
   script:
     - test_var=0
-    - pwd
-    - exit 1
+    - echo $test_var > /builds/clustervision/trinityx-combined/test_var.txt
     - yum install openssh -y
     - yum install sshpass -y
     - yum install git -y
@@ -18,11 +17,14 @@ stages:
     - cd pyvmomi-community-samples/samples
     - echo $CI_COMMIT_BRANCH
     - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./ci-log.sh  $CI_COMMIT_BRANCH"
+    - rm -f /builds/clustervision/trinityx-combined/test_var.txt
     - test_var=1
+    - echo $test_var > /builds/clustervision/trinityx-combined/test_var.txt
     - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./setup.sh $CI_COMMIT_BRANCH"
   after_script:
+    - test_var=$(cat /builds/clustervision/trinityx-combined/test_var.txt)
     - echo $test_var
-    - exit 1
+    - test $test_var -eq 1
     - cd pyvmomi/pyvmomi-community-samples/samples
     - python3 snapshot_operations.py -s $VMWARE_HOST -u "$VMWARE_API_USER" -p "$VMWARE_API_PASSWORD" -nossl -v $VM_name -op revert --snapshot-name init_snap
     - sleep 10
