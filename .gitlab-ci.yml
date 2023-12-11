@@ -4,6 +4,7 @@ stages:
 .ansible-template: &ansible-template
   script:
     - test_var=0
+    - exit 1
     - yum install openssh -y
     - yum install sshpass -y
     - yum install git -y
@@ -19,7 +20,8 @@ stages:
     - test_var=1
     - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./setup.sh $CI_COMMIT_BRANCH"
   after_script:
-    - test $test_var -eq 1
+    - echo $test_var
+    - exit 1
     - cd pyvmomi/pyvmomi-community-samples/samples
     - python3 snapshot_operations.py -s $VMWARE_HOST -u "$VMWARE_API_USER" -p "$VMWARE_API_PASSWORD" -nossl -v $VM_name -op revert --snapshot-name init_snap
     - sleep 10
