@@ -21,13 +21,15 @@ stages:
     - test_var=1
     - echo $test_var > /builds/clustervision/trinityx-combined/test_var.txt
     - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./setup.sh $CI_COMMIT_BRANCH"
+    - echo $?
     - rm -f /builds/clustervision/trinityx-combined/test_var.txt
     - test_var=2
     - echo $test_var > /builds/clustervision/trinityx-combined/test_var.txt
 
   after_script:
     - test_var=$(cat /builds/clustervision/trinityx-combined/test_var.txt)
-    - test $test_var -gt 1
+    - test $test_var -gt 0
+    - echo $test_var
     - cd pyvmomi/pyvmomi-community-samples/samples
     - python3 snapshot_operations.py -s $VMWARE_HOST -u "$VMWARE_API_USER" -p "$VMWARE_API_PASSWORD" -nossl -v $VM_name -op revert --snapshot-name init_snap
     - sleep 10
