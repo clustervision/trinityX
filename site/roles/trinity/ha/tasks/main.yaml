@@ -91,7 +91,12 @@
       state: started
       enabled: true
 
-# $ sudo pcs resource create cluster_ip ocf:heartbeat:IPaddr2 ip=192.168.111.10 cidr_netmask=24 op monitor interval=30s
+  - name: Add floating IP resource
+    pcs_resource:
+      name: 'trinity-ip'
+      resource_type: 'ocf:heartbeat:IPaddr2'
+      options: 'ip={{ trix_ctrl_ip }} op monitor interval=29s --group Trinity'
+      state: present
 
   when: ha | default(False)
 
