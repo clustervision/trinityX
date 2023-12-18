@@ -32,10 +32,8 @@
       copy:
         src: '/etc/corosync/authkey'
         dest: '{{ trix_shared }}/corosync/'
+        mode: '0640'
     when: not stat_corosync_key.stat.exists
-
-#  - name: Fetching network config
-#    shell: 'ipcalc 10.141.255.254/16 -n|cut -f2 -d'=''
 
   - name: Configure corosync
     template:
@@ -63,6 +61,15 @@
     args:
       executable: /bin/bash
     when: pcs_pip is not defined
+
+  - name: Get python libdir
+    shell: "echo /trinity/local/python/lib/python*"
+    register: luna2_python_dir
+    changed_when: false
+
+  - name: Install ruby gems
+    shell: "/bin/bash {{ luna2_python_dir.stdout }}/site-packages/pcs/gems.sh"
+    ignore_errors: true
 
   - name: Install PCS wrapper
     copy:
