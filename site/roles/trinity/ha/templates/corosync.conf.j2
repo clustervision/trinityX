@@ -55,18 +55,42 @@ quorum {
 nodelist {
         # Change/uncomment/add node sections to match cluster configuration
 
-{% for i in range(1,10) %}
-    {% if item['trix_ctrl' ~ i ~ '_hostname'] is defined %}
         node {
                 # Hostname of the node
-                name: {{ item['trix_ctrl' ~ i ~ '_hostname'] }}
+                name: {{ trix_ctrl1_hostname }}
                 # Cluster membership node identifier
-                nodeid: {{ i }}
+                nodeid: 1
                 # Address of first link
-                ring0_addr: {{ item['trix_ctrl' ~ i ~ '_ip'] }}
+                ring0_addr: {{ trix_ctrl1_ip }}
         }
-   {% endif %}
-{% endfor %}
+        node {
+                # Hostname of the node
+                name: {{ trix_ctrl2_hostname }}
+                # Cluster membership node identifier
+                nodeid: 2
+                # Address of first link
+                ring0_addr: {{ trix_ctrl2_ip }}
+        }
+{% if trix_ctrl3_hostname is defined %}
+        node {
+                # Hostname of the node
+                name: {{ trix_ctrl3_hostname }}
+                # Cluster membership node identifier
+                nodeid: 3
+                # Address of first link
+                ring0_addr: {{ trix_ctrl3_ip }}
+        }
+{% endif %}
+{% if trix_ctrl4_hostname is defined %}
+        node {
+                # Hostname of the node
+                name: {{ trix_ctrl4_hostname }}
+                # Cluster membership node identifier
+                nodeid: 4
+                # Address of first link
+                ring0_addr: {{ trix_ctrl4_ip }}
+        }
+{% endif %}
 
 }
 
