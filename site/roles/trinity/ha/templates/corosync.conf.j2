@@ -1,0 +1,72 @@
+# Please read the corosync.conf.5 manual page
+totem {
+        version: 2
+
+        # Set name of the cluster
+        cluster_name: ExampleCluster
+
+        # crypto_cipher and crypto_hash: Used for mutual node authentication.
+        # If you choose to enable this, then do remember to create a shared
+        # secret with "corosync-keygen".
+        # enabling crypto_cipher, requires also enabling of crypto_hash.
+        # crypto works only with knet transport
+        crypto_cipher: none
+        crypto_hash: none
+
+        transport: udpu
+        interface {
+            ringnumber: 0
+            bindnetaddr: {{ trix_cluster_net | replace(".0", ".*") }}
+            broadcast: yes
+            mcastport: 5405
+        }
+}
+
+logging {
+        # Log the source file and line where messages are being
+        # generated. When in doubt, leave off. Potentially useful for
+        # debugging.
+        fileline: off
+        # Log to standard error. When in doubt, set to yes. Useful when
+        # running in the foreground (when invoking "corosync -f")
+        to_stderr: yes
+        # Log to a log file. When set to "no", the "logfile" option
+        # must not be set.
+        to_logfile: yes
+        logfile: /var/log/corosync.log
+        # Log to the system log daemon. When in doubt, set to yes.
+        to_syslog: yes
+        # Log debug messages (very verbose). When in doubt, leave off.
+        debug: off
+        # Log messages with time stamps. When in doubt, set to hires (or on)
+        #timestamp: hires
+        logger_subsys {
+                subsys: QUORUM
+                debug: off
+        }
+}
+
+quorum {
+        # Enable and configure quorum subsystem (default: off)
+        # see also corosync.conf.5 and votequorum.5
+        provider: corosync_votequorum
+}
+
+nodelist {
+        # Change/uncomment/add node sections to match cluster configuration
+
+{% for i in range(0,10) %}
+    {% if 'trix_ctrl' ~ i ~ '_hostname' is defined %}
+        node {
+                # Hostname of the node
+                name: {{ 'trix_ctrl' ~ i ~ '_hostname' }}
+                # Cluster membership node identifier
+                nodeid: {{ i }}
+                # Address of first link
+                ring0_addr: {{ 'trix_ctrl' ~ i ~ '_ip' }}
+        }
+   {% endif %}
+{% enfor %}
+
+}
+

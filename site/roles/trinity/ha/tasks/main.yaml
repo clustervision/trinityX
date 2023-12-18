@@ -14,6 +14,36 @@
       state: present
       enablerepo: ha
 
+  - name: Verify if corosync key exists
+    stat:
+      path: "{{ trix_shared }}/corosync/authkey"
+    register: stat_corosync_key
+
+  - block:
+    - name: Ensure corosync shared directory exists
+      file:
+        path: '{{ trix_shared }}/corosync'
+        state: directory
+
+    - name: Create corosync key
+      shell: "corosync-keygen"
+
+    - name: Copy corosync key to shared storage
+      copy:
+        src: '/etc/corosync/authkey'
+        dest: '{{ trix_shared }}/corosync/'
+    when: not stat_corosync_key.stat.exists
+
+#  - name: Fetching network config
+#    shell: 'ipcalc 10.141.255.254/16 -n|cut -f2 -d'=''
+
+  - name: Configure corosync
+    template:
+      src: "corosync.conf.j2"
+      dest: "/etc/corosync/corosync.conf"
+#    notify:
+#      - restart nscd
+
   # TODO: better way than below
   - name: Install PCS
     ansible.builtin.shell: |
