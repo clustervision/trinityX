@@ -39,8 +39,8 @@
     template:
       src: "corosync.conf.j2"
       dest: "/etc/corosync/corosync.conf"
-#    notify:
-#      - restart nscd
+    notify:
+      - restart corosync
 
   # TODO: better way than below
   - name: Install PCS
@@ -78,6 +78,18 @@
       owner: 'root'
       group: 'root'
       mode: '0755'
+
+  - name: Start pacemaker service
+    service:
+      name: pacemaker
+      state: started
+      enabled: true
+
+  - name: Start corosync service
+    service:
+      name: corosync
+      state: started
+      enabled: true
 
   when: ha | default(False)
 
