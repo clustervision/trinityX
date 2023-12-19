@@ -81,6 +81,17 @@
       group: 'root'
       mode: '0755'
 
+  - name: Ensure corosync service.d directory exists
+    file:
+      path: /etc/corosync/service.d/
+      state: directory
+
+  - name: Adding pcmk service to corosync
+    file:
+      path: "/etc/corosync/service.d/{{ item }}"
+    with_items:
+      - pcmk
+
   - name: Start pacemaker service
     service:
       name: pacemaker
