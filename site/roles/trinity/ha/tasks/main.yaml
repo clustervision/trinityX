@@ -35,7 +35,9 @@
         src: '/etc/corosync/authkey'
         dest: '{{ trix_shared }}/corosync/'
         mode: '0640'
-    when: not stat_corosync_key.stat.exists
+    when: 
+      - not stat_corosync_key.stat.exists
+      - primary
 
   - name: Configure corosync
     template:
@@ -109,7 +111,7 @@
     pcs_resource:
       name: 'trinity-ip'
       resource_type: 'ocf:heartbeat:IPaddr2'
-      options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} op monitor interval=29s --group Trinity'
+      options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Trinity'
       state: present
 
   when: ha | default(False)
