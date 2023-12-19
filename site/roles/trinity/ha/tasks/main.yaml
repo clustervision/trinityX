@@ -39,6 +39,21 @@
       - not stat_corosync_key.stat.exists
       - primary
 
+  - block:
+    - name: temporarily mount trinity/shared from controller1
+      shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
+
+    - name: Copy corosync key from shared storage
+      copy:
+        src: '{{ trix_shared }}/corosync/authkey'
+        dest: '/etc/corosync/'
+        mode: '0640'
+
+    - name: Umount trinity/shared
+      shell: "umount -l {{ trix_shared }}"
+    when: 
+      - not primary
+
   - name: Configure corosync
     template:
       src: "corosync.conf.j2"
