@@ -40,7 +40,7 @@
       - primary
 
   - block:
-    - name: temporarily mount trinity/shared from controller1
+    - name: Temporarily mount trinity/shared from controller1
       shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
 
     - name: Copy corosync key from shared storage
@@ -122,12 +122,14 @@
       state: started
       enabled: true
 
-  - name: Add floating IP resource
-    pcs_resource:
-      name: 'trinity-ip'
-      resource_type: 'ocf:heartbeat:IPaddr2'
-      options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Trinity'
-      state: present
+  - block
+    - name: Add floating IP resource
+      pcs_resource:
+        name: 'trinity-ip'
+        resource_type: 'ocf:heartbeat:IPaddr2'
+        options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Trinity'
+        state: present
+    when: primary
 
   when: ha | default(False)
 
