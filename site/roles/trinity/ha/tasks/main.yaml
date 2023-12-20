@@ -198,7 +198,7 @@
         name: stonith-enabled
         value: '{{ fence_ipmilan_enabled }}'
 
-    - name: Configure fencing resources using the ipmilan fencing agent
+    - name: Configuring fencing resources using the ipmilan fencing agent
       pcs_resource:
         name: 'fence-{{ item.0 }}'
         resource_class: 'stonith'
@@ -208,19 +208,18 @@
       with_together:
         - '{{ ha_controllers }}'
         - '{{ ha_bmc }}'
-      when: fence_ipmilan_enabled == 'true'
-      tags: fencing
 
-    - name: Add fencing location constraints
+    - name: Adding fencing location constraints
       pcs_constraint_location:
         resource: 'fence-{{ item }}'
         node_name: '{{ item }}'
         score: '-INFINITY'
         state: present
       with_items: '{{ ha_controllers }}'
-      when: fence_ipmilan_enabled == 'true'
-      tags: fencing
-    when: primary
+    tags: fencing
+    when: 
+      - primary
+      - fence_ipmilan_enabled == true
 
 
   # pcs property set stonith-enabled=false
