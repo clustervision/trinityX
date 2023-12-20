@@ -87,7 +87,7 @@ def getToken():
 
     token_credentials = {'username': CONF['USERNAME'],'password': CONF['PASSWORD']}
     try:
-        x = requests.post(CONF["PROTOCOL"]+'://'+CONF["ENDPOINT"]+'/token', json = token_credentials)
+        x = requests.post(CONF["PROTOCOL"]+'://'+CONF["ENDPOINT"]+'/token', json = token_credentials, verify=CONF["VERIFY_CERTIFICATE"])
         if (str(x.status_code) in RET):
             print("Error: "+RET[str(x.status_code)])
             exit(4)
@@ -131,7 +131,7 @@ def handleRequest(nodes=None,groups=None,interface=None,action=None):
             url_string = f'{CONF["PROTOCOL"]}://{CONF["ENDPOINT"]}/ha/master'
         if url_string:
             try:
-                r = requests.get(url_string,headers=headers)
+                r = requests.get(url_string,headers=headers,verify=CONF["VERIFY_CERTIFICATE"])
                 status_code=str(r.status_code)
                 print("["+status_code+'] ::: '+r.text)
             except requests.exceptions.HTTPError as err:
