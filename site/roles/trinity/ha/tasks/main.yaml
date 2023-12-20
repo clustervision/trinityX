@@ -206,8 +206,8 @@
         options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
         state: present
       with_together:
-        - ['{{ trix_ctrl1_hostname }}', '{{ trix_ctrl2_hostname }}']
-        - ['{{ trix_ctrl1_bmcip }}', '{{ trix_ctrl2_bmcip }}']
+        - '{{ ha_controllers }}'
+        - '{{ ha_bmc }}'
       when: fence_ipmilan_enabled == 'true'
       tags: fencing
 
@@ -217,12 +217,10 @@
         node_name: '{{ item }}'
         score: '-INFINITY'
         state: present
-      with_items:
-        - '{{ trix_ctrl1_hostname }}'
-        - '{{ trix_ctrl2_hostname }}'
+      with_items: '{{ ha_controllers }}'
       when: fence_ipmilan_enabled == 'true'
       tags: fencing
-    when: default(false)
+    when: primary
 
 
   # pcs property set stonith-enabled=false
