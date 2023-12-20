@@ -129,7 +129,7 @@
 
 # ---------------------- resources and config -----------------
 
-  - block
+  - block:
     - name: Set pacemaker properties
       pcs_property:
         name: '{{ item.key }}'
@@ -154,36 +154,37 @@
 
 # ---------------------- prepare ------------------------
 
+  - block:
     - name: Standard controller host list
-	set_fact:
-           ha_controllers:
-             - trix_ctrl1_hostname
-             - trix_ctrl2_hostname
+      set_fact:
+         ha_controllers:
+           - '{{ trix_ctrl1_hostname }}'
+           - '{{ trix_ctrl2_hostname }}'
 
-    - name: Adding controller 3 host:
-        set_fact:
-           ha_controllers: '{{ ha_controllers + trix_ctrl3_hostname }}'
+    - name: Adding controller 3 host
+      set_fact:
+         ha_controllers: '{{ ha_controllers + [ trix_ctrl3_hostname ] }}'
       when: trix_ctrl3_hostname is defined
 
-    - name: Adding controller 4 host:
-        set_fact:
-           ha_controllers: '{{ ha_controllers + trix_ctrl4_hostname }}'
+    - name: Adding controller 4 host
+      set_fact:
+         ha_controllers: '{{ ha_controllers + [ trix_ctrl4_hostname ] }}'
       when: trix_ctrl4_hostname is defined
 
     - name: Standard controller bmc list
-	set_fact:
-           ha_bmc:
-             - trix_ctrl1_bmcip
-             - trix_ctrl2_bmcip
+      set_fact:
+         ha_bmc:
+           - '{{ trix_ctrl1_bmcip }}'
+           - '{{ trix_ctrl2_bmcip }}'
 
-    - name: Adding controller 3 bmc:
-        set_fact:
-           ha_bmc: '{{ ha_bmc + trix_ctrl3_bmcip }}'
+    - name: Adding controller 3 bmc
+      set_fact:
+         ha_bmc: '{{ ha_bmc + [ trix_ctrl3_bmcip ] }}'
       when: trix_ctrl3_bmcip is defined
 
-    - name: Adding controller 4 bmc:
-        set_fact:
-           ha_bmc: '{{ ha_bmc + trix_ctrl4_bmcip }}'
+    - name: Adding controller 4 bmc
+      set_fact:
+         ha_bmc: '{{ ha_bmc + [ trix_ctrl4_bmcip ] }}'
       when: trix_ctrl4_bmcip is defined
 
     - debug:
