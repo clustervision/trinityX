@@ -15,14 +15,45 @@
     msg: "i am in HA mode"
   when: ha|default(False)
 
-- name: Set HA controllers' domain name
-  blockinfile:
-    path: /etc/hosts
-    block: |
-      {{trix_ctrl1_ip}}    {{trix_ctrl1_hostname}}.{{trix_domain}} {{trix_ctrl1_hostname}}
-      {{trix_ctrl2_ip}}    {{trix_ctrl2_hostname}}.{{trix_domain}} {{trix_ctrl2_hostname}}
-      {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
-#      {{ ansible_default_ipv4.address }} {{ ansible_fqdn.split('.') | first }} {{ ansible_fqdn }}
+- block:
+  - name: Set HA controllers' domain name
+    blockinfile:
+      path: /etc/hosts
+      block: |
+        {{trix_ctrl1_ip}}    {{trix_ctrl1_hostname}}.{{trix_domain}} {{trix_ctrl1_hostname}}
+        {{trix_ctrl2_ip}}    {{trix_ctrl2_hostname}}.{{trix_domain}} {{trix_ctrl2_hostname}}
+        {{trix_ctrl3_ip}}    {{trix_ctrl3_hostname}}.{{trix_domain}} {{trix_ctrl3_hostname}}
+        {{trix_ctrl4_ip}}    {{trix_ctrl4_hostname}}.{{trix_domain}} {{trix_ctrl4_hostname}}
+        {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
+    when: 
+      - trix_ctrl3_ip is defined
+      - trix_ctrl3_hostname is defined
+      - trix_ctrl4_ip is defined
+      - trix_ctrl4_hostname is defined
+
+  - name: Set HA controllers' domain name
+    blockinfile:
+      path: /etc/hosts
+      block: |
+        {{trix_ctrl1_ip}}    {{trix_ctrl1_hostname}}.{{trix_domain}} {{trix_ctrl1_hostname}}
+        {{trix_ctrl2_ip}}    {{trix_ctrl2_hostname}}.{{trix_domain}} {{trix_ctrl2_hostname}}
+        {{trix_ctrl3_ip}}    {{trix_ctrl3_hostname}}.{{trix_domain}} {{trix_ctrl3_hostname}}
+        {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
+    when: 
+      - trix_ctrl3_ip is defined
+      - trix_ctrl3_hostname is defined
+      - (trix_ctrl4_ip is not defined) or (trix_ctrl4_hostname is not defined)
+
+  - name: Set HA controllers' domain name
+    blockinfile:
+      path: /etc/hosts
+      block: |
+        {{trix_ctrl1_ip}}    {{trix_ctrl1_hostname}}.{{trix_domain}} {{trix_ctrl1_hostname}}
+        {{trix_ctrl2_ip}}    {{trix_ctrl2_hostname}}.{{trix_domain}} {{trix_ctrl2_hostname}}
+        {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
+    when: 
+      - (trix_ctrl3_ip is not defined) or (trix_ctrl3_hostname is not defined)
+      - (trix_ctrl4_ip is not defined) or (trix_ctrl4_hostname is not defined)
   when: ha|default(False)
 
 - name: Set non-HA controller's domain name
@@ -30,7 +61,6 @@
     path: /etc/hosts
     block: |
       {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
-#      {{ ansible_default_ipv4.address }} {{ ansible_fqdn.split('.') | first }} {{ ansible_fqdn }}
   when: not ha|default(False)
 
 
