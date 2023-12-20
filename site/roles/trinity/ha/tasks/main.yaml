@@ -28,7 +28,12 @@
         state: directory
 
     - name: Create corosync key
-      shell: "corosync-keygen"
+      command: "corosync-keygen -l"
+      args:
+        creates: '/etc/corosync/authkey'
+
+#    - name: Create corosync key
+#      shell: "corosync-keygen"
 
     - name: Copy corosync key to shared storage
       copy:
@@ -122,7 +127,23 @@
       state: started
       enabled: true
 
+# ---------------------- resources and config -----------------
+
   - block
+    - name: Set pacemaker properties
+      pcs_property:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+      with_dict: '{{ pacemaker_properties }}'
+
+    - name: Setup pacemaker resource defaults
+      command: pcs resource defaults '{{ item }}'
+      register: result
+      until: result.rc == 0
+      retries: 5
+      delay: 10
+      with_items: '{{ pacemaker_resource_defaults }}'
+
     - name: Add floating IP resource
       pcs_resource:
         name: 'trinity-ip'
@@ -130,6 +151,78 @@
         options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Trinity'
         state: present
     when: primary
+
+# ---------------------- prepare ------------------------
+
+    - name: Standard controller host list
+	set_fact:
+           ha_controllers:
+             - trix_ctrl1_hostname
+             - trix_ctrl2_hostname
+
+    - name: Adding controller 3 host:
+        set_fact:
+           ha_controllers: '{{ ha_controllers + trix_ctrl3_hostname }}'
+      when: trix_ctrl3_hostname is defined
+
+    - name: Adding controller 4 host:
+        set_fact:
+           ha_controllers: '{{ ha_controllers + trix_ctrl4_hostname }}'
+      when: trix_ctrl4_hostname is defined
+
+    - name: Standard controller bmc list
+	set_fact:
+           ha_bmc:
+             - trix_ctrl1_bmcip
+             - trix_ctrl2_bmcip
+
+    - name: Adding controller 3 bmc:
+        set_fact:
+           ha_bmc: '{{ ha_bmc + trix_ctrl3_bmcip }}'
+      when: trix_ctrl3_bmcip is defined
+
+    - name: Adding controller 4 bmc:
+        set_fact:
+           ha_bmc: '{{ ha_bmc + trix_ctrl4_bmcip }}'
+      when: trix_ctrl4_bmcip is defined
+
+    - debug:
+        msg: 'ha_controllers: {{ ha_controllers }}'
+
+# --------------------- fencing ----------------------------
+
+  - block:
+    - name: Toggle pacemaker stonith property
+      pcs_property:
+        name: stonith-enabled
+        value: '{{ fence_ipmilan_enabled }}'
+
+    - name: Configure fencing resources using the ipmilan fencing agent
+      pcs_resource:
+        name: 'fence-{{ item.0 }}'
+        resource_class: 'stonith'
+        resource_type: 'fence_ipmilan'
+        options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
+        state: present
+      with_together:
+        - ['{{ trix_ctrl1_hostname }}', '{{ trix_ctrl2_hostname }}']
+        - ['{{ trix_ctrl1_bmcip }}', '{{ trix_ctrl2_bmcip }}']
+      when: fence_ipmilan_enabled == 'true'
+      tags: fencing
+
+    - name: Add fencing location constraints
+      pcs_constraint_location:
+        resource: 'fence-{{ item }}'
+        node_name: '{{ item }}'
+        score: '-INFINITY'
+        state: present
+      with_items:
+        - '{{ trix_ctrl1_hostname }}'
+        - '{{ trix_ctrl2_hostname }}'
+      when: fence_ipmilan_enabled == 'true'
+      tags: fencing
+    when: default(false)
+
 
   # pcs property set stonith-enabled=false
 
