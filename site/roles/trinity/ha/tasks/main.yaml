@@ -1,5 +1,6 @@
 ---
 
+  # watch out. the below section is one big massive block to end at the bottom
 - block:
   - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
     include_vars: "{{ item }}"
@@ -152,7 +153,7 @@
         state: present
     when: primary
 
-# ---------------------- prepare ------------------------
+# ---------------------- list assembly ------------------------
 
   - block:
     - name: Standard controller host list
@@ -198,6 +199,8 @@
         name: stonith-enabled
         value: '{{ fence_ipmilan_enabled }}'
 
+    # pcs property set stonith-enabled=false
+
     - name: Configuring fencing resources using the ipmilan fencing agent
       pcs_resource:
         name: 'fence-{{ item.0 }}'
@@ -221,8 +224,6 @@
       - primary
       - fence_ipmilan_enabled == true
 
-
-  # pcs property set stonith-enabled=false
-
+  # The massive block ends here
   when: ha | default(False)
 
