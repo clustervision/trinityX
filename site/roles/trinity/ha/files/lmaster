@@ -87,7 +87,7 @@ def getToken():
 
     token_credentials = {'username': CONF['USERNAME'],'password': CONF['PASSWORD']}
     try:
-        x = requests.post('http://'+CONF["ENDPOINT"]+'/token', json = token_credentials)
+        x = requests.post(CONF["PROTOCOL"]+'://'+CONF["ENDPOINT"]+'/token', json = token_credentials)
         if (str(x.status_code) in RET):
             print("Error: "+RET[str(x.status_code)])
             exit(4)
@@ -126,9 +126,9 @@ def handleRequest(nodes=None,groups=None,interface=None,action=None):
 
         url_string = None
         if (action == "set"):
-            url_string = f'http://{CONF["ENDPOINT"]}/ha/master/_set'
+            url_string = f'{CONF["PROTOCOL"]}://{CONF["ENDPOINT"]}/ha/master/_set'
         elif (action == "status"):
-            url_string = f'http://{CONF["ENDPOINT"]}/ha/master'
+            url_string = f'{CONF["PROTOCOL"]}://{CONF["ENDPOINT"]}/ha/master'
         if url_string:
             try:
                 r = requests.get(url_string,headers=headers)
