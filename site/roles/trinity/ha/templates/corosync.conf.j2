@@ -21,6 +21,15 @@ totem {
             mcastaddr: 226.96.1.1
             mcastport: 5405
         }
+{% if trix_ctrl1_heartbeat_ip is defined %}
+        interface {
+            ringnumber: 1
+            bindnetaddr: {{ trix_cluster_net | split('.')[2:] | join('.') }}.*.*
+            broadcast: yes
+            mcastaddr: 226.96.2.1
+            mcastport: 5405
+        }
+{% endif %}
 }
 
 logging {
@@ -63,6 +72,9 @@ nodelist {
                 nodeid: 1
                 # Address of first link
                 ring0_addr: {{ trix_ctrl1_ip }}
+                {% if trix_ctrl1_heartbeat_ip is defined %}
+                ring1_addr: {{ trix_ctrl1_heartbeat_ip }}
+                {% endif %}
         }
         node {
                 # Hostname of the node
@@ -71,6 +83,9 @@ nodelist {
                 nodeid: 2
                 # Address of first link
                 ring0_addr: {{ trix_ctrl2_ip }}
+                {% if trix_ctrl2_heartbeat_ip is defined %}
+                ring1_addr: {{ trix_ctrl2_heartbeat_ip }}
+                {% endif %}
         }
 {% if trix_ctrl3_hostname is defined %}
         node {
@@ -80,6 +95,9 @@ nodelist {
                 nodeid: 3
                 # Address of first link
                 ring0_addr: {{ trix_ctrl3_ip }}
+                {% if trix_ctrl3_heartbeat_ip is defined %}
+                ring1_addr: {{ trix_ctrl3_heartbeat_ip }}
+                {% endif %}
         }
 {% endif %}
 {% if trix_ctrl4_hostname is defined %}
@@ -90,6 +108,9 @@ nodelist {
                 nodeid: 4
                 # Address of first link
                 ring0_addr: {{ trix_ctrl4_ip }}
+                {% if trix_ctrl4_heartbeat_ip is defined %}
+                ring1_addr: {{ trix_ctrl4_heartbeat_ip }}
+                {% endif %}
         }
 {% endif %}
 
