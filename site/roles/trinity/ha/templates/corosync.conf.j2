@@ -1,6 +1,9 @@
 # Please read the corosync.conf.5 manual page
 totem {
         version: 2
+{% if trix_ctrl1_heartbeat_ip is defined %}
+        rrp_mode: passive
+{% endif %}
 
         # Set name of the cluster
         cluster_name: {{ trix_domain }}
@@ -13,7 +16,8 @@ totem {
         crypto_cipher: none
         crypto_hash: none
 
-        transport: udpu
+        # transport: udpu, knet
+        transport: knet
         interface {
             ringnumber: 0
             bindnetaddr: {{ trix_cluster_net | replace(".0", ".*") }}
@@ -24,7 +28,7 @@ totem {
 {% if trix_ctrl1_heartbeat_ip is defined %}
         interface {
             ringnumber: 1
-            bindnetaddr: {{ trix_cluster_net | split('.')[2:] | join('.') }}.*.*
+            bindnetaddr: {{ trix_ctrl1_heartbeat_ip.split('.')[:2] | join('.') }}.*.*
             broadcast: yes
             mcastaddr: 226.96.2.1
             mcastport: 5405
@@ -72,9 +76,9 @@ nodelist {
                 nodeid: 1
                 # Address of first link
                 ring0_addr: {{ trix_ctrl1_ip }}
-                {% if trix_ctrl1_heartbeat_ip is defined %}
+                {% if trix_ctrl1_heartbeat_ip is defined -%}
                 ring1_addr: {{ trix_ctrl1_heartbeat_ip }}
-                {% endif %}
+                {% endif -%}
         }
         node {
                 # Hostname of the node
@@ -83,9 +87,9 @@ nodelist {
                 nodeid: 2
                 # Address of first link
                 ring0_addr: {{ trix_ctrl2_ip }}
-                {% if trix_ctrl2_heartbeat_ip is defined %}
+                {% if trix_ctrl1_heartbeat_ip is defined and trix_ctrl2_heartbeat_ip is defined -%}
                 ring1_addr: {{ trix_ctrl2_heartbeat_ip }}
-                {% endif %}
+                {% endif -%}
         }
 {% if trix_ctrl3_hostname is defined %}
         node {
@@ -95,9 +99,9 @@ nodelist {
                 nodeid: 3
                 # Address of first link
                 ring0_addr: {{ trix_ctrl3_ip }}
-                {% if trix_ctrl3_heartbeat_ip is defined %}
+                {% if trix_ctrl1_heartbeat_ip is defined and trix_ctrl3_heartbeat_ip is defined -%}
                 ring1_addr: {{ trix_ctrl3_heartbeat_ip }}
-                {% endif %}
+                {% endif -%}
         }
 {% endif %}
 {% if trix_ctrl4_hostname is defined %}
@@ -108,9 +112,9 @@ nodelist {
                 nodeid: 4
                 # Address of first link
                 ring0_addr: {{ trix_ctrl4_ip }}
-                {% if trix_ctrl4_heartbeat_ip is defined %}
+                {% if trix_ctrl1_heartbeat_ip is defined  and trix_ctrl4_heartbeat_ip is defined -%}
                 ring1_addr: {{ trix_ctrl4_heartbeat_ip }}
-                {% endif %}
+                {% endif -%}
         }
 {% endif %}
 
