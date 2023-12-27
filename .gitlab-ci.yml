@@ -3,6 +3,8 @@ stages:
 
 .ansible-template: &ansible-template
   script:
+    - test_var=0
+    - echo $test_var > /builds/clustervision/trinityx-combined/test_var.txt
     - yum install openssh -y
     - yum install sshpass -y
     - yum install git -y
@@ -15,13 +17,18 @@ stages:
     - cd pyvmomi-community-samples/samples
     - echo $CI_COMMIT_BRANCH
     - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./ci-log.sh  $CI_COMMIT_BRANCH"
+    - rm -f /builds/clustervision/trinityx-combined/test_var.txt
+    - test_var=1
+    - echo $test_var > /builds/clustervision/trinityx-combined/test_var.txt
     - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./setup.sh $CI_COMMIT_BRANCH"
+
   after_script:
+    - test_var=$(cat /builds/clustervision/trinityx-combined/test_var.txt)
+    - test $test_var -gt 0
     - cd pyvmomi/pyvmomi-community-samples/samples
     - python3 snapshot_operations.py -s $VMWARE_HOST -u "$VMWARE_API_USER" -p "$VMWARE_API_PASSWORD" -nossl -v $VM_name -op revert --snapshot-name init_snap
     - sleep 10
     - python3 vm_power_on.py -s $VMWARE_HOST -u "$VMWARE_API_USER" -p "$VMWARE_API_PASSWORD" -nossl -v $VM_name
-    - sleep 2
 
 ansible-rocky8:
   <<: *ansible-template
@@ -58,6 +65,18 @@ ansible-centos8:
   variables:
     VM_name: $VM_CENTOS8_NAME
     VM_IP: $VM_CENTOS8_IP
+
+ansible-centos9:
+  <<: *ansible-template
+  stage: installation
+  when: manual
+  tags:
+    - luna2
+  image:
+    name: geerlingguy/docker-rockylinux8-ansible
+  variables:
+    VM_name: $VM_CENTOS9_NAME
+    VM_IP: $VM_CENTOS9_IP
 
 ansible-rhel8:
   <<: *ansible-template
