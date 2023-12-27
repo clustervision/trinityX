@@ -1,4 +1,14 @@
 #!/bin/bash
+if [[ `getenforce` == "Disabled" ]]; then
+    echo "SELinux in disabled mode is not supported. Please reboot to run in permissive mode"
+    if [[ `grep "^SELINUX=disabled$" /etc/selinux/config` ]]; then
+        sed -i 's/SELINUX=disabled/SELINUX=permissive/g' /etc/selinux/config
+        exit 1
+    else
+        sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
+        exit 1
+    fi
+fi
 if [ ! -f TrinityX.pdf ]; then
   echo "Please run from within the cloned TrinityX folder"
 else
