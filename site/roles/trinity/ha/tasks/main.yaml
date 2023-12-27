@@ -176,44 +176,6 @@
         state: present
     when: primary
 
-# ---------------------- list assembly ------------------------
-
-  - block:
-    - name: Standard controller host list
-      set_fact:
-         ha_controllers:
-           - '{{ trix_ctrl1_hostname }}'
-           - '{{ trix_ctrl2_hostname }}'
-
-    - name: Adding controller 3 host
-      set_fact:
-         ha_controllers: '{{ ha_controllers + [ trix_ctrl3_hostname ] }}'
-      when: trix_ctrl3_hostname is defined
-
-    - name: Adding controller 4 host
-      set_fact:
-         ha_controllers: '{{ ha_controllers + [ trix_ctrl4_hostname ] }}'
-      when: trix_ctrl4_hostname is defined
-
-    - name: Standard controller bmc list
-      set_fact:
-         ha_bmc:
-           - '{{ trix_ctrl1_bmcip }}'
-           - '{{ trix_ctrl2_bmcip }}'
-
-    - name: Adding controller 3 bmc
-      set_fact:
-         ha_bmc: '{{ ha_bmc + [ trix_ctrl3_bmcip ] }}'
-      when: trix_ctrl3_bmcip is defined
-
-    - name: Adding controller 4 bmc
-      set_fact:
-         ha_bmc: '{{ ha_bmc + [ trix_ctrl4_bmcip ] }}'
-      when: trix_ctrl4_bmcip is defined
-
-    - debug:
-        msg: 'ha_controllers: {{ ha_controllers }}'
-
 # --------------------- fencing ----------------------------
 
   - block:
@@ -232,8 +194,8 @@
         options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
         state: present
       with_together:
-        - '{{ ha_controllers }}'
-        - '{{ ha_bmc }}'
+        - '{{ all_ctrl_hostname }}'
+        - '{{ all_ctrl_bmc }}'
 
     - name: Add fencing location constraints
       pcs_constraint_location:
@@ -241,7 +203,7 @@
         node_name: '{{ item }}'
         score: '-INFINITY'
         state: present
-      with_items: '{{ ha_controllers }}'
+      with_items: '{{ all_ctrl_hostname }}'
     tags: fencing
     when: 
       - primary
