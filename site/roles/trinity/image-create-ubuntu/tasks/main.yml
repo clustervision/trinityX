@@ -13,7 +13,6 @@
     name: "{{ required_packages }}"
     state: present
 
-
 - name: Build basic Ubuntu image
   shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ image_path }} {{ ubuntu_distribution_source }} | tee /tmp/debootstrap.log"
   ignore_errors: true
@@ -42,6 +41,11 @@
     - {dev: "ptmx", mo: "666", t: 'c', ma: 5, mi: 2}
     - {dev: "tty", mo: "666", t: 'c', ma: 5, mi: 0}
 
+  # seen in the field where /dev/null had wrong permissions for unknown reasons. apt will fail.
+- name: Ensure /dev/null is worldwide writeable
+  file:
+    path: "{{ image_path }}/dev/null"
+    mode: "0666"
 
 - name: Configure repos
   lineinfile:
@@ -109,7 +113,7 @@
   ignore_errors: true
 
 - name: Creating image in luna
-  shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu {{ image_name }}"
+  shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu {{ image_name }} -qo \"net.ifnames=0 biosdevname=0\""
   when: ubuntu_image_in_luna is defined and ubuntu_image_in_luna.rc|int != 0
 
 - name: Create node config directory

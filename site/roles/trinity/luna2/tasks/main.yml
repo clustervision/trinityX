@@ -407,7 +407,7 @@
   with_items:
     - "{{ start_services }}"
 
-- name: setting permissions on database
+- name: Setting permissions on database
   file:
     path: '{{ luna2_python_dir.stdout }}/site-packages/daemon/common/luna.db'
     owner: root
@@ -415,6 +415,16 @@
     mode: '0600'
   ignore_errors: true
 
+- name: Set me as Luna master
+  shell: "/usr/local/sbin/lmaster"
+  ignore_errors: true
+  when:
+    - ha
+    - primary
+
 - name: Setting default DNS forwarder
   shell: "luna cluster change -fs \"{{ trix_dns_forwarders|join(',') }}\""
-  when: trix_dns_forwarders is defined
+  when:
+    - primary
+    - trix_dns_forwarders is defined
+

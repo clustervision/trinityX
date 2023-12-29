@@ -18,12 +18,23 @@
     set_fact:
       on_controller: '{{ True if "controllers" in group_names else False }}'
 
-  - name: Update the trix_ctrl_* variables in case of non-HA setup
-    set_fact:
-      trix_ctrl_hostname: '{{ trix_ctrl1_hostname }}'
-      trix_ctrl_ip: '{{ trix_ctrl1_ip }}'
-      trix_ctrl2_hostname: ''
-      trix_ctrl2_ip: ''
+  - block:
+    - name: Update the trix_ctrl_* variables in case of non-HA setup
+      set_fact:
+        trix_ctrl_hostname: '{{ trix_ctrl1_hostname }}'
+        trix_ctrl_ip: '{{ trix_ctrl1_ip }}'
+        trix_ctrl2_hostname: ''
+        trix_ctrl2_ip: ''
+
+    - name: Standard controller host list
+      set_fact:
+         all_ctrl_hostname:
+           - '{{ trix_ctrl1_hostname }}'
+
+    - name: Standard controller ip list
+      set_fact:
+        all_ctrl_ip:
+          - '{{ trix_ctrl1_ip }}'
     when: not ha|default(False)
 
   - debug:
@@ -31,7 +42,7 @@
 
   - name: Check if this node is the primary controller
     set_fact:
-      primary: '{{ True if trix_ctrl_ip in ansible_all_ipv4_addresses and on_controller else False }}'
+      primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses and on_controller else False }}'
       on_controller: true
 
   - debug:
@@ -81,11 +92,64 @@
 
 
 - block:
+  - name: Standard controller host list
+    set_fact:
+       all_ctrl_hostname:
+         - '{{ trix_ctrl1_hostname }}'
+         - '{{ trix_ctrl2_hostname }}'
+
+  - name: Adding controller 3 host
+    set_fact:
+      all_ctrl_hostname: '{{ all_ctrl_hostname + [ trix_ctrl3_hostname ] }}'
+    when: trix_ctrl3_hostname is defined
+
+  - name: Adding controller 4 host
+    set_fact:
+      all_ctrl_hostname: '{{ all_ctrl_hostname + [ trix_ctrl4_hostname ] }}'
+    when: trix_ctrl4_hostname is defined
+
+  - name: Standard controller ip list
+    set_fact:
+      all_ctrl_ip:
+        - '{{ trix_ctrl1_ip }}'
+        - '{{ trix_ctrl2_ip }}'
+
+  - name: Adding controller 3 ip
+    set_fact:
+      all_ctrl_ip: '{{ all_ctrl_ip + [ trix_ctrl3_ip ] }}'
+    when: trix_ctrl3_ip is defined
+
+  - name: Adding controller 4 ip
+    set_fact:
+      all_ctrl_ip: '{{ all_ctrl_ip + [ trix_ctrl4_ip ] }}'
+    when: trix_ctrl4_ip is defined
+
+  - name: Standard controller bmc list
+    set_fact:
+      all_ctrl_bmc:
+        - '{{ trix_ctrl1_bmcip }}'
+        - '{{ trix_ctrl2_bmcip }}'
+
+  - name: Adding controller 3 bmc
+    set_fact:
+      all_ctrl_bmc: '{{ all_ctrl_bmc + [ trix_ctrl3_bmcip ] }}'
+    when: trix_ctrl3_bmcip is defined
+
+  - name: Adding controller 4 bmc
+    set_fact:
+      all_ctrl_bmc: '{{ all_ctrl_bmc + [ trix_ctrl4_bmcip ] }}'
+    when: trix_ctrl4_bmcip is defined
+
+  - debug:
+      msg: 'all_ctrl_hostname: {{ all_ctrl_hostname }}'
+  when: ha
+  tags: always,ha
+
+
+- block:
   - name: Collecting controller interface information
     include_tasks: interface.yml
-    with_items:
-      - "{{ trix_ctrl1_ip }}"
-      - "{{ trix_ctrl2_ip }}"
+    with_items: "{{ all_ctrl_ip }}"
     loop_control:
       loop_var: inner_loop_var
 
@@ -95,11 +159,30 @@
 
   - name: Verify internal controller interface is configured
     fail:
-      msg: "Interface with config set in 'trix_ctrl1_ip' ({{ trix_ctrl1_ip }}) or 'trix_ctrl2_ip' ({{ trix_ctrl2_ip }}) not found. Please make sure the interface is configured and up"
+      msg: "Interface with config set in 'trix_ctrl1_ip' ({{ trix_ctrl1_ip }}) or 'trix_ctrlX_ip' ({{ trix_ctrl2_ip }}, ...) not found. Please make sure the interface is configured and up"
     when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
 
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
+
+
+- block:
+  - name: Resolve admin group
+    getent:
+      database: group
+      split: ':'
+      key: '{{ admin_group }}'
+    ignore_errors: true
+
+  - name: Override admin group
+    set_fact:
+      admin_group: 'root'
+    when: ansible_facts.getent_group is not defined
+
+  - debug:
+      msg: "admin_group: {{ admin_group }}"
+  when: not enable_authentication|default(False)
+  tags: always
 
 
 - name: Toggle selinux state
