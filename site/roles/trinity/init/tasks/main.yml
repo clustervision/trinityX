@@ -166,14 +166,24 @@
   when: ansible_connection not in 'chroot' and on_controller
 
 
-- name: Override admin group
-  set_fact:
-    admin_group: 'root'
+- block:
+  - name: Resolve admin group
+    getent:
+      database: group
+      split: ':'
+      key: '{{ admin_group }}'
+    ignore_errors: true
+
+  - name: Override admin group
+    set_fact:
+      admin_group: 'root'
+    when: ansible_facts.getent_group is not defined
+
+  - debug:
+      msg: "admin_group: {{ admin_group }}"
   when: not enable_authentication|default(False)
   tags: always
 
-- debug:
-    msg: "admin_group: {{ admin_group }}"
 
 - name: Toggle selinux state
   selinux:
