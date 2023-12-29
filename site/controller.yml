@@ -94,11 +94,13 @@
       openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
       openldap_server_conf_path: '{{ trix_local }}/etc/openldap/slapd.d'
       openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      when: enable_authentication
       tags: openldap
 
     - role: trinity/obol
       users_home_path: '{{ trix_home }}'
       ldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      when: enable_authentication
       tags: obol
 
     - role: trinity/sssd
@@ -106,6 +108,7 @@
         - '{{ admin_group }}'
       sss_ldap_hosts:
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      when: enable_authentication
       tags: sssd
 
     - role: trinity/mariadb
@@ -231,7 +234,7 @@
 
     - role: trinity/grafana
       tags: monitoring
-      ldap_auth: true
+      ldap_auth: "{{ enable_authentication }}"
       enable_ssl: true
       grafana_admin_group: "{{ admin_group }}"
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
