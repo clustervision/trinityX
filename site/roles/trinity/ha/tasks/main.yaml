@@ -1,0 +1,214 @@
+---
+
+  # watch out. the below section is one big massive block to end at the bottom
+- block:
+  - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+    include_vars: "{{ item }}"
+    with_first_found:
+      - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+      - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    ignore_errors: true
+
+  - name: Install H/A packages
+    yum:
+      name: '{{ ha_packages }}'
+      state: present
+      enablerepo: 
+        - ha
+        - resilientstorage
+
+  - name: Verify if corosync key exists
+    stat:
+      path: "{{ trix_shared }}/corosync/authkey"
+    register: stat_corosync_key
+
+  - block:
+    - name: Ensure corosync shared directory exists
+      file:
+        path: '{{ trix_shared }}/corosync'
+        state: directory
+
+    - name: Create corosync key
+      command: "corosync-keygen -l"
+      args:
+        creates: '/etc/corosync/authkey'
+
+#    - name: Create corosync key
+#      shell: "corosync-keygen"
+
+    - name: Copy corosync key to shared storage
+      copy:
+        src: '/etc/corosync/authkey'
+        dest: '{{ trix_shared }}/corosync/'
+        mode: '0640'
+    when: 
+      - not stat_corosync_key.stat.exists
+      - primary
+
+  - block:
+    - name: Temporarily mount trinity/shared from controller1
+      shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
+
+    - name: Copy corosync key from shared storage
+      copy:
+        src: '{{ trix_shared }}/corosync/authkey'
+        dest: '/etc/corosync/'
+        mode: '0640'
+
+    - name: Umount trinity/shared
+      shell: "umount -l {{ trix_shared }}"
+    when: 
+      - not primary
+
+  - name: Configure corosync
+    template:
+      src: "corosync.conf.j2"
+      dest: "/etc/corosync/corosync.conf"
+    notify:
+      - restart corosync
+
+  # TODO: better way than below
+  - name: Install PCS
+    ansible.builtin.shell: |
+      source /trinity/local/python/bin/activate
+      pip3 install --upgrade {{ pcs_noarch_pip_repository }}/{{ pcs_pip }}
+      exit $?
+    args:
+      executable: /bin/bash
+    when: pcs_pip is defined
+
+  # TODO: better way than below
+  - name: Install PCS
+    ansible.builtin.shell: |
+      source /trinity/local/python/bin/activate
+      pip3 install --upgrade -i {{ pcs_noarch_pip_repository }}/ pcs
+      exit $?
+    args:
+      executable: /bin/bash
+    when: pcs_pip is not defined
+
+  - name: Get python libdir
+    shell: "echo /trinity/local/python/lib/python*"
+    register: luna2_python_dir
+    changed_when: false
+
+  - name: Install ruby gems
+    shell: "/bin/bash {{ luna2_python_dir.stdout }}/site-packages/pcs/cv/gems.sh"
+    ignore_errors: true
+
+  - name: Install PCS wrapper
+    copy:
+      src: 'pcs'
+      dest: '/usr/local/sbin/'
+      owner: 'root'
+      group: 'root'
+      mode: '0755'
+
+  - name: Ensure corosync service.d directory exists
+    file:
+      path: /etc/corosync/service.d/
+      state: directory
+
+  - name: Adding pcmk service to corosync
+    copy:
+      src: "{{ item }}"
+      dest: "/etc/corosync/service.d/"
+    with_items:
+      - pcmk
+
+  - name: Start pacemaker service
+    service:
+      name: pacemaker
+      state: started
+      enabled: true
+
+  - name: Start corosync service
+    service:
+      name: corosync
+      state: started
+      enabled: true
+
+# ---------------------- resources and config -----------------
+
+  - name: Install lmaster
+    copy:
+      src: 'lmaster'
+      dest: '/usr/local/sbin/'
+      owner: root
+      group: root
+      mode: 0750
+
+  - name: Render /etc/systemd/system/luna2-master.service
+    copy:
+      src: 'luna2-master.service'
+      dest: '/etc/systemd/system/luna2-master.service'
+      owner: root
+      group: root
+      mode: 0644
+
+  - block:
+    - name: Set pacemaker properties
+      pcs_property:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+      with_dict: '{{ pacemaker_properties }}'
+
+    - name: Setup pacemaker resource defaults
+      command: pcs resource defaults '{{ item }}'
+      register: result
+      until: result.rc == 0
+      retries: 5
+      delay: 10
+      with_items: '{{ pacemaker_resource_defaults }}'
+
+    - name: Add floating IP resource
+      pcs_resource:
+        name: 'trinity-ip'
+        resource_type: 'ocf:heartbeat:IPaddr2'
+        options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Trinity'
+        state: present
+
+    - name: Add luna2 master systemd service
+      pcs_resource:
+        name: 'luna2-master'
+        resource_type: 'systemd:luna2-master.service'
+        options: 'op monitor interval=29s --group Trinity'
+        state: present
+    when: primary
+
+# --------------------- fencing ----------------------------
+
+  - block:
+    - name: Toggle pacemaker stonith property
+      pcs_property:
+        name: stonith-enabled
+        value: '{{ fence_ipmilan_enabled }}'
+
+    # pcs property set stonith-enabled=false
+
+    - name: Configure fencing resources using the ipmilan fencing agent
+      pcs_resource:
+        name: 'fence-{{ item.0 }}'
+        resource_class: 'stonith'
+        resource_type: 'fence_ipmilan'
+        options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
+        state: present
+      with_together:
+        - '{{ all_ctrl_hostname }}'
+        - '{{ all_ctrl_bmc }}'
+
+    - name: Add fencing location constraints
+      pcs_constraint_location:
+        resource: 'fence-{{ item }}'
+        node_name: '{{ item }}'
+        score: '-INFINITY'
+        state: present
+      with_items: '{{ all_ctrl_hostname }}'
+    tags: fencing
+    when: 
+      - primary
+      - fence_ipmilan_enabled == true
+
+  # The massive block ends here
+  when: ha | default(False)
+

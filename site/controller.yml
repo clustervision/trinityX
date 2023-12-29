@@ -25,6 +25,12 @@
     - role: trinity/packages
       tags: packages
 
+    - role: OndrejHome.pcs-modules-2
+      tags: ha
+
+    - role: trinity/ha
+      tags: ha
+
     - role: trinity/trix-tree
       tags: trix-tree
 
@@ -88,11 +94,13 @@
       openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
       openldap_server_conf_path: '{{ trix_local }}/etc/openldap/slapd.d'
       openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      when: enable_authentication
       tags: openldap
 
     - role: trinity/obol
       users_home_path: '{{ trix_home }}'
       ldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      when: enable_authentication
       tags: obol
 
     - role: trinity/sssd
@@ -100,6 +108,7 @@
         - '{{ admin_group }}'
       sss_ldap_hosts:
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      when: enable_authentication
       tags: sssd
 
     - role: trinity/mariadb
@@ -128,13 +137,18 @@
       tags: slurm, sbank
 
     - role: trinity/config-manager
+      cm_admin_group: "{{ admin_group }}"
       tags: config-manager
 
     - role: trinity/luna2
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       luna2_cluster:
+        ha: '{{ ha }}'
         frontend_address: '{{ trix_ctrl_ip }}'
+        controllers: 
+          hostnames: '{{ all_ctrl_hostname }}'
+          ip_addresses: '{{ all_ctrl_ip }}'
         networks:
         - name: '{{ trix_domain }}'
           function: 'default'
@@ -221,7 +235,7 @@
 
     - role: trinity/grafana
       tags: monitoring
-      ldap_auth: true
+      ldap_auth: "{{ enable_authentication }}"
       enable_ssl: true
       grafana_admin_group: "{{ admin_group }}"
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"

@@ -20,6 +20,8 @@ else
   yum install epel-release -y
   yum install curl tar ansible git epel-release -y
 
+  ansible-galaxy install OndrejHome.pcs-modules-2
+
   if [ ! -f site/hosts ]; then
     echo "Please modify the site/hosts.example and save it as site/hosts"  
   else
