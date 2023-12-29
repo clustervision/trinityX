@@ -166,6 +166,13 @@
   when: ansible_connection not in 'chroot' and on_controller
 
 
+- name: Override admin group
+  set_fact:
+    ood_admin_group: 'root'
+  when: not enable_authentication|default(False)
+  tags: always
+
+
 - name: Toggle selinux state
   selinux:
     state: '{{ "permissive" if enable_selinux else "disabled" }}'

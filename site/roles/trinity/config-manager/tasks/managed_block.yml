@@ -16,13 +16,11 @@
     is_managed_block_present: "{{ grep_managed_block.stdout != '' }}"
   when: item_path.stat.exists
 
-
-
 - name: "Ensure file is owned by admins"
   file:
     path: "{{ item }}"
     owner: root
-    group: admins
+    group: '{{ cm_admin_group }}'
     mode: 0660
   when: item_path.stat.exists
 
@@ -31,7 +29,7 @@
     src: "{{ item }}"
     dest: "{{ item }}.bkp"
     owner: root
-    group: admins
+    group: '{{ cm_admin_group }}'
     mode: 0660
   when: (item_path.stat.exists) and not (item_bkp_path.stat.exists)
 
