@@ -207,6 +207,18 @@
     key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
     path: "{{ image_path }}/root/.ssh/authorized_keys"
 
+#- name: unset default systemd target
+#  file:
+#    path: "{{ image_path }}/usr/lib/systemd/system/default.target"
+#    state: absent
+#  ignore_errors: yes
+
+- name: setting preferred default systemd target
+  file:
+    src: "{{ image_path }}/usr/lib/systemd/system/{{ image_default_target }}"
+    dest: "{{ image_path }}/usr/lib/systemd/system/default.target"
+    state: link
+
 - name: Create node config directory
   file:
     path: '{{ image_path }}/{{ trix_luna }}/node/config/'
