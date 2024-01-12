@@ -35,12 +35,12 @@
   notify: activate sysctls
 
 - name: Setting compute performance tuned profile
-  shell: "tuned-adm profile {{ compute_tuned_profile }}"
+  shell: "tuned-adm profile {{ compute_tuned_profile | default('hpc-compute') }}"
   when: ansible_connection in 'chroot'
   ignore_errors: true
 
 - name: Setting controller performance tuned profile
-  shell: "tuned-adm profile {{ controller_tuned_profile }}"
+  shell: "tuned-adm profile {{ controller_tuned_profile | default('throughput-performance') }}"
   when: ansible_connection not in 'chroot'
   ignore_errors: true
 
