@@ -109,9 +109,10 @@
 
 - name: Setting preferred default systemd target
   file:
-    src: "{{ image_path }}/usr/lib/systemd/system/{{ image_default_target | default('multi-user') }}.target"
+    src: "/usr/lib/systemd/system/{{ image_default_target | default('multi-user') }}.target"
     dest: "{{ image_path }}/usr/lib/systemd/system/default.target"
     state: link
+    force: true
 
 - name: Verify if image already exists in luna
   shell: "luna osimage show {{ image_name }}"
