@@ -7,7 +7,9 @@
 
   roles:
     - role: trinity/init
-      tags: init
+      tags: 
+        - init
+        - authentication
 
     - role: trinity/hostname
       tags: hostname
@@ -27,12 +29,16 @@
 
     - role: OndrejHome.pcs-modules-2
       tags: ha
+      when: ha | default(False)
 
     - role: trinity/ha
       tags: ha
+      when: ha | default(False)
 
     - role: trinity/trix-tree
-      tags: trix-tree
+      tags: 
+        - trix-tree
+        - authentication
 
     - role: trinity/cv_support
       tags: cv_support
@@ -82,7 +88,9 @@
         - '{{ ansible_fqdn }}'
         - '{{ trix_external_fqdn }}'
       ssl_cert_days: '36500'
-      tags: ssl-cert
+      tags: 
+        - ssl-cert
+        - authentication  
 
     - role: trinity/bind
       bind_db_path: '{{ trix_local }}/var/lib/named'
@@ -95,13 +103,17 @@
       openldap_server_conf_path: '{{ trix_local }}/etc/openldap/slapd.d'
       openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       when: enable_authentication
-      tags: openldap
+      tags: 
+        - openldap
+        - authentication
 
     - role: trinity/obol
       users_home_path: '{{ trix_home }}'
       ldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       when: enable_authentication
-      tags: obol
+      tags: 
+        - obol
+        - authentication
 
     - role: trinity/sssd
       sss_allowed_groups:
@@ -109,7 +121,9 @@
       sss_ldap_hosts:
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       when: enable_authentication
-      tags: sssd
+      tags: 
+        - sssd
+        - authentication
 
     - role: trinity/mariadb
       mariadb_db_path: '{{ trix_local }}/var/lib/mysql'
