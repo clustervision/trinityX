@@ -107,13 +107,6 @@
     key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
     path: "{{ image_path }}/root/.ssh/authorized_keys"
 
-- name: Setting preferred default systemd target
-  file:
-    src: "/usr/lib/systemd/system/{{ image_default_target | default('multi-user') }}.target"
-    dest: "{{ image_path }}/usr/lib/systemd/system/default.target"
-    state: link
-    force: true
-
 - name: Verify if image already exists in luna
   shell: "luna osimage show {{ image_name }}"
   register: ubuntu_image_in_luna
