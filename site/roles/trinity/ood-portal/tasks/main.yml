@@ -265,13 +265,13 @@
     group: "{{ ood_admin_group }}"
     mode: 0640
 
-- name: Render trinityx-ood luna app osusers.toml
-  template:
-    src: 'osusers.toml.j2'
-    dest: '{{ trix_ood }}/{{ ood_version }}/config/osusers.toml'
-    owner: root
-    group: "{{ ood_admin_group }}"
-    mode: 0640
+# - name: Render trinityx-ood luna app osusers.toml
+#   template:
+#     src: 'osusers.toml.j2'
+#     dest: '{{ trix_ood }}/{{ ood_version }}/config/osusers.toml'
+#     owner: root
+#     group: "{{ ood_admin_group }}"
+#     mode: 0640
 
 # - name: Render trinityx-ood luna app sensu.toml
 #   template:
@@ -372,42 +372,42 @@
     - infiniband
   notify: run update_ood_portal
 
-- name: Create a directory for static files if it does not exist
-  ansible.builtin.file:
-    path: '{{ trix_ood }}/{{ ood_version }}/{{item}}/static'
-    state: directory
-    mode: 0755
-    owner: root
-    group: root
-  with_items:
-    # - sensu
-    - users
+# - name: Create a directory for static files if it does not exist
+#   ansible.builtin.file:
+#     path: '{{ trix_ood }}/{{ ood_version }}/{{item}}/static'
+#     state: directory
+#     mode: 0755
+#     owner: root
+#     group: root
+#   with_items:
+#     - sensu
+#     - users
 
-- name: Symlink shared templates
-  file:
-    src: "{{ trix_ood }}/{{ ood_version }}/_base/templates"
-    dest: "/var/www/ood/apps/sys/trinity_{{ item }}/templates/base"
-    state: link
-    mode: 0755
-    owner: root
-    group: root
-  with_items:
-    # - sensu
-    - users
-  notify: run update_ood_portal
+# - name: Symlink shared templates
+#   file:
+#     src: "{{ trix_ood }}/{{ ood_version }}/_base/templates"
+#     dest: "/var/www/ood/apps/sys/trinity_{{ item }}/templates/base"
+#     state: link
+#     mode: 0755
+#     owner: root
+#     group: root
+#   with_items:
+#     - sensu
+#     - users
+#   notify: run update_ood_portal
 
-- name: Symlink shared static assets
-  file:
-    src: "{{ trix_ood }}/{{ ood_version }}/_base/static"
-    dest: "/var/www/ood/apps/sys/trinity_{{ item }}/static/base"
-    state: link
-    mode: 0755
-    owner: root
-    group: root
-  with_items:
-    # - sensu
-    - users
-  notify: run update_ood_portal
+# - name: Symlink shared static assets
+#   file:
+#     src: "{{ trix_ood }}/{{ ood_version }}/_base/static"
+#     dest: "/var/www/ood/apps/sys/trinity_{{ item }}/static/base"
+#     state: link
+#     mode: 0755
+#     owner: root
+#     group: root
+#   with_items:
+#     - sensu
+#     - users
+#   notify: run update_ood_portal
 
   # ----------------------------------------------------------------------
   # ensuring ood app root dir is open
