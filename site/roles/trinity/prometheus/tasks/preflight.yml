@@ -1,0 +1,121 @@
+---
+- name: Assert usage of systemd as an init system
+  ansible.builtin.assert:
+    that: ansible_service_mgr == 'systemd'
+    msg: "This module only works with systemd"
+
+- name: Install package fact dependencies
+  become: true
+  ansible.builtin.package:
+    name: "{{ _pkg_fact_req }}"
+    state: present
+  when: (_pkg_fact_req)
+  vars:
+    _pkg_fact_req: "{% if (ansible_pkg_mgr == 'apt') %}\
+                    {{ ('python-apt' if ansible_python_version is version('3', '<') else 'python3-apt') }}
+                    {% else %}\
+                    {% endif %}"
+
+- name: Gather package facts
+  ansible.builtin.package_facts:
+  when: "not 'packages' in ansible_facts"
+
+- name: Assert that used version supports listen address type
+  ansible.builtin.assert:
+    that:
+      - >-
+        prometheus_web_listen_address is string
+
+- name: Naive assertion of proper listen address
+  ansible.builtin.assert:
+    that:
+      - >-
+        [prometheus_web_listen_address] |
+          flatten |
+          reject('match', '.+:\\d+$') |
+          list |
+          length == 0
+
+- name: Assert no duplicate config flags
+  ansible.builtin.assert:
+    that:
+      - prometheus_config_flags_extra['config.file'] is not defined
+      - prometheus_config_flags_extra['storage.tsdb.path'] is not defined
+      - prometheus_config_flags_extra['storage.local.path'] is not defined
+      - prometheus_config_flags_extra['web.listen-address'] is not defined
+      - prometheus_config_flags_extra['web.external-url'] is not defined
+    msg: "Detected duplicate configuration entry. Please check your ansible variables and role README.md."
+
+- name: Assert external_labels aren't configured twice
+  ansible.builtin.assert:
+    that: prometheus_global.external_labels is not defined
+    msg: "Use prometheus_external_labels to define external labels"
+
+- name: Fail when prometheus_config_flags_extra duplicates parameters set by other variables
+  ansible.builtin.fail:
+    msg: >
+      Whooops. You are duplicating configuration. Please look at your prometheus_config_flags_extra
+      and check against other variables in defaults/main.yml
+  with_items:
+    - 'storage.tsdb.retention'
+    - 'storage.tsdb.path'
+    - 'storage.local.retention'
+    - 'storage.local.path'
+    - 'config.file'
+    - 'web.listen-address'
+    - 'web.external-url'
+  when: item in prometheus_config_flags_extra.keys()
+
+- name: Get all file_sd files from scrape_configs
+  ansible.builtin.set_fact:
+    file_sd_files: "{{ prometheus_scrape_configs | selectattr('file_sd_configs', 'defined') | map(attribute='file_sd_configs') |
+                    flatten | map(attribute='files') | flatten }}"
+
+- name: Fail when file_sd targets are not defined in scrape_configs
+  ansible.builtin.fail:
+    msg: >
+      Oh, snap! `{{ item.key }}` couldn't be found in your scrape configs. Please ensure you provided
+      all targets from prometheus_targets in prometheus_scrape_configs
+  when: not prometheus_config_dir + "/file_sd/" + item.key + ".yml" in file_sd_files
+  #  when: not item | basename | splitext | difference(['.yml']) | join('') in prometheus_targets.keys()
+  with_dict: "{{ prometheus_targets }}"
+
+- name: Alert when prometheus_alertmanager_config is empty, but prometheus_alert_rules is specified
+  ansible.builtin.debug:
+    msg: >
+      No alertmanager configuration was specified. If you want your alerts to be sent make sure to
+      specify a prometheus_alertmanager_config in defaults/main.yml.
+  when:
+    - prometheus_alertmanager_config == []
+    - prometheus_alert_rules != []
+
+- name: Discover latest version
+  ansible.builtin.set_fact:
+    prometheus_version: "{{ (lookup('url', 'https://api.github.com/repos/{{ _prometheus_repo}}/releases/latest', headers=_github_api_headers,
+                         split_lines=False) | from_json).get('tag_name') | replace('v', '') }}"
+  run_once: true
+  until: prometheus_version is version('0.0.0', '>=')
+  retries: 10
+  when:
+    - prometheus_version == "latest"
+    - prometheus_binary_local_dir | length == 0
+    - not prometheus_skip_install
+
+- name: Get prometheus binary checksum
+  when:
+    - prometheus_binary_local_dir | length == 0
+    - not prometheus_skip_install
+  block:
+    - name: "Get checksum list"
+      ansible.builtin.set_fact:
+        __prometheus_checksums: "{{ lookup('url', prometheus_checksums_url, headers=_github_api_headers, wantlist=True) | list }}"
+      run_once: true
+      until: __prometheus_checksums is search('linux-' + go_arch + '.tar.gz')
+      retries: 10
+
+    - name: "Get checksum for {{ go_arch }}"
+      ansible.builtin.set_fact:
+        __prometheus_checksum: "{{ item.split(' ')[0] }}"
+      with_items: "{{ __prometheus_checksums }}"
+      when:
+        - "('linux-' + go_arch + '.tar.gz') in item"
