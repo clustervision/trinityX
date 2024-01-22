@@ -4,29 +4,29 @@
   with_first_found:
     - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
     - "{{ ansible_distribution | lower }}.yml"
+    - "{{ ansible_distribution_file_variety | lower }}-{{ ansible_distribution_major_version }}.yml"
     - "{{ ansible_distribution_file_variety | lower }}.yml"
     - "{{ ansible_os_family | lower }}.yml"
   tags:
-    - slurm_exporter_install
-    - slurm_exporter_configure
-    - slurm_exporter_run
+    - prometheus-slurm-exporter-install
+    - prometheus-slurm-exporter-configure
+    - prometheus-slurm-exporter-run
 
 - import_tasks: preflight.yml
   tags:
-    - slurm_exporter_install
-    - slurm_exporter_configure
-    - slurm_exporter_run
+    - prometheus-slurm-exporter-install
+    - prometheus-slurm-exporter-configure
+    - prometheus-slurm-exporter-run
 
 - import_tasks: install.yml
   become: true
-  when: (not __slurm_exporter_is_installed.stat.exists) or (__slurm_exporter_current_version.content != slurm_exporter_version)
   tags:
-    - slurm_exporter_install
+    - prometheus-slurm-exporter-install
 
 - import_tasks: configure.yml
   become: true
   tags:
-    - slurm_exporter_configure
+    - prometheus-slurm-exporter-configure
 
 - name: Ensure Slurm Exporter is enabled on boot
   become: true
@@ -36,4 +36,4 @@
     enabled: true
     state: started
   tags:
-    - slurm_exporter_run
+    - prometheus-slurm-exporter-run

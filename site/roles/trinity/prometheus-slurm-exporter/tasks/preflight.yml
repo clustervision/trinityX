@@ -9,54 +9,30 @@
   changed_when: false
   check_mode: false
   register: __systemd_version
-  tags:
-    - skip_ansible_lint
 
 - name: Set systemd version fact
   set_fact:
     slurm_exporter_systemd_version: "{{ __systemd_version.stdout_lines[0] | regex_replace('^systemd\\s(\\d+).*$', '\\1') }}"
 
-- name: Naive assertion of proper listen address
+- name: Ensure that slurm_exporter_version is set
   assert:
     that:
-      - "':' in slurm_exporter_web_listen_address"
-
-- name: Check if prometheus-slurm-exporter is installed
-  stat:
-    path: "/var/lib/slurm_exporter/version"
-  register: __slurm_exporter_is_installed
+      - slurm_exporter_version is defined
+      - slurm_exporter_version | length > 0
   tags:
-    - slurm_exporter_install
+    - prometheus-slurm-exporter-install
 
-- name: Gather currently installed slurm_exporter version (if any)
-  slurp:
-    src: /var/lib/slurm_exporter/version
-  changed_when: false
-  register: __slurm_exporter_current_version
-  when: __slurm_exporter_is_installed.stat.exists
+- name: Register slurm_exporter binary
+  set_fact:
+    slurm_exporter_binary: "prometheus-slurm-exporter-{{ slurm_exporter_version }}-linux-amd64"
   tags:
-    - slurm_exporter_install
-    - skip_ansible_lint
+    - prometheus-slurm-exporter-install
 
-- block:
-    - name: Get latest release
-      uri:
-        url: "https://api.github.com/repos/vpenso/prometheus-slurm-exporter/releases/latest"
-        method: GET
-        return_content: true
-        status_code: 200
-        body_format: json
-        validate_certs: false
-        user: "{{ lookup('env', 'GH_USER') | default(omit) }}"
-        password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
-      no_log: "{{ not lookup('env', 'MOLECULE_DEBUG') | bool }}"
-      register: _latest_release
-      until: _latest_release.status == 200
-      retries: 5
-
-    - name: "Set slurm_exporter version to {{ _latest_release.json.tag_name }}"
-      set_fact:
-        slurm_exporter_version: "{{ _latest_release.json.tag_name }}"
-  when: slurm_exporter_version == "latest"
-  delegate_to: localhost
-  run_once: true
+- name: Ensure that slurm_exporter binary exists in role's files
+  assert:
+    that:
+      - slurm_exporter_binary is defined
+      - slurm_exporter_binary | length > 0
+      - slurm_exporter_binary in lookup('fileglob', 'files/prometheus-slurm-exporter-*')
+  tags:
+    - prometheus-slurm-exporter-install
