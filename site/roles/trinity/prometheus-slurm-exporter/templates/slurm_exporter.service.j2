@@ -1,0 +1,37 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=Prometheus SLURM Exporter
+After=network-online.target
+StartLimitInterval=0
+
+[Service]
+Type=simple
+User={{ slurm_exporter_system_user }}
+Group={{ slurm_exporter_system_group }}
+ExecStart=/usr/local/bin/prometheus-slurm-exporter \
+    --listen-address={{ slurm_exporter_web_listen_address }}
+
+SyslogIdentifier=slurm_exporter
+Restart=always
+RestartSec=1
+
+PrivateTmp=yes
+{% for m in ansible_mounts if m.mount == '/home' %}
+ProtectHome=read-only
+{% else %}
+ProtectHome=yes
+{% endfor %}
+NoNewPrivileges=yes
+
+{% if slurm_exporter_systemd_version | int >= 232 %}
+ProtectSystem=strict
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=yes
+{% else %}
+ProtectSystem=full
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target
