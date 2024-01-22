@@ -7,7 +7,7 @@ testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(
 
 def test_directories(host):
     dirs = [
-        "/var/lib/slurm_exporter"
+        "/var/lib/prometheus_slurm_exporter"
     ]
     for dir in dirs:
         d = host.file(dir)
@@ -17,7 +17,7 @@ def test_directories(host):
 
 def test_files(host):
     files = [
-        "/etc/systemd/system/slurm_exporter.service",
+        "/etc/systemd/system/prometheus_slurm_exporter.service",
         "/usr/local/bin/prometheus-slurm-exporter"
     ]
     for file in files:
@@ -34,7 +34,7 @@ def test_user(host):
 
 
 def test_service(host):
-    s = host.service("slurm_exporter")
+    s = host.service("prometheus_slurm_exporter")
 #    assert s.is_enabled
     assert s.is_running
 

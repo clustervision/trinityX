@@ -1,21 +1,21 @@
 ---
-- name: Create the slurm_exporter group
+- name: Create the prometheus_slurm_exporter group
   group:
-    name: "{{ slurm_exporter_system_group }}"
+    name: "{{ prometheus_slurm_exporter_system_group }}"
     state: present
     system: true
-  when: slurm_exporter_system_group != "root"
+  when: prometheus_slurm_exporter_system_group != "root"
 
-- name: Create the slurm_exporter user
+- name: Create the prometheus_slurm_exporter user
   user:
-    name: "{{ slurm_exporter_system_user }}"
-    groups: "{{ slurm_exporter_system_group }}"
+    name: "{{ prometheus_slurm_exporter_system_user }}"
+    groups: "{{ prometheus_slurm_exporter_system_group }}"
     append: true
     shell: /usr/sbin/nologin
     system: true
     createhome: false
     home: /
-  when: slurm_exporter_system_user != "root"
+  when: prometheus_slurm_exporter_system_user != "root"
 
 - name: Create /usr/local/bin
   file:
@@ -23,18 +23,18 @@
     state: directory
     mode: 0755
 
-- name: Create /var/lib/slurm_exporter
+- name: Create /var/lib/prometheus_slurm_exporter
   file:
-    path: /var/lib/slurm_exporter
+    path: /var/lib/prometheus_slurm_exporter
     state: directory
     mode: 0755
 
-- name: Propagate slurm_exporter binaries
+- name: Propagate prometheus_slurm_exporter binaries
   copy:
-    src: "{{slurm_exporter_binary}}"
+    src: "{{prometheus_slurm_exporter_binary}}"
     dest: "/usr/local/bin/prometheus-slurm-exporter"
     mode: 0755
     owner: root
     group: root
-  notify: restart slurm_exporter
+  notify: restart prometheus_slurm_exporter
   when: not ansible_check_mode

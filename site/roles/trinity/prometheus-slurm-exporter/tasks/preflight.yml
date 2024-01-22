@@ -12,27 +12,27 @@
 
 - name: Set systemd version fact
   set_fact:
-    slurm_exporter_systemd_version: "{{ __systemd_version.stdout_lines[0] | regex_replace('^systemd\\s(\\d+).*$', '\\1') }}"
+    prometheus_slurm_exporter_systemd_version: "{{ __systemd_version.stdout_lines[0] | regex_replace('^systemd\\s(\\d+).*$', '\\1') }}"
 
-- name: Ensure that slurm_exporter_version is set
+- name: Ensure that prometheus_slurm_exporter_version is set
   assert:
     that:
-      - slurm_exporter_version is defined
-      - slurm_exporter_version | length > 0
+      - prometheus_slurm_exporter_version is defined
+      - prometheus_slurm_exporter_version | length > 0
   tags:
     - prometheus-slurm-exporter-install
 
-- name: Register slurm_exporter binary
+- name: Register prometheus_slurm_exporter binary
   set_fact:
-    slurm_exporter_binary: "prometheus-slurm-exporter-{{ slurm_exporter_version }}-linux-amd64"
+    prometheus_slurm_exporter_binary: "prometheus-slurm-exporter-{{ prometheus_slurm_exporter_version }}-linux-amd64"
   tags:
     - prometheus-slurm-exporter-install
 
-- name: Ensure that slurm_exporter binary exists in role's files
+- name: Ensure that prometheus_slurm_exporter binary exists in role's files
   assert:
     that:
-      - slurm_exporter_binary is defined
-      - slurm_exporter_binary | length > 0
-      - slurm_exporter_binary in lookup('fileglob', 'files/prometheus-slurm-exporter-*')
+      - prometheus_slurm_exporter_binary is defined
+      - prometheus_slurm_exporter_binary | length > 0
+      - prometheus_slurm_exporter_binary in lookup('fileglob', 'files/prometheus-slurm-exporter-*')
   tags:
     - prometheus-slurm-exporter-install
