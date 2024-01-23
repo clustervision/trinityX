@@ -43,3 +43,16 @@
   when:
     - ansible_version.full is version_compare('2.4', '>=')
     - ansible_selinux.status == "enabled"
+
+- name: Configure prometheus node-exporter if prometheus_node_exporter_sd_file is defined
+  blockinfile:
+    path: "{{ prometheus_node_exporter_sd_file }}"
+    block: |
+      - targets:
+        - localhost:{{ node_exporter_web_listen_port }}
+        labels:
+          exporter: node
+    marker: "### {mark} ANSIBLE MANAGED BLOCK (controller.node_exporter)"
+  when:
+    - prometheus_node_exporter_sd_file is defined
+  

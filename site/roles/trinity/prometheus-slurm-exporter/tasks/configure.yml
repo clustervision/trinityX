@@ -17,3 +17,15 @@
   when:
     - ansible_version.full is version_compare('2.4', '>=')
     - ansible_selinux.status == "enabled"
+
+- name: Configure prometheus slurm-exporter if prometheus_slurm_exporter_sd_file is defined
+  blockinfile:
+    path: "{{ prometheus_slurm_exporter_sd_file }}"
+    block: |
+      - targets:
+        - localhost:{{ prometheus_slurm_exporter_web_listen_port }}
+        labels:
+          exporter: slurm
+    marker: "### {mark} ANSIBLE MANAGED BLOCK (controller.slurm_exporter)"
+  when:
+    - prometheus_slurm_exporter_sd_file is defined

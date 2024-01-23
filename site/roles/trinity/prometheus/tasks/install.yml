@@ -37,9 +37,7 @@
 - name: Get prometheus binary
   when:
     - prometheus_binary_local_dir | length == 0
-    - not prometheus_skip_install
   block:
-
     - name: Download prometheus binary to local folder
       become: false
       ansible.builtin.get_url:
@@ -102,7 +100,6 @@
     - promtool
   when:
     - prometheus_binary_local_dir | length > 0
-    - not prometheus_skip_install
   notify:
     - restart prometheus
 

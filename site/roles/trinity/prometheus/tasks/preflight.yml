@@ -66,20 +66,6 @@
     - 'web.external-url'
   when: item in prometheus_config_flags_extra.keys()
 
-- name: Get all file_sd files from scrape_configs
-  ansible.builtin.set_fact:
-    file_sd_files: "{{ prometheus_scrape_configs | selectattr('file_sd_configs', 'defined') | map(attribute='file_sd_configs') |
-                    flatten | map(attribute='files') | flatten }}"
-
-- name: Fail when file_sd targets are not defined in scrape_configs
-  ansible.builtin.fail:
-    msg: >
-      Oh, snap! `{{ item.key }}` couldn't be found in your scrape configs. Please ensure you provided
-      all targets from prometheus_targets in prometheus_scrape_configs
-  when: not prometheus_config_dir + "/file_sd/" + item.key + ".yml" in file_sd_files
-  #  when: not item | basename | splitext | difference(['.yml']) | join('') in prometheus_targets.keys()
-  with_dict: "{{ prometheus_targets }}"
-
 - name: Alert when prometheus_alertmanager_config is empty, but prometheus_alert_rules is specified
   ansible.builtin.debug:
     msg: >
@@ -99,12 +85,10 @@
   when:
     - prometheus_version == "latest"
     - prometheus_binary_local_dir | length == 0
-    - not prometheus_skip_install
 
 - name: Get prometheus binary checksum
   when:
     - prometheus_binary_local_dir | length == 0
-    - not prometheus_skip_install
   block:
     - name: "Get checksum list"
       ansible.builtin.set_fact:
@@ -119,3 +103,19 @@
       with_items: "{{ __prometheus_checksums }}"
       when:
         - "('linux-' + go_arch + '.tar.gz') in item"
+
+- name: Assert that prometheus_sd_files is a dictionary if defined
+  ansible.builtin.assert:
+    that:
+      - prometheus_sd_files is mapping
+    msg: "prometheus_sd_files must be a dictionary of type {job_name: path_to_sd_file}"
+  when: prometheus_sd_files is defined
+
+- name: Assert that prometheus_exporter_sd_file is in prometheus_sd_files if defined
+  ansible.builtin.assert:
+    that:
+      - prometheus_exporter_sd_file in prometheus_sd_files.values()
+    msg: "prometheus_exporter_sd_file={{prometheus_exporter_sd_file}} cannot be found in prometheus_sd_files={{prometheus_sd_files.values()}}"
+  when: prometheus_exporter_sd_file is defined
+    
+    

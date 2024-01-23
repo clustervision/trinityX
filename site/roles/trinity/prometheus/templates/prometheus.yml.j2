@@ -32,5 +32,13 @@ alerting:
   {% endif %}
 {% endif %}
 
+
+{% if prometheus_sd_files %}
 scrape_configs:
-  {{ prometheus_scrape_configs | to_nice_yaml(indent=2,sort_keys=False) | indent(2,False) }}
+  {% for job_name, file in prometheus_sd_files.items() %}
+  - job_name: {{ job_name }}
+    file_sd_configs:
+    - files:
+      - {{ file }}
+  {% endfor %}
+{% endif %}

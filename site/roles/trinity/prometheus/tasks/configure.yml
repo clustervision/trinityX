@@ -36,7 +36,6 @@
     group: prometheus
     mode: 0640
     validate: "{{ _prometheus_binary_install_dir }}/promtool check config %s"
-  no_log: "{{ false if (lookup('env', 'CI')) or (lookup('env', 'MOLECULE_PROVISIONER_NAME')) else true }}"
   notify:
     - reload prometheus
 
@@ -49,24 +48,56 @@
     group: prometheus
     mode: 0640
 
-- name: Configure prometheus static targets
-  ansible.builtin.copy:
-    content: |
-      {{ item.value | to_nice_yaml(indent=2, sort_keys=False) }}
-    dest: "{{ prometheus_config_dir }}/file_sd/{{ item.key }}.yml"
-    force: true
+- name: Create sd targets directories if needed
+  ansible.builtin.file:
+    path: "{{ item.value | dirname }}"
+    state: directory
     owner: root
     group: prometheus
-    mode: 0640
-  with_dict: "{{ prometheus_targets }}"
-  when: prometheus_targets != {}
+    mode: 0750
+  with_dict: "{{ prometheus_sd_files }}"
 
-- name: Copy prometheus custom static targets
-  ansible.builtin.copy:
-    src: "{{ item }}"
-    dest: "{{ prometheus_config_dir }}/file_sd/"
-    force: true
+- name: Create sd targets files if needed
+  ansible.builtin.file:
+    path: "{{ item.value }}"
+    state: touch
     owner: root
     group: prometheus
-    mode: 0640
-  with_fileglob: "{{ prometheus_static_targets_files }}"
+    mode: 0750
+  with_dict: "{{ prometheus_sd_files }}"
+
+- name: Configure prometheus self-exporter if prometheus_exporter_sd_file is defined
+  blockinfile:
+    path: "{{ prometheus_exporter_sd_file }}"
+    block: |
+      - targets:
+        - localhost:{{ prometheus_web_listen_port }}
+        labels:
+          exporter: prometheus
+    marker: "### {mark} ANSIBLE MANAGED BLOCK (controller.prometheus_exporter)"
+  when:
+    - prometheus_exporter_sd_file is defined
+  
+
+
+# - name: Configure prometheus static targets
+#   ansible.builtin.copy:
+#     content: |
+#       {{ item.value | to_nice_yaml(indent=2, sort_keys=False) }}
+#     dest: "{{ prometheus_config_dir }}/file_sd/{{ item.key }}.yml"
+#     force: true
+#     owner: root
+#     group: prometheus
+#     mode: 0640
+#   with_dict: "{{ prometheus_targets }}"
+#   when: prometheus_targets != {}
+
+# - name: Copy prometheus custom static targets
+#   ansible.builtin.copy:
+#     src: "{{ item }}"
+#     dest: "{{ prometheus_config_dir }}/file_sd/"
+#     force: true
+#     owner: root
+#     group: prometheus
+#     mode: 0640
+#   with_fileglob: "{{ prometheus_static_targets_files }}"
