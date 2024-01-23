@@ -1,4 +1,5 @@
-# Prometheus Slurm Exporter Role 
+# Ansible Role: prometheus-slurm-exporter
+### Description
 Ansible role to install and configure prometheus slurm exporter from precompiled binary
 ### Credits
 - Prometheus Slurm exporter fom [vpenso/prometheus-slurm-exporter](https://github.com/vpenso/prometheus-slurm-exporter)
