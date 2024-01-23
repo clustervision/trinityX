@@ -80,10 +80,11 @@
 - name: Place dashboards
   copy:
     src: "{{ item }}"
-    dest: "{{ grafana_dashboard_dir }}/{{ item }}"
+    dest: "{{ grafana_dashboard_dir }}/"
     owner: grafana
     group: grafana
-  with_items: "{{ grafana_dashboards }}"
+  with_fileglob:
+  - "files/dashboards/*"
   notify: restart grafana-server
 
 - name: Place branding
