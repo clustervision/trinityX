@@ -1,0 +1,33 @@
+# systemd unit file for the Python Demo Service
+
+
+[Unit]
+
+# Human readable name of the unit
+Description=Python Demo Service
+
+
+[Service]
+
+# Command to execute when the service is started
+ExecStart={{prometheus_sd_luna_script_path}} {{prometheus_sd_file}}
+
+# Disable Python's buffering of STDOUT and STDERR, so that output from the
+# service shows up immediately in systemd's logs
+Environment=PYTHONUNBUFFERED=1
+
+# Automatically restart the service if it crashes
+Restart=on-failure
+
+# Our service will notify systemd once it is up and running
+Type=notify
+
+# Use a dedicated user to run our service
+User=root
+
+
+[Install]
+
+# Tell systemd to automatically start this service when the system boots
+# (assuming the service is enabled)
+WantedBy=default.target
