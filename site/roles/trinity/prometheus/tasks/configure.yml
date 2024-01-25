@@ -48,23 +48,35 @@
     group: prometheus
     mode: 0640
 
+- name: Collect _prometheus_sd_file_configs
+  set_fact:
+    _prometheus_sd_file_configs: "{{ _prometheus_sd_file_configs | default([]) + ( item.file_sd_configs ) }}"
+  loop: "{{ prometheus_scrape_configs }}"
+  when: item.file_sd_configs is defined
+
+- name: Collect prometheus_sd_files
+  set_fact:
+    prometheus_sd_files: "{{ prometheus_sd_files | default([]) + ( item.files ) }}"
+  loop: "{{ _prometheus_sd_file_configs }}"
+
+
 - name: Create sd targets directories if needed
   ansible.builtin.file:
-    path: "{{ item.value | dirname }}"
+    path: "{{ item | dirname }}"
     state: directory
     owner: root
     group: prometheus
     mode: 0750
-  with_dict: "{{ prometheus_sd_files }}"
+  loop: "{{ prometheus_sd_files }}"
 
 - name: Create sd targets files if needed
   ansible.builtin.file:
-    path: "{{ item.value }}"
+    path: "{{ item }}"
     state: touch
     owner: root
     group: prometheus
     mode: 0750
-  with_dict: "{{ prometheus_sd_files }}"
+  loop: "{{ prometheus_sd_files }}"
 
 - name: Configure prometheus self-exporter if prometheus_exporter_sd_file is defined
   blockinfile:
