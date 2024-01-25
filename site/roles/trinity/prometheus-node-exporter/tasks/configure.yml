@@ -44,9 +44,9 @@
     - ansible_version.full is version_compare('2.4', '>=')
     - ansible_selinux.status == "enabled"
 
-- name: Configure prometheus node-exporter if prometheus_prometheus_node_exporter_sd_file is defined
+- name: Configure prometheus node-exporter if prometheus_node_exporter_sd_file is defined
   blockinfile:
-    path: "{{ prometheus_prometheus_node_exporter_sd_file }}"
+    path: "{{ prometheus_node_exporter_sd_file }}"
     block: |
       - targets:
         - {{ ansible_fqdn }}:{{ prometheus_node_exporter_web_listen_port }}
@@ -54,5 +54,5 @@
           exporter: node
     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_node_exporter)"
   when:
-    - prometheus_prometheus_node_exporter_sd_file is defined
+    - prometheus_node_exporter_sd_file is defined
   
