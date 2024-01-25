@@ -1,42 +1,42 @@
 ---
-- name: Copy the node_exporter systemd service file
+- name: Copy the prometheus_node_exporter systemd service file
   ansible.builtin.template:
-    src: node_exporter.service.j2
-    dest: /etc/systemd/system/node_exporter.service
+    src: prometheus_node_exporter.service.j2
+    dest: /etc/systemd/system/prometheus_node_exporter.service
     owner: root
     group: root
     mode: 0644
-  notify: restart node_exporter
+  notify: restart prometheus_node_exporter
 
-- name: Create node_exporter config directory
+- name: Create prometheus_node_exporter config directory
   ansible.builtin.file:
-    path: "/etc/node_exporter"
+    path: "/etc/prometheus_node_exporter"
     state: directory
     owner: root
     group: root
     mode: u+rwX,g+rwX,o=rX
 
-- name: Copy the node_exporter config file
+- name: Copy the prometheus_node_exporter config file
   ansible.builtin.template:
     src: config.yaml.j2
-    dest: /etc/node_exporter/config.yaml
+    dest: /etc/prometheus_node_exporter/config.yaml
     owner: root
     group: root
     mode: 0644
-  notify: restart node_exporter
+  notify: restart prometheus_node_exporter
 
 - name: Create textfile collector dir
   ansible.builtin.file:
-    path: "{{ node_exporter_textfile_dir }}"
+    path: "{{ prometheus_node_exporter_textfile_dir }}"
     state: directory
-    owner: "{{ node_exporter_system_user }}"
-    group: "{{ node_exporter_system_group }}"
+    owner: "{{ prometheus_node_exporter_system_user }}"
+    group: "{{ prometheus_node_exporter_system_group }}"
     mode: u+rwX,g+rwX,o=rX
-  when: node_exporter_textfile_dir | length > 0
+  when: prometheus_node_exporter_textfile_dir | length > 0
 
-- name: Allow node_exporter port in SELinux on RedHat OS family
+- name: Allow prometheus_node_exporter port in SELinux on RedHat OS family
   community.general.seport:
-    ports: "{{ node_exporter_web_listen_address.split(':')[-1] }}"
+    ports: "{{ prometheus_node_exporter_web_listen_address.split(':')[-1] }}"
     proto: tcp
     setype: http_port_t
     state: present
@@ -44,15 +44,15 @@
     - ansible_version.full is version_compare('2.4', '>=')
     - ansible_selinux.status == "enabled"
 
-- name: Configure prometheus node-exporter if prometheus_node_exporter_sd_file is defined
+- name: Configure prometheus node-exporter if prometheus_prometheus_node_exporter_sd_file is defined
   blockinfile:
-    path: "{{ prometheus_node_exporter_sd_file }}"
+    path: "{{ prometheus_prometheus_node_exporter_sd_file }}"
     block: |
       - targets:
-        - {{ ansible_fqdn }}:{{ node_exporter_web_listen_port }}
+        - {{ ansible_fqdn }}:{{ prometheus_node_exporter_web_listen_port }}
         labels:
           exporter: node
-    marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.node_exporter)"
+    marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_node_exporter)"
   when:
-    - prometheus_node_exporter_sd_file is defined
+    - prometheus_prometheus_node_exporter_sd_file is defined
   
