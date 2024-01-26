@@ -56,7 +56,10 @@ ProtectHome=true
 RemoveIPC=true
 RestrictSUIDSGID=true
 #SystemCallFilter=@signal @timer
-
+{% if prometheus_log_file %}
+StandardOutput=append:{{prometheus_log_file}}
+StandardError=append:{{prometheus_log_file}}
+{% endif %}
 {% if (ansible_facts.packages.systemd | first).version is version('231', '>=') %}
 ReadWritePaths={{ prometheus_db_dir }}
 {% for path in prometheus_read_only_dirs %}

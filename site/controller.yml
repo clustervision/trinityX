@@ -251,35 +251,34 @@
       tags: wrapup
     
     - role: trinity/prometheus
+      prometheus_config_dir: "{{trix_local}}/etc/prometheus"
+      prometheus_db_dir: "{{trix_local}}/var/lib/prometheus"
       prometheus_scrape_configs: # files read by prometheus to discover targets
       - job_name: file_sd
         file_sd_configs:
         - files:
-          - /trinity/local/etc/prometheus/targets/luna_nodes.yml
-          - /trinity/local/etc/prometheus/targets/static_nodes.yml
+          - "{{trix_local}}/prometheus/targets/luna_nodes.yml"
+          - "{{trix_local}}/prometheus/targets/static_nodes.yml"
       - job_name: http_sd
         http_sd_configs:
         - url: https://localhost:7050/export/prometheus
           tls_config:
             insecure_skip_verify: true
-
-      # file where prometheus self-exporter is announced
-      prometheus_exporter_sd_file: /trinity/local/etc/prometheus/targets/luna_nodes.yml
-      tags: prometheus, monitoring
-
-    # - role: trinity/prometheus-sd
-    #   prometheus_sd_file: /trinity/local/etc/prometheus/targets/luna_nodes.yml
-    #   tags: prometheus, prometheus-sd, monitoring
+      
+    - role: trinity/prometheus-alertmanager
+      alertmanager_config_dir: "{{trix_local}}/etc/alertmanager"
+      alertmanager_db_dir: "{{trix_local}}/var/lib/alertmanager"
+      tags: prometheus, prometheus-alertmanager, monitoring
 
     - role: trinity/prometheus-node-exporter
       # file where prometheus node-exporter is announced
-      prometheus_node_exporter_sd_file: /trinity/local/etc/prometheus/targets/luna_nodes.yml
+      prometheus_node_exporter_sd_file: "{{trix_local}}/etc/prometheus/targets/luna_nodes.yml"
       tags: prometheus, prometheus-node-exporter, monitoring
 
     - role: trinity/prometheus-slurm-exporter
       # file where prometheus slurm-exporter is announced
       prometheus_slurm_exporter_system_group: root
-      prometheus_slurm_exporter_sd_file: /trinity/local/etc/prometheus/targets/luna_nodes.yml
+      prometheus_slurm_exporter_sd_file: "{{trix_local}}/etc/prometheus/targets/luna_nodes.yml"
       tags: prometheus, prometheus-slurm-exporter, monitoring
       
     - role: trinity/grafana
