@@ -1,0 +1,143 @@
+---
+alertmanager_version: 0.26.0
+alertmanager_binary_local_dir: ''
+alertmanager_binary_url: "https://github.com/{{ _alertmanager_repo }}/releases/download/v{{ alertmanager_version }}/\
+                          alertmanager-{{ alertmanager_version }}.linux-{{ go_arch }}.tar.gz"
+alertmanager_checksums_url: "https://github.com/{{ _alertmanager_repo }}/releases/download/v{{ alertmanager_version }}/sha256sums.txt"
+alertmanager_skip_install: false
+
+alertmanager_config_dir: /etc/alertmanager
+alertmanager_db_dir: /var/lib/alertmanager
+
+alertmanager_config_file: 'alertmanager.yml.j2'
+
+alertmanager_template_files:
+  - alertmanager/templates/*.tmpl
+
+
+alertmanager_web_listen_host: '0.0.0.0'
+alertmanager_web_listen_port: 9093
+alertmanager_web_listen_address: "{{ alertmanager_web_listen_host }}:{{ alertmanager_web_listen_port }}"
+alertmanager_web_external_url: 'http://localhost:9093/'
+
+alertmanager_http_config: 
+  basic_auth:
+    username: admin
+    password: UNSAFE_PASSWORD
+
+alertmanager_resolve_timeout: 3m
+
+alertmanager_config_flags_extra: {}
+# alertmanager_config_flags_extra:
+#   data.retention: 10
+
+# SMTP default params
+alertmanager_smtp: {}
+# alertmanager_smtp:
+#   from: ''
+#   smarthost: ''
+#   auth_username: ''
+#   auth_password: ''
+#   auth_secret: ''
+#   auth_identity: ''
+#   require_tls: "True"
+
+# Default values you can see here -> https://prometheus.io/docs/alerting/configuration/
+alertmanager_slack_api_url: ''
+alertmanager_pagerduty_url: ''
+alertmanager_opsgenie_api_key: ''
+alertmanager_opsgenie_api_url: ''
+alertmanager_victorops_api_key: ''
+alertmanager_victorops_api_url: ''
+alertmanager_hipchat_api_url: ''
+alertmanager_hipchat_auth_token: ''
+alertmanager_wechat_url: ''
+alertmanager_wechat_secret: ''
+alertmanager_wechat_corp_id: ''
+
+# First read: https://github.com/prometheus/alertmanager#high-availability
+alertmanager_cluster:
+  listen-address: ""
+# alertmanager_cluster:
+#   listen-address: "{{ ansible_default_ipv4.address }}:6783"
+#   peers:
+#     - "{{ ansible_default_ipv4.address }}:6783"
+#     - "alertmanager.demo.do.prometheus.io:6783"
+
+alertmanager_receivers:
+- name: 'mail'
+  email_configs:
+  - to: 'root@localhost'
+    from: 'alertmanager@localhost'
+    smarthost: 'localhost:25'
+  
+alertmanager_time_intervals: []
+# alertmanager_time_intervals:
+#   - name: offhours
+#      time_intervals:
+#        - times:
+#            - start_time: "21:00"
+#              end_time: "24:00"
+#          location: "Africa/Johannesburg"
+alertmanager_inhibit_rules: []
+# alertmanager_inhibit_rules:
+#   - target_match:
+#       label: value
+#     source_match:
+#       label: value
+#     equal: ['dc', 'rack']
+#   - target_match_re:
+#       label: value1|value2
+#     source_match_re:
+#       label: value3|value5
+
+alertmanager_route: 
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: mail
+
+#   # This routes performs a regular expression match on alert labels to
+#   # catch alerts that are related to a list of services.
+#   routes:
+#     - match_re:
+#         service: ^(foo1|foo2|baz)$
+#       receiver: team-X-mails
+#       # The service has a sub-route for critical alerts, any alerts
+#       # that do not match, i.e. severity != critical, fall-back to the
+#       # parent node and are sent to 'team-X-mails'
+#       routes:
+#         - match:
+#             severity: critical
+#           receiver: team-X-pager
+#     - match:
+#         service: files
+#       receiver: team-Y-mails
+#       routes:
+#         - match:
+#             severity: critical
+#           receiver: team-Y-pager
+#     # This route handles all alerts coming from a database service. If there's
+#     # no team to handle it, it defaults to the DB team.
+#     - match:
+#         service: database
+#       receiver: team-DB-pager
+#       # Also group alerts by affected database.
+#       group_by: [alertname, cluster, database]
+#       routes:
+#         - match:
+#             owner: team-X
+#           receiver: team-X-pager
+#         - match:
+#             owner: team-Y
+#           receiver: team-Y-pager
+
+# The template for amtool's configuration
+alertmanager_amtool_config_file: 'amtool.yml.j2'
+
+# Location (URL) of the alertmanager
+alertmanager_amtool_config_alertmanager_url: "{{ alertmanager_web_external_url }}"
+
+# Extended output of `amtool` commands, use '' for less verbosity
+alertmanager_amtool_config_output: 'extended'

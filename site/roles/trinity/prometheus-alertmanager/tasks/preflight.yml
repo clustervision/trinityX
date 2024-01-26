@@ -1,0 +1,165 @@
+---
+- name: Assert usage of systemd as an init system
+  ansible.builtin.assert:
+    that: ansible_service_mgr == 'systemd'
+    msg: "This module only works with systemd"
+
+- name: Install package fact dependencies
+  become: true
+  ansible.builtin.package:
+    name: "{{ _pkg_fact_req }}"
+    state: present
+  when: (_pkg_fact_req)
+  vars:
+    _pkg_fact_req: "{% if (ansible_pkg_mgr == 'apt') %}\
+                    {{ ('python-apt' if ansible_python_version is version('3', '<') else 'python3-apt') }}
+                    {% else %}\
+                    {% endif %}"
+
+- name: Gather package facts
+  ansible.builtin.package_facts:
+  when: "not 'packages' in ansible_facts"
+
+- name: Assert that used version supports listen address type
+  ansible.builtin.assert:
+    that:
+      - >-
+        alertmanager_web_listen_address is string
+        or
+        (
+          alertmanager_version is version('0.25.0', '>=') and
+          alertmanager_web_listen_address | type_debug == "list"
+        )
+
+- name: Naive assertion of proper listen address
+  ansible.builtin.assert:
+    that:
+      - >-
+        [alertmanager_web_listen_address] |
+          flatten |
+          reject('match', '.+:\\d+$') |
+          list |
+          length == 0
+
+- name: Discover latest version
+  ansible.builtin.set_fact:
+    alertmanager_version: "{{ (lookup('url', 'https://api.github.com/repos/{{ _alertmanager_repo }}/releases/latest', headers=_github_api_headers,
+                           split_lines=False) | from_json).get('tag_name') | replace('v', '') }}"
+  run_once: true
+  until: alertmanager_version is version('0.0.0', '>=')
+  retries: 10
+  when:
+    - alertmanager_version == "latest"
+    - alertmanager_binary_local_dir | length == 0
+    - not alertmanager_skip_install
+
+- name: Get alertmanager binary checksum
+  when:
+    - alertmanager_binary_local_dir | length == 0
+    - not alertmanager_skip_install
+  block:
+    - name: "Get checksum list"
+      ansible.builtin.set_fact:
+        __alertmanager_checksums: "{{ lookup('url', alertmanager_checksums_url, headers=_github_api_headers, wantlist=True) | list }}"
+      run_once: true
+      until: __alertmanager_checksums is search('linux-' + go_arch + '.tar.gz')
+      retries: 10
+
+    - name: "Get checksum for {{ go_arch }}"
+      ansible.builtin.set_fact:
+        __alertmanager_checksum: "{{ item.split(' ')[0] }}"
+      with_items: "{{ __alertmanager_checksums }}"
+      when:
+        - "('linux-' + go_arch + '.tar.gz') in item"
+
+
+- name: Fail when extra config flags are duplicating ansible variables
+  ansible.builtin.fail:
+    msg: "Detected duplicate configuration entry. Please check your ansible variables and role README.md."
+  when:
+    (alertmanager_config_flags_extra['config.file'] is defined) or
+    (alertmanager_config_flags_extra['storage.path'] is defined) or
+    (alertmanager_config_flags_extra['web.listen-address'] is defined) or
+    (alertmanager_config_flags_extra['web.external-url'] is defined)
+
+- name: Fail when there are no receivers defined
+  ansible.builtin.fail:
+    msg: "Configure alert receivers (`alertmanager_receivers`). Otherwise alertmanager won't know where to send alerts."
+  when:
+    - alertmanager_config_file == 'alertmanager.yml.j2'
+    - alertmanager_receivers == []
+
+- name: Fail when there is no alert route defined
+  ansible.builtin.fail:
+    msg: "Configure alert routing (`alertmanager_route`). Otherwise alertmanager won't know how to send alerts."
+  when:
+    - alertmanager_config_file == 'alertmanager.yml.j2'
+    - alertmanager_route == {}
+
+- name: "DEPRECATION WARNING: alertmanager version 0.15 and earlier are no longer supported and will be dropped from future releases"
+  failed_when: false
+  ansible.builtin.fail:
+    msg: "Please use `alertmanager_version >= v0.16.0`"
+  when: alertmanager_version is version_compare('0.16.0', '<')
+
+- name: Check deprecated variable `alertmanager_cli_flags`
+  when: alertmanager_cli_flags is defined
+  block:
+    - name: Backward compatibility of variable [part 1]
+      ansible.builtin.set_fact:
+        alertmanager_config_flags_extra: "{{ alertmanager_cli_flags }}"
+
+    - name: "DEPRECATION WARNING: `alertmanager_cli_flags` is no longer supported and will be dropped from future releases"
+      failed_when: false
+      ansible.builtin.fail:
+        msg: "Please use `alertmanager_config_flags_extra` instead of `alertmanager_cli_flags`"
+
+- name: Check deprecated variable `alertmanager_listen_address`
+  when: alertmanager_listen_address is defined
+  block:
+    - name: Backward compatibility of variable [part 2]
+      ansible.builtin.set_fact:
+        alertmanager_web_listen_address: "{{ alertmanager_listen_address }}"
+
+    - name: "DEPRECATION WARNING: `alertmanager_listen_address` is no longer supported and will be dropped from future releases"
+      failed_when: false
+      ansible.builtin.fail:
+        msg: "Please use `alertmanager_web_listen_address` instead of `alertmanager_listen_address`"
+
+- name: Check deprecated variable `alertmanager_external_url`
+  when: alertmanager_external_url is defined
+  block:
+    - name: Backward compatibility of variable [part 3]
+      ansible.builtin.set_fact:
+        alertmanager_web_external_url: "{{ alertmanager_external_url }}"
+
+    - name: "DEPRECATION WARNING: `alertmanager_external_url` is no longer supported and will be dropped from future releases"
+      failed_when: false
+      ansible.builtin.fail:
+        msg: "Please use `alertmanager_web_external_url` instead of `alertmanager_external_url`"
+
+- name: Check deprecated variable `alertmanager_mesh`
+  when: alertmanager_mesh is defined
+  block:
+    - name: HA config compatibility with alertmanager<0.15.0
+      ansible.builtin.set_fact:
+        alertmanager_cluster: "{{ alertmanager_mesh }}"
+
+    - name: "DEPRECATION WARNING: `alertmanager_mesh` is no longer supported and will be dropped from future releases"
+      failed_when: false
+      ansible.builtin.fail:
+        msg: "Please use `alertmanager_cluster` instead of `alertmanager_cluster`"
+
+- name: "`alertmanager_child_routes` is no longer supported"
+  ansible.builtin.fail:
+    msg: "Please move content of `alertmanager_child_routes` to `alertmanager_route.routes` as the former variable is deprecated
+          and will be removed in future versions."
+  when: alertmanager_child_routes is defined
+
+- name: "`alertmanager_time_intervals` is only supported on version 0.22.0. Please upgrade to this version."
+  ansible.builtin.fail:
+    msg: "To use `alertmanager_time_intervals`,
+          Please upgrade to AlertManager 0.22.0 or newer."
+  when:
+    - alertmanager_version is version_compare('0.22.0', '<')
+    - alertmanager_time_intervals is defined
