@@ -264,22 +264,24 @@
         - url: https://localhost:7050/export/prometheus
           tls_config:
             insecure_skip_verify: true
+      tags: prometheus-server, prometheus, monitoring
+
       
     - role: trinity/prometheus-alertmanager
       alertmanager_config_dir: "{{trix_local}}/etc/alertmanager"
       alertmanager_db_dir: "{{trix_local}}/var/lib/alertmanager"
-      tags: prometheus, prometheus-alertmanager, monitoring
+      tags: prometheus-alertmanager, prometheus, monitoring
 
     - role: trinity/prometheus-node-exporter
       # file where prometheus node-exporter is announced
       prometheus_node_exporter_sd_file: "{{trix_local}}/etc/prometheus/targets/luna_nodes.yml"
-      tags: prometheus, prometheus-node-exporter, monitoring
+      tags: prometheus-node-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-slurm-exporter
       # file where prometheus slurm-exporter is announced
       prometheus_slurm_exporter_system_group: root
       prometheus_slurm_exporter_sd_file: "{{trix_local}}/etc/prometheus/targets/luna_nodes.yml"
-      tags: prometheus, prometheus-slurm-exporter, monitoring
+      tags: prometheus-slurm-exporter, prometheus, monitoring
       
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication }}"
