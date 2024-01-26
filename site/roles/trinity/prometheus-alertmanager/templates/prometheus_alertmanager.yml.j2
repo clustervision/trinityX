@@ -1,0 +1,60 @@
+{{ ansible_managed | comment }}
+
+global:
+  resolve_timeout: {{ prometheus_alertmanager_resolve_timeout | quote}}
+{% for key, value in prometheus_alertmanager_smtp.items() %}
+  smtp_{{ key }}: {{ value | quote }}
+{% endfor %}
+{% if prometheus_alertmanager_slack_api_url | string | length %}
+  slack_api_url: {{ prometheus_alertmanager_slack_api_url | quote }}
+{% endif %}
+{% if prometheus_alertmanager_http_config | length %}
+  http_config:
+    {{ prometheus_alertmanager_http_config | to_nice_yaml(indent=2) | indent(4, False)}}
+{% endif %}
+{% if prometheus_alertmanager_pagerduty_url | string | length %}
+  pagerduty_url: {{ prometheus_alertmanager_pagerduty_url | quote }}
+{% endif %}
+{% if prometheus_alertmanager_opsgenie_api_key | string | length %}
+  opsgenie_api_key: {{ prometheus_alertmanager_opsgenie_api_key | quote }}
+{% endif %}
+{% if prometheus_alertmanager_opsgenie_api_url | string | length %}
+  opsgenie_api_url: {{ prometheus_alertmanager_opsgenie_api_url | quote }}
+{% endif %}
+{% if prometheus_alertmanager_victorops_api_key | string | length %}
+  victorops_api_key: {{ prometheus_alertmanager_victorops_api_key | quote }}
+{% endif %}
+{% if prometheus_alertmanager_victorops_api_url | string | length %}
+  victorops_api_url: {{ prometheus_alertmanager_victorops_api_url | quote }}
+{% endif %}
+{% if prometheus_alertmanager_hipchat_api_url | string | length %}
+  hipchat_api_url: {{ prometheus_alertmanager_hipchat_api_url | quote }}
+{% endif %}
+{% if prometheus_alertmanager_hipchat_auth_token | string | length %}
+  hipchat_auth_token: {{ prometheus_alertmanager_hipchat_auth_token | quote }}
+{% endif %}
+{% if prometheus_alertmanager_wechat_url | string | length %}
+  wechat_api_url: {{ prometheus_alertmanager_wechat_url | quote }}
+{% endif %}
+{% if prometheus_alertmanager_wechat_secret | string | length %}
+  wechat_api_secret: {{ prometheus_alertmanager_wechat_secret | quote }}
+{% endif %}
+{% if prometheus_alertmanager_wechat_corp_id | string | length %}
+  wechat_api_corp_id: {{ prometheus_alertmanager_wechat_corp_id | quote }}
+{% endif %}
+templates:
+- '{{ prometheus_alertmanager_config_dir }}/templates/*.tmpl'
+{% if prometheus_alertmanager_receivers | length %}
+receivers:
+{{ prometheus_alertmanager_receivers | to_nice_yaml(indent=2) }}
+{% endif %}
+{% if prometheus_alertmanager_inhibit_rules | length %}
+inhibit_rules:
+{{ prometheus_alertmanager_inhibit_rules | to_nice_yaml(indent=2) }}
+{% endif %}
+{% if prometheus_alertmanager_time_intervals | length %}
+time_intervals:
+{{ prometheus_alertmanager_time_intervals | to_nice_yaml(indent=2) }}
+{% endif %}
+route:
+  {{ prometheus_alertmanager_route | to_nice_yaml(indent=2) | indent(2, False) }}

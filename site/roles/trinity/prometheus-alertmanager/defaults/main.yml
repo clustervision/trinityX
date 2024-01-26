@@ -1,36 +1,36 @@
 ---
-alertmanager_version: 0.26.0
-alertmanager_binary_local_dir: ''
-alertmanager_binary_url: "https://github.com/{{ _alertmanager_repo }}/releases/download/v{{ alertmanager_version }}/\
-                          alertmanager-{{ alertmanager_version }}.linux-{{ go_arch }}.tar.gz"
-alertmanager_checksums_url: "https://github.com/{{ _alertmanager_repo }}/releases/download/v{{ alertmanager_version }}/sha256sums.txt"
-alertmanager_skip_install: false
+prometheus_alertmanager_version: 0.26.0
+prometheus_alertmanager_binary_local_dir: ''
+prometheus_alertmanager_binary_url: "https://github.com/{{ _prometheus_alertmanager_repo }}/releases/download/v{{ prometheus_alertmanager_version }}/\
+                          alertmanager-{{ prometheus_alertmanager_version }}.linux-{{ go_arch }}.tar.gz"
+prometheus_alertmanager_checksums_url: "https://github.com/{{ _prometheus_alertmanager_repo }}/releases/download/v{{ prometheus_alertmanager_version }}/sha256sums.txt"
+prometheus_alertmanager_skip_install: false
 
-alertmanager_config_dir: /etc/alertmanager
-alertmanager_db_dir: /var/lib/alertmanager
+prometheus_alertmanager_config_dir: /etc/alertmanager
+prometheus_alertmanager_db_dir: /var/lib/alertmanager
 
-alertmanager_config_file: 'alertmanager.yml.j2'
+prometheus_alertmanager_config_file: 'prometheus_alertmanager.yml.j2'
 
-alertmanager_template_files:
+prometheus_alertmanager_template_files:
   - alertmanager/templates/*.tmpl
 
 
-alertmanager_web_listen_host: '0.0.0.0'
-alertmanager_web_listen_port: 9093
-alertmanager_web_listen_address: "{{ alertmanager_web_listen_host }}:{{ alertmanager_web_listen_port }}"
-alertmanager_web_external_url: 'http://localhost:9093/'
+prometheus_alertmanager_web_listen_host: '0.0.0.0'
+prometheus_alertmanager_web_listen_port: 9093
+prometheus_alertmanager_web_listen_address: "{{ prometheus_alertmanager_web_listen_host }}:{{ prometheus_alertmanager_web_listen_port }}"
+prometheus_alertmanager_web_external_url: 'http://localhost:9093/'
 
-alertmanager_http_config: []
+prometheus_alertmanager_http_config: []
 
-alertmanager_resolve_timeout: 3m
+prometheus_alertmanager_resolve_timeout: 3m
 
-alertmanager_config_flags_extra: {}
-# alertmanager_config_flags_extra:
+prometheus_alertmanager_config_flags_extra: {}
+# prometheus_alertmanager_config_flags_extra:
 #   data.retention: 10
 
 # SMTP default params
-alertmanager_smtp: {}
-# alertmanager_smtp:
+prometheus_alertmanager_smtp: {}
+# prometheus_alertmanager_smtp:
 #   from: ''
 #   smarthost: ''
 #   auth_username: ''
@@ -40,44 +40,44 @@ alertmanager_smtp: {}
 #   require_tls: "True"
 
 # Default values you can see here -> https://prometheus.io/docs/alerting/configuration/
-alertmanager_slack_api_url: ''
-alertmanager_pagerduty_url: ''
-alertmanager_opsgenie_api_key: ''
-alertmanager_opsgenie_api_url: ''
-alertmanager_victorops_api_key: ''
-alertmanager_victorops_api_url: ''
-alertmanager_hipchat_api_url: ''
-alertmanager_hipchat_auth_token: ''
-alertmanager_wechat_url: ''
-alertmanager_wechat_secret: ''
-alertmanager_wechat_corp_id: ''
+prometheus_alertmanager_slack_api_url: ''
+prometheus_alertmanager_pagerduty_url: ''
+prometheus_alertmanager_opsgenie_api_key: ''
+prometheus_alertmanager_opsgenie_api_url: ''
+prometheus_alertmanager_victorops_api_key: ''
+prometheus_alertmanager_victorops_api_url: ''
+prometheus_alertmanager_hipchat_api_url: ''
+prometheus_alertmanager_hipchat_auth_token: ''
+prometheus_alertmanager_wechat_url: ''
+prometheus_alertmanager_wechat_secret: ''
+prometheus_alertmanager_wechat_corp_id: ''
 
 # First read: https://github.com/prometheus/alertmanager#high-availability
-alertmanager_cluster:
+prometheus_alertmanager_cluster:
   listen-address: ""
-# alertmanager_cluster:
+# prometheus_alertmanager_cluster:
 #   listen-address: "{{ ansible_default_ipv4.address }}:6783"
 #   peers:
 #     - "{{ ansible_default_ipv4.address }}:6783"
 #     - "alertmanager.demo.do.prometheus.io:6783"
 
-alertmanager_receivers:
+prometheus_alertmanager_receivers:
 - name: 'mail'
   email_configs:
   - to: 'root@localhost'
     from: 'alertmanager@localhost'
     smarthost: 'localhost:25'
   
-alertmanager_time_intervals: []
-# alertmanager_time_intervals:
+prometheus_alertmanager_time_intervals: []
+# prometheus_alertmanager_time_intervals:
 #   - name: offhours
 #      time_intervals:
 #        - times:
 #            - start_time: "21:00"
 #              end_time: "24:00"
 #          location: "Africa/Johannesburg"
-alertmanager_inhibit_rules: []
-# alertmanager_inhibit_rules:
+prometheus_alertmanager_inhibit_rules: []
+# prometheus_alertmanager_inhibit_rules:
 #   - target_match:
 #       label: value
 #     source_match:
@@ -88,7 +88,7 @@ alertmanager_inhibit_rules: []
 #     source_match_re:
 #       label: value3|value5
 
-alertmanager_route: 
+prometheus_alertmanager_route: 
   group_by: ['alertname', 'cluster', 'service']
   group_wait: 30s
   group_interval: 5m
@@ -131,10 +131,10 @@ alertmanager_route:
 #           receiver: team-Y-pager
 
 # The template for amtool's configuration
-alertmanager_amtool_config_file: 'amtool.yml.j2'
+prometheus_alertmanager_amtool_config_file: 'amtool.yml.j2'
 
 # Location (URL) of the alertmanager
-alertmanager_amtool_config_alertmanager_url: "{{ alertmanager_web_external_url }}"
+prometheus_alertmanager_amtool_config_alertmanager_url: "{{ prometheus_alertmanager_web_external_url }}"
 
 # Extended output of `amtool` commands, use '' for less verbosity
-alertmanager_amtool_config_output: 'extended'
+prometheus_alertmanager_amtool_config_output: 'extended'

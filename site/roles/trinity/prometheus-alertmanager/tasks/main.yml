@@ -4,13 +4,13 @@
     file: preflight.yml
     apply:
       tags:
-        - alertmanager_install
-        - alertmanager_configure
-        - alertmanager_run
+        - prometheus_alertmanager_install
+        - prometheus_alertmanager_configure
+        - prometheus_alertmanager_run
   tags:
-    - alertmanager_install
-    - alertmanager_configure
-    - alertmanager_run
+    - prometheus_alertmanager_install
+    - prometheus_alertmanager_configure
+    - prometheus_alertmanager_run
 
 - name: Install
   ansible.builtin.include_tasks:
@@ -18,9 +18,9 @@
     apply:
       become: true
       tags:
-        - alertmanager_install
+        - prometheus_alertmanager_install
   tags:
-    - alertmanager_install
+    - prometheus_alertmanager_install
 
 - name: SELinux
   ansible.builtin.include_tasks:
@@ -28,10 +28,10 @@
     apply:
       become: true
       tags:
-        - alertmanager_configure
+        - prometheus_alertmanager_configure
   when: ansible_selinux.status == "enabled"
   tags:
-    - alertmanager_configure
+    - prometheus_alertmanager_configure
 
 - name: Configure
   ansible.builtin.include_tasks:
@@ -39,11 +39,11 @@
     apply:
       become: true
       tags:
-        - alertmanager_configure
+        - prometheus_alertmanager_configure
   tags:
-    - alertmanager_configure
+    - prometheus_alertmanager_configure
 
-- name: Ensure alertmanager service is started and enabled
+- name: Ensure prometheus_alertmanager.service is started and enabled
   become: true
   ansible.builtin.systemd:
     daemon_reload: true
@@ -51,7 +51,7 @@
     state: started
     enabled: true
   tags:
-    - alertmanager_run
+    - prometheus_alertmanager_run
 
 - name: Flush alertmangaer handlers after run.
   ansible.builtin.meta: flush_handlers

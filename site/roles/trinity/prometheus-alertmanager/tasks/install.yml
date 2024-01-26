@@ -21,23 +21,23 @@
     group: alertmanager
     mode: 0755
   with_items:
-    - "{{ alertmanager_config_dir }}"
-    - "{{ alertmanager_config_dir }}/templates"
-    - "{{ alertmanager_db_dir }}"
-    - "{{ _alertmanager_amtool_config_dir }}"
+    - "{{ prometheus_alertmanager_config_dir }}"
+    - "{{ prometheus_alertmanager_config_dir }}/templates"
+    - "{{ prometheus_alertmanager_db_dir }}"
+    - "{{ _prometheus_alertmanager_amtool_config_dir }}"
 
 - name: Get binary
   when:
-    - alertmanager_binary_local_dir | length == 0
-    - not alertmanager_skip_install
+    - prometheus_alertmanager_binary_local_dir | length == 0
+    - not prometheus_alertmanager_skip_install
   block:
 
     - name: Download alertmanager binary to local folder
       become: false
       ansible.builtin.get_url:
-        url: "{{ alertmanager_binary_url }}"
-        dest: "/tmp/alertmanager-{{ alertmanager_version }}.linux-{{ go_arch }}.tar.gz"
-        checksum: "sha256:{{ __alertmanager_checksum }}"
+        url: "{{ prometheus_alertmanager_binary_url }}"
+        dest: "/tmp/alertmanager-{{ prometheus_alertmanager_version }}.linux-{{ go_arch }}.tar.gz"
+        checksum: "sha256:{{ __prometheus_alertmanager_checksum }}"
         mode: 0644
       register: _download_archive
       until: _download_archive is succeeded
@@ -50,17 +50,17 @@
     - name: Unpack alertmanager binaries
       become: false
       ansible.builtin.unarchive:
-        src: "/tmp/alertmanager-{{ alertmanager_version }}.linux-{{ go_arch }}.tar.gz"
+        src: "/tmp/alertmanager-{{ prometheus_alertmanager_version }}.linux-{{ go_arch }}.tar.gz"
         dest: "/tmp"
         mode: 0755
-        creates: "/tmp/alertmanager-{{ alertmanager_version }}.linux-{{ go_arch }}/alertmanager"
+        creates: "/tmp/alertmanager-{{ prometheus_alertmanager_version }}.linux-{{ go_arch }}/alertmanager"
       delegate_to: localhost
       check_mode: false
 
     - name: Propagate official alertmanager and amtool binaries
       ansible.builtin.copy:
-        src: "/tmp/alertmanager-{{ alertmanager_version }}.linux-{{ go_arch }}/{{ item }}"
-        dest: "{{ _alertmanager_binary_install_dir }}/{{ item }}"
+        src: "/tmp/alertmanager-{{ prometheus_alertmanager_version }}.linux-{{ go_arch }}/{{ item }}"
+        dest: "{{ _prometheus_alertmanager_binary_install_dir }}/{{ item }}"
         mode: 0755
         owner: root
         group: root
@@ -72,8 +72,8 @@
 
 - name: Propagate locally distributed alertmanager and amtool binaries
   ansible.builtin.copy:
-    src: "{{ alertmanager_binary_local_dir }}/{{ item }}"
-    dest: "{{ _alertmanager_binary_install_dir }}/{{ item }}"
+    src: "{{ prometheus_alertmanager_binary_local_dir }}/{{ item }}"
+    dest: "{{ _prometheus_alertmanager_binary_install_dir }}/{{ item }}"
     mode: 0755
     owner: root
     group: root
@@ -81,7 +81,7 @@
     - alertmanager
     - amtool
   when:
-    - alertmanager_binary_local_dir | length > 0
-    - not alertmanager_skip_install
+    - prometheus_alertmanager_binary_local_dir | length > 0
+    - not prometheus_alertmanager_skip_install
   notify:
     - restart alertmanager
