@@ -20,6 +20,19 @@
   notify:
     - restart alertmanager
 
+- name: Copy alertmanager web config ( for basic auth )
+  ansible.builtin.template:
+    force: true
+    src: "{{ alertmanager_config_file }}"
+    dest: "{{ alertmanager_config_dir }}/alertmanage.web.yml"
+    owner: alertmanager
+    group: alertmanager
+    mode: 0644
+    # validate: "{{ _alertmanager_binary_install_dir }}/amtool check-config %s"
+  notify:
+    - restart alertmanager
+  when: alertmanager_auth_user is defined
+
 - name: Create systemd service unit
   ansible.builtin.template:
     src: alertmanager.service.j2

@@ -250,6 +250,10 @@
     - role: trinity/wrapup
       tags: wrapup
     
+    - role: trinity/prometheus-auth
+      prometheus_auth_credentials_dir: '/etc/trinity/prometheus'
+      tags: prometheus-auth, prometheus, monitoring
+
     - role: trinity/prometheus
       prometheus_config_dir: "{{trix_local}}/etc/prometheus"
       prometheus_db_dir: "{{trix_local}}/var/lib/prometheus"
@@ -264,12 +268,15 @@
         - url: https://localhost:7050/export/prometheus
           tls_config:
             insecure_skip_verify: true
+      prometheus_exporter_sd_file: "{{trix_local}}/etc/prometheus/targets/controller.yml"
       tags: prometheus-server, prometheus, monitoring
 
       
     - role: trinity/prometheus-alertmanager
       alertmanager_config_dir: "{{trix_local}}/etc/alertmanager"
       alertmanager_db_dir: "{{trix_local}}/var/lib/alertmanager"
+      alertmanager_auth_user: "{{ prometheus_auth_user }}"
+      alertmanager_auth_password: "{{ prometheus_auth_password }}"
       tags: prometheus-alertmanager, prometheus, monitoring
 
     - role: trinity/prometheus-node-exporter

@@ -1,0 +1,17 @@
+- name: Create credentials folder if it does not exist
+  file:
+    path: "{{ prometheus_auth_credentials_dir }}"
+    state: directory
+    mode: 0755
+
+- name: Register _prometheus_auth_credentials_file
+  set_fact:
+    _prometheus_auth_credentials_file: "{{ prometheus_auth_credentials_dir }}/{{ prometheus_auth_user }}.txt"
+
+- name: Retrieve password from {{ _prometheus_auth_credentials_file }} if exists, generate it otherwise
+  set_fact:
+    prometheus_auth_password: "{{ lookup('password',
+                        _prometheus_auth_credentials_file,
+                        chars=['ascii_letters','digits','hexdigits']) }}"
+
+
