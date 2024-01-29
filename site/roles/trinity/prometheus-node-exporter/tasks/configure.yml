@@ -27,16 +27,16 @@
 
 - name: Create textfile collector dir
   ansible.builtin.file:
-    path: "{{ prometheus_node_exporter_textfile_dir }}"
+    path: "{{ prometheus_node_exporter_db_dir }}"
     state: directory
     owner: "{{ prometheus_node_exporter_system_user }}"
     group: "{{ prometheus_node_exporter_system_group }}"
     mode: u+rwX,g+rwX,o=rX
-  when: prometheus_node_exporter_textfile_dir | length > 0
+  when: prometheus_node_exporter_db_dir | length > 0
 
 - name: Allow prometheus_node_exporter port in SELinux on RedHat OS family
   community.general.seport:
-    ports: "{{ prometheus_node_exporter_web_listen_address.split(':')[-1] }}"
+    ports: "{{ prometheus_node_exporter_web_listen_port }}"
     proto: tcp
     setype: http_port_t
     state: present

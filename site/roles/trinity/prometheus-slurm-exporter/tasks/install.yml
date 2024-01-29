@@ -17,9 +17,9 @@
     home: /
   when: prometheus_slurm_exporter_system_user != "root"
 
-- name: Create /usr/local/bin
+- name: Create prometheus_node_exporter_binary_install_dir
   file:
-    path: /usr/local/bin
+    path: "{{prometheus_node_exporter_binary_install_dir}}"
     state: directory
     mode: 0755
 
@@ -32,7 +32,7 @@
 - name: Propagate prometheus_slurm_exporter binaries
   copy:
     src: "{{prometheus_slurm_exporter_binary}}"
-    dest: "/usr/local/bin/prometheus-slurm-exporter"
+    dest: "{{prometheus_node_exporter_binary_install_dir}}/prometheus-slurm-exporter"
     mode: 0755
     owner: root
     group: root

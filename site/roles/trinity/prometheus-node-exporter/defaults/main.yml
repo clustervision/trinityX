@@ -4,26 +4,18 @@ prometheus_node_exporter_binary_local_dir: ""
 prometheus_node_exporter_binary_url: "https://github.com/{{ _prometheus_node_exporter_repo }}/releases/download/v{{ prometheus_node_exporter_version }}/\
                            node_exporter-{{ prometheus_node_exporter_version }}.linux-{{ go_arch }}.tar.gz"
 prometheus_node_exporter_checksums_url: "https://github.com/{{ _prometheus_node_exporter_repo }}/releases/download/v{{ prometheus_node_exporter_version }}/sha256sums.txt"
-prometheus_node_exporter_skip_install: false
-
 
 prometheus_node_exporter_web_listen_port: "9100"
 prometheus_node_exporter_web_listen_host: "0.0.0.0"
-prometheus_node_exporter_web_listen_address: "{{prometheus_node_exporter_web_listen_host}}:{{prometheus_node_exporter_web_listen_port}}"
-prometheus_node_exporter_web_telemetry_path: "/metrics"
 
-prometheus_node_exporter_textfile_dir: "/var/lib/prometheus_node_exporter"
+prometheus_node_exporter_db_dir: "/var/lib/prometheus_node_exporter"
 
 prometheus_node_exporter_tls_server_config: {}
-
-prometheus_node_exporter_http_server_config: {}
-
-prometheus_node_exporter_basic_auth_users: {}
 
 prometheus_node_exporter_enabled_collectors:
   - systemd
   - textfile:
-      directory: "{{ prometheus_node_exporter_textfile_dir }}"
+      directory: "{{ prometheus_node_exporter_db_dir}}"
   - filesystem:
       ignored-mount-points: "^/(sys|proc|dev)($|/)"
       ignored-fs-types: "^(sys|proc|auto)fs$"
