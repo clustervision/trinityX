@@ -1,6 +1,6 @@
-# Ansible Role: prometheus
+# Ansible Role: prometheus-server
 ### Description
-Ansible role to install and configure prometheus node exporter from precompiled binary
+Ansible role to install and configure prometheus server from precompiled binary
 ### Credits
-- Prometheus node exporter fom [prometheus/prometheus](https://github.com/prometheus/prometheus)
+- Prometheus server fom [prometheus/prometheus](https://github.com/prometheus/prometheus)
 - Original Ansible role from [prometheus-community/ansible](https://github.com/prometheus-community/ansible)
