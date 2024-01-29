@@ -22,15 +22,19 @@ rule_files:
   - {{ prometheus_config_dir }}/rules/*.rules
 {% endif %}
 
-{% if prometheus_alertmanager_config | length > 0 %}
+{% if prometheus_alertmanager is defined %}
 alerting:
   alertmanagers:
-  {{ prometheus_alertmanager_config | to_nice_yaml(indent=2,sort_keys=False) | indent(2,False) }}
-  {% if prometheus_alert_relabel_configs | length > 0 %}
-  alert_relabel_configs:
-  {{ prometheus_alert_relabel_configs | to_nice_yaml(indent=2,sort_keys=False) | indent(2,False) }}
+    - static_configs:
+        - targets:
+          - {{ prometheus_alertmanager.target }}
+  {% if prometheus_alertmanager.credentials_file is defined %}
+      basic_auth:
+        username: {{ prometheus_alertmanager.credentials_file | basename | replace('.txt', '') }}
+        password_file: {{ prometheus_alertmanager.credentials_file }}
   {% endif %}
 {% endif %}
+
 
 {% if prometheus_scrape_configs %}
 {{ {'scrape_configs' : prometheus_scrape_configs} | to_nice_yaml(indent=2,sort_keys=False)  }}

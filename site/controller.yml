@@ -257,7 +257,9 @@
     - role: trinity/prometheus
       prometheus_config_dir: "{{trix_local}}/etc/prometheus"
       prometheus_db_dir: "{{trix_local}}/var/lib/prometheus"
-      prometheus_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      prometheus_alertmanager:
+        credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+        target: "{{ trix_ctrl_hostname }}.{{ trix_domain }}:9093"
       prometheus_scrape_configs: # files read by prometheus to discover targets
       - job_name: file_sd
         file_sd_configs:
@@ -266,7 +268,7 @@
           - "{{trix_local}}/etc/prometheus/targets/static_nodes.yml"
       - job_name: http_sd
         http_sd_configs:
-        - url: https://localhost:7050/export/prometheus
+        - url: https://{{ trix_ctrl_hostname }}.{{ trix_domain }}:7050/export/prometheus
           tls_config:
             insecure_skip_verify: true
       prometheus_exporter_sd_file: "{{trix_local}}/etc/prometheus/targets/luna_nodes.yml"
