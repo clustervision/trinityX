@@ -251,12 +251,13 @@
       tags: wrapup
     
     - role: trinity/prometheus-auth
-      prometheus_auth_credentials_dir: '/etc/trinity/prometheus'
+      prometheus_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
       tags: prometheus-auth, prometheus, monitoring
 
     - role: trinity/prometheus
       prometheus_config_dir: "{{trix_local}}/etc/prometheus"
       prometheus_db_dir: "{{trix_local}}/var/lib/prometheus"
+      prometheus_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
       prometheus_scrape_configs: # files read by prometheus to discover targets
       - job_name: file_sd
         file_sd_configs:
@@ -274,8 +275,8 @@
     - role: trinity/prometheus-alertmanager
       prometheus_alertmanager_config_dir: "{{trix_local}}/etc/prometheus_alertmanager"
       prometheus_alertmanager_db_dir: "{{trix_local}}/var/lib/prometheus_alertmanager"
-      prometheus_alertmanager_auth_user: "{{ prometheus_auth_user }}"
-      prometheus_alertmanager_auth_password: "{{ prometheus_auth_password }}"
+      prometheus_alertmanager_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+
       tags: prometheus-alertmanager, prometheus, monitoring
 
     - role: trinity/prometheus-node-exporter

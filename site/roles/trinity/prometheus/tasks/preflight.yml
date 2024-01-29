@@ -105,4 +105,12 @@
         - "('linux-' + go_arch + '.tar.gz') in item"
 
     
-    
+- name: "Collect prometheus_auth_user from prometheus_auth_credentials_file filename"
+  ansible.builtin.set_fact:
+    prometheus_auth_user: "{{ prometheus_auth_credentials_file | basename | regex_replace('\\.txt$', '') }}"
+  when: prometheus_auth_credentials_file is defined
+
+- name: "Collect prometheus_auth_password from prometheus_auth_credentials_file"
+  ansible.builtin.set_fact:
+    prometheus_auth_password: "{{ lookup('password', prometheus_auth_credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
+  when: prometheus_auth_credentials_file is defined

@@ -164,13 +164,12 @@
     - prometheus_alertmanager_version is version_compare('0.22.0', '<')
     - prometheus_alertmanager_time_intervals is defined
 
-- name: "Check that both prometheus_alertmanager_auth_user and prometheus_alertmanager_auth_password are valid if one of them is defined"
-  assert:
-    that:
-      - prometheus_alertmanager_auth_user is defined
-      - prometheus_alertmanager_auth_password is defined
-      - prometheus_alertmanager_auth_user | length > 0
-      - prometheus_alertmanager_auth_password | length > 0
-    msg: "Both prometheus_alertmanager_auth_user and prometheus_alertmanager_auth_password must be defined if one of them is defined"
-  when:
-    - (prometheus_alertmanager_auth_user is defined) or (prometheus_alertmanager_auth_password is defined)
+- name: "Collect prometheus_alertmanager_auth_user from prometheus_alertmanager_auth_credentials_file filename"
+  ansible.builtin.set_fact:
+    prometheus_alertmanager_auth_user: "{{ prometheus_alertmanager_auth_credentials_file | basename | regex_replace('\\.txt$', '') }}"
+  when: prometheus_alertmanager_auth_credentials_file is defined
+
+- name: "Collect prometheus_alertmanager_auth_password from prometheus_alertmanager_auth_credentials_file"
+  ansible.builtin.set_fact:
+    prometheus_alertmanager_auth_password: "{{ lookup('password', prometheus_alertmanager_auth_credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
+  when: prometheus_alertmanager_auth_credentials_file is defined
