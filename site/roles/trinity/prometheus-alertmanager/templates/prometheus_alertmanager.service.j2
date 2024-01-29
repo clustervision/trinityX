@@ -31,6 +31,9 @@ ExecStart={{ _prometheus_alertmanager_binary_install_dir }}/alertmanager \
   {{ pre }}-{{ cluster_flag }}.{{ option }}={{ value }} \
 {%   endif %}
 {% endfor %}
+{% if prometheus_alertmanager_auth_user %}
+  {{ pre }}-web.config={{ prometheus_alertmanager_config_dir }}/prometheus_alertmanager.web.yml \
+{% endif %}
   {{ pre }}-config.file={{ prometheus_alertmanager_config_dir }}/prometheus_alertmanager.yml \
   {{ pre }}-storage.path={{ prometheus_alertmanager_db_dir }} \
 {% if prometheus_alertmanager_version is version('0.25.0', '>=') and
