@@ -2,62 +2,62 @@
 - name: Alerting rules file
   ansible.builtin.template:
     src: "alert.rules.j2"
-    dest: "{{ prometheus_config_dir }}/rules/ansible_managed.rules"
+    dest: "{{ prometheus_server_config_dir }}/rules/ansible_managed.rules"
     owner: root
     group: prometheus
     mode: 0640
-    validate: "{{ _prometheus_binary_install_dir }}/promtool check rules %s"
+    validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
   when:
-    - prometheus_alert_rules != []
-    - not prometheus_agent_mode
+    - prometheus_server_alert_rules != []
+    - not prometheus_server_agent_mode
   notify:
     - reload prometheus
 
 - name: Copy custom alerting rule files
   ansible.builtin.copy:
     src: "{{ item }}"
-    dest: "{{ prometheus_config_dir }}/rules/"
+    dest: "{{ prometheus_server_config_dir }}/rules/"
     owner: root
     group: prometheus
     mode: 0640
-    validate: "{{ _prometheus_binary_install_dir }}/promtool check rules %s"
-  with_fileglob: "{{ prometheus_alert_rules_files }}"
+    validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
+  with_fileglob: "{{ prometheus_server_alert_rules_files }}"
   when:
-    - not prometheus_agent_mode
+    - not prometheus_server_agent_mode
   notify:
     - reload prometheus
 
 - name: Configure prometheus
   ansible.builtin.template:
-    src: "{{ prometheus_config_file }}"
-    dest: "{{ prometheus_config_dir }}/prometheus.yml"
+    src: "{{ prometheus_server_config_file }}"
+    dest: "{{ prometheus_server_config_dir }}/prometheus.yml"
     force: true
     owner: root
     group: prometheus
     mode: 0640
-    validate: "{{ _prometheus_binary_install_dir }}/promtool check config %s"
+    validate: "{{ _prometheus_server_binary_install_dir }}/promtool check config %s"
   notify:
     - reload prometheus
 
 - name: Configure Prometheus web
   ansible.builtin.copy:
-    content: "{{ prometheus_web_config | to_nice_yaml(indent=2, sort_keys=False) }}"
-    dest: "{{ prometheus_config_dir }}/web.yml"
+    content: "{{ prometheus_server_web_config | to_nice_yaml(indent=2, sort_keys=False) }}"
+    dest: "{{ prometheus_server_config_dir }}/web.yml"
     force: true
     owner: root
     group: prometheus
     mode: 0640
 
-- name: Collect _prometheus_sd_file_configs
+- name: Collect _prometheus_server_sd_file_configs
   set_fact:
-    _prometheus_sd_file_configs: "{{ _prometheus_sd_file_configs | default([]) + ( item.file_sd_configs ) }}"
-  loop: "{{ prometheus_scrape_configs }}"
+    _prometheus_server_sd_file_configs: "{{ _prometheus_server_sd_file_configs | default([]) + ( item.file_sd_configs ) }}"
+  loop: "{{ prometheus_server_scrape_configs }}"
   when: item.file_sd_configs is defined
 
-- name: Collect prometheus_sd_files
+- name: Collect prometheus_server_sd_files
   set_fact:
-    prometheus_sd_files: "{{ prometheus_sd_files | default([]) + ( item.files ) }}"
-  loop: "{{ _prometheus_sd_file_configs }}"
+    prometheus_server_sd_files: "{{ prometheus_server_sd_files | default([]) + ( item.files ) }}"
+  loop: "{{ _prometheus_server_sd_file_configs }}"
 
 
 - name: Create sd targets directories if needed
@@ -67,7 +67,7 @@
     owner: root
     group: prometheus
     mode: 0750
-  loop: "{{ prometheus_sd_files }}"
+  loop: "{{ prometheus_server_sd_files }}"
 
 - name: Create sd targets files if needed
   ansible.builtin.file:
@@ -76,19 +76,19 @@
     owner: root
     group: prometheus
     mode: 0750
-  loop: "{{ prometheus_sd_files }}"
+  loop: "{{ prometheus_server_sd_files }}"
 
-- name: Configure prometheus self-exporter if prometheus_exporter_sd_file is defined
+- name: Configure prometheus self-exporter if prometheus_server_exporter_sd_file is defined
   blockinfile:
-    path: "{{ prometheus_exporter_sd_file }}"
+    path: "{{ prometheus_server_exporter_sd_file }}"
     block: |
       - targets:
-        - {{ ansible_fqdn }}:{{ prometheus_web_listen_port }}
+        - {{ ansible_fqdn }}:{{ prometheus_server_web_listen_port }}
         labels:
           exporter: prometheus
-    marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_exporter)"
+    marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_server_exporter)"
   when:
-    - prometheus_exporter_sd_file is defined
+    - prometheus_server_exporter_sd_file is defined
   
 
 
@@ -96,20 +96,20 @@
 #   ansible.builtin.copy:
 #     content: |
 #       {{ item.value | to_nice_yaml(indent=2, sort_keys=False) }}
-#     dest: "{{ prometheus_config_dir }}/file_sd/{{ item.key }}.yml"
+#     dest: "{{ prometheus_server_config_dir }}/file_sd/{{ item.key }}.yml"
 #     force: true
 #     owner: root
 #     group: prometheus
 #     mode: 0640
-#   with_dict: "{{ prometheus_targets }}"
-#   when: prometheus_targets != {}
+#   with_dict: "{{ prometheus_server_targets }}"
+#   when: prometheus_server_targets != {}
 
 # - name: Copy prometheus custom static targets
 #   ansible.builtin.copy:
 #     src: "{{ item }}"
-#     dest: "{{ prometheus_config_dir }}/file_sd/"
+#     dest: "{{ prometheus_server_config_dir }}/file_sd/"
 #     force: true
 #     owner: root
 #     group: prometheus
 #     mode: 0640
-#   with_fileglob: "{{ prometheus_static_targets_files }}"
+#   with_fileglob: "{{ prometheus_server_static_targets_files }}"

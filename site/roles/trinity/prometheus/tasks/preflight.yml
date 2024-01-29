@@ -24,13 +24,13 @@
   ansible.builtin.assert:
     that:
       - >-
-        prometheus_web_listen_address is string
+        prometheus_server_web_listen_address is string
 
 - name: Naive assertion of proper listen address
   ansible.builtin.assert:
     that:
       - >-
-        [prometheus_web_listen_address] |
+        [prometheus_server_web_listen_address] |
           flatten |
           reject('match', '.+:\\d+$') |
           list |
@@ -39,22 +39,22 @@
 - name: Assert no duplicate config flags
   ansible.builtin.assert:
     that:
-      - prometheus_config_flags_extra['config.file'] is not defined
-      - prometheus_config_flags_extra['storage.tsdb.path'] is not defined
-      - prometheus_config_flags_extra['storage.local.path'] is not defined
-      - prometheus_config_flags_extra['web.listen-address'] is not defined
-      - prometheus_config_flags_extra['web.external-url'] is not defined
+      - prometheus_server_config_flags_extra['config.file'] is not defined
+      - prometheus_server_config_flags_extra['storage.tsdb.path'] is not defined
+      - prometheus_server_config_flags_extra['storage.local.path'] is not defined
+      - prometheus_server_config_flags_extra['web.listen-address'] is not defined
+      - prometheus_server_config_flags_extra['web.external-url'] is not defined
     msg: "Detected duplicate configuration entry. Please check your ansible variables and role README.md."
 
 - name: Assert external_labels aren't configured twice
   ansible.builtin.assert:
-    that: prometheus_global.external_labels is not defined
-    msg: "Use prometheus_external_labels to define external labels"
+    that: prometheus_server_global.external_labels is not defined
+    msg: "Use prometheus_server_external_labels to define external labels"
 
-- name: Fail when prometheus_config_flags_extra duplicates parameters set by other variables
+- name: Fail when prometheus_server_config_flags_extra duplicates parameters set by other variables
   ansible.builtin.fail:
     msg: >
-      Whooops. You are duplicating configuration. Please look at your prometheus_config_flags_extra
+      Whooops. You are duplicating configuration. Please look at your prometheus_server_config_flags_extra
       and check against other variables in defaults/main.yml
   with_items:
     - 'storage.tsdb.retention'
@@ -64,51 +64,51 @@
     - 'config.file'
     - 'web.listen-address'
     - 'web.external-url'
-  when: item in prometheus_config_flags_extra.keys()
+  when: item in prometheus_server_config_flags_extra.keys()
 
 - name: Discover latest version
   ansible.builtin.set_fact:
-    prometheus_version: "{{ (lookup('url', 'https://api.github.com/repos/{{ _prometheus_repo}}/releases/latest', headers=_github_api_headers,
+    prometheus_server_version: "{{ (lookup('url', 'https://api.github.com/repos/{{ _prometheus_server_repo}}/releases/latest', headers=_github_api_headers,
                          split_lines=False) | from_json).get('tag_name') | replace('v', '') }}"
   run_once: true
-  until: prometheus_version is version('0.0.0', '>=')
+  until: prometheus_server_version is version('0.0.0', '>=')
   retries: 10
   when:
-    - prometheus_version == "latest"
-    - prometheus_binary_local_dir | length == 0
+    - prometheus_server_version == "latest"
+    - prometheus_server_binary_local_dir | length == 0
 
 - name: Get prometheus binary checksum
   when:
-    - prometheus_binary_local_dir | length == 0
+    - prometheus_server_binary_local_dir | length == 0
   block:
     - name: "Get checksum list"
       ansible.builtin.set_fact:
-        __prometheus_checksums: "{{ lookup('url', prometheus_checksums_url, headers=_github_api_headers, wantlist=True) | list }}"
+        __prometheus_server_checksums: "{{ lookup('url', prometheus_server_checksums_url, headers=_github_api_headers, wantlist=True) | list }}"
       run_once: true
-      until: __prometheus_checksums is search('linux-' + go_arch + '.tar.gz')
+      until: __prometheus_server_checksums is search('linux-' + go_arch + '.tar.gz')
       retries: 10
 
     - name: "Get checksum for {{ go_arch }}"
       ansible.builtin.set_fact:
-        __prometheus_checksum: "{{ item.split(' ')[0] }}"
-      with_items: "{{ __prometheus_checksums }}"
+        __prometheus_server_checksum: "{{ item.split(' ')[0] }}"
+      with_items: "{{ __prometheus_server_checksums }}"
       when:
         - "('linux-' + go_arch + '.tar.gz') in item"
 
     
-- name: "Collect prometheus_auth_user from prometheus_auth_credentials_file filename"
+- name: "Collect prometheus_server_auth_user from prometheus_server_auth_credentials_file filename"
   ansible.builtin.set_fact:
-    prometheus_auth_user: "{{ prometheus_auth_credentials_file | basename |  replace('.txt', '') }}"
-  when: prometheus_auth_credentials_file is defined
+    prometheus_server_auth_user: "{{ prometheus_server_auth_credentials_file | basename |  replace('.txt', '') }}"
+  when: prometheus_server_auth_credentials_file is defined
 
-- name: "Collect prometheus_auth_password from prometheus_auth_credentials_file"
+- name: "Collect prometheus_server_auth_password from prometheus_server_auth_credentials_file"
   ansible.builtin.set_fact:
-    prometheus_auth_password: "{{ lookup('password', prometheus_auth_credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
-  when: prometheus_auth_credentials_file is defined
+    prometheus_server_auth_password: "{{ lookup('password', prometheus_server_auth_credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
+  when: prometheus_server_auth_credentials_file is defined
 
-- name: "Ensure prometheus_alertmanager has a target field when defined"
+- name: "Ensure prometheus_server_alertmanager has a target field when defined"
   assert:
     that:
-      - prometheus_alertmanager.target is defined
-    fail_msg: "prometheus_alertmanager.target is required when prometheus_alertmanager is defined"
-  when: prometheus_alertmanager is defined
+      - prometheus_server_alertmanager.target is defined
+    fail_msg: "prometheus_server_alertmanager.target is required when prometheus_server_alertmanager is defined"
+  when: prometheus_server_alertmanager is defined

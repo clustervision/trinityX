@@ -3,40 +3,40 @@
 # http://prometheus.io/docs/operating/configuration/
 
 global:
-  {{ prometheus_global | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
+  {{ prometheus_server_global | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
   external_labels:
-    {{ prometheus_external_labels | to_nice_yaml(indent=2,sort_keys=False) | indent(4, False) }}
+    {{ prometheus_server_external_labels | to_nice_yaml(indent=2,sort_keys=False) | indent(4, False) }}
 
-{% if prometheus_remote_write != [] %}
+{% if prometheus_server_remote_write != [] %}
 remote_write:
-  {{ prometheus_remote_write | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
+  {{ prometheus_server_remote_write | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
 {% endif %}
 
-{% if prometheus_remote_read != [] %}
+{% if prometheus_server_remote_read != [] %}
 remote_read:
-  {{ prometheus_remote_read | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
+  {{ prometheus_server_remote_read | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
 {% endif %}
 
-{% if not prometheus_agent_mode and prometheus_alert_rules_files != [] %}
+{% if not prometheus_server_agent_mode and prometheus_server_alert_rules_files != [] %}
 rule_files:
-  - {{ prometheus_config_dir }}/rules/*.rules
+  - {{ prometheus_server_config_dir }}/rules/*.rules
 {% endif %}
 
-{% if prometheus_alertmanager is defined %}
+{% if prometheus_server_alertmanager is defined %}
 alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - {{ prometheus_alertmanager.target }}
-  {% if prometheus_alertmanager.credentials_file is defined %}
+          - {{ prometheus_server_alertmanager.target }}
+  {% if prometheus_server_alertmanager.credentials_file is defined %}
       basic_auth:
-        username: {{ prometheus_alertmanager.credentials_file | basename | replace('.txt', '') }}
-        password: {{ lookup('file', prometheus_alertmanager.credentials_file) }}
+        username: {{ prometheus_server_alertmanager.credentials_file | basename | replace('.txt', '') }}
+        password: {{ lookup('file', prometheus_server_alertmanager.credentials_file) }}
   {% endif %}
 {% endif %}
 
 
-{% if prometheus_scrape_configs %}
-{{ {'scrape_configs' : prometheus_scrape_configs} | to_nice_yaml(indent=2,sort_keys=False)  }}
+{% if prometheus_server_scrape_configs %}
+{{ {'scrape_configs' : prometheus_server_scrape_configs} | to_nice_yaml(indent=2,sort_keys=False)  }}
 {% endif %}
 

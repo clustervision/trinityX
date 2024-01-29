@@ -12,11 +12,11 @@
     shell: "/usr/sbin/nologin"
     group: prometheus
     createhome: false
-    home: "{{ prometheus_db_dir }}"
+    home: "{{ prometheus_server_db_dir }}"
 
 - name: Create prometheus data directory
   ansible.builtin.file:
-    path: "{{ prometheus_db_dir }}"
+    path: "{{ prometheus_server_db_dir }}"
     state: directory
     owner: prometheus
     group: prometheus
@@ -30,20 +30,20 @@
     group: prometheus
     mode: 0770
   with_items:
-    - "{{ prometheus_config_dir }}"
-    - "{{ prometheus_config_dir }}/rules"
-    - "{{ prometheus_config_dir }}/file_sd"
+    - "{{ prometheus_server_config_dir }}"
+    - "{{ prometheus_server_config_dir }}/rules"
+    - "{{ prometheus_server_config_dir }}/file_sd"
 
 - name: Get prometheus binary
   when:
-    - prometheus_binary_local_dir | length == 0
+    - prometheus_server_binary_local_dir | length == 0
   block:
     - name: Download prometheus binary to local folder
       become: false
       ansible.builtin.get_url:
-        url: "{{ prometheus_binary_url }}"
-        dest: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
-        checksum: "sha256:{{ __prometheus_checksum }}"
+        url: "{{ prometheus_server_binary_url }}"
+        dest: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
+        checksum: "sha256:{{ __prometheus_server_checksum }}"
         mode: 0644
       register: _download_archive
       until: _download_archive is succeeded
@@ -56,16 +56,16 @@
     - name: Unpack prometheus binaries
       become: false
       ansible.builtin.unarchive:
-        src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
+        src: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
         dest: "/tmp"
-        creates: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/prometheus"
+        creates: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/prometheus"
       delegate_to: localhost
       check_mode: false
 
     - name: Propagate official prometheus and promtool binaries
       ansible.builtin.copy:
-        src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/{{ item }}"
-        dest: "{{ _prometheus_binary_install_dir }}/{{ item }}"
+        src: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/{{ item }}"
+        dest: "{{ _prometheus_server_binary_install_dir }}/{{ item }}"
         mode: 0755
         owner: root
         group: root
@@ -77,8 +77,8 @@
 
     - name: Propagate official console templates
       ansible.builtin.copy:
-        src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/{{ item }}/"
-        dest: "{{ prometheus_config_dir }}/{{ item }}/"
+        src: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/{{ item }}/"
+        dest: "{{ prometheus_server_config_dir }}/{{ item }}/"
         mode: 0644
         owner: root
         group: root
@@ -90,8 +90,8 @@
 
 - name: Propagate locally distributed prometheus and promtool binaries
   ansible.builtin.copy:
-    src: "{{ prometheus_binary_local_dir }}/{{ item }}"
-    dest: "{{ _prometheus_binary_install_dir }}/{{ item }}"
+    src: "{{ prometheus_server_binary_local_dir }}/{{ item }}"
+    dest: "{{ _prometheus_server_binary_install_dir }}/{{ item }}"
     mode: 0755
     owner: root
     group: root
@@ -99,7 +99,7 @@
     - prometheus
     - promtool
   when:
-    - prometheus_binary_local_dir | length > 0
+    - prometheus_server_binary_local_dir | length > 0
   notify:
     - restart prometheus
 
@@ -115,7 +115,7 @@
 
 - name: Install SELinux dependencies
   ansible.builtin.package:
-    name: "{{ _prometheus_selinux_packages }}"
+    name: "{{ _prometheus_server_selinux_packages }}"
     state: present
   register: _install_packages
   until: _install_packages is succeeded
@@ -127,7 +127,7 @@
 
 - name: Allow prometheus to bind to port in SELinux
   community.general.seport:
-    ports: "{{ prometheus_web_listen_address.split(':')[1] }}"
+    ports: "{{ prometheus_server_web_listen_address.split(':')[1] }}"
     proto: tcp
     setype: http_port_t
     state: present

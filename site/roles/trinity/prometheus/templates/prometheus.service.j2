@@ -12,27 +12,27 @@ Environment="GOMAXPROCS={{ ansible_processor_vcpus|default(ansible_processor_cou
 User=prometheus
 Group=prometheus
 ExecReload=/bin/kill -HUP $MAINPID
-ExecStart={{ _prometheus_binary_install_dir }}/prometheus \
-{% if not prometheus_agent_mode %}
-  --storage.tsdb.path={{ prometheus_db_dir }} \
-{% if prometheus_version is version('2.7.0', '>=') %}
-  --storage.tsdb.retention.time={{ prometheus_storage_retention }} \
-  --storage.tsdb.retention.size={{ prometheus_storage_retention_size }} \
+ExecStart={{ _prometheus_server_binary_install_dir }}/prometheus \
+{% if not prometheus_server_agent_mode %}
+  --storage.tsdb.path={{ prometheus_server_db_dir }} \
+{% if prometheus_server_version is version('2.7.0', '>=') %}
+  --storage.tsdb.retention.time={{ prometheus_server_storage_retention }} \
+  --storage.tsdb.retention.size={{ prometheus_server_storage_retention_size }} \
 {% else %}
-  --storage.tsdb.retention={{ prometheus_storage_retention }} \
+  --storage.tsdb.retention={{ prometheus_server_storage_retention }} \
 {% endif %}
 {% else %}
   --enable-feature=agent \
-  --storage.agent.path={{ prometheus_db_dir }} \
+  --storage.agent.path={{ prometheus_server_db_dir }} \
 {% endif %}
-{% if prometheus_version is version('2.24.0', '>=') %}
-  --web.config.file={{ prometheus_config_dir }}/web.yml \
+{% if prometheus_server_version is version('2.24.0', '>=') %}
+  --web.config.file={{ prometheus_server_config_dir }}/web.yml \
 {% endif %}
-  --web.console.libraries={{ prometheus_config_dir }}/console_libraries \
-  --web.console.templates={{ prometheus_config_dir }}/consoles \
-  --web.listen-address={{ prometheus_web_listen_address }} \
-  --web.external-url={{ prometheus_web_external_url }} \
-{% for flag, flag_value in prometheus_config_flags_extra.items() %}
+  --web.console.libraries={{ prometheus_server_config_dir }}/console_libraries \
+  --web.console.templates={{ prometheus_server_config_dir }}/consoles \
+  --web.listen-address={{ prometheus_server_web_listen_address }} \
+  --web.external-url={{ prometheus_server_web_external_url }} \
+{% for flag, flag_value in prometheus_server_config_flags_extra.items() %}
 {% if not flag_value %}
   --{{ flag }} \
 {% elif flag_value is string %}
@@ -43,7 +43,7 @@ ExecStart={{ _prometheus_binary_install_dir }}/prometheus \
 {% endfor %}
 {% endif %}
 {% endfor %}
-  --config.file={{ prometheus_config_dir }}/prometheus.yml
+  --config.file={{ prometheus_server_config_dir }}/prometheus.yml
 
 CapabilityBoundingSet=CAP_SET_UID
 LimitNOFILE=65000
@@ -56,18 +56,18 @@ ProtectHome=true
 RemoveIPC=true
 RestrictSUIDSGID=true
 #SystemCallFilter=@signal @timer
-{% if prometheus_log_file is defined %}
-StandardOutput=append:{{prometheus_log_file}}
-StandardError=append:{{prometheus_log_file}}
+{% if prometheus_server_log_file is defined %}
+StandardOutput=append:{{prometheus_server_log_file}}
+StandardError=append:{{prometheus_server_log_file}}
 {% endif %}
 {% if (ansible_facts.packages.systemd | first).version is version('231', '>=') %}
-ReadWritePaths={{ prometheus_db_dir }}
-{% for path in prometheus_read_only_dirs %}
+ReadWritePaths={{ prometheus_server_db_dir }}
+{% for path in prometheus_server_read_only_dirs %}
 ReadOnlyPaths={{ path }}
 {% endfor %}
 {% else %}
-ReadWriteDirectories={{ prometheus_db_dir }}
-{% for path in prometheus_read_only_dirs %}
+ReadWriteDirectories={{ prometheus_server_db_dir }}
+{% for path in prometheus_server_read_only_dirs %}
 ReadOnlyDirectories={{ path }}
 {% endfor %}
 {% endif %}
@@ -88,7 +88,7 @@ Environment="HTTP_PROXY={{ http_proxy }}"{% if https_proxy is defined %} "HTTPS_
 
 SyslogIdentifier=prometheus
 Restart=always
-TimeoutStopSec={{ prometheus_stop_timeout }}
+TimeoutStopSec={{ prometheus_server_stop_timeout }}
 
 [Install]
 WantedBy=multi-user.target
