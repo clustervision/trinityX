@@ -223,8 +223,16 @@
 - name: Add templates/templates_directory if it does not exist
   lineinfile:
     path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^TEMPLATES_DIR = '
-    line: 'TEMPLATES_DIRECTORY = {{ trix_luna }}/daemon/templates'
+    regexp: '^TEMPLATES_DIR = (.+)'
+    line: 'TEMPLATES_DIRECTORY = \1'
+    backrefs: true
+
+- name: Add templates/templates_list if it does not exist
+  lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^TEMPLATELIST = (.+)'
+    line: 'TEMPLATES_DIRECTORY = \1'
+    backrefs: true
 
 # ------------------------------------------------
 
