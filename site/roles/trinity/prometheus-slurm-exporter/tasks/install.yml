@@ -29,12 +29,12 @@
     state: directory
     mode: 0755
 
-- name: Propagate prometheus_slurm_exporter binaries
-  copy:
-    src: "{{prometheus_slurm_exporter_binary}}"
+- name: Download prometheus-slurm-exporter binary to local folder
+  get_url:
+    url: "{{ prometheus_slurm_exporter_binary_url }}"
     dest: "{{prometheus_node_exporter_binary_install_dir}}/prometheus-slurm-exporter"
     mode: 0755
-    owner: root
-    group: root
-  notify: restart prometheus_slurm_exporter
-  when: not ansible_check_mode
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 5
+  delay: 2
