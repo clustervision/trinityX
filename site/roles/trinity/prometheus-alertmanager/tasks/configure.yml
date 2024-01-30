@@ -1,13 +1,4 @@
 ---
-- name: Copy amtool config
-  ansible.builtin.template:
-    force: true
-    src: "{{ prometheus_alertmanager_amtool_config_file }}"
-    dest: "{{ _prometheus_alertmanager_amtool_config_dir }}/config.yml"
-    owner: alertmanager
-    group: alertmanager
-    mode: 0644
-
 - name: Copy alertmanager config
   ansible.builtin.template:
     force: true
@@ -28,7 +19,6 @@
     owner: alertmanager
     group: alertmanager
     mode: 0644
-    # validate: "{{ _prometheus_alertmanager_binary_install_dir }}/amtool check-config %s"
   notify:
     - restart alertmanager
   when: prometheus_alertmanager_auth_credentials_file is defined

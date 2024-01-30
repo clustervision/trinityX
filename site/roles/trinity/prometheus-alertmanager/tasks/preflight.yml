@@ -20,27 +20,6 @@
   ansible.builtin.package_facts:
   when: "not 'packages' in ansible_facts"
 
-- name: Assert that used version supports listen address type
-  ansible.builtin.assert:
-    that:
-      - >-
-        prometheus_alertmanager_web_listen_address is string
-        or
-        (
-          prometheus_alertmanager_version is version('0.25.0', '>=') and
-          prometheus_alertmanager_web_listen_address | type_debug == "list"
-        )
-
-- name: Naive assertion of proper listen address
-  ansible.builtin.assert:
-    that:
-      - >-
-        [prometheus_alertmanager_web_listen_address] |
-          flatten |
-          reject('match', '.+:\\d+$') |
-          list |
-          length == 0
-
 - name: Discover latest version
   ansible.builtin.set_fact:
     prometheus_alertmanager_version: "{{ (lookup('url', 'https://api.github.com/repos/{{ _prometheus_alertmanager_repo }}/releases/latest', headers=_github_api_headers,
@@ -51,12 +30,10 @@
   when:
     - prometheus_alertmanager_version == "latest"
     - prometheus_alertmanager_binary_local_dir | length == 0
-    - not prometheus_alertmanager_skip_install
 
 - name: Get alertmanager binary checksum
   when:
     - prometheus_alertmanager_binary_local_dir | length == 0
-    - not prometheus_alertmanager_skip_install
   block:
     - name: "Get checksum list"
       ansible.builtin.set_fact:
@@ -71,16 +48,6 @@
       with_items: "{{ __prometheus_alertmanager_checksums }}"
       when:
         - "('linux-' + go_arch + '.tar.gz') in item"
-
-
-- name: Fail when extra config flags are duplicating ansible variables
-  ansible.builtin.fail:
-    msg: "Detected duplicate configuration entry. Please check your ansible variables and role README.md."
-  when:
-    (prometheus_alertmanager_config_flags_extra['config.file'] is defined) or
-    (prometheus_alertmanager_config_flags_extra['storage.path'] is defined) or
-    (prometheus_alertmanager_config_flags_extra['web.listen-address'] is defined) or
-    (prometheus_alertmanager_config_flags_extra['web.external-url'] is defined)
 
 - name: Fail when there are no receivers defined
   ansible.builtin.fail:
@@ -102,30 +69,6 @@
     msg: "Please use `prometheus_alertmanager_version >= v0.16.0`"
   when: prometheus_alertmanager_version is version_compare('0.16.0', '<')
 
-- name: Check deprecated variable `prometheus_alertmanager_cli_flags`
-  when: prometheus_alertmanager_cli_flags is defined
-  block:
-    - name: Backward compatibility of variable [part 1]
-      ansible.builtin.set_fact:
-        prometheus_alertmanager_config_flags_extra: "{{ prometheus_alertmanager_cli_flags }}"
-
-    - name: "DEPRECATION WARNING: `prometheus_alertmanager_cli_flags` is no longer supported and will be dropped from future releases"
-      failed_when: false
-      ansible.builtin.fail:
-        msg: "Please use `prometheus_alertmanager_config_flags_extra` instead of `prometheus_alertmanager_cli_flags`"
-
-- name: Check deprecated variable `prometheus_alertmanager_listen_address`
-  when: prometheus_alertmanager_listen_address is defined
-  block:
-    - name: Backward compatibility of variable [part 2]
-      ansible.builtin.set_fact:
-        prometheus_alertmanager_web_listen_address: "{{ prometheus_alertmanager_listen_address }}"
-
-    - name: "DEPRECATION WARNING: `prometheus_alertmanager_listen_address` is no longer supported and will be dropped from future releases"
-      failed_when: false
-      ansible.builtin.fail:
-        msg: "Please use `prometheus_alertmanager_web_listen_address` instead of `prometheus_alertmanager_listen_address`"
-
 - name: Check deprecated variable `prometheus_alertmanager_external_url`
   when: prometheus_alertmanager_external_url is defined
   block:
@@ -137,18 +80,6 @@
       failed_when: false
       ansible.builtin.fail:
         msg: "Please use `prometheus_alertmanager_web_external_url` instead of `prometheus_alertmanager_external_url`"
-
-- name: Check deprecated variable `prometheus_alertmanager_mesh`
-  when: prometheus_alertmanager_mesh is defined
-  block:
-    - name: HA config compatibility with alertmanager<0.15.0
-      ansible.builtin.set_fact:
-        prometheus_alertmanager_cluster: "{{ prometheus_alertmanager_mesh }}"
-
-    - name: "DEPRECATION WARNING: `prometheus_alertmanager_mesh` is no longer supported and will be dropped from future releases"
-      failed_when: false
-      ansible.builtin.fail:
-        msg: "Please use `prometheus_alertmanager_cluster` instead of `prometheus_alertmanager_cluster`"
 
 - name: "`prometheus_alertmanager_child_routes` is no longer supported"
   ansible.builtin.fail:

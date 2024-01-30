@@ -36,19 +36,8 @@ ExecStart={{ _prometheus_alertmanager_binary_install_dir }}/alertmanager \
 {% endif %}
   {{ pre }}-config.file={{ prometheus_alertmanager_config_dir }}/alertmanager.yml \
   {{ pre }}-storage.path={{ prometheus_alertmanager_db_dir }} \
-{% if prometheus_alertmanager_version is version('0.25.0', '>=') and
-      prometheus_alertmanager_web_listen_address is iterable and
-      prometheus_alertmanager_web_listen_address is not mapping and
-      prometheus_alertmanager_web_listen_address is not string %}
-{%   for address in prometheus_alertmanager_web_listen_address %}
-  {{ pre }}-web.listen-address={{ address }} \
-{%   endfor %}
-{% else %}
-  {{ pre }}-web.listen-address={{ prometheus_alertmanager_web_listen_address }} \
-{% endif %}
-  {{ pre }}-web.external-url={{ prometheus_alertmanager_web_external_url }}{% for flag, flag_value in prometheus_alertmanager_config_flags_extra.items() %} \
-  {{ pre }}-{{ flag }}={{ flag_value }}{% endfor %}
-
+  {{ pre }}-web.listen-address={{ prometheus_alertmanager_web_listen_host }}:{{ prometheus_alertmanager_web_listen_port }} \
+  {{ pre }}-web.external-url={{ prometheus_alertmanager_web_external_url }}
 SyslogIdentifier=alertmanager
 Restart=always
 RestartSec=5
