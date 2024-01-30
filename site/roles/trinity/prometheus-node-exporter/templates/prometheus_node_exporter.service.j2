@@ -34,7 +34,10 @@ Restart=always
 RestartSec=1
 StartLimitInterval=0
 NoNewPrivileges=yes
-
+{% if prometheus_node_exporter_log_dir is defined %}
+StandardOutput=append:{{prometheus_node_exporter_log_dir}}/prometheus.output.log
+StandardError=append:{{prometheus_node_exporter_log_dir}}/prometheus.error.log
+{% endif %}
 {% if (ansible_facts.packages.systemd | first).version is version('232', '>=') %}
 ProtectSystem=strict
 ProtectControlGroups=true

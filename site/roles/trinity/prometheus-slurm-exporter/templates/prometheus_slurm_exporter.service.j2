@@ -15,7 +15,10 @@ ExecStart={{ prometheus_slurm_exporter_binary_install_dir }}/prometheus-slurm-ex
 SyslogIdentifier=prometheus_slurm_exporter
 Restart=always
 RestartSec=1
-
+{% if prometheus_slurm_exporter_log_dir is defined %}
+StandardOutput=append:{{prometheus_slurm_exporter_log_dir}}/prometheus.output.log
+StandardError=append:{{prometheus_slurm_exporter_log_dir}}/prometheus.error.log
+{% endif %}
 PrivateTmp=yes
 {% for m in (ansible_mounts|default([])) if m.mount == '/home' %}
 ProtectHome=read-only
