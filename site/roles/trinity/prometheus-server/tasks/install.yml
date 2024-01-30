@@ -113,6 +113,16 @@
   notify:
     - restart prometheus
 
+- name: Create log dir if prometheus_server_log_dir is defined
+  ansible.builtin.file:
+    path: "{{ prometheus_server_log_dir }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: 0755
+  when:
+    - prometheus_server_log_dir is defined
+
 - name: Install SELinux dependencies
   ansible.builtin.package:
     name: "{{ _prometheus_server_selinux_packages }}"
