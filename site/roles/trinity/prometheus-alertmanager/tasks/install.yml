@@ -93,3 +93,11 @@
     mode: 0755
   when:
     - prometheus_alertmanager_log_dir is defined
+
+- name: Configure firewalld
+  firewalld:
+    state: enabled
+    port: "{{ prometheus_alertmanager_port }}/tcp"
+    permanent: "yes"
+    immediate: "yes"
+  when: ansible_virtualization_type != 'docker'
