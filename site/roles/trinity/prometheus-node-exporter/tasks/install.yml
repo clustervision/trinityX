@@ -65,3 +65,13 @@
   when:
     - prometheus_node_exporter_binary_local_dir | length > 0
   notify: restart prometheus_node_exporter
+
+- name: Create log dir if prometheus_node_exporter_log_dir is defined
+  ansible.builtin.file:
+    path: "{{ prometheus_node_exporter_log_dir }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: 0755
+  when:
+    - prometheus_node_exporter_log_dir is defined

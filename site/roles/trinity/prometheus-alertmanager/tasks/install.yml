@@ -83,3 +83,13 @@
     - prometheus_alertmanager_binary_local_dir | length > 0
   notify:
     - restart alertmanager
+
+- name: Create log dir if prometheus_alertmanager_log_dir is defined
+  ansible.builtin.file:
+    path: "{{ prometheus_alertmanager_log_dir }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: 0755
+  when:
+    - prometheus_alertmanager_log_dir is defined

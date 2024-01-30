@@ -38,3 +38,13 @@
   until: _download_archive is succeeded
   retries: 5
   delay: 2
+
+- name: Create log dir if prometheus_slurm_exporter_log_dir is defined
+  ansible.builtin.file:
+    path: "{{ prometheus_slurm_exporter_log_dir }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: 0755
+  when:
+    - prometheus_slurm_exporter_log_dir is defined
