@@ -204,22 +204,27 @@
 - name: Add files/tmp_directory if it does not exist
   lineinfile:
     path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^TMP_DIRECTORY = /trinity/local/luna/tmp'
-    insertafter: '[FILES]'
-    line: 'TMP_DIRECTORY = /trinity/local/luna/tmp/files'
+    regexp: '^TMP_DIRECTORY = {{ trix_luna }}/tmp$'
+    insertafter: '\[FILES\]'
+    line: 'TMP_DIRECTORY = {{ trix_luna }}/tmp/files'
 
 - name: Set new tmp_directory for files if not set correctly
-  lineinfile: 
+  lineinfile:
     path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^TMP_DIRECTORY = /trinity/local/luna/tmp$'
-    line: 'TMP_DIRECTORY = /trinity/local/luna/tmp/files'
+    regexp: '^TMP_DIRECTORY = {{ trix_luna }}/tmp$'
+    line: 'TMP_DIRECTORY = {{ trix_luna }}/tmp/files'
 
 - name: Add templates/tmp_directory if it does not exist
   lineinfile:
     path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^TMP_DIRECTORY = /trinity/local/luna/tmp'
-    insertafter: '[TEMPLATES]'
-    line: 'TMP_DIRECTORY = /trinity/local/luna/tmp/templates'
+    regexp: '^TEMP_DIR = '
+    line: 'TMP_DIRECTORY = {{ trix_luna }}/tmp/templates'
+
+- name: Add templates/templates_directory if it does not exist
+  lineinfile:
+    path: '{{ trix_luna }}/daemon/config/luna.ini'
+    regexp: '^TEMPLATES_DIR = '
+    line: 'TEMPLATES_DIRECTORY = {{ trix_luna }}/daemon/templates'
 
 # ------------------------------------------------
 
