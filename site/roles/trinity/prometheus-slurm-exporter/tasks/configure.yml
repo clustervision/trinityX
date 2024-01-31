@@ -26,6 +26,10 @@
         - {{ ansible_fqdn }}:{{ prometheus_slurm_exporter_web_listen_port }}
         labels:
           exporter: slurm
+      {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
+          luna_group: controller
+          luna_role: controller
+      {% endif %}
     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.slurm_exporter)"
   when:
     - prometheus_slurm_exporter_sd_file is defined
