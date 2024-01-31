@@ -281,10 +281,12 @@
       prometheus_alertmanager_config_dir: "{{trix_etc}}/prometheus_alertmanager"
       prometheus_alertmanager_db_dir: "{{trix_local}}/var/lib/prometheus_alertmanager"
       prometheus_alertmanager_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      prometheus_alertmanager_mail: "{{ administrator_email }}"
       prometheus_alertmanager_cluster:
         listen-address: "{{ ansible_fqdn }}:6783"
         peers:
           - "{{ trix_ctrl_hostname }}:6783"
+
       prometheus_alertmanager_tls:
         enable: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
@@ -298,22 +300,26 @@
       prometheus_node_exporter_config_dir: "{{trix_etc}}/prometheus_node_exporter"
       prometheus_node_exporter_db_dir: "{{trix_local}}/var/lib/prometheus_node_exporter"
       prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
+
       prometheus_alertmanager_tls:
         enable: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
         key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
         allow_insecure: true
+
       tags: prometheus-node-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-slurm-exporter
       # file where prometheus slurm-exporter is announced
       prometheus_slurm_exporter_system_group: root
       prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
+
       prometheus_alertmanager_tls:
         enable: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
         key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
         allow_insecure: true
+
       tags: prometheus-slurm-exporter, prometheus, monitoring
       
     - role: trinity/grafana

@@ -53,10 +53,10 @@ prometheus_alertmanager_cluster: {}
 #     - "alertmanager.demo.do.prometheus.io:6783"
 
 prometheus_alertmanager_receivers:
+- name: 'null'
 - name: 'mail'
   email_configs:
-  - to: 'diego.sonaglia@clustervision.com'
-
+  - to: '{{prometheus_alertmanager_mail}}'
   
 prometheus_alertmanager_time_intervals: []
 # prometheus_alertmanager_time_intervals:
@@ -67,24 +67,28 @@ prometheus_alertmanager_time_intervals: []
 #              end_time: "24:00"
 #          location: "Africa/Johannesburg"
 
-prometheus_alertmanager_inhibit_rules: []
-# prometheus_alertmanager_inhibit_rules:
-#   - target_match:
-#       label: value
-#     source_match:
-#       label: value
-#     equal: ['dc', 'rack']
-#   - target_match_re:
-#       label: value1|value2
-#     source_match_re:
-#       label: value3|value5
+
+prometheus_alertmanager_inhibit_rules:
+  # Inhibit alerts with severity level `warning` or lower for critical alerts
+  - source_match:
+      severity: 'critical'
+    target_match_re:
+      severity: 'warning|critical'
+    equal: ['cluster', 'controller', 'alertname']
+
+
 
 prometheus_alertmanager_route: 
-  group_by: ['alertname', 'cluster', 'service']
+  group_by: ['cluster']
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
-  receiver: mail
+  receiver: 'null'
+  routes:
+  - match_re:
+      severity: 'critical|warning'
+    receiver: 'mail'
+  
 
 #   # This routes performs a regular expression match on alert labels to
 #   # catch alerts that are related to a list of services.

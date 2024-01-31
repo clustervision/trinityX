@@ -49,7 +49,8 @@ prometheus_server_global:
   evaluation_interval: 15s
 
 prometheus_server_external_labels:
-  environment: "{{ ansible_fqdn | default(ansible_host) | default(inventory_hostname) }}"
+  controller: "{{ ansible_fqdn | default(ansible_host) | default(inventory_hostname) }}"
+  cluster: "trinityX"
 
 # Alternative config file name, searched in ansible templates path.
 prometheus_server_config_file: 'prometheus.yml.j2'
@@ -62,7 +63,7 @@ prometheus_server_alert_rules:  # noqa yaml[line-length]  # noqa line-length
     expr: vector(1)
     for: 5m
     labels:
-      severity: warning
+      severity: info
     annotations:
       description: "This is an alert meant to ensure that the entire alerting pipeline is functional.\nThis alert is always firing, therefore it should always be firing in Alertmanager\nand always fire against a receiver. There are integrations with various notification\nmechanisms that send a notification when this alert is not firing. For example the\n\"DeadMansSnitch\" integration in PagerDuty."
       summary: 'Ensure entire alerting pipeline is functional'
