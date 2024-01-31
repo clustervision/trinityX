@@ -6,23 +6,13 @@ global:
   {{ prometheus_server_global | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
   external_labels:
     {{ prometheus_server_external_labels | to_nice_yaml(indent=2,sort_keys=False) | indent(4, False) }}
-
-{% if prometheus_server_remote_write != [] %}
-remote_write:
-  {{ prometheus_server_remote_write | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
-{% endif %}
-
-{% if prometheus_server_remote_read != [] %}
-remote_read:
-  {{ prometheus_server_remote_read | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
-{% endif %}
-
 {% if not prometheus_server_agent_mode and prometheus_server_alert_rules_files != [] %}
+
 rule_files:
   - {{ prometheus_server_config_dir }}/rules/*.rules
 {% endif %}
-
 {% if prometheus_server_alertmanager is defined %}
+
 alerting:
   alertmanagers:
     - static_configs:
@@ -34,9 +24,23 @@ alerting:
         password: {{ lookup('file', prometheus_server_alertmanager.credentials_file) }}
   {% endif %}
 {% endif %}
+{% if (prometheus_server_sd_files | length > 0) or (prometheus_server_sd_urls | length > 0) %}
 
-
-{% if prometheus_server_scrape_configs %}
-{{ {'scrape_configs' : prometheus_server_scrape_configs} | to_nice_yaml(indent=2,sort_keys=False)  }}
+scrape_configs:
+- job_name: trinityX
+{% if prometheus_server_sd_files | length > 0 %}
+  file_sd_configs:
+  - files:
+  {% for sd_file in prometheus_server_sd_files %}
+    - {{ sd_file }}
+  {% endfor %}
 {% endif %}
-
+{% if prometheus_server_sd_urls | length > 0 %}
+  http_sd_configs:
+  {% for sd_url in prometheus_server_sd_urls %}
+  - url: {{ sd_url }}
+    tls_config:
+      insecure_skip_verify: {{ (prometheus_server_tls is defined and prometheus_server_tls.allow_insecure is defined and prometheus_server_tls.allow_insecure) | default(false)}}
+  {% endfor %}
+{% endif %}
+{% endif %}

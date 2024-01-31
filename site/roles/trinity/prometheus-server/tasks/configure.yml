@@ -48,18 +48,6 @@
     group: prometheus
     mode: 0640
 
-- name: Collect _prometheus_server_sd_file_configs
-  set_fact:
-    _prometheus_server_sd_file_configs: "{{ _prometheus_server_sd_file_configs | default([]) + ( item.file_sd_configs ) }}"
-  loop: "{{ prometheus_server_scrape_configs }}"
-  when: item.file_sd_configs is defined
-
-- name: Collect prometheus_server_sd_files
-  set_fact:
-    prometheus_server_sd_files: "{{ prometheus_server_sd_files | default([]) + ( item.files ) }}"
-  loop: "{{ _prometheus_server_sd_file_configs }}"
-
-
 - name: Create sd targets directories if needed
   ansible.builtin.file:
     path: "{{ item | dirname }}"

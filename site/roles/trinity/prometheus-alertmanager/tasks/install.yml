@@ -88,8 +88,6 @@
   ansible.builtin.file:
     path: "{{ prometheus_alertmanager_log_dir }}"
     state: directory
-    owner: prometheus
-    group: prometheus
     mode: 0755
   when:
     - prometheus_alertmanager_log_dir is defined
@@ -97,7 +95,7 @@
 - name: Configure firewalld
   firewalld:
     state: enabled
-    port: "{{ prometheus_alertmanager_port }}/tcp"
+    port: "{{ prometheus_alertmanager_web_listen_port }}/tcp"
     permanent: "yes"
     immediate: "yes"
   when: ansible_virtualization_type != 'docker'

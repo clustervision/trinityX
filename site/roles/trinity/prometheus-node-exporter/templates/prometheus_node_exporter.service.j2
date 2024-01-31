@@ -24,7 +24,7 @@ ExecStart={{ prometheus_node_exporter_binary_install_dir }}/prometheus_node_expo
     '--no-collector.{{ collector }}' \
 {% endfor %}
 {% if prometheus_node_exporter_tls_server_config | length > 0 %}
-    '--web.config.file=/etc/prometheus_node_exporter/config.yaml' \
+    '--web.config.file={{prometheus_node_exporter_config_dir}}/config.yaml' \
 {% endif %}
     '--web.listen-address={{ prometheus_node_exporter_web_listen_host }}:{{ prometheus_node_exporter_web_listen_port }}' \
     '--web.telemetry-path=/metrics'
@@ -35,8 +35,7 @@ RestartSec=1
 StartLimitInterval=0
 NoNewPrivileges=yes
 {% if prometheus_node_exporter_log_dir is defined %}
-StandardOutput=append:{{prometheus_node_exporter_log_dir}}/prometheus.output.log
-StandardError=append:{{prometheus_node_exporter_log_dir}}/prometheus.error.log
+StandardOutput=append:{{prometheus_node_exporter_log_dir}}/prometheus_alertmanager.log
 {% endif %}
 {% if (ansible_facts.packages.systemd | first).version is version('232', '>=') %}
 ProtectSystem=strict
