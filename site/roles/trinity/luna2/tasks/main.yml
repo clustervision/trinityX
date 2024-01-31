@@ -201,45 +201,9 @@
 
 # ---------------- legacy fixes ------------------
 
-- name: Add files/tmp_directory if it does not exist
-  lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^TMP_DIRECTORY = {{ trix_luna }}/tmp$'
-    insertafter: '\[FILES\]'
-    line: 'TMP_DIRECTORY = {{ trix_luna }}/tmp/files'
-
-- name: Set new tmp_directory for files if not set correctly
-  lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^TMP_DIRECTORY = {{ trix_luna }}/tmp$'
-    line: 'TMP_DIRECTORY = {{ trix_luna }}/tmp/files'
-
-- name: Add templates/tmp_directory if it does not exist
-  lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^TEMP_DIR = '
-    line: 'TMP_DIRECTORY = {{ trix_luna }}/tmp/templates'
-
-- name: Add templates/templates_directory if it does not exist
-  lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^TEMPLATES_DIR = (.+)'
-    line: 'TEMPLATE_FILES = \1'
-    backrefs: true
-
-- name: Add templates/templates_list if it does not exist
-  lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^TEMPLATELIST = (.+)'
-    line: 'TEMPLATE_LIST = \1'
-    backrefs: true
-
-- name: Add plugins/plugins_directory if it does not exist
-  lineinfile:
-    path: '{{ trix_luna }}/daemon/config/luna.ini'
-    regexp: '^PLUGINS_DIR = (.+)'
-    line: 'PLUGINS_DIRECTORY = \1'
-    backrefs: true
+- name: Perform legacy fixes for existing daemon luna.ini config file
+  import_tasks: legacy_fixes.yml
+  when: false
 
 # ------------------------------------------------
 
