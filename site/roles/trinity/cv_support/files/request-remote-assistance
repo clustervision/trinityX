@@ -17,13 +17,13 @@ from os.path import expanduser
 sandbox      = 'sandbox'
 sshd_config  = '/etc/ssh/sshd_config'
 auth_key     = '/.ssh/authorized_keys'
-pub_files    = ['/.ssh/id_dsa.pub', '/.ssh/id_rsa.pub', '/.ssh/identity.pub', '/.ssh/id_rsa-CV.pub']
+pub_files    = ['/.ssh/id_rsa.pub', '/.ssh/identity.pub', '/.ssh/id_rsa-CV.pub']
 pub          = ''
 getpubcert   = 1
 ok_chars     = 'a-zA-Z0-9 _,-.+#='
 no_questions = 0
 run_in_loop  = 0
-version      = '1.1.2'
+version      = '1.1.3'
 
 # ---------------------------------------------------------------------------------------------------------
 
@@ -68,7 +68,16 @@ del sys.argv[0]
 
 while sys.argv:
     arg = sys.argv.pop()
-    if (arg == '--confirm') or (arg == '-c'):
+    if (arg == '--help') or (arg == '-h'):
+        print ('\nRequest Remote Assistance v'+version+'\n')
+        print ('how to run:')
+        print ('   request-remote-assistence [options] [remote host]\n')
+        print ('options:')
+        print ('   -c|--confirm		Do not ask questions. Assume yes to all.')
+        print ('   -l|--loop		Run this program in a loop. It will reconnect when needed.\n')
+        print ('remote host: is \'sandbox\' by default. Any given remote host will have .clustervision.com appended.\n')
+        sys.exit(0)
+    elif (arg == '--confirm') or (arg == '-c'):
         no_questions=1
     elif (arg == '--loop') or (arg == '-l'):
         run_in_loop=1
@@ -159,19 +168,31 @@ if perr != 0:
     if not confirm('Continue?', 'n'):
         sys.exit(0)
 
+key_name = None
 req = "https://static.clustervision.com/support.pub"
 try:
     readable_trid=str(trid)
     now = datetime.now()
     logfile_name = 'tunnel--TrinityID-' + readable_trid + '--' + now.strftime("%m-%d-%Y_%H-%M-%S") + ".log"
-    with urllib.request.urlopen(req,context=ssl.create_default_context(cafile=certifi.where())) as response:
-        sandboxpub = response.read().decode()
-    if getpubcert:
-        shell("""touch {}""".format(auth_key))
-        shell("""cp -f {} {}.bak""".format(auth_key, auth_key))
-        shell("""echo '{}' >> {}""".format(sandboxpub, auth_key))
-        shell("""chmod 640 {}""".format(auth_key))
-        print('\nAdded temporary ClusterVision public key.')
+    if getpubcert: 
+        sandboxpub = None
+        with urllib.request.urlopen(req,context=ssl.create_default_context(cafile=certifi.where())) as response:
+            sandboxpub = response.read().decode()
+        if sandboxpub:
+            sandboxpub = sandboxpub.rstrip('\r\n')
+            result = re.search(r"^\S+\s+\S+\s+(\S+)", sandboxpub)
+            if result and result.groups():
+                key_name = result.group(1)
+            shell("""touch {}""".format(auth_key))
+            shell("""cp -f {} {}.bak""".format(auth_key, auth_key))
+            shell("""echo '{}' >> {}""".format(sandboxpub, auth_key))
+            shell("""chmod 640 {}""".format(auth_key))
+            print('\nAdded temporary ClusterVision public key.')
+        else:
+            print('\nWarning: Could not collect ClusterVision\'s public key for access.')
+            print('Note: support will not be able to login automatically, you will need to supply')
+            print('      the root password when contacted by support.\n')
+        
     data = dict(pub=pub,info=info,trid=trid)
     r = requests.post('https://sandbox.clustervision.com/cgi-bin/keys.py',data=data, auth=('trinityx','trinityx'))
     try:
@@ -193,7 +214,6 @@ try:
     # ------ copy the log file ------- Won't work as we cannot copy files accross
     #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@{}.clustervision.com:{}""".format(priv_file,remoteport,sandbox,logfile_name))
     # --------------------------------
-    shell("""cp -f {}.bak {}""".format(auth_key, auth_key))
     print('Tunnel to {} terminated.'.format(sandbox))
 except urllib.error.URLError as e:
     print('\nError: could not complete communication with {} .'.format(remote_url))
@@ -201,5 +221,11 @@ except urllib.error.URLError as e:
 except urllib.error.HTTPError as e:
     print('\nError: {} could not fulfill the request.').format(remote_url)
     print('Reason: {} {} .'.format(e.code, e.read()))
+except Exception as e:
+    print('\nError: {}.'.format(e))
+
+if key_name:
+    shell("""grep -vw '{}' {} > {}.clean""".format(key_name, auth_key, auth_key))
+    shell("""cat {}.clean > {}""".format(auth_key, auth_key))
 
 sys.exit(0)
