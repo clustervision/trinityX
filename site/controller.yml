@@ -288,7 +288,7 @@
           - "{{ trix_ctrl_hostname }}:6783"
 
       prometheus_alertmanager_tls:
-        enable: true
+        enabled: false
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
         key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
         allow_insecure: true
@@ -301,11 +301,10 @@
       prometheus_node_exporter_db_dir: "{{trix_local}}/var/lib/prometheus_node_exporter"
       prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
 
-      prometheus_alertmanager_tls:
-        enable: true
+      prometheus_node_exporter_tls:
+        enabled: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
         key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-        allow_insecure: true
 
       tags: prometheus-node-exporter, prometheus, monitoring
 
@@ -313,12 +312,6 @@
       # file where prometheus slurm-exporter is announced
       prometheus_slurm_exporter_system_group: root
       prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
-
-      prometheus_alertmanager_tls:
-        enable: true
-        cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-        key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-        allow_insecure: true
 
       tags: prometheus-slurm-exporter, prometheus, monitoring
       

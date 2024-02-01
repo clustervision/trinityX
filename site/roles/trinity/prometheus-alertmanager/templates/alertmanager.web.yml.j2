@@ -1,2 +1,8 @@
 basic_auth_users:
   {{ prometheus_alertmanager_auth_user }}: {{ prometheus_alertmanager_auth_password | password_hash('bcrypt') }}
+{% if (prometheus_alertmanager_tls.get('enabled', False) | bool) %}
+tls_server_config:
+  cert_file: {{ prometheus_alertmanager_tls.cert_file }}
+  key_file: {{ prometheus_alertmanager_tls.key_file }}
+{% endif %}
+
