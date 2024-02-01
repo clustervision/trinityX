@@ -4,43 +4,43 @@
     force: true
     src: "{{ prometheus_alertmanager_config_file }}"
     dest: "{{ prometheus_alertmanager_config_dir }}/alertmanager.yml"
-    owner: alertmanager
-    group: alertmanager
+    owner: "{{prometheus_alertmanager_system_user}}"
+    group: "{{prometheus_alertmanager_system_group}}"
     mode: 0644
     validate: "{{ _prometheus_alertmanager_binary_install_dir }}/amtool check-config %s"
   notify:
-    - restart alertmanager
+    - restart
 
 - name: Copy alertmanager web config ( for basic auth )
   ansible.builtin.template:
     force: true
     src: "{{ prometheus_alertmanager_web_config_file }}"
     dest: "{{ prometheus_alertmanager_config_dir }}/alertmanager.web.yml"
-    owner: alertmanager
-    group: alertmanager
+    owner: "{{prometheus_alertmanager_system_user}}"
+    group: "{{prometheus_alertmanager_system_group}}"
     mode: 0644
   notify:
-    - restart alertmanager
+    - restart
   when: prometheus_alertmanager_auth_credentials_file is defined
 
 - name: Create systemd service unit
   ansible.builtin.template:
-    src: prometheus_alertmanager.service.j2
-    dest: /etc/systemd/system/prometheus_alertmanager.service
+    src: prometheus-alertmanager.service.j2
+    dest: /etc/systemd/system/prometheus-alertmanager.service
     owner: root
     group: root
     mode: 0644
   notify:
-    - restart alertmanager
+    - restart
 
 - name: Copy alertmanager template files
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: "{{ prometheus_alertmanager_config_dir }}/templates/"
     force: true
-    owner: alertmanager
-    group: alertmanager
+    owner: "{{prometheus_alertmanager_system_user}}"
+    group: "{{prometheus_alertmanager_system_group}}"
     mode: 0644
   with_fileglob: "{{ prometheus_alertmanager_template_files }}"
   notify:
-    - restart alertmanager
+    - restart

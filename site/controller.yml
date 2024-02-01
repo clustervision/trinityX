@@ -250,9 +250,9 @@
     - role: trinity/wrapup
       tags: wrapup
     
-    - role: trinity/prometheus-auth
-      prometheus_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
-      tags: prometheus-auth, prometheus, monitoring
+    # - role: trinity/prometheus-auth
+    #   prometheus_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+    #   tags: prometheus-auth, prometheus, monitoring
 
     - role: trinity/prometheus-server
       prometheus_server_config_dir: "{{trix_etc}}/prometheus"
@@ -310,8 +310,9 @@
 
     - role: trinity/prometheus-slurm-exporter
       # file where prometheus slurm-exporter is announced
-      prometheus_slurm_exporter_system_group: root
       prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
+      prometheus_slurm_exporter_additional_system_groups:
+        - slurm
 
       tags: prometheus-slurm-exporter, prometheus, monitoring
       

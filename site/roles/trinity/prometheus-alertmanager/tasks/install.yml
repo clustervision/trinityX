@@ -1,24 +1,25 @@
 ---
 - name: Create alertmanager system group
   ansible.builtin.group:
-    name: alertmanager
+    name: "{{prometheus_alertmanager_system_group}}"
     system: true
     state: present
 
 - name: Create alertmanager system user
   ansible.builtin.user:
-    name: alertmanager
+    name: "{{prometheus_alertmanager_system_user}}"
     system: true
     shell: "/usr/sbin/nologin"
-    group: alertmanager
+    group: "{{prometheus_alertmanager_system_group}}"
+    groups: "{{prometheus_alertmanager_additional_system_groups}}"
     createhome: false
 
 - name: Create alertmanager directories
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    owner: alertmanager
-    group: alertmanager
+    owner: "{{prometheus_alertmanager_system_user}}"
+    group: "{{prometheus_alertmanager_system_group}}"
     mode: 0755
   with_items:
     - "{{ prometheus_alertmanager_config_dir }}"
@@ -67,7 +68,7 @@
         - alertmanager
         - amtool
       notify:
-        - restart alertmanager
+        - restart
 
 - name: Propagate locally distributed alertmanager and amtool binaries
   ansible.builtin.copy:
@@ -82,7 +83,7 @@
   when:
     - prometheus_alertmanager_binary_local_dir | length > 0
   notify:
-    - restart alertmanager
+    - restart
 
 - name: Create log dir if prometheus_alertmanager_log_dir is defined
   ansible.builtin.file:

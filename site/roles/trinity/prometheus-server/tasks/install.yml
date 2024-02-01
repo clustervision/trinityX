@@ -1,16 +1,17 @@
 ---
 - name: Create prometheus system group
   ansible.builtin.group:
-    name: prometheus
+    name: "{{prometheus_server_system_group}}"
     system: true
     state: present
 
 - name: Create prometheus system user
   ansible.builtin.user:
-    name: prometheus
+    name: "{{prometheus_server_system_user}}"
     system: true
     shell: "/usr/sbin/nologin"
-    group: prometheus
+    group: "{{prometheus_server_system_group}}"
+    groups: "{{prometheus_server_additional_system_groups}}"
     createhome: false
     home: "{{ prometheus_server_db_dir }}"
 
@@ -18,8 +19,8 @@
   ansible.builtin.file:
     path: "{{ prometheus_server_db_dir }}"
     state: directory
-    owner: prometheus
-    group: prometheus
+    owner: "{{prometheus_server_system_user}}"
+    group: "{{prometheus_server_system_group}}"
     mode: 0755
 
 - name: Create prometheus configuration directories
@@ -27,7 +28,7 @@
     path: "{{ item }}"
     state: directory
     owner: root
-    group: prometheus
+    group: "{{prometheus_server_system_group}}"
     mode: 0770
   with_items:
     - "{{ prometheus_server_config_dir }}"
@@ -73,7 +74,7 @@
         - prometheus
         - promtool
       notify:
-        - restart prometheus
+        - restart
 
     - name: Propagate official console templates
       ansible.builtin.copy:
@@ -86,7 +87,7 @@
         - console_libraries
         - consoles
       notify:
-        - restart prometheus
+        - restart
 
 - name: Propagate locally distributed prometheus and promtool binaries
   ansible.builtin.copy:
@@ -101,22 +102,24 @@
   when:
     - prometheus_server_binary_local_dir | length > 0
   notify:
-    - restart prometheus
+    - restart
 
 - name: Create systemd service unit
   ansible.builtin.template:
-    src: prometheus_server.service.j2
-    dest: /etc/systemd/system/prometheus_server.service
+    src: prometheus-server.service.j2
+    dest: /etc/systemd/system/prometheus-server.service
     owner: root
     group: root
     mode: 0644
   notify:
-    - restart prometheus
+    - restart
 
 - name: Create log dir if prometheus_server_log_dir is defined
   ansible.builtin.file:
     path: "{{ prometheus_server_log_dir }}"
     state: directory
+    owner: "{{prometheus_server_system_user}}"
+    group: "{{prometheus_server_system_group}}"
     mode: 0755
   when:
     - prometheus_server_log_dir is defined
