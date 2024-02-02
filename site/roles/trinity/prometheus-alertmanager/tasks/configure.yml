@@ -9,7 +9,7 @@
     mode: 0644
     validate: "{{ _prometheus_alertmanager_binary_install_dir }}/amtool check-config %s"
   notify:
-    - restart
+    - restart prometheus-alertmanager
 
 - name: Copy alertmanager web config ( for basic auth )
   ansible.builtin.template:
@@ -20,7 +20,7 @@
     group: "{{prometheus_alertmanager_system_group}}"
     mode: 0644
   notify:
-    - restart
+    - restart prometheus-alertmanager
   when: prometheus_alertmanager_auth_credentials_file is defined
 
 - name: Create systemd service unit
@@ -31,7 +31,7 @@
     group: root
     mode: 0644
   notify:
-    - restart
+    - restart prometheus-alertmanager
 
 - name: Copy alertmanager template files
   ansible.builtin.copy:
@@ -43,4 +43,4 @@
     mode: 0644
   with_fileglob: "{{ prometheus_alertmanager_template_files }}"
   notify:
-    - restart
+    - restart prometheus-alertmanager

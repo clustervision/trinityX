@@ -74,7 +74,7 @@
         - prometheus
         - promtool
       notify:
-        - restart
+        - restart prometheus-server
 
     - name: Propagate official console templates
       ansible.builtin.copy:
@@ -87,7 +87,7 @@
         - console_libraries
         - consoles
       notify:
-        - restart
+        - restart prometheus-server
 
 - name: Propagate locally distributed prometheus and promtool binaries
   ansible.builtin.copy:
@@ -102,7 +102,7 @@
   when:
     - prometheus_server_binary_local_dir | length > 0
   notify:
-    - restart
+    - restart prometheus-server
 
 - name: Create systemd service unit
   ansible.builtin.template:
@@ -112,7 +112,7 @@
     group: root
     mode: 0644
   notify:
-    - restart
+    - restart prometheus-server
 
 - name: Create log dir if prometheus_server_log_dir is defined
   ansible.builtin.file:

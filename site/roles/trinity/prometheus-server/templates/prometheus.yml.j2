@@ -20,8 +20,8 @@ alerting:
           - {{ prometheus_server_alertmanager.target }}
   {% if prometheus_server_alertmanager.credentials_file is defined %}
       basic_auth:
-        username: {{ prometheus_server_alertmanager.credentials_file | basename | replace('.txt', '') }}
-        password: {{ lookup('file', prometheus_server_alertmanager.credentials_file) }}
+        username: {{ prometheus_server_auth_user }}
+        password: {{ prometheus_server_auth_password }}
   {% endif %}
 {% endif %}
 {% if (prometheus_server_sd_files | length > 0) or (prometheus_server_sd_urls | length > 0) %}

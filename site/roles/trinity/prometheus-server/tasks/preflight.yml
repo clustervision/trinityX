@@ -50,15 +50,15 @@
         - "('linux-' + go_arch + '.tar.gz') in item"
 
     
-- name: "Collect prometheus_server_auth_user from prometheus_server_auth_credentials_file filename"
+- name: "Collect prometheus_server_auth_user from prometheus_server_alertmanager.credentials_file filename"
   ansible.builtin.set_fact:
-    prometheus_server_auth_user: "{{ prometheus_server_auth_credentials_file | basename |  replace('.txt', '') }}"
-  when: prometheus_server_auth_credentials_file is defined
+    prometheus_server_auth_user: "{{ prometheus_server_alertmanager.credentials_file | basename |  replace('.txt', '') }}"
+  when: prometheus_server_alertmanager is defined and prometheus_server_alertmanager.credentials_file is defined
 
-- name: "Collect prometheus_server_auth_password from prometheus_server_auth_credentials_file"
+- name: "Collect prometheus_server_auth_password from prometheus_server_alertmanager.credentials_file"
   ansible.builtin.set_fact:
-    prometheus_server_auth_password: "{{ lookup('password', prometheus_server_auth_credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
-  when: prometheus_server_auth_credentials_file is defined
+    prometheus_server_auth_password: "{{ lookup('password', prometheus_server_alertmanager.credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
+  when: prometheus_server_alertmanager is defined and prometheus_server_alertmanager.credentials_file is defined
 
 - name: "Ensure prometheus_server_alertmanager has a target field when defined"
   assert:
