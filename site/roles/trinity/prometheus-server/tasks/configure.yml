@@ -1,4 +1,14 @@
 ---
+- name: "Collect prometheus_server_auth_user from prometheus_server_auth.credentials_file filename"
+  ansible.builtin.set_fact:
+    prometheus_server_auth_user: "{{ prometheus_server_auth.credentials_file | basename | replace('.txt', '') }}"
+  when: prometheus_server_auth.credentials_file is defined
+
+- name: "Collect prometheus_server_auth_password from prometheus_server_auth.credentials_file"
+  ansible.builtin.set_fact:
+    prometheus_server_auth_password: "{{ lookup('password', prometheus_server_auth.credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
+  when: prometheus_server_auth.credentials_file is defined
+
 - name: Alerting rules file
   ansible.builtin.template:
     src: "alert.rules.j2"
@@ -29,7 +39,7 @@
 
 - name: Configure prometheus
   ansible.builtin.template:
-    src: "{{ prometheus_server_config_file }}"
+    src: prometheus.yml.j2
     dest: "{{ prometheus_server_config_dir }}/prometheus.yml"
     force: true
     owner: root
@@ -40,12 +50,13 @@
     - reload prometheus-server 
 
 - name: Configure Prometheus web
-  ansible.builtin.copy:
-    content: "{{ prometheus_server_web_config | to_nice_yaml(indent=2, sort_keys=False) }}"
-    dest: "{{ prometheus_server_config_dir }}/web.yml"
+  ansible.builtin.template:
+    src: prometheus.web.yml.j2
+    dest: "{{ prometheus_server_config_dir }}/prometheus.web.yml"
     force: true
     owner: root
     group: "{{prometheus_server_system_group}}"
+    validate: "{{ _prometheus_server_binary_install_dir }}/promtool check web-config %s"
     mode: 0640
 
 - name: Create sd targets directories if needed
@@ -76,7 +87,6 @@
           exporter: prometheus
       {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
           luna_group: controller
-          luna_role: controller
       {% endif %}
     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_server_exporter)"
   when:

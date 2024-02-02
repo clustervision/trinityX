@@ -255,40 +255,47 @@
     #   tags: prometheus-auth, prometheus, monitoring
 
     - role: trinity/prometheus-server
+      # Prometheus server
       prometheus_server_config_dir: "{{trix_etc}}/prometheus_server"
       prometheus_server_db_dir: "{{trix_local}}/var/lib/prometheus_server"
-
+      prometheus_node_exporter_additional_system_groups:
+        - "{{ssl_cert_group}}"
       prometheus_server_sd_files:
         - "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
         - "{{trix_etc}}/prometheus/targets/static_nodes.yml"
       prometheus_server_sd_urls:
         - "{{luna_protocol}}://localhost:7050/export/prometheus"
       prometheus_server_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
-
       prometheus_server_alertmanager:
-        credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
         target: "localhost:9093"
-
+      prometheus_server_auth:
+        enabled: true
+        credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
       prometheus_server_tls:
-        enable: true
+        enabled: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
         key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
         allow_insecure: true
 
       tags: prometheus-server, prometheus, monitoring
 
+
     - role: trinity/prometheus-alertmanager
+      # Prometheus alertmanager
       prometheus_alertmanager_config_dir: "{{trix_etc}}/prometheus_alertmanager"
       prometheus_alertmanager_db_dir: "{{trix_local}}/var/lib/prometheus_alertmanager"
-      prometheus_alertmanager_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
       prometheus_alertmanager_mail: "{{ administrator_email }}"
+      prometheus_alertmanager_additional_system_groups:
+        - "{{ssl_cert_group}}"
       prometheus_alertmanager_cluster:
         listen-address: "{{ ansible_fqdn }}:6783"
         peers:
           - "{{ trix_ctrl_hostname }}:6783"
-
+      prometheus_alertmanager_auth:
+        enabled: true
+        credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
       prometheus_alertmanager_tls:
-        enabled: false
+        enabled: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
         key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
         allow_insecure: true
@@ -296,23 +303,15 @@
       tags: prometheus-alertmanager, prometheus, monitoring
 
     - role: trinity/prometheus-node-exporter
-      # file where prometheus node-exporter is announced
+      # Prometheus node exporter
       prometheus_node_exporter_config_dir: "{{trix_etc}}/prometheus_node_exporter"
       prometheus_node_exporter_db_dir: "{{trix_local}}/var/lib/prometheus_node_exporter"
       prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
-
-      prometheus_node_exporter_tls:
-        enabled: true
-        cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-        key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-
       tags: prometheus-node-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-slurm-exporter
       # file where prometheus slurm-exporter is announced
       prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
-      prometheus_slurm_exporter_additional_system_groups:
-        - admins
 
       tags: prometheus-slurm-exporter, prometheus, monitoring
       

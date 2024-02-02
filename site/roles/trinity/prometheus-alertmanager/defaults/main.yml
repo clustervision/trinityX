@@ -9,21 +9,26 @@ prometheus_alertmanager_config_dir: /etc/alertmanager
 prometheus_alertmanager_db_dir: /var/lib/alertmanager
 prometheus_alertmanager_log_dir: /var/log/prometheus
 
-prometheus_alertmanager_web_config_file: 'alertmanager.web.yml.j2'
-prometheus_alertmanager_config_file: 'alertmanager.yml.j2'
-
 prometheus_alertmanager_template_files:
   - alertmanager/templates/*.tmpl
 
+# First read: https://github.com/prometheus/alertmanager#high-availability
+prometheus_alertmanager_cluster: {}
+prometheus_alertmanager_auth:
+  enabled: false
+
+prometheus_alertmanager_tls:
+  enabled: false
+
 prometheus_alertmanager_web_listen_host: '0.0.0.0'
 prometheus_alertmanager_web_listen_port: 9093
-prometheus_alertmanager_web_external_url: 'http://{{ ansible_fqdn }}:{{prometheus_alertmanager_web_listen_port}}/'
+prometheus_alertmanager_web_external_url: 'http://{{ trix_external_fqdn }}:{{prometheus_alertmanager_web_listen_port}}/'
 
 prometheus_alertmanager_system_user: "prometheus-alertmanager"
 prometheus_alertmanager_system_group: "prometheus"
 prometheus_alertmanager_additional_system_groups: []
 
-prometheus_alertmanager_tls: {}
+
 
 # SMTP default params
 prometheus_alertmanager_smtp:
@@ -48,13 +53,7 @@ prometheus_alertmanager_wechat_url: ''
 prometheus_alertmanager_wechat_secret: ''
 prometheus_alertmanager_wechat_corp_id: ''
 
-# First read: https://github.com/prometheus/alertmanager#high-availability
-prometheus_alertmanager_cluster: {}
-# prometheus_alertmanager_cluster:
-#   listen-address: "{{ ansible_default_ipv4.address }}:6783"
-#   peers:
-#     - "{{ ansible_default_ipv4.address }}:6783"
-#     - "alertmanager.demo.do.prometheus.io:6783"
+
 
 prometheus_alertmanager_receivers:
 - name: 'null'

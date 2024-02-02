@@ -49,58 +49,16 @@
       when:
         - "('linux-' + go_arch + '.tar.gz') in item"
 
-- name: Fail when there are no receivers defined
+- name: Ensure prometheus_alertmanager_auth is defined and it has an enabled field
   ansible.builtin.fail:
-    msg: "Configure alert receivers (`prometheus_alertmanager_receivers`). Otherwise alertmanager won't know where to send alerts."
+    msg: "prometheus_alertmanager_auth is required and it must have an enabled field"
   when:
-    - prometheus_alertmanager_config_file == 'alertmanager.yml.j2'
-    - prometheus_alertmanager_receivers == []
+    - prometheus_alertmanager_auth is not defined
+    - prometheus_alertmanager_auth.enabled is not defined
 
-- name: Fail when there is no alert route defined
+- name: Ensure prometheus_alertmanager_tls is defined and it has an enabled field
   ansible.builtin.fail:
-    msg: "Configure alert routing (`prometheus_alertmanager_route`). Otherwise alertmanager won't know how to send alerts."
+    msg: "prometheus_alertmanager_tls is required and it must have an enabled field"
   when:
-    - prometheus_alertmanager_config_file == 'alertmanager.yml.j2'
-    - prometheus_alertmanager_route == {}
-
-- name: "DEPRECATION WARNING: alertmanager version 0.15 and earlier are no longer supported and will be dropped from future releases"
-  failed_when: false
-  ansible.builtin.fail:
-    msg: "Please use `prometheus_alertmanager_version >= v0.16.0`"
-  when: prometheus_alertmanager_version is version_compare('0.16.0', '<')
-
-- name: Check deprecated variable `prometheus_alertmanager_external_url`
-  when: prometheus_alertmanager_external_url is defined
-  block:
-    - name: Backward compatibility of variable [part 3]
-      ansible.builtin.set_fact:
-        prometheus_alertmanager_web_external_url: "{{ prometheus_alertmanager_external_url }}"
-
-    - name: "DEPRECATION WARNING: `prometheus_alertmanager_external_url` is no longer supported and will be dropped from future releases"
-      failed_when: false
-      ansible.builtin.fail:
-        msg: "Please use `prometheus_alertmanager_web_external_url` instead of `prometheus_alertmanager_external_url`"
-
-- name: "`prometheus_alertmanager_child_routes` is no longer supported"
-  ansible.builtin.fail:
-    msg: "Please move content of `prometheus_alertmanager_child_routes` to `prometheus_alertmanager_route.routes` as the former variable is deprecated
-          and will be removed in future versions."
-  when: prometheus_alertmanager_child_routes is defined
-
-- name: "`prometheus_alertmanager_time_intervals` is only supported on version 0.22.0. Please upgrade to this version."
-  ansible.builtin.fail:
-    msg: "To use `prometheus_alertmanager_time_intervals`,
-          Please upgrade to AlertManager 0.22.0 or newer."
-  when:
-    - prometheus_alertmanager_version is version_compare('0.22.0', '<')
-    - prometheus_alertmanager_time_intervals is defined
-
-- name: "Collect prometheus_alertmanager_auth_user from prometheus_alertmanager_auth_credentials_file filename"
-  ansible.builtin.set_fact:
-    prometheus_alertmanager_auth_user: "{{ prometheus_alertmanager_auth_credentials_file | basename | replace('.txt', '') }}"
-  when: prometheus_alertmanager_auth_credentials_file is defined
-
-- name: "Collect prometheus_alertmanager_auth_password from prometheus_alertmanager_auth_credentials_file"
-  ansible.builtin.set_fact:
-    prometheus_alertmanager_auth_password: "{{ lookup('password', prometheus_alertmanager_auth_credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
-  when: prometheus_alertmanager_auth_credentials_file is defined
+    - prometheus_alertmanager_tls is not defined
+    - prometheus_alertmanager_tls.enabled is not defined

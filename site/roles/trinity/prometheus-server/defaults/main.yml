@@ -19,10 +19,11 @@ prometheus_server_alert_rules_files:
   - prometheus/rules/*.rules
 
 # See https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
-prometheus_server_web_config:
-  tls_server_config: {}
-  http_server_config: {}
-  basic_auth_users: {}
+prometheus_server_auth:
+  enabled: false
+
+prometheus_server_tls:
+  enabled: false
 
 prometheus_server_system_user: "prometheus-server"
 prometheus_server_system_group: "prometheus"
@@ -56,11 +57,6 @@ prometheus_server_global:
 prometheus_server_external_labels:
   controller: "{{ ansible_fqdn | default(ansible_host) | default(inventory_hostname) }}"
   cluster: "trinityX"
-
-# Alternative config file name, searched in ansible templates path.
-prometheus_server_config_file: 'prometheus.yml.j2'
-
-
 
 # yamllint disable rule:line-length
 prometheus_server_alert_rules:  # noqa yaml[line-length]  # noqa line-length

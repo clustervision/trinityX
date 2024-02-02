@@ -18,6 +18,9 @@ alerting:
     - static_configs:
         - targets:
           - {{ prometheus_server_alertmanager.target }}
+  {% if prometheus_server_tls.enabled %}
+      scheme: https
+  {% endif %}
   {% if prometheus_server_alertmanager.credentials_file is defined %}
       basic_auth:
         username: {{ prometheus_server_auth_user }}

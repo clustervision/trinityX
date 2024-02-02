@@ -15,18 +15,14 @@ ExecReload=/bin/kill -HUP $MAINPID
 ExecStart={{ _prometheus_server_binary_install_dir }}/prometheus \
 {% if not prometheus_server_agent_mode %}
   --storage.tsdb.path={{ prometheus_server_db_dir }} \
-{% if prometheus_server_version is version('2.7.0', '>=') %}
   --storage.tsdb.retention.time={{ prometheus_server_storage_retention }} \
   --storage.tsdb.retention.size={{ prometheus_server_storage_retention_size }} \
-{% else %}
-  --storage.tsdb.retention={{ prometheus_server_storage_retention }} \
-{% endif %}
 {% else %}
   --enable-feature=agent \
   --storage.agent.path={{ prometheus_server_db_dir }} \
 {% endif %}
-{% if prometheus_server_version is version('2.24.0', '>=') %}
-  --web.config.file={{ prometheus_server_config_dir }}/web.yml \
+{% if prometheus_server_tls.enabled or prometheus_server_auth.enabled %}
+  --web.config.file={{ prometheus_server_config_dir }}/prometheus.web.yml \
 {% endif %}
   --web.console.libraries={{ prometheus_server_config_dir }}/console_libraries \
   --web.console.templates={{ prometheus_server_config_dir }}/consoles \

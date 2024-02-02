@@ -25,19 +25,19 @@ ExecStart={{ _prometheus_alertmanager_binary_install_dir }}/alertmanager \
 {% for option, value in (prometheus_alertmanager_cluster.items() | sort) %}
 {%   if option == "peers" %}
 {%     for peer in value %}
-  {{ pre }}-{{ cluster_flag }}.peer={{ peer }} \
+  --{{ cluster_flag }}.peer={{ peer }} \
 {%     endfor %}
 {%   else %}
-  {{ pre }}-{{ cluster_flag }}.{{ option }}={{ value }} \
+  --{{ cluster_flag }}.{{ option }}={{ value }} \
 {%   endif %}
 {% endfor %}
-{% if prometheus_alertmanager_auth_credentials_file %}
-  {{ pre }}-web.config.file={{ prometheus_alertmanager_config_dir }}/alertmanager.web.yml \
+{% if prometheus_alertmanager_tls.enabled or prometheus_alertmanager_auth.enabled %}
+  --web.config.file={{ prometheus_alertmanager_config_dir }}/alertmanager.web.yml \
 {% endif %}
-  {{ pre }}-config.file={{ prometheus_alertmanager_config_dir }}/alertmanager.yml \
-  {{ pre }}-storage.path={{ prometheus_alertmanager_db_dir }} \
-  {{ pre }}-web.listen-address={{ prometheus_alertmanager_web_listen_host }}:{{ prometheus_alertmanager_web_listen_port }} \
-  {{ pre }}-web.external-url={{ prometheus_alertmanager_web_external_url }}
+  --config.file={{ prometheus_alertmanager_config_dir }}/alertmanager.yml \
+  --storage.path={{ prometheus_alertmanager_db_dir }} \
+  --web.listen-address={{ prometheus_alertmanager_web_listen_host }}:{{ prometheus_alertmanager_web_listen_port }} \
+  --web.external-url={{ prometheus_alertmanager_web_external_url }}
 SyslogIdentifier=alertmanager
 Restart=always
 RestartSec=5
