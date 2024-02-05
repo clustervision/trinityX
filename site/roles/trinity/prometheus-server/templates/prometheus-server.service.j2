@@ -27,7 +27,6 @@ ExecStart={{ _prometheus_server_binary_install_dir }}/prometheus \
   --web.console.libraries={{ prometheus_server_config_dir }}/console_libraries \
   --web.console.templates={{ prometheus_server_config_dir }}/consoles \
   --web.listen-address={{ prometheus_server_web_listen_host }}:{{ prometheus_server_web_listen_port }} \
-  --web.external-url={{ prometheus_server_web_external_url }} \
 {% for flag, flag_value in prometheus_server_config_flags_extra.items() %}
 {% if not flag_value %}
   --{{ flag }} \
@@ -55,31 +54,16 @@ RestrictSUIDSGID=true
 {% if prometheus_server_log_dir is defined %}
 StandardOutput=append:{{prometheus_server_log_dir}}/prometheus_server.log
 {% endif %}
-{% if (ansible_facts.packages.systemd | first).version is version('231', '>=') %}
-ReadWritePaths={{ prometheus_server_db_dir }}
-{% for path in prometheus_server_read_only_dirs %}
-ReadOnlyPaths={{ path }}
-{% endfor %}
-{% else %}
-ReadWriteDirectories={{ prometheus_server_db_dir }}
-{% for path in prometheus_server_read_only_dirs %}
-ReadOnlyDirectories={{ path }}
-{% endfor %}
-{% endif %}
-
-{% if (ansible_facts.packages.systemd | first).version is version('232', '>=') %}
-PrivateUsers=true
-ProtectControlGroups=true
-ProtectKernelModules=true
-ProtectKernelTunables=true
-ProtectSystem=strict
-{% else %}
-ProtectSystem=full
-{% endif %}
 
 {% if http_proxy is defined %}
 Environment="HTTP_PROXY={{ http_proxy }}"{% if https_proxy is defined %} "HTTPS_PROXY={{ https_proxy }}{% endif %}"
 {% endif %}
+
+{% if (ansible_facts.packages.systemd | first).version is version('231', '>=') %}
+ReadWritePaths={{ prometheus_server_db_dir }}
+ProtectSystem=strict
+{% endif %}
+
 
 SyslogIdentifier=prometheus
 Restart=always

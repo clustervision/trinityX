@@ -4,12 +4,14 @@
     file: preflight.yml
     apply:
       tags:
-        - prometheus-configure
         - prometheus-install
+        - prometheus-configure
+        - prometheus-selinux
         - prometheus-run
   tags:
-    - prometheus-configure
     - prometheus-install
+    - prometheus-configure
+    - prometheus-selinux
     - prometheus-run
 
 - name: Install
@@ -31,6 +33,16 @@
         - prometheus-configure
   tags:
     - prometheus-configure
+
+- name: SELinux
+  ansible.builtin.include_tasks:
+    file: selinux.yml
+    apply:
+      become: true
+      tags:
+        - prometheus-selinux
+  tags:
+    - prometheus-selinux
 
 - name: Ensure prometheus service is started and enabled
   become: true

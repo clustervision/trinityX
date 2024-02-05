@@ -29,11 +29,8 @@
   retries: 10
   when:
     - prometheus_server_version == "latest"
-    - prometheus_server_binary_local_dir | length == 0
 
 - name: Get prometheus binary checksum
-  when:
-    - prometheus_server_binary_local_dir | length == 0
   block:
     - name: "Get checksum list"
       ansible.builtin.set_fact:
@@ -48,24 +45,3 @@
       with_items: "{{ __prometheus_server_checksums }}"
       when:
         - "('linux-' + go_arch + '.tar.gz') in item"
-
-- name: Ensure prometheus_server_auth is defined and it has an enabled field
-  ansible.builtin.fail:
-    msg: "prometheus_server_auth is required and it must have an enabled field"
-  when:
-    - prometheus_server_auth is not defined
-    - prometheus_server_auth.enabled is not defined
-
-- name: Ensure prometheus_server_tls is defined and it has an enabled field
-  ansible.builtin.fail:
-    msg: "prometheus_server_tls is required and it must have an enabled field"
-  when:
-    - prometheus_server_tls is not defined
-    - prometheus_server_tls.enabled is not defined
-
-- name: "Ensure prometheus_server_alertmanager has a target field when defined"
-  assert:
-    that:
-      - prometheus_server_alertmanager.target is defined
-    fail_msg: "prometheus_server_alertmanager.target is required when prometheus_server_alertmanager is defined"
-  when: prometheus_server_alertmanager is defined

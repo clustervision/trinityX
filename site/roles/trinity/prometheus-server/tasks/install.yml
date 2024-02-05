@@ -33,11 +33,37 @@
   with_items:
     - "{{ prometheus_server_config_dir }}"
     - "{{ prometheus_server_config_dir }}/rules"
-    - "{{ prometheus_server_config_dir }}/file_sd"
+    # - "{{ prometheus_server_config_dir }}/file_sd"
+
+- name: Create file_sd directories if needed
+  ansible.builtin.file:
+    path: "{{ item.target | dirname }}"
+    state: directory
+    owner: root
+    group: "{{prometheus_server_system_group}}"
+    mode: 0750
+  loop: "{{ prometheus_server_file_sd }}"
+
+- name: Create file_sd files if needed
+  ansible.builtin.file:
+    path: "{{ item.target }}"
+    state: touch
+    owner: root
+    group: "{{prometheus_server_system_group}}"
+    mode: 0750
+  loop: "{{ prometheus_server_file_sd }}"
+
+- name: Create log directory
+  ansible.builtin.file:
+    path: "{{ prometheus_server_log_dir }}"
+    state: directory
+    owner: "{{prometheus_server_system_user}}"
+    group: "{{prometheus_server_system_group}}"
+    mode: 0755
+  when:
+    - prometheus_server_log_dir | length > 0 
 
 - name: Get prometheus binary
-  when:
-    - prometheus_server_binary_local_dir | length == 0
   block:
     - name: Download prometheus binary to local folder
       become: false
@@ -50,8 +76,6 @@
       until: _download_archive is succeeded
       retries: 5
       delay: 2
-      # run_once: true # <-- this cannot be set due to multi-arch support
-      delegate_to: localhost
       check_mode: false
 
     - name: Unpack prometheus binaries
@@ -60,7 +84,6 @@
         src: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
         dest: "/tmp"
         creates: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/prometheus"
-      delegate_to: localhost
       check_mode: false
 
     - name: Propagate official prometheus and promtool binaries
@@ -89,21 +112,6 @@
       notify:
         - restart prometheus-server
 
-- name: Propagate locally distributed prometheus and promtool binaries
-  ansible.builtin.copy:
-    src: "{{ prometheus_server_binary_local_dir }}/{{ item }}"
-    dest: "{{ _prometheus_server_binary_install_dir }}/{{ item }}"
-    mode: 0755
-    owner: root
-    group: root
-  with_items:
-    - prometheus
-    - promtool
-  when:
-    - prometheus_server_binary_local_dir | length > 0
-  notify:
-    - restart prometheus-server
-
 - name: Create systemd service unit
   ansible.builtin.template:
     src: prometheus-server.service.j2
@@ -114,42 +122,4 @@
   notify:
     - restart prometheus-server
 
-- name: Create log dir if prometheus_server_log_dir is defined
-  ansible.builtin.file:
-    path: "{{ prometheus_server_log_dir }}"
-    state: directory
-    owner: "{{prometheus_server_system_user}}"
-    group: "{{prometheus_server_system_group}}"
-    mode: 0755
-  when:
-    - prometheus_server_log_dir is defined
 
-- name: Install SELinux dependencies
-  ansible.builtin.package:
-    name: "{{ _prometheus_server_selinux_packages }}"
-    state: present
-  register: _install_packages
-  until: _install_packages is succeeded
-  retries: 5
-  delay: 2
-  when:
-    - ansible_version.full is version('2.4', '>=')
-    - ansible_selinux.status == "enabled"
-
-- name: Allow prometheus to bind to port in SELinux
-  community.general.seport:
-    ports: "{{ prometheus_server_web_listen_port }}"
-    proto: tcp
-    setype: http_port_t
-    state: present
-  when:
-    - ansible_version.full is version('2.4', '>=')
-    - ansible_selinux.status == "enabled"
-
-- name: Configure firewalld
-  firewalld:
-    state: enabled
-    port: "{{ prometheus_server_web_listen_port }}/tcp"
-    permanent: "yes"
-    immediate: "yes"
-  when: ansible_virtualization_type != 'docker'

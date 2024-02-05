@@ -258,25 +258,28 @@
       # Prometheus server
       prometheus_server_config_dir: "{{trix_etc}}/prometheus_server"
       prometheus_server_db_dir: "{{trix_local}}/var/lib/prometheus_server"
-      prometheus_node_exporter_additional_system_groups:
+      prometheus_server_additional_system_groups:
         - "{{ssl_cert_group}}"
-      prometheus_server_sd_files:
-        - "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
-        - "{{trix_etc}}/prometheus/targets/static_nodes.yml"
-      prometheus_server_sd_urls:
-        - "{{luna_protocol}}://localhost:7050/export/prometheus"
-      prometheus_server_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
-      prometheus_server_alertmanager:
-        target: "localhost:9093"
-      prometheus_server_auth:
-        enabled: true
-        credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      prometheus_server_file_sd:
+        - target: "{{trix_etc}}/prometheus/file_sd/luna_targets.yml"
+        - target: "{{trix_etc}}/prometheus/file_sd/targets.yml"
+      prometheus_server_http_sd:
+        - target: "localhost:7050/export/prometheus"
+          tls:
+            enabled: "{{ luna_protocol == 'https' }}"
+            insecure_skip_verify: true
+      prometheus_server_alertmanagers:
+        - target: "localhost:9093"
+          tls:
+            enabled: true
+            insecure_skip_verify: true
+          basic_auth:
+            enabled: true
+            credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
       prometheus_server_tls:
         enabled: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
         key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-        allow_insecure: true
-
       tags: prometheus-server, prometheus, monitoring
 
 
@@ -298,21 +301,18 @@
         enabled: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
         key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-        allow_insecure: true
-
       tags: prometheus-alertmanager, prometheus, monitoring
 
     - role: trinity/prometheus-node-exporter
       # Prometheus node exporter
       prometheus_node_exporter_config_dir: "{{trix_etc}}/prometheus_node_exporter"
       prometheus_node_exporter_db_dir: "{{trix_local}}/var/lib/prometheus_node_exporter"
-      prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
+      prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus/file_sd/luna_targets.yml"
       tags: prometheus-node-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-slurm-exporter
-      # file where prometheus slurm-exporter is announced
-      prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus/targets/luna_nodes.yml"
-
+      # Prometheus slurm exporter
+      prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus/file_sd/luna_targets.yml"
       tags: prometheus-slurm-exporter, prometheus, monitoring
       
     - role: trinity/grafana

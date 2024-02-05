@@ -1,14 +1,4 @@
 ---
-- name: "Collect prometheus_server_auth_user from prometheus_server_auth.credentials_file filename"
-  ansible.builtin.set_fact:
-    prometheus_server_auth_user: "{{ prometheus_server_auth.credentials_file | basename | replace('.txt', '') }}"
-  when: prometheus_server_auth.credentials_file is defined
-
-- name: "Collect prometheus_server_auth_password from prometheus_server_auth.credentials_file"
-  ansible.builtin.set_fact:
-    prometheus_server_auth_password: "{{ lookup('password', prometheus_server_auth.credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
-  when: prometheus_server_auth.credentials_file is defined
-
 - name: Alerting rules file
   ansible.builtin.template:
     src: "alert.rules.j2"
@@ -59,59 +49,27 @@
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check web-config %s"
     mode: 0640
 
-- name: Create sd targets directories if needed
-  ansible.builtin.file:
-    path: "{{ item | dirname }}"
-    state: directory
-    owner: root
-    group: "{{prometheus_server_system_group}}"
-    mode: 0750
-  loop: "{{ prometheus_server_sd_files }}"
+# - name: Configure prometheus self-exporter if prometheus_server_exporter_sd_file is defined
+#   blockinfile:
+#     path: "{{ prometheus_server_exporter_sd_file }}"
+#     block: |
+#       - targets:
+#         - {{ ansible_fqdn }}:{{ prometheus_server_web_listen_port }}
+#         labels:
+#           exporter: prometheus
+#       {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
+#           luna_group: controller
+#       {% endif %}
+#     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_server_exporter)"
+#   when:
+#     - prometheus_server_exporter_sd_file is defined
 
-- name: Create sd targets files if needed
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: touch
-    owner: root
-    group: "{{prometheus_server_system_group}}"
-    mode: 0750
-  loop: "{{ prometheus_server_sd_files }}"
-
-- name: Configure prometheus self-exporter if prometheus_server_exporter_sd_file is defined
-  blockinfile:
-    path: "{{ prometheus_server_exporter_sd_file }}"
-    block: |
-      - targets:
-        - {{ ansible_fqdn }}:{{ prometheus_server_web_listen_port }}
-        labels:
-          exporter: prometheus
-      {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
-          luna_group: controller
-      {% endif %}
-    marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_server_exporter)"
-  when:
-    - prometheus_server_exporter_sd_file is defined
-  
+- name: Configure firewalld
+  firewalld:
+    state: enabled
+    port: "{{ prometheus_server_web_listen_port }}/tcp"
+    permanent: "yes"
+    immediate: "yes"
+  when: ansible_virtualization_type != 'docker'
 
 
-# - name: Configure prometheus static targets
-#   ansible.builtin.copy:
-#     content: |
-#       {{ item.value | to_nice_yaml(indent=2, sort_keys=False) }}
-#     dest: "{{ prometheus_server_config_dir }}/file_sd/{{ item.key }}.yml"
-#     force: true
-#     owner: root
-#     group: prometheus
-#     mode: 0640
-#   with_dict: "{{ prometheus_server_targets }}"
-#   when: prometheus_server_targets != {}
-
-# - name: Copy prometheus custom static targets
-#   ansible.builtin.copy:
-#     src: "{{ item }}"
-#     dest: "{{ prometheus_server_config_dir }}/file_sd/"
-#     force: true
-#     owner: root
-#     group: prometheus
-#     mode: 0640
-#   with_fileglob: "{{ prometheus_server_static_targets_files }}"
