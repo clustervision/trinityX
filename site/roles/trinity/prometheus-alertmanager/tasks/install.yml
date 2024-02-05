@@ -74,6 +74,17 @@
   when:
     - prometheus_alertmanager_log_dir is defined
 
+- name: Install postfix
+  ansible.builtin.package:
+    name: postfix
+    state: present
+
+- name: Start and enable postfix
+  ansible.builtin.service:
+    name: postfix
+    state: started
+    enabled: true
+
 - name: Create systemd service unit
   ansible.builtin.template:
     src: prometheus-alertmanager.service.j2
