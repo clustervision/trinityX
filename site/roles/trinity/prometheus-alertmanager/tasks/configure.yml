@@ -21,23 +21,13 @@
   notify:
     - restart prometheus-alertmanager
 
-- name: Copy alertmanager web config ( for basic auth )
+- name: Copy alertmanager web config
   ansible.builtin.template:
     force: true
     src: 'alertmanager.web.yml.j2'
     dest: "{{ prometheus_alertmanager_config_dir }}/alertmanager.web.yml"
     owner: "{{prometheus_alertmanager_system_user}}"
     group: "{{prometheus_alertmanager_system_group}}"
-    mode: 0644
-  notify:
-    - restart prometheus-alertmanager
-
-- name: Create systemd service unit
-  ansible.builtin.template:
-    src: prometheus-alertmanager.service.j2
-    dest: /etc/systemd/system/prometheus-alertmanager.service
-    owner: root
-    group: root
     mode: 0644
   notify:
     - restart prometheus-alertmanager
@@ -53,3 +43,11 @@
   with_fileglob: "{{ prometheus_alertmanager_template_files }}"
   notify:
     - restart prometheus-alertmanager
+
+- name: Configure firewalld
+  firewalld:
+    state: enabled
+    port: "{{ prometheus_alertmanager_web_listen_port }}/tcp"
+    permanent: "yes"
+    immediate: "yes"
+  when: ansible_virtualization_type != 'docker'

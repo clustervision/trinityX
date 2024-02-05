@@ -29,11 +29,9 @@
   retries: 10
   when:
     - prometheus_alertmanager_version == "latest"
-    - prometheus_alertmanager_binary_local_dir | length == 0
 
 - name: Get alertmanager binary checksum
-  when:
-    - prometheus_alertmanager_binary_local_dir | length == 0
+
   block:
     - name: "Get checksum list"
       ansible.builtin.set_fact:
@@ -49,16 +47,3 @@
       when:
         - "('linux-' + go_arch + '.tar.gz') in item"
 
-- name: Ensure prometheus_alertmanager_auth is defined and it has an enabled field
-  ansible.builtin.fail:
-    msg: "prometheus_alertmanager_auth is required and it must have an enabled field"
-  when:
-    - prometheus_alertmanager_auth is not defined
-    - prometheus_alertmanager_auth.enabled is not defined
-
-- name: Ensure prometheus_alertmanager_tls is defined and it has an enabled field
-  ansible.builtin.fail:
-    msg: "prometheus_alertmanager_tls is required and it must have an enabled field"
-  when:
-    - prometheus_alertmanager_tls is not defined
-    - prometheus_alertmanager_tls.enabled is not defined

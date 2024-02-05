@@ -4,13 +4,15 @@
     file: preflight.yml
     apply:
       tags:
-        - prometheus_alertmanager_install
-        - prometheus_alertmanager_configure
-        - prometheus_alertmanager_run
+        - prometheus-alertmanager-install
+        - prometheus-alertmanager-configure
+        - prometheus-alertmanager-selinux
+        - prometheus-alertmanager-run
   tags:
-    - prometheus_alertmanager_install
-    - prometheus_alertmanager_configure
-    - prometheus_alertmanager_run
+    - prometheus-alertmanager-install
+    - prometheus-alertmanager-configure
+    - prometheus-alertmanager-selinux
+    - prometheus-alertmanager-run
 
 - name: Install
   ansible.builtin.include_tasks:
@@ -18,9 +20,9 @@
     apply:
       become: true
       tags:
-        - prometheus_alertmanager_install
+        - prometheus-alertmanager-install
   tags:
-    - prometheus_alertmanager_install
+    - prometheus-alertmanager-install
 
 - name: SELinux
   ansible.builtin.include_tasks:
@@ -28,10 +30,10 @@
     apply:
       become: true
       tags:
-        - prometheus_alertmanager_configure
+        - prometheus-alertmanager-selinux
   when: ansible_selinux.status == "enabled"
   tags:
-    - prometheus_alertmanager_configure
+    - prometheus-alertmanager-selinux
 
 - name: Configure
   ansible.builtin.include_tasks:
@@ -39,9 +41,9 @@
     apply:
       become: true
       tags:
-        - prometheus_alertmanager_configure
+        - prometheus-alertmanager-configure
   tags:
-    - prometheus_alertmanager_configure
+    - prometheus-alertmanager-configure
 
 - name: Ensure prometheus-alertmanager.service is started and enabled
   become: true
@@ -51,7 +53,5 @@
     state: started
     enabled: true
   tags:
-    - prometheus_alertmanager_run
+    - prometheus-alertmanager-run
 
-- name: Flush alertmangaer handlers after run.
-  ansible.builtin.meta: flush_handlers

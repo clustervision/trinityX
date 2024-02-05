@@ -28,8 +28,6 @@
     - "{{ _prometheus_alertmanager_amtool_config_dir }}"
 
 - name: Get binary
-  when:
-    - prometheus_alertmanager_binary_local_dir | length == 0
   block:
 
     - name: Download alertmanager binary to local folder
@@ -44,7 +42,6 @@
       retries: 5
       delay: 2
       # run_once: true  # <-- this can't be set due to multi-arch support
-      delegate_to: localhost
       check_mode: false
 
     - name: Unpack alertmanager binaries
@@ -54,7 +51,6 @@
         dest: "/tmp"
         mode: 0755
         creates: "/tmp/alertmanager-{{ prometheus_alertmanager_version }}.linux-{{ go_arch }}/alertmanager"
-      delegate_to: localhost
       check_mode: false
 
     - name: Propagate official alertmanager and amtool binaries
@@ -70,22 +66,7 @@
       notify:
         - restart prometheus-alertmanager
 
-- name: Propagate locally distributed alertmanager and amtool binaries
-  ansible.builtin.copy:
-    src: "{{ prometheus_alertmanager_binary_local_dir }}/{{ item }}"
-    dest: "{{ _prometheus_alertmanager_binary_install_dir }}/{{ item }}"
-    mode: 0755
-    owner: root
-    group: root
-  with_items:
-    - alertmanager
-    - amtool
-  when:
-    - prometheus_alertmanager_binary_local_dir | length > 0
-  notify:
-    - restart prometheus-alertmanager
-
-- name: Create log dir if prometheus_alertmanager_log_dir is defined
+- name: Create log directory
   ansible.builtin.file:
     path: "{{ prometheus_alertmanager_log_dir }}"
     state: directory
@@ -93,10 +74,12 @@
   when:
     - prometheus_alertmanager_log_dir is defined
 
-- name: Configure firewalld
-  firewalld:
-    state: enabled
-    port: "{{ prometheus_alertmanager_web_listen_port }}/tcp"
-    permanent: "yes"
-    immediate: "yes"
-  when: ansible_virtualization_type != 'docker'
+- name: Create systemd service unit
+  ansible.builtin.template:
+    src: prometheus-alertmanager.service.j2
+    dest: /etc/systemd/system/prometheus-alertmanager.service
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart prometheus-alertmanager
