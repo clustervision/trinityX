@@ -4,13 +4,15 @@
     file: preflight.yml
     apply:
       tags:
-        - prometheus_node_exporter_install
-        - prometheus_node_exporter_configure
-        - prometheus_node_exporter_run
+        - prometheus-node-exporter-install
+        - prometheus-node-exporter-configure
+        - prometheus-node-exporter-selinux
+        - prometheus-node-exporter-run
   tags:
-    - prometheus_node_exporter_install
-    - prometheus_node_exporter_configure
-    - prometheus_node_exporter_run
+    - prometheus-node-exporter-install
+    - prometheus-node-exporter-configure
+    - prometheus-node-exporter-selinux
+    - prometheus-node-exporter-run
 
 - name: Install
   ansible.builtin.include_tasks:
@@ -18,20 +20,9 @@
     apply:
       become: true
       tags:
-        - prometheus_node_exporter_install
+        - prometheus-node-exporter-install
   tags:
-    - prometheus_node_exporter_install
-
-- name: SELinux
-  ansible.builtin.include_tasks:
-    file: selinux.yml
-    apply:
-      become: true
-      tags:
-        - prometheus_node_exporter_configure
-  when: ansible_selinux.status == "enabled"
-  tags:
-    - prometheus_node_exporter_configure
+    - prometheus-node-exporter-install
 
 - name: Configure
   ansible.builtin.include_tasks:
@@ -39,18 +30,27 @@
     apply:
       become: true
       tags:
-        - prometheus_node_exporter_configure
+        - prometheus-node-exporter-configure
   tags:
-    - prometheus_node_exporter_configure
+    - prometheus-node-exporter-configure
+
+- name: SELinux
+  ansible.builtin.include_tasks:
+    file: selinux.yml
+    apply:
+      become: true
+      tags:
+        - prometheus-node-exporter-selinux
+  when: ansible_selinux.status == "enabled"
+  tags:
+    - prometheus-node-exporter-selinux
 
 - name: Ensure Node Exporter is enabled on boot
   become: true
   ansible.builtin.systemd:
     daemon_reload: true
     name: prometheus-node-exporter
-    enabled: true
     state: started
-  when:
-    - not ansible_check_mode
+    enabled: true
   tags:
-    - prometheus_node_exporter_run
+    - prometheus-node-exporter-run

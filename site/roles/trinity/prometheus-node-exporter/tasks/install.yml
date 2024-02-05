@@ -18,11 +18,24 @@
     home: /
   when: prometheus_node_exporter_system_user != "root"
 
-- name: Get binary
-  when:
-    - prometheus_node_exporter_binary_local_dir | length == 0
-  block:
+- name: Create prometheus_node_exporter config directory
+  ansible.builtin.file:
+    path: "{{prometheus_node_exporter_config_dir}}"
+    state: directory
+    owner: root
+    group: root
+    mode: u+rwX,g+rwX,o=rX
 
+- name: Create prometheus_node_exporter log directory
+  ansible.builtin.file:
+    path: "{{ prometheus_node_exporter_log_dir }}"
+    state: directory
+    mode: 0755
+  when:
+    - prometheus_node_exporter_log_dir is defined
+
+- name: Get binary
+  block:
     - name: Download prometheus_node_exporter binary to local folder
       become: false
       ansible.builtin.get_url:
@@ -34,7 +47,6 @@
       until: _download_binary is succeeded
       retries: 5
       delay: 2
-      delegate_to: localhost
       check_mode: false
 
     - name: Unpack prometheus_node_exporter binary
@@ -43,7 +55,6 @@
         src: "/tmp/prometheus_node_exporter-{{ prometheus_node_exporter_version }}.linux-{{ go_arch }}.tar.gz"
         dest: "/tmp"
         creates: "/tmp/node_exporter-{{ prometheus_node_exporter_version }}.linux-{{ go_arch }}/node_exporter"
-      delegate_to: localhost
       check_mode: false
 
     - name: Propagate prometheus_node_exporter binaries
@@ -56,21 +67,11 @@
       notify: restart prometheus-node-exporter
       when: not ansible_check_mode
 
-- name: Propagate locally distributed prometheus_node_exporter binary
-  ansible.builtin.copy:
-    src: "{{ prometheus_node_exporter_binary_local_dir }}/prometheus_node_exporter"
-    dest: "{{ prometheus_node_exporter_binary_install_dir }}/prometheus_node_exporter"
-    mode: 0755
+- name: Copy the prometheus_node_exporter systemd service file
+  ansible.builtin.template:
+    src: prometheus-node-exporter.service.j2
+    dest: /etc/systemd/system/prometheus-node-exporter.service
     owner: root
     group: root
-  when:
-    - prometheus_node_exporter_binary_local_dir | length > 0
+    mode: 0644
   notify: restart prometheus-node-exporter
-
-- name: Create log dir if prometheus_node_exporter_log_dir is defined
-  ansible.builtin.file:
-    path: "{{ prometheus_node_exporter_log_dir }}"
-    state: directory
-    mode: 0755
-  when:
-    - prometheus_node_exporter_log_dir is defined

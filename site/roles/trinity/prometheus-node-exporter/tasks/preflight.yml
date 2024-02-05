@@ -20,54 +20,6 @@
   ansible.builtin.package_facts:
   when: "not 'packages' in ansible_facts"
 
-- name: Assert collectors are not both disabled and enabled at the same time
-  ansible.builtin.assert:
-    that:
-      - "item not in prometheus_node_exporter_enabled_collectors"
-  with_items: "{{ prometheus_node_exporter_disabled_collectors }}"
-
-- name: Assert that TLS config is correct
-  when: (prometheus_node_exporter_tls.get('enabled', False) | bool)
-  block:
-    - name: Assert that TLS key and cert path are set
-      ansible.builtin.assert:
-        that:
-          - "prometheus_node_exporter_tls.cert_file is defined"
-          - "prometheus_node_exporter_tls.key_file is defined"
-
-    - name: Check existence of TLS cert file
-      ansible.builtin.stat:
-        path: "{{ prometheus_node_exporter_tls.cert_file }}"
-      register: __prometheus_node_exporter_cert_file
-
-    - name: Check existence of TLS key file
-      ansible.builtin.stat:
-        path: "{{ prometheus_node_exporter_tls.key_file }}"
-      register: __prometheus_node_exporter_key_file
-
-    - name: Assert that TLS key and cert are present
-      ansible.builtin.assert:
-        that:
-          - "__prometheus_node_exporter_cert_file.stat.exists"
-          - "__prometheus_node_exporter_key_file.stat.exists"
-
-- name: Check if prometheus_node_exporter is installed
-  ansible.builtin.stat:
-    path: "{{ prometheus_node_exporter_binary_install_dir }}/prometheus_node_exporter"
-  register: __prometheus_node_exporter_is_installed
-  check_mode: false
-  tags:
-    - prometheus_node_exporter_install
-
-- name: Gather currently installed prometheus_node_exporter version (if any)
-  ansible.builtin.command: "{{ prometheus_node_exporter_binary_install_dir }}/prometheus_node_exporter --version"
-  changed_when: false
-  register: __prometheus_node_exporter_current_version_output
-  check_mode: false
-  when: __prometheus_node_exporter_is_installed.stat.exists
-  tags:
-    - prometheus_node_exporter_install
-
 - name: Discover latest version
   ansible.builtin.set_fact:
     prometheus_node_exporter_version: "{{ (lookup('url', 'https://api.github.com/repos/{{ _prometheus_node_exporter_repo }}/releases/latest', headers=_github_api_headers,
@@ -77,11 +29,8 @@
   retries: 10
   when:
     - prometheus_node_exporter_version == "latest"
-    - prometheus_node_exporter_binary_local_dir | length == 0
 
 - name: Get prometheus_node_exporter binary checksum
-  when:
-    - prometheus_node_exporter_binary_local_dir | length == 0
   block:
     - name: Get checksum list from github
       ansible.builtin.set_fact:
@@ -96,3 +45,9 @@
       with_items: "{{ __prometheus_node_exporter_checksums }}"
       when:
         - "('linux-' + go_arch + '.tar.gz') in item"
+
+- name: Assert collectors are not both disabled and enabled at the same time
+  ansible.builtin.assert:
+    that:
+      - "item not in prometheus_node_exporter_enabled_collectors"
+  with_items: "{{ prometheus_node_exporter_disabled_collectors }}"

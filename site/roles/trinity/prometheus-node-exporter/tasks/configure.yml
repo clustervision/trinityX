@@ -1,21 +1,4 @@
 ---
-- name: Copy the prometheus_node_exporter systemd service file
-  ansible.builtin.template:
-    src: prometheus-node-exporter.service.j2
-    dest: /etc/systemd/system/prometheus-node-exporter.service
-    owner: root
-    group: root
-    mode: 0644
-  notify: restart prometheus-node-exporter
-
-- name: Create prometheus_node_exporter config directory
-  ansible.builtin.file:
-    path: "{{prometheus_node_exporter_config_dir}}"
-    state: directory
-    owner: root
-    group: root
-    mode: u+rwX,g+rwX,o=rX
-
 - name: Copy the prometheus_node_exporter config file
   ansible.builtin.template:
     src: node_exporter.web.yml.j2
@@ -33,16 +16,6 @@
     group: "{{ prometheus_node_exporter_system_group }}"
     mode: u+rwX,g+rwX,o=rX
   when: prometheus_node_exporter_db_dir | length > 0
-
-- name: Allow prometheus_node_exporter port in SELinux on RedHat OS family
-  community.general.seport:
-    ports: "{{ prometheus_node_exporter_web_listen_port }}"
-    proto: tcp
-    setype: http_port_t
-    state: present
-  when:
-    - ansible_version.full is version_compare('2.4', '>=')
-    - ansible_selinux.status == "enabled"
 
 - name: Configure prometheus node-exporter if prometheus_node_exporter_sd_file is defined
   blockinfile:
