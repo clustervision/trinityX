@@ -1,0 +1,13 @@
+---
+- name: List the enabled services
+  command: systemctl list-unit-files --type=service --state=enabled --no-legend
+  register: enabled_services
+
+- name: Stop and disable the services in cleanup_legacy_services (if present)
+  service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  with_items: "{{ cleanup_legacy_services }}"
+  ignore_errors: yes
+  when: item in enabled_services.stdout_lines
