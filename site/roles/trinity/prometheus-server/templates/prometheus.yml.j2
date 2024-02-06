@@ -41,6 +41,9 @@ scrape_configs:
     - {{ansible_fqdn}}:9090
     labels:
       exporter: node
+      {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
+      luna_group: controller
+      {% endif %}
 {% if prometheus_server_tls.get('enabled', False) %}
   scheme: https
 {% endif %}

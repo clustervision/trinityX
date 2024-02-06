@@ -66,6 +66,17 @@
       notify:
         - restart prometheus-alertmanager
 
+- name: Get prometheus-bcrypt binary
+  get_url:
+    url: "{{ prometheus_alertmanager_bcrypt_binary_url }}"
+    dest: "{{prometheus_alertmanager_bcrypt_binary_install_dir}}/prometheus-bcrypt"
+    mode: 0755
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 5
+  delay: 2
+
+
 - name: Create log directory
   ansible.builtin.file:
     path: "{{ prometheus_alertmanager_log_dir }}"
