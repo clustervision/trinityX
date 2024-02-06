@@ -18,7 +18,6 @@
   ansible.builtin.include_tasks:
     file: install.yml
     apply:
-      become: true
       tags:
         - prometheus-node-exporter-install
   tags:
@@ -28,7 +27,6 @@
   ansible.builtin.include_tasks:
     file: configure.yml
     apply:
-      become: true
       tags:
         - prometheus-node-exporter-configure
   tags:
@@ -38,7 +36,6 @@
   ansible.builtin.include_tasks:
     file: selinux.yml
     apply:
-      become: true
       tags:
         - prometheus-node-exporter-selinux
   when: ansible_selinux.status == "enabled"
@@ -46,9 +43,7 @@
     - prometheus-node-exporter-selinux
 
 - name: Ensure Node Exporter is enabled on boot
-  become: true
   ansible.builtin.systemd:
-    daemon_reload: true
     name: prometheus-node-exporter
     state: started
     enabled: true
