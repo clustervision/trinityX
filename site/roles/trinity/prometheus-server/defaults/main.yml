@@ -93,7 +93,7 @@ prometheus_server_alert_rules:  # noqa yaml[line-length]  # noqa line-length
       description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 10% free space available.{% endraw %}'
       summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
   - alert: HighRemoteFilesystemUsage
-    expr: 'node_filesystem_avail_bytes{luna_role="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_role="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 20'
+    expr: 'node_filesystem_avail_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 20'
     for: 5m
     labels:
       severity: warning
@@ -101,7 +101,7 @@ prometheus_server_alert_rules:  # noqa yaml[line-length]  # noqa line-length
       description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 20% free space available.{% endraw %}'
       summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
   - alert: HighRemoteFilesystemUsage
-    expr: 'node_filesystem_avail_bytes{luna_role="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_role="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 10'
+    expr: 'node_filesystem_avail_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 10'
     for: 5m
     labels:
       severity: critical
@@ -109,7 +109,7 @@ prometheus_server_alert_rules:  # noqa yaml[line-length]  # noqa line-length
       description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 10% free space available.{% endraw %}'
       summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
   - alert: HighCpuLoad
-    expr: 'node_load1{luna_role="controller"} > 2.75'
+    expr: 'node_load1{luna_group="controller"} > 2.75'
     for: 5m
     labels:
       severity: warning
@@ -117,7 +117,7 @@ prometheus_server_alert_rules:  # noqa yaml[line-length]  # noqa line-length
       description: '{% raw %}{{ $labels.instance }} load average is above 2.75 (current value: {{ $value }}){% endraw %}'
       summary: '{% raw %}Instance {{ $labels.instance }} load average is high{% endraw %}'
   - alert: HighCpuLoad
-    expr: 'node_load1{luna_role="controller"} > 3.5'
+    expr: 'node_load1{luna_group="controller"} > 3.5'
     for: 5m
     labels:
       severity: critical
@@ -125,7 +125,7 @@ prometheus_server_alert_rules:  # noqa yaml[line-length]  # noqa line-length
       description: '{% raw %}{{ $labels.instance }} load average is above 3.5 (current value: {{ $value }}){% endraw %}'
       summary: '{% raw %}Instance {{ $labels.instance }} load average is high{% endraw %}'
   - alert: HighMemoryUsage
-    expr: 'node_memory_MemAvailable_bytes{luna_role="controller"} / node_memory_MemTotal_bytes{luna_role="controller"} * 100 < 20'
+    expr: 'node_memory_MemAvailable_bytes{luna_group="controller"} / node_memory_MemTotal_bytes{luna_group="controller"} * 100 < 20'
     for: 5m
     labels:
       severity: warning
@@ -133,7 +133,7 @@ prometheus_server_alert_rules:  # noqa yaml[line-length]  # noqa line-length
       description: '{% raw %}{{ $labels.instance }} memory usage is above 80% (current value: {{ $value }}){% endraw %}'
       summary: '{% raw %}Instance {{ $labels.instance }} memory usage is high{% endraw %}'
   - alert: HighMemoryUsage
-    expr: 'node_memory_MemAvailable_bytes{luna_role="controller"} / node_memory_MemTotal_bytes{luna_role="controller"} * 100 < 10'
+    expr: 'node_memory_MemAvailable_bytes{luna_group="controller"} / node_memory_MemTotal_bytes{luna_group="controller"} * 100 < 10'
     for: 5m
     labels:
       severity: critical
