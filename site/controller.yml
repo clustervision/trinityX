@@ -43,8 +43,8 @@
     - role: trinity/cv_support
       tags: cv_support
 
-    - role: trinity/sensu-client
-      tags: monitoring
+    # - role: trinity/sensu-client
+    #   tags: monitoring
 
     - role: trinity/tunables
       tags: tunables
@@ -233,30 +233,100 @@
     - role: trinity/ood-vnc
       tags: ood
 
-    - role: trinity/telegraf
-      tags: monitoring
-      influxdb_server: "{{ trix_ctrl_ip }}"
+    # - role: trinity/telegraf
+    #   tags: monitoring
+    #   influxdb_server: "{{ trix_ctrl_ip }}"
 
-    - role: trinity/rabbitmq
-      tags: monitoring
+    # - role: trinity/rabbitmq
+    #   tags: monitoring
 
-    - role: trinity/sensu-server
-      tags: monitoring
+    # - role: trinity/sensu-server
+    #   tags: monitoring
 
-    - role: trinity/influxdb
-      tags: monitoring
-      influxdb_server: "{{ trix_ctrl_ip }}"
+    # - role: trinity/influxdb
+    #   tags: monitoring
+    #   influxdb_server: "{{ trix_ctrl_ip }}"
 
+    # - role: trinity/prometheus-auth
+    #   prometheus_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+    #   tags: prometheus-auth, prometheus, monitoring
+
+    - role: trinity/prometheus-server
+      # Prometheus server
+      prometheus_server_config_dir: "{{trix_etc}}/prometheus_server"
+      prometheus_server_db_dir: "{{trix_local}}/var/lib/prometheus_server"
+      prometheus_server_additional_system_groups:
+        - "{{ssl_cert_group}}"
+      prometheus_server_file_sd:
+        - target: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+        - target: "{{trix_etc}}/prometheus_server/file_sd/targets.yml"
+      prometheus_server_http_sd:
+        - target: "localhost:7050/export/prometheus"
+          tls:
+            enabled: "{{ luna_protocol == 'https' }}"
+            insecure_skip_verify: true
+      prometheus_server_alertmanagers:
+        - target: "localhost:9093"
+          tls:
+            enabled: true
+            insecure_skip_verify: true
+          basic_auth:
+            enabled: true
+            credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      prometheus_server_tls:
+        enabled: true
+        cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+        key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      tags: prometheus-server, prometheus, monitoring
+
+
+    - role: trinity/prometheus-alertmanager
+      # Prometheus alertmanager
+      prometheus_alertmanager_config_dir: "{{trix_etc}}/prometheus_alertmanager"
+      prometheus_alertmanager_db_dir: "{{trix_local}}/var/lib/prometheus_alertmanager"
+      prometheus_alertmanager_mail: "{{ administrator_email }}"
+      prometheus_alertmanager_additional_system_groups:
+        - "{{ssl_cert_group}}"
+      prometheus_alertmanager_cluster:
+        listen-address: "{{ ansible_fqdn }}:6783"
+        peers:
+          - "{{ trix_ctrl_hostname }}:6783"
+      prometheus_alertmanager_auth:
+        enabled: true
+        credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      prometheus_alertmanager_tls:
+        enabled: true
+        cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+        key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      tags: prometheus-alertmanager, prometheus, monitoring
+
+    - role: trinity/prometheus-node-exporter
+      # Prometheus node exporter
+      prometheus_node_exporter_config_dir: "{{trix_etc}}/prometheus_node_exporter"
+      prometheus_node_exporter_db_dir: "{{trix_local}}/var/lib/prometheus_node_exporter"
+      prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      tags: prometheus-node-exporter, prometheus, monitoring
+
+    - role: trinity/prometheus-slurm-exporter
+      # Prometheus slurm exporter
+      prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      tags: prometheus-slurm-exporter, prometheus, monitoring
+      
     - role: trinity/grafana
-      tags: monitoring
       ldap_auth: "{{ enable_authentication|default(True) }}"
       enable_ssl: true
       grafana_admin_group: "{{ admin_group }}"
+      grafana_prometheus_url: "https://{{ trix_ctrl_hostname }}.{{ trix_domain }}:9090"
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      tags: grafana, monitoring
+
+    - role: trinity/cleanup-legacy
+      tags: cleanup-legacy
 
     - role: trinity/wrapup
       tags: wrapup
+    
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }}"

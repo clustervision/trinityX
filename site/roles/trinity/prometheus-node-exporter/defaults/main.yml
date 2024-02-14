@@ -1,0 +1,31 @@
+---
+prometheus_node_exporter_version: 1.7.0
+prometheus_node_exporter_binary_url: "https://github.com/{{ _prometheus_node_exporter_repo }}/releases/download/v{{ prometheus_node_exporter_version }}/\
+                           node_exporter-{{ prometheus_node_exporter_version }}.linux-{{ go_arch }}.tar.gz"
+prometheus_node_exporter_checksums_url: "https://github.com/{{ _prometheus_node_exporter_repo }}/releases/download/v{{ prometheus_node_exporter_version }}/sha256sums.txt"
+
+prometheus_node_exporter_config_dir: "/etc/prometheus_node_exporter"
+prometheus_node_exporter_db_dir: "/var/lib/prometheus_node_exporter"
+prometheus_node_exporter_log_dir: "/var/log/prometheus"
+
+prometheus_node_exporter_web_listen_port: "9100"
+prometheus_node_exporter_web_listen_host: "0.0.0.0"
+
+prometheus_node_exporter_tls:
+  enabled: false
+
+prometheus_node_exporter_enabled_collectors:
+  - systemd
+  - textfile:
+      directory: "{{ prometheus_node_exporter_db_dir}}"
+  - filesystem:
+      ignored-mount-points: "^/(sys|proc|dev)($|/)"
+      ignored-fs-types: "^(sys|proc|auto)fs$"
+
+prometheus_node_exporter_disabled_collectors: []
+
+prometheus_node_exporter_binary_install_dir: "/usr/local/bin"
+
+prometheus_node_exporter_system_user: "prometheus-node-exporter"
+prometheus_node_exporter_system_group: "prometheus"
+prometheus_node_exporter_additional_system_groups: []

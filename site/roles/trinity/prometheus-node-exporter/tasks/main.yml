@@ -1,0 +1,51 @@
+---
+- name: Preflight
+  ansible.builtin.include_tasks:
+    file: preflight.yml
+    apply:
+      tags:
+        - prometheus-node-exporter-install
+        - prometheus-node-exporter-configure
+        - prometheus-node-exporter-selinux
+        - prometheus-node-exporter-run
+  tags:
+    - prometheus-node-exporter-install
+    - prometheus-node-exporter-configure
+    - prometheus-node-exporter-selinux
+    - prometheus-node-exporter-run
+
+- name: Install
+  ansible.builtin.include_tasks:
+    file: install.yml
+    apply:
+      tags:
+        - prometheus-node-exporter-install
+  tags:
+    - prometheus-node-exporter-install
+
+- name: Configure
+  ansible.builtin.include_tasks:
+    file: configure.yml
+    apply:
+      tags:
+        - prometheus-node-exporter-configure
+  tags:
+    - prometheus-node-exporter-configure
+
+- name: SELinux
+  ansible.builtin.include_tasks:
+    file: selinux.yml
+    apply:
+      tags:
+        - prometheus-node-exporter-selinux
+  when: ansible_selinux.status == "enabled"
+  tags:
+    - prometheus-node-exporter-selinux
+
+- name: Ensure Node Exporter is enabled on boot
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter
+    state: started
+    enabled: true
+  tags:
+    - prometheus-node-exporter-run
