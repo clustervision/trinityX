@@ -21,6 +21,7 @@ else
 
   yum update -y
   yum install curl tar git epel-release -y
+  yum --enablerepo=powertools install perl-IPC-Run -y
 
   if [[ `grep -i "Red Hat Enterprise Linux" /etc/redhat-release` ]]; then
     if [[ `grep -i "release 8" /etc/redhat-release` ]]; then
