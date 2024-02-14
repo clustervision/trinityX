@@ -90,12 +90,12 @@
     when: enable_openhpc == true
     tags: nfs-mounts
 
-  - role: trinity/telegraf
-    tags: monitoring
-    influxdb_server: "{{ trix_ctrl_ip }}"
+#  - role: trinity/telegraf
+#    tags: monitoring
+#    influxdb_server: "{{ trix_ctrl_ip }}"
 
-  - role: trinity/sensu-client
-    tags: monitoring
+#  - role: trinity/sensu-client
+#    tags: monitoring
 
   - role: trinity/ood-vnc
     tags: ood
@@ -103,6 +103,13 @@
   - role: trinity/target
     default_target: "{{ image_default_target | default('multi-user') }}"
     tags: target
+  
+  - role: trinity/prometheus-node-exporter
+    # file where prometheus node-exporter is announced
+    tags: prometheus, prometheus-node-exporter, monitoring
+
+  - role: trinity/cleanup-legacy
+    tags: cleanup-legacy
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }}"

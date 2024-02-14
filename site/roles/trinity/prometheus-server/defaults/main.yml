@@ -1,0 +1,210 @@
+---
+prometheus_server_version: 2.49.1
+prometheus_server_binary_url: "https://github.com/{{ _prometheus_server_repo }}/releases/download/v{{ prometheus_server_version }}/\
+                        prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
+prometheus_server_checksums_url: "https://github.com/{{ _prometheus_server_repo }}/releases/download/v{{ prometheus_server_version }}/sha256sums.txt"
+
+prometheus_server_config_dir: /etc/prometheus
+prometheus_server_db_dir: /var/lib/prometheus
+prometheus_server_log_dir: /var/log/prometheus
+
+prometheus_server_web_listen_port: "9090"
+prometheus_server_web_listen_host: "0.0.0.0"
+
+prometheus_server_alert_rules_files:
+  - prometheus/rules/*.rules
+
+prometheus_server_tls:
+  enabled: false
+
+prometheus_server_system_user: "prometheus-server"
+prometheus_server_system_group: "prometheus"
+prometheus_server_additional_system_groups: []
+
+
+prometheus_server_storage_retention: "30d"
+# Available since Prometheus 2.7.0
+# [EXPERIMENTAL] Maximum number of bytes that can be stored for blocks. Units
+# supported: KB, MB, GB, TB, PB.
+prometheus_server_storage_retention_size: "0"
+
+# The Agent mode optimizes Prometheus for the remote write use case: https://prometheus.io/blog/2021/11/16/agent/
+prometheus_server_agent_mode: false
+
+prometheus_server_config_flags_extra: {}
+# prometheus_server_config_flags_extra:
+#   storage.tsdb.retention: 15d
+#   alertmanager.timeout: 10s
+
+prometheus_server_alert_relabel_configs: []
+# prometheus_server_alert_relabel_configs:
+#   - action: labeldrop
+#     regex: replica
+
+prometheus_server_global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+prometheus_server_external_labels:
+  controller: "{{ ansible_fqdn | default(ansible_host) | default(inventory_hostname) }}"
+  cluster: "trinityX"
+
+# yamllint disable rule:line-length
+prometheus_server_alert_rules:  # noqa yaml[line-length]  # noqa line-length
+  - alert: Watchdog
+    expr: vector(1)
+    for: 5m
+    labels:
+      severity: info
+    annotations:
+      description: "This is an alert meant to ensure that the entire alerting pipeline is functional.\nThis alert is always firing, therefore it should always be firing in Alertmanager\nand always fire against a receiver. There are integrations with various notification\nmechanisms that send a notification when this alert is not firing. For example the\n\"DeadMansSnitch\" integration in PagerDuty."
+      summary: 'Ensure entire alerting pipeline is functional'
+  - alert: LowEntropy
+    expr: 'node_entropy_available_bits < 64'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} entropy is low ({{ $value }} bits).{% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} entropy is low{% endraw %}'
+  - alert: LowEntropy
+    expr: 'node_entropy_available_bits < 32'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} entropy is critically low ({{ $value }} bits).{% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} entropy is critically low{% endraw %}'
+  - alert: HighLocalFilesystemUsage
+    expr: 'node_filesystem_avail_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} * 100 < 20'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 20% free space available.{% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
+  - alert: HighLocalFilesystemUsage
+    expr: 'node_filesystem_avail_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} * 100 < 10'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 10% free space available.{% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
+  - alert: HighRemoteFilesystemUsage
+    expr: 'node_filesystem_avail_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 20'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 20% free space available.{% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
+  - alert: HighRemoteFilesystemUsage
+    expr: 'node_filesystem_avail_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 10'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 10% free space available.{% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
+  - alert: HighCpuLoad
+    expr: 'node_load1{luna_group="controller"} > 2.75'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} load average is above 2.75 (current value: {{ $value }}){% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} load average is high{% endraw %}'
+  - alert: HighCpuLoad
+    expr: 'node_load1{luna_group="controller"} > 3.5'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} load average is above 3.5 (current value: {{ $value }}){% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} load average is high{% endraw %}'
+  - alert: HighMemoryUsage
+    expr: 'node_memory_MemAvailable_bytes{luna_group="controller"} / node_memory_MemTotal_bytes{luna_group="controller"} * 100 < 20'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} memory usage is above 80% (current value: {{ $value }}){% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} memory usage is high{% endraw %}'
+  - alert: HighMemoryUsage
+    expr: 'node_memory_MemAvailable_bytes{luna_group="controller"} / node_memory_MemTotal_bytes{luna_group="controller"} * 100 < 10'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} memory usage is above 90% (current value: {{ $value }}){% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} memory usage is high{% endraw %}'
+  - alert: HighSwapUsage
+    expr: 'node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes * 100 < 20'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} swap usage is above 80% (current value: {{ $value }}){% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} swap usage is high{% endraw %}'
+  - alert: HighSwapUsage
+    expr: 'node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes * 100 < 10'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} swap usage is above 90% (current value: {{ $value }}){% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} swap usage is high{% endraw %}'
+  - alert: NodeClockSkewDetected
+    expr: "(node_timex_offset_seconds > 0.05) or (node_timex_offset_seconds < -0.05) "
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      message: '{% raw %}Clock on {{ $labels.instance }} is out of sync by more than 50ms. Ensure NTP is configured correctly on this host.{% endraw %}'
+      summary: 'Clock skew detected.'
+  - alert: NodeClockSkewDetected
+    expr: "(node_timex_offset_seconds > 0.1) or (node_timex_offset_seconds < -0.1) "
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      message: '{% raw %}Clock on {{ $labels.instance }} is out of sync by more than 100ms. Ensure NTP is configured correctly on this host.{% endraw %}'
+      summary: 'Clock skew detected.'
+  - alert: NodeClockNotSynchronising
+    expr: "min_over_time(node_timex_sync_status[5m]) == 0\n"
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      message: '{% raw %}Clock on {{ $labels.instance }} is not synchronising. Ensure NTP is configured on this host.{% endraw %}'
+      summary: 'Clock not synchronising.'
+  - alert: ExcessiveTCPConnections
+    expr: 'node_netstat_Tcp_CurrEstab > 800'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} has more than 10000 established TCP connections (current value: {{ $value }}){% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} has excessive TCP connections{% endraw %}'
+  - alert: ExcessiveTCPConnections
+    expr: 'node_netstat_Tcp_CurrEstab > 1000'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} has more than 20000 established TCP connections (current value: {{ $value }}){% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} has excessive TCP connections{% endraw %}'
+  - alert: InstanceDown
+    expr: 'up == 0'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes.{% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} down{% endraw %}'
+
+# yamllint enable rule:line-length
+
+prometheus_server_stop_timeout: '600s'

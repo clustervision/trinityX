@@ -1,0 +1,34 @@
+---
+- name: Copy the prometheus_node_exporter config file
+  ansible.builtin.template:
+    src: node_exporter.web.yml.j2
+    dest: "{{prometheus_node_exporter_config_dir}}/node_exporter.web.yml"
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart prometheus-node-exporter
+
+- name: Create textfile collector dir
+  ansible.builtin.file:
+    path: "{{ prometheus_node_exporter_db_dir }}"
+    state: directory
+    owner: "{{ prometheus_node_exporter_system_user }}"
+    group: "{{ prometheus_node_exporter_system_group }}"
+    mode: u+rwX,g+rwX,o=rX
+  when: prometheus_node_exporter_db_dir | length > 0
+
+- name: Configure prometheus node-exporter if prometheus_node_exporter_sd_file is defined
+  blockinfile:
+    path: "{{ prometheus_node_exporter_sd_file }}"
+    block: |
+      - targets:
+        - {{ ansible_fqdn }}:{{ prometheus_node_exporter_web_listen_port }}
+        labels:
+          exporter: node
+      {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
+          luna_group: controller
+      {% endif %}
+    marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_node_exporter)"
+  when:
+    - prometheus_node_exporter_sd_file is defined
+  

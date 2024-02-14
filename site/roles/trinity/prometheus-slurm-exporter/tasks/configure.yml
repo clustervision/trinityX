@@ -1,0 +1,34 @@
+---
+- name: Copy the Slurm Exporter systemd service file
+  template:
+    src: prometheus-slurm-exporter.service.j2
+    dest: /etc/systemd/system/prometheus-slurm-exporter.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart prometheus-slurm-exporter
+
+- name: Allow Slurm Exporter port in SELinux on RedHat OS family
+  seport:
+    ports: "{{ prometheus_slurm_exporter_web_listen_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  when:
+    - ansible_version.full is version_compare('2.4', '>=')
+    - ansible_selinux.status == "enabled"
+
+- name: Configure prometheus slurm-exporter if prometheus_slurm_exporter_sd_file is defined
+  blockinfile:
+    path: "{{ prometheus_slurm_exporter_sd_file }}"
+    block: |
+      - targets:
+        - {{ ansible_fqdn }}:{{ prometheus_slurm_exporter_web_listen_port }}
+        labels:
+          exporter: slurm
+      {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
+          luna_group: controller
+      {% endif %}
+    marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_slurm_exporter)"
+  when:
+    - prometheus_slurm_exporter_sd_file is defined

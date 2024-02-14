@@ -1,0 +1,11 @@
+---
+- name: Reload and restart prometheus-node-exporter
+  listen: "restart prometheus-node-exporter"
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: prometheus-node-exporter
+    state: restarted
+  when:
+    - not ansible_connection in 'chroot'
+    - not ansible_check_mode

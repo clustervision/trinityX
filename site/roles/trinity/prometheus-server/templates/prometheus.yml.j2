@@ -1,0 +1,73 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{{ ansible_managed | comment }}
+# http://prometheus.io/docs/operating/configuration/
+
+global:
+  {{ prometheus_server_global | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
+  external_labels:
+    {{ prometheus_server_external_labels | to_nice_yaml(indent=2,sort_keys=False) | indent(4, False) }}
+{% if not prometheus_server_agent_mode and prometheus_server_alert_rules_files != [] %}
+
+rule_files:
+  - {{ prometheus_server_config_dir }}/rules/*.rules
+{% endif %}
+
+{% if prometheus_server_alertmanagers | length > 0 %}
+alerting:
+  alertmanagers:
+    - static_configs:
+  {% for alertmanager in prometheus_server_alertmanagers %}
+        - targets:
+          - {{ alertmanager.target }}
+  {% if alertmanager.get('tls', {}).get('enabled', False) %}
+      scheme: https
+  {% endif %}
+  {% if alertmanager.get('tls', {}).get('insecure_skip_verify', False) %}
+      tls_config:
+        insecure_skip_verify: true
+  {% endif %}
+  {% if alertmanager.get('basic_auth', False) %}
+      basic_auth:
+        username: {{ alertmanager.basic_auth.credentials_file.rsplit('.', 1)[0] | basename }}
+        password: {{ lookup('password', alertmanager.basic_auth.credentials_file, chars='ascii_letters,digits,hexdigits') }}
+  {% endif %}
+  {% endfor %}
+{% endif %}
+
+scrape_configs:
+- job_name: static_sd
+  static_configs:
+  - targets:
+    - {{ansible_fqdn}}:9090
+    labels:
+      exporter: prometheus
+      {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
+      luna_group: controller
+      {% endif %}
+{% if prometheus_server_tls.get('enabled', False) %}
+  scheme: https
+{% endif %}
+{% if prometheus_server_tls.get('insecure_skip_verify', False) %}
+  tls_config:
+    insecure_skip_verify: true
+{% endif %}
+{% if prometheus_server_file_sd | length > 0 %}
+- job_name: file_sd
+  file_sd_configs:
+  - files:
+  {% for item in prometheus_server_file_sd %}
+    - {{ item.target }}
+  {% endfor %}
+{% endif %}
+{% if prometheus_server_http_sd | length > 0 %}
+- job_name: http_sd
+  http_sd_configs:
+  {% for item in prometheus_server_http_sd %}
+  - url: {{'https' if item.tls.get('enabled', False) else 'http' }}://{{ item.target }}
+  {% if item.get('tls', False) %}
+    tls_config:
+      insecure_skip_verify: {{ item.tls.insecure_skip_verify | default(false) }}
+  {% endif %}
+  {% endfor %}
+{% endif %}
+

@@ -1,0 +1,21 @@
+- name: Install SELinux dependencies
+  ansible.builtin.package:
+    name: "{{ _prometheus_server_selinux_packages }}"
+    state: present
+  register: _install_packages
+  until: _install_packages is succeeded
+  retries: 5
+  delay: 2
+  when:
+    - ansible_version.full is version('2.4', '>=')
+    - ansible_selinux.status == "enabled"
+
+- name: Allow prometheus to bind to port in SELinux
+  community.general.seport:
+    ports: "{{ prometheus_server_web_listen_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  when:
+    - ansible_version.full is version('2.4', '>=')
+    - ansible_selinux.status == "enabled"

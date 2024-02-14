@@ -1,0 +1,68 @@
+{%- if prometheus_alertmanager_version is version_compare('0.13.0', '>=') %}
+{%- set pre = '-' %}
+{%- else %}
+{%- set pre = '' %}
+{%- endif %}
+{%- if prometheus_alertmanager_version is version_compare('0.15.0', '<') %}
+{%- set cluster_flag = 'mesh' %}
+{%- else %}
+{%- set cluster_flag = 'cluster' %}
+{%- endif %}
+{{ ansible_managed | comment }}
+[Unit]
+Description=Prometheus Alertmanager
+After=network-online.target
+StartLimitInterval=0
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+PIDFile=/var/run/alertmanager.pid
+User={{prometheus_alertmanager_system_user}}
+Group={{prometheus_alertmanager_system_group}}
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart={{ _prometheus_alertmanager_binary_install_dir }}/alertmanager \
+{% for option, value in (prometheus_alertmanager_cluster.items() | sort) %}
+{%   if option == "peers" %}
+{%     for peer in value %}
+  --{{ cluster_flag }}.peer={{ peer }} \
+{%     endfor %}
+{%   else %}
+  --{{ cluster_flag }}.{{ option }}={{ value }} \
+{%   endif %}
+{% endfor %}
+{% if prometheus_alertmanager_tls.enabled or prometheus_alertmanager_auth.enabled %}
+  --web.config.file={{ prometheus_alertmanager_config_dir }}/alertmanager.web.yml \
+{% endif %}
+  --config.file={{ prometheus_alertmanager_config_dir }}/alertmanager.yml \
+  --storage.path={{ prometheus_alertmanager_db_dir }} \
+  --web.listen-address={{ prometheus_alertmanager_web_listen_host }}:{{ prometheus_alertmanager_web_listen_port }} \
+  --web.external-url={{ prometheus_alertmanager_web_external_url }}
+SyslogIdentifier=alertmanager
+Restart=always
+RestartSec=5
+{% if prometheus_alertmanager_log_dir is defined %}
+StandardOutput=append:{{prometheus_alertmanager_log_dir}}/prometheus_alertmanager.log
+{% endif %}
+CapabilityBoundingSet=CAP_SET_UID
+LockPersonality=true
+NoNewPrivileges=true
+MemoryDenyWriteExecute=true
+PrivateTmp=true
+ProtectHome=true
+ReadWriteDirectories={{ prometheus_alertmanager_db_dir }}
+RemoveIPC=true
+RestrictSUIDSGID=true
+
+{% if (ansible_facts.packages.systemd | first).version is version('232', '>=') %}
+PrivateUsers=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=yes
+ProtectSystem=strict
+{% else %}
+ProtectSystem=full
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target

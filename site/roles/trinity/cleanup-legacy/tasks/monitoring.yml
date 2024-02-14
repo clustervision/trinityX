@@ -1,0 +1,22 @@
+---
+- name: List the enabled services
+  command: systemctl list-unit-files --type=service --state=enabled --no-legend
+  register: enabled_services
+
+- name: Stop and disable the services in cleanup_legacy_services (if present)
+  service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  with_items:
+    - influxdb
+    - telegraf
+    - redis
+    - sensu-client
+    - sensu-server
+    - sensu-api
+    - rabbitmq-server
+    - uchiwa
+  ignore_errors: yes
+  when: enabled_services.stdout_lines is search(item)
+
