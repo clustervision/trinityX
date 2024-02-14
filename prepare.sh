@@ -40,9 +40,6 @@ else
     ansible-galaxy collection install community.mysql
     ansible-galaxy collection install community.rabbitmq
     ansible-galaxy collection install community.grafana
-  elif [[ `grep -i PRETTY_NAME=\"CentOS Stream 9\" /etc/os-release` ]]; then
-    yum install ansible  -y
-    yum --enablerepo=crb install perl-IPC-Run -y
   else
     yum install ansible  -y
   fi
