@@ -3,20 +3,35 @@
   command: systemctl list-unit-files --type=service --state=enabled --no-legend
   register: enabled_services
 
-- name: Stop and disable the services in cleanup_legacy_services (if present)
-  service:
-    name: "{{ item }}"
-    state: stopped
-    enabled: no
-  with_items:
-  - influxdb
-  - telegraf
-  - redis
-  - sensu-client
-  - sensu-server
-  - sensu-api
-  - rabbitmq-server
-  - uchiwa
+- block:
+  - name: Stop and disable the services in cleanup_legacy_services (if present)
+    service:
+      name: "{{ item }}"
+      state: stopped
+      enabled: no
+    with_items:
+      - influxdb
+      - telegraf
+      - redis
+      - sensu-client
+      - sensu-server
+      - sensu-api
+      - rabbitmq-server
+      - uchiwa
+    ignore_errors: yes
+    when: item in enabled_services.stdout_lines
+  when: ansible_connection not in 'chroot' and on_controller
 
-  ignore_errors: yes
-  when: item in enabled_services.stdout_lines
+- block:
+  - name: Stop and disable the services in cleanup_legacy_services (if present)
+    service:
+      name: "{{ item }}"
+      state: stopped
+      enabled: no
+    with_items:
+      - telegraf
+      - sensu-client
+      - sensu-api
+    ignore_errors: yes
+    when: item in enabled_services.stdout_lines
+  when: ansible_connection in 'chroot'
