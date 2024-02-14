@@ -16,9 +16,22 @@ else
   setenforce 0
   sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
 
+  # if running on RedHat 8 or 9, install subscription-manager repos --enable ansible-XXXXXXXXXXXX
+
+
   yum update -y
   yum install epel-release -y
-  yum install curl tar ansible git epel-release -y
+  yum install curl tar git epel-release -y
+
+  if [[ `grep -i "Red Hat Enterprise Linux" /etc/redhat-release` ]]; then
+    if [[ `grep -i "release 8" /etc/redhat-release` ]]; then
+        yum install ansible-core  -y
+    elif [[ `grep -i "release 9" /etc/redhat-release` ]]; then
+        yum install ansible-core  -y
+    else
+      yum install ansible  -y
+    fi
+  fi
 
   ansible-galaxy install OndrejHome.pcs-modules-2
 
