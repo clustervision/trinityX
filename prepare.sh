@@ -21,19 +21,28 @@ else
 
   yum update -y
   yum install curl tar git epel-release -y
-  yum --enablerepo=powertools install perl-IPC-Run -y
 
-  if [[ `grep -i "Red Hat Enterprise Linux" /etc/redhat-release` ]]; then
-    if [[ `grep -i "release 8" /etc/redhat-release` ]]; then
-      subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
-      yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
-      yum install ansible-core  -y
-    elif [[ `grep -i "release 9" /etc/redhat-release` ]]; then
-      subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
-      yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
-      yum install ansible-core  -y
-
-    fi
+  if [[ `grep -i PRETTY_NAME="Red Hat Enterprise Linux 9" /etc/redhat-release` ]]; then
+    # subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
+    # yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
+    yum install ansible-core -y
+    ansible-galaxy collection install ansible.posix
+    ansible-galaxy collection install community.general
+    ansible-galaxy collection install community.mysql
+    ansible-galaxy collection install community.rabbitmq
+    ansible-galaxy collection install community.grafana
+  # elif [[ `grep -i PRETTY_NAME="Red Hat Enterprise Linux 9" /etc/redhat-release` ]]; then
+    subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
+    # yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
+    yum install ansible-core -y
+    ansible-galaxy collection install ansible.posix
+    ansible-galaxy collection install community.general
+    ansible-galaxy collection install community.mysql
+    ansible-galaxy collection install community.rabbitmq
+    ansible-galaxy collection install community.grafana
+  elif [[ `grep -i PRETTY_NAME="CentOS Stream 9" /etc/redhat-release` ]]; then
+    yum install ansible  -y
+    yum --enablerepo=crb install perl-IPC-Run -y
   else
     yum install ansible  -y
   fi
