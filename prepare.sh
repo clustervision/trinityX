@@ -28,9 +28,10 @@ else
         yum install ansible-core  -y
     elif [[ `grep -i "release 9" /etc/redhat-release` ]]; then
         yum install ansible-core  -y
-    else
-      yum install ansible  -y
+
     fi
+  else
+    yum install ansible  -y
   fi
 
   ansible-galaxy install OndrejHome.pcs-modules-2
