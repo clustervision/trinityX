@@ -20,14 +20,17 @@ else
 
 
   yum update -y
-  yum install epel-release -y
   yum install curl tar git epel-release -y
 
   if [[ `grep -i "Red Hat Enterprise Linux" /etc/redhat-release` ]]; then
     if [[ `grep -i "release 8" /etc/redhat-release` ]]; then
-        yum install ansible-core  -y
+      subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
+      yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
+      yum install ansible-core  -y
     elif [[ `grep -i "release 9" /etc/redhat-release` ]]; then
-        yum install ansible-core  -y
+      subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
+      yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
+      yum install ansible-core  -y
 
     fi
   else
