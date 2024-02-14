@@ -22,7 +22,7 @@ else
   yum update -y
   yum install curl tar git epel-release -y
 
-  if [[ `grep -i PRETTY_NAME="Red Hat Enterprise Linux 9" /etc/os-release` ]]; then
+  if [[ `grep -i PRETTY_NAME=\"Red Hat Enterprise Linux 9\" /etc/os-release` ]]; then
     # subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
     # yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
     yum install ansible-core -y
@@ -31,7 +31,7 @@ else
     ansible-galaxy collection install community.mysql
     ansible-galaxy collection install community.rabbitmq
     ansible-galaxy collection install community.grafana
-  elif [[ `grep -i PRETTY_NAME="Red Hat Enterprise Linux 9" /etc/os-release` ]]; then
+  elif [[ `grep -i PRETTY_NAME=\"Red Hat Enterprise Linux 9\" /etc/os-release` ]]; then
     # subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
     # yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
     yum install ansible-core -y
@@ -40,7 +40,7 @@ else
     ansible-galaxy collection install community.mysql
     ansible-galaxy collection install community.rabbitmq
     ansible-galaxy collection install community.grafana
-  elif [[ `grep -i PRETTY_NAME="CentOS Stream 9" /etc/os-release` ]]; then
+  elif [[ `grep -i PRETTY_NAME=\"CentOS Stream 9\" /etc/os-release` ]]; then
     yum install ansible  -y
     yum --enablerepo=crb install perl-IPC-Run -y
   else
