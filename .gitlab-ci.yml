@@ -1,9 +1,11 @@
 stages:
-  - rollout
+  - test
 
-Matrix:
-  stage: rollout
-  # image: alpine:latest
+rollout:
+  stage: test
+
+  when: manual
+  
   parallel:
     matrix:
     - TAG: "rocky8"
@@ -12,11 +14,13 @@ Matrix:
     - TAG: "centos9"
     - TAG: "rhel8"
     - TAG: "rhel9"
-    # - TAG: "alma8"
+    - TAG: "alma8"
     # - TAG: "alma9"
+    
   tags:
   - $TAG
   - "vm"
+  
   script:
   - ./prepare.sh
 
@@ -38,6 +42,7 @@ Matrix:
   - "ansible-playbook controller.yml"
   - "ansible-playbook compute-redhat.yml"
   - "ansible-playbook compute-ubuntu.yml"
+  
 
 
 
