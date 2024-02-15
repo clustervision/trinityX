@@ -28,9 +28,9 @@ else
     yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
     yum install ansible-core -y
   else
-    yum install ansible epel-release -y
+    yum install epel-release -y
+    yum install ansible -y
   fi
-
 
   ansible-galaxy install OndrejHome.pcs-modules-2
   ansible-galaxy collection install ansible.posix
