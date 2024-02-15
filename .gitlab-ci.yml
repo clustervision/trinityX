@@ -36,7 +36,8 @@ rollout:
   - "cp group_vars/all.yml.example group_vars/all.yml"
   - "sed -i -E \"s/ens6/eth000/\" group_vars/all.yml"
   - "sed -i -E \"s/selinux: true/selinux: false/\" group_vars/all.yml"
-  - "sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml"
+  # - "sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml"
+  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml; fi"
 
 
   - "ansible-playbook controller.yml"
