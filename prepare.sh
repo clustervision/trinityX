@@ -42,7 +42,7 @@ else
   if [ ! -f site/hosts ]; then
     echo "Please modify the site/hosts.example and save it as site/hosts"  
   else
-    if [ ! grep -q "^$(hostname -s)\s*" site/hosts ]; then
+    if ! grep -q "^$(hostname -s)\s*" site/hosts; then
       echo "Please note the hostnames are not matching (see site/hosts)."
     fi
   fi
