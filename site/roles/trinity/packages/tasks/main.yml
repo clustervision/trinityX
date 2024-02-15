@@ -8,21 +8,23 @@
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
   ignore_errors: true
 
-- name: Install perl-IPC-Run if CentOS 9 or newer
-  when:
-    - ansible_distribution == 'CentOS'
-    - ansible_distribution_major_version | int >= 9
-  yum:
-    name: perl-IPC-Run
-    enablerepo: crb
-    state: present
-    update_cache: yes
+#- name: Install perl-IPC-Run if CentOS 9 or newer
+#  when:
+#    - ansible_distribution == 'CentOS'
+#    - ansible_distribution_major_version | int >= 9
+#  yum:
+#    name: perl-IPC-Run
+#    enablerepo: crb
+#    state: present
+#    update_cache: yes
 
 - name: Install additional packages
   yum:
     name: "{{ tunables_packages }}"
     state: present
-    enablerepo: powertools
+    enablerepo: 
+      - powertools
+      - crb
     disable_gpg_check: true
   tags: install-only
 
