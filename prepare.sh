@@ -19,17 +19,18 @@ else
   yum update -y
   yum install curl tar git -y
 
-  if  [[ `grep -i PRETTY_NAME="\"Red Hat Enterprise Linux 8\" /etc/os-release"` ]]; then
+  if  [[ `grep -i "PRETTY_NAME=\"Red Hat Enterprise Linux 8\"" /etc/os-release` ]]; then
     subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
     yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
     yum install ansible-core -y
-  elif  [[ `grep -i PRETTY_NAME="\"Red Hat Enterprise Linux 9\" /etc/os-release"` ]]; then
+  elif  [[ `grep -i "PRETTY_NAME=\"Red Hat Enterprise Linux 9\"" /etc/os-release` ]]; then
     subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
     yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
     yum install ansible-core -y
   else
     yum install ansible epel-release -y
   fi
+
 
   ansible-galaxy install OndrejHome.pcs-modules-2
   ansible-galaxy collection install ansible.posix
