@@ -20,31 +20,26 @@ else
 
 
   yum update -y
-  yum install curl tar git epel-release -y
+  yum install curl tar git -y
 
   if [[ `grep -i PRETTY_NAME=\"Red Hat Enterprise Linux 9\" /etc/os-release` ]]; then
-    # subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
-    # yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
+    subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
+    yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
     yum install ansible-core -y
-    ansible-galaxy collection install ansible.posix
-    ansible-galaxy collection install community.general
-    ansible-galaxy collection install community.mysql
-    ansible-galaxy collection install community.rabbitmq
-    ansible-galaxy collection install community.grafana
   elif [[ `grep -i PRETTY_NAME=\"Red Hat Enterprise Linux 9\" /etc/os-release` ]]; then
-    # subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
-    # yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
+    subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
+    yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
     yum install ansible-core -y
-    ansible-galaxy collection install ansible.posix
-    ansible-galaxy collection install community.general
-    ansible-galaxy collection install community.mysql
-    ansible-galaxy collection install community.rabbitmq
-    ansible-galaxy collection install community.grafana
   else
-    yum install ansible  -y
+    yum install ansible epel-release -y
   fi
 
   ansible-galaxy install OndrejHome.pcs-modules-2
+  ansible-galaxy collection install ansible.posix
+  ansible-galaxy collection install community.general
+  ansible-galaxy collection install community.mysql
+  ansible-galaxy collection install community.rabbitmq
+  ansible-galaxy collection install community.grafana
 
   if [ ! -f site/hosts ]; then
     echo "Please modify the site/hosts.example and save it as site/hosts"  
