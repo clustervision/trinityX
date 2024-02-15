@@ -16,17 +16,14 @@ else
   setenforce 0
   sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
 
-  # if running on RedHat 8 or 9, install subscription-manager repos --enable ansible-XXXXXXXXXXXX
-
-
   yum update -y
   yum install curl tar git -y
 
-  if [[ `grep -i PRETTY_NAME=\"Red Hat Enterprise Linux 9\" /etc/os-release` ]]; then
+  if  [[ `grep -i PRETTY_NAME="\"Red Hat Enterprise Linux 8\" /etc/os-release"` ]]; then
     subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
     yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
     yum install ansible-core -y
-  elif [[ `grep -i PRETTY_NAME=\"Red Hat Enterprise Linux 9\" /etc/os-release` ]]; then
+  elif  [[ `grep -i PRETTY_NAME="\"Red Hat Enterprise Linux 9\" /etc/os-release"` ]]; then
     subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
     yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
     yum install ansible-core -y
@@ -44,7 +41,7 @@ else
   if [ ! -f site/hosts ]; then
     echo "Please modify the site/hosts.example and save it as site/hosts"  
   else
-    if ! grep -q "^$(hostname -s)\s*" site/hosts; then
+    if [ ! grep -q "^$(hostname -s)\s*" site/hosts ]; then
       echo "Please note the hostnames are not matching (see site/hosts)."
     fi
   fi
