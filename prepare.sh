@@ -28,15 +28,15 @@ else
     yum install ansible-core -y
     ansible-galaxy collection install ansible.posix
     ansible-galaxy collection install community.general
+    ansible-galaxy collection install community.mysql
+    ansible-galaxy collection install community.rabbitmq
+    ansible-galaxy collection install community.grafana
   else
     yum install epel-release -y
     yum install ansible -y
   fi
 
   ansible-galaxy install OndrejHome.pcs-modules-2
-#  ansible-galaxy collection install community.mysql
-#  ansible-galaxy collection install community.rabbitmq
-#  ansible-galaxy collection install community.grafana
 
   if [ ! -f site/hosts ]; then
     echo "Please modify the site/hosts.example and save it as site/hosts"  
