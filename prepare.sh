@@ -21,6 +21,7 @@ else
     REDHAT_RELEASE=8
   elif  [[ `grep -i "Red Hat Enterprise Linux 9" /etc/os-release` ]]; then
     REDHAT_RELEASE=8
+  fi
   if [ "$REDHAT_RELEASE" ]; then
     subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-x86_64-rpms
     yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
