@@ -20,7 +20,7 @@ else
   if  [[ `grep -i "Red Hat Enterprise Linux 8" /etc/os-release` ]]; then
     REDHAT_RELEASE=8
   elif  [[ `grep -i "Red Hat Enterprise Linux 9" /etc/os-release` ]]; then
-    REDHAT_RELEASE=8
+    REDHAT_RELEASE=9
   fi
   if [ "$REDHAT_RELEASE" ]; then
     subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-x86_64-rpms
@@ -29,7 +29,6 @@ else
     ansible-galaxy collection install ansible.posix
     ansible-galaxy collection install community.general
     ansible-galaxy collection install community.mysql
-    ansible-galaxy collection install community.rabbitmq
     ansible-galaxy collection install community.grafana
   else
     yum install epel-release -y
