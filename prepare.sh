@@ -26,10 +26,11 @@ else
     subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-x86_64-rpms
     yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
     yum install ansible-core -y
-    ansible-galaxy collection install ansible.posix
-    ansible-galaxy collection install community.general
-    ansible-galaxy collection install community.mysql
-    ansible-galaxy collection install community.grafana
+    yum install ansible -y
+#    ansible-galaxy collection install ansible.posix
+#    ansible-galaxy collection install community.general
+#    ansible-galaxy collection install community.mysql
+#    ansible-galaxy collection install community.grafana
   else
     yum install epel-release -y
     yum install ansible -y
