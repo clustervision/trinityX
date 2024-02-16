@@ -30,7 +30,7 @@ else
   fi
 
   ansible-galaxy install OndrejHome.pcs-modules-2
-#  ansible-galaxy collection install ansible.posix
+  ansible-galaxy collection install ansible.posix
 #  ansible-galaxy collection install community.general
 #  ansible-galaxy collection install community.mysql
 #  ansible-galaxy collection install community.rabbitmq
