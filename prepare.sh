@@ -16,22 +16,23 @@ else
   yum update -y
   yum install curl tar git -y
 
+  REDHAT_RELEASE=''
   if  [[ `grep -i "Red Hat Enterprise Linux 8" /etc/os-release` ]]; then
-    subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
-    yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
-    yum install ansible-core -y
+    REDHAT_RELEASE=8
   elif  [[ `grep -i "Red Hat Enterprise Linux 9" /etc/os-release` ]]; then
-    subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
-    yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
+    REDHAT_RELEASE=8
+  if [ "$REDHAT_RELEASE" ]; then
+    subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-x86_64-rpms
+    yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
     yum install ansible-core -y
+    ansible-galaxy collection install ansible.posix
+    ansible-galaxy collection install community.general
   else
     yum install epel-release -y
     yum install ansible -y
   fi
 
   ansible-galaxy install OndrejHome.pcs-modules-2
-  ansible-galaxy collection install ansible.posix
-#  ansible-galaxy collection install community.general
 #  ansible-galaxy collection install community.mysql
 #  ansible-galaxy collection install community.rabbitmq
 #  ansible-galaxy collection install community.grafana
