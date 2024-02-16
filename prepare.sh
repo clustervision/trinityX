@@ -4,9 +4,6 @@ if [[ `getenforce` == "Disabled" ]]; then
     if [[ `grep "^SELINUX=disabled$" /etc/selinux/config` ]]; then
         sed -i 's/SELINUX=disabled/SELINUX=permissive/g' /etc/selinux/config
         exit 1
-    else
-        sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
-        exit 1
     fi
 fi
 if [ ! -f TrinityX.pdf ]; then
@@ -17,8 +14,23 @@ else
   sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
 
   yum update -y
-  yum install epel-release -y
-  yum install curl tar ansible git epel-release -y
+  yum install curl tar git -y
+
+  REDHAT_RELEASE=''
+  if  [[ `grep -i "Red Hat Enterprise Linux 8" /etc/os-release` ]]; then
+    REDHAT_RELEASE=8
+  elif  [[ `grep -i "Red Hat Enterprise Linux 9" /etc/os-release` ]]; then
+    REDHAT_RELEASE=9
+  fi
+  if [ "$REDHAT_RELEASE" ]; then
+    subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-x86_64-rpms
+    yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
+    yum install ansible-core -y
+    yum install ansible -y
+  else
+    yum install epel-release -y
+    yum install ansible -y
+  fi
 
   ansible-galaxy install OndrejHome.pcs-modules-2
 

@@ -1,104 +1,49 @@
 stages:
-  - installation
+  - test
 
-.ansible-template: &ansible-template
+rollout:
+  stage: test
+
+  when: manual
+  
+  parallel:
+    matrix:
+    - TAG: "rocky8"
+    - TAG: "rocky9"
+    - TAG: "centos8"
+    - TAG: "centos9"
+    - TAG: "rhel8"
+    - TAG: "rhel9"
+    - TAG: "alma8"
+    # - TAG: "alma9"
+    
+  tags:
+  - $TAG
+  - "vm"
+  
   script:
-    - test_var=0
-    - echo $test_var > /builds/clustervision/trinityx-combined/test_var.txt
-    - yum install openssh -y
-    - yum install sshpass -y
-    - yum install git -y
-    - yum install python3 -y
-    - git clone https://github.com/vmware/pyvmomi.git
-    - cd pyvmomi
-    - pip install --upgrade pyvmomi
-    - python3 setup.py install
-    - git clone https://github.com/vmware/pyvmomi-community-samples.git
-    - cd pyvmomi-community-samples/samples
-    - echo $CI_COMMIT_BRANCH
-    - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./ci-log.sh  $CI_COMMIT_BRANCH"
-    - rm -f /builds/clustervision/trinityx-combined/test_var.txt
-    - test_var=1
-    - echo $test_var > /builds/clustervision/trinityx-combined/test_var.txt
-    - sshpass -p "${SSHPASS_PASSWORD}" ssh -o StrictHostKeyChecking=no root@$VM_IP "./setup.sh $CI_COMMIT_BRANCH"
+  - ./prepare.sh
 
-  after_script:
-    - test_var=$(cat /builds/clustervision/trinityx-combined/test_var.txt)
-    - test $test_var -gt 0
-    - cd pyvmomi/pyvmomi-community-samples/samples
-    - python3 snapshot_operations.py -s $VMWARE_HOST -u "$VMWARE_API_USER" -p "$VMWARE_API_PASSWORD" -nossl -v $VM_name -op revert --snapshot-name init_snap
-    - sleep 10
-    - python3 vm_power_on.py -s $VMWARE_HOST -u "$VMWARE_API_USER" -p "$VMWARE_API_PASSWORD" -nossl -v $VM_name
+  - ip link add eth000 type dummy
+  - ip link set eth000 up
+  - ip a a 10.141.255.254/16 dev eth000
+  - ip a a 10.149.255.254/16 dev eth000
+  - ip a a 10.148.255.254/16 dev eth000
+  - ip a a 10.141.255.252/16 dev eth000
+  
+  - "cd site"
+  - "cp hosts.example hosts"
+  - "cp group_vars/all.yml.example group_vars/all.yml"
+  - "sed -i -E \"s/ens6/eth000/\" group_vars/all.yml"
+  - "sed -i -E \"s/selinux: true/selinux: false/\" group_vars/all.yml"
+  # - "sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml"
+  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml; fi"
 
-ansible-rocky8:
-  <<: *ansible-template
-  stage: installation
-  when: manual
-  tags:
-    - luna2
-  image:
-    name: geerlingguy/docker-rockylinux8-ansible
-  variables:
-    VM_name: $VM_ROCKY8_NAME
-    VM_IP: $VM_ROCKY8_IP
 
-ansible-rocky9:
-  <<: *ansible-template
-  stage: installation
-  when: manual
-  tags:
-    - luna2
-  image:
-    name: geerlingguy/docker-rockylinux8-ansible
-  variables:
-    VM_name: $VM_ROCKY9_NAME
-    VM_IP: $VM_ROCKY9_IP
+  - "ansible-playbook controller.yml"
+  - "ansible-playbook compute-redhat.yml"
+  - "ansible-playbook compute-ubuntu.yml"
+  
 
-ansible-centos8:
-  <<: *ansible-template
-  stage: installation
-  when: manual
-  tags:
-    - luna2
-  image:
-    name: geerlingguy/docker-rockylinux8-ansible
-  variables:
-    VM_name: $VM_CENTOS8_NAME
-    VM_IP: $VM_CENTOS8_IP
 
-ansible-centos9:
-  <<: *ansible-template
-  stage: installation
-  when: manual
-  tags:
-    - luna2
-  image:
-    name: geerlingguy/docker-rockylinux8-ansible
-  variables:
-    VM_name: $VM_CENTOS9_NAME
-    VM_IP: $VM_CENTOS9_IP
-
-ansible-rhel8:
-  <<: *ansible-template
-  stage: installation
-  when: manual
-  tags:
-    - luna2
-  image:
-    name: geerlingguy/docker-rockylinux8-ansible
-  variables:
-    VM_name: $VM_RHEL8_NAME
-    VM_IP: $VM_RHEL8_IP
-
-ansible-rhel9:
-  <<: *ansible-template
-  stage: installation
-  when: manual
-  tags:
-    - luna2
-  image:
-    name: geerlingguy/docker-rockylinux8-ansible
-  variables:
-    VM_name: $VM_RHEL9_NAME
-    VM_IP: $VM_RHEL9_IP
 
