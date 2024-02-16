@@ -27,10 +27,6 @@ else
     yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
     yum install ansible-core -y
     yum install ansible -y
-#    ansible-galaxy collection install ansible.posix
-#    ansible-galaxy collection install community.general
-#    ansible-galaxy collection install community.mysql
-#    ansible-galaxy collection install community.grafana
   else
     yum install epel-release -y
     yum install ansible -y
