@@ -1,0 +1,27 @@
+---
+- name: Collect stat info of ood apps folder
+  stat:
+    path: /var/www/ood/apps/sys
+  register: ood_apps_folder
+
+- block:
+  - name: List all ood apps
+    command: "ls /var/www/ood/apps/sys"
+    register: ood_legacy_apps
+    when: ood_apps_folder.stat.exists
+
+  - name: Remove legacy ood app folders
+    command: "rm -rf /var/www/ood/apps/sys/{{ item }}"
+    with_items:
+      - trinity_sensu
+    when: item in ood_legacy_apps.stdout_lines | default([])
+    
+  when: ood_apps_folder.stat.exists
+  ignore_errors: yes
+
+
+
+
+
+
+  
