@@ -281,6 +281,12 @@
 #     group: "{{ ood_admin_group }}"
 #     mode: 0644
 
+- name: Install trinityx-ood custom apps python requirements
+  ansible.builtin.pip:
+    requirements: "{{ trix_ood }}/{{ ood_version }}/{{ item }}/requirements.txt"
+    virtualenv: /trinity/local/python/
+  with_items: "{{ ood_custom_apps }}"
+
 - name: Create custom app folders if they do not exist
   file:
     path: '/var/www/ood/apps/sys/{{ item | basename | regex_replace("\_manifest.yml.j2$", "") }}'
