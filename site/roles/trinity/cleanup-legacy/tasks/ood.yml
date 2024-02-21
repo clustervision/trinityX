@@ -1,0 +1,14 @@
+---
+
+- name: List all ood apps
+  command: "ls /var/www/ood/apps/sys"
+  register: ood_legacy_apps
+
+- name: Remove legacy ood app folders
+  command: "rm -rf /var/www/ood/apps/sys/{{ item }}"
+  with_items:
+    - trinity_sensu
+  when: item in ood_legacy_apps.stdout_lines
+
+
+  
