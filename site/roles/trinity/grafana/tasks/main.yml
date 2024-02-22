@@ -2,15 +2,9 @@
 
 - name: Generate grafana admin password and save it to /etc/trinity/passwords
   set_fact:
-    tmp_pwd: "{{ lookup('password',
-                          '/etc/trinity/passwords/grafana/admin.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
-
-- name: Get grafana admin password from /etc/trinity/passwords
-  set_fact:
     grafana_admin_pwd: "{{ lookup('password',
-                          '/etc/trinity/passwords/grafana/admin.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
+                          '/etc/trinity/passwords/grafana/admin.txt',
+                           chars=['ascii_letters','digits','hexdigits']) }}"
 
 - name: Set protocol
   set_fact:
@@ -58,23 +52,34 @@
     append: "yes"
   when: enable_ssl
 
-- name: Configure Grafana datasources
-  template:
-    src: trinityx-datasource.yaml.j2
-    dest: /etc/grafana/provisioning/datasources/trinityx-datasource.yaml
-  notify: restart grafana-server
 
-- name: Ensure directory
+- name: Ensure grafana dashboard directory exists
   file:
     state: directory
     path: "{{ grafana_dashboard_dir }}"
     owner: grafana
     group: grafana
 
-- name: Configure Grafana dashboard provider
+- name: Ensure provisioning directory exists
+  file:
+    state: directory
+    path: "{{ grafana_provisioning_dir }}"
+    owner: grafana
+    group: grafana
+  with_items:
+    - datasources
+    - dashboards
+
+- name: Configure Grafana datasources
+  template:
+    src: trinityx-datasource.yaml.j2
+    dest: "{{ grafana_provisioning_dir }}/datasources/trinityx-datasource.yaml"
+  notify: restart grafana-server
+
+- name: Configure Grafana dashboards
   template:
     src: trinityx-dashboards.yaml.j2
-    dest: /etc/grafana/provisioning/dashboards/trinityx-dashboards.yaml
+    dest:  "{{ grafana_provisioning_dir }}/dashboards/trinityx-dashboards.yaml"
   notify: restart grafana-server
 
 - name: Place dashboards
