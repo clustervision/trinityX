@@ -2,7 +2,10 @@
 
 # TrinityX shared disk resource file
 
-resource trinity_disk {
+{% set port = [7789] -%}
+
+{% for disk in drbd_fs_disks %}
+resource {{ disk.name }} {
     net {
         # Default policies after split brain is detected. This is the safe
         # behaviour, i.e. it will not destroy data and will disconnect the disks
@@ -14,36 +17,39 @@ resource trinity_disk {
     }
 
     on {{ trix_ctrl1_hostname }} {
-        device    {{ drbd_ctrl1_device }};
-        disk      {{ drbd_ctrl1_disk }};
-        address   {{ drbd_ctrl1_ip }}:7789;
+        device    {{ disk.device }};
+        disk      {{ disk.disk }};
+        address   {{ drbd_ctrl1_ip }}:{{ port[0] }};
         meta-disk internal;
     }
 
     on {{ trix_ctrl2_hostname }} {
-        device    {{ drbd_ctrl2_device }};
-        disk      {{ drbd_ctrl2_disk }};
-        address   {{ drbd_ctrl2_ip }}:7789;
+        device    {{ disk.device }};
+        disk      {{ disk.disk }};
+        address   {{ drbd_ctrl2_ip }}:{{ port[0] }};
         meta-disk internal;
     }
 
 {% if trix_ctrl3_hostname is defined %}
     on {{ trix_ctrl3_hostname }} {
-        device    {{ drbd_ctrl3_device }};
-        disk      {{ drbd_ctrl3_disk }};
-        address   {{ drbd_ctrl3_ip }}:7789;
+        device    {{ disk.device }};
+        disk      {{ disk.disk }};
+        address   {{ drbd_ctrl3_ip }}:{{ port[0] }};
         meta-disk internal;
     }
 {% endif %}
 
 {% if trix_ctrl4_hostname is defined %}
     on {{ trix_ctrl4_hostname }} {
-        device    {{ drbd_ctrl4_device }};
-        disk      {{ drbd_ctrl4_disk }};
-        address   {{ drbd_ctrl4_ip }}:7789;
+        device    {{ disk.device }};
+        disk      {{ disk.disk }};
+        address   {{ drbd_ctrl4_ip }}:{{ port[0] }};
         meta-disk internal;
     }
 {% endif %}
 }
+
+{% if port.append(port.pop() + 1) %}{% endif %}
+{% endfor %}
 
 
