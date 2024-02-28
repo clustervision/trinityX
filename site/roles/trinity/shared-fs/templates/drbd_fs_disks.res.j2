@@ -6,6 +6,11 @@
 
 {% for disk in drbd_fs_disks %}
 resource {{ disk.name | replace("/","_") }} {
+    volume 0 {
+        device    {{ disk.device }};
+        disk      {{ disk.disk }};
+        meta-disk internal;
+    }
     net {
         # Default policies after split brain is detected. This is the safe
         # behaviour, i.e. it will not destroy data and will disconnect the disks
@@ -15,12 +20,8 @@ resource {{ disk.name | replace("/","_") }} {
         after-sb-1pri consensus;
         after-sb-2pri disconnect;
         protocol      C;
-    }
-
-    volume 0 {
-        device    {{ disk.device }};
-        disk      {{ disk.disk }};
-        meta-disk internal;
+        transport     "tcp";
+#        transport     "rdma";
     }
 
     on "{{ trix_ctrl1_hostname }}" {
