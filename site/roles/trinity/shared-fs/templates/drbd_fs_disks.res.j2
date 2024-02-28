@@ -14,39 +14,48 @@ resource {{ disk.name | replace("/","_") }} {
         after-sb-0pri discard-zero-changes;
         after-sb-1pri consensus;
         after-sb-2pri disconnect;
+        protocol      C;
     }
 
-    on {{ trix_ctrl1_hostname }} {
+    volume 0 {
         device    {{ disk.device }};
         disk      {{ disk.disk }};
+        meta-disk internal;
+    }
+
+    on "{{ trix_ctrl1_hostname }}" {
+        node-id   0;
         address   {{ drbd_ctrl1_ip }}:{{ port[0] }};
-        meta-disk internal;
     }
 
-    on {{ trix_ctrl2_hostname }} {
-        device    {{ disk.device }};
-        disk      {{ disk.disk }};
+    on "{{ trix_ctrl2_hostname }}" {
+        node-id   1;
         address   {{ drbd_ctrl2_ip }}:{{ port[0] }};
-        meta-disk internal;
     }
 
 {% if trix_ctrl3_hostname is defined %}
-    on {{ trix_ctrl3_hostname }} {
-        device    {{ disk.device }};
-        disk      {{ disk.disk }};
+    on "{{ trix_ctrl3_hostname }}" {
+        node-id   2;
         address   {{ drbd_ctrl3_ip }}:{{ port[0] }};
-        meta-disk internal;
     }
 {% endif %}
 
 {% if trix_ctrl4_hostname is defined %}
-    on {{ trix_ctrl4_hostname }} {
-        device    {{ disk.device }};
-        disk      {{ disk.disk }};
+    on "{{ trix_ctrl4_hostname }}" {
+        node-id   3;
         address   {{ drbd_ctrl4_ip }}:{{ port[0] }};
-        meta-disk internal;
     }
 {% endif %}
+
+    connection-mesh {
+        hosts     "{{ trix_ctrl1_hostname }}" "{{ trix_ctrl2_hostname }}"
+{%- if trix_ctrl3_hostname is defined %}
+ "{{ trix_ctrl3_hostname }}" 
+{%- endif -%}
+{%- if trix_ctrl3_hostname is defined %}
+ "{{ trix_ctrl3_hostname }}" 
+{%- endif -%};
+    }
 }
 
 {% if port.append(port.pop() + 1) %}{% endif %}
