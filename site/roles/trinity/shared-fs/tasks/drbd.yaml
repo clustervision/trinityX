@@ -21,21 +21,22 @@
 
 - name: Set up DRBD shared resource configuration file
   template:
-    src: '{{ drbd_shared_resource_name }}.res.j2'
-    dest: "/etc/drbd.d/{{ drbd_shared_resource_name }}.res"
+    src: 'drbd_fs_disk.res.j2'
+    dest: "/etc/drbd.d/trinityx.res"
 
 - name: Initialize DRBD shared resource
-  shell: '/usr/sbin/drbdadm --force create-md {{ drbd_shared_resource_name }}'
+  shell: '/usr/sbin/drbdadm --force create-md {{ item.name | replace("/","_") }}'
+  with_items: drbd_fs_disks
   ignore_errors: yes
 
 - block:
   - name: Check if DRBD is already mounted at trix_root
     command:
-      '/usr/bin/findmnt -S /dev/drbd/by-res/{{ drbd_shared_resource_name }}
-      -T {{ trix_root }}'
+      '/usr/bin/findmnt -S /dev/drbd/by-res/ -T {{ item.name | replace("/","_") }}'
     register: drbd_mounted
     changed_when: false
     failed_when: false
+    with_items: drbd_fs_disks
 
   - block:
     - name: Temporarily start DRBD up
@@ -44,14 +45,16 @@
         state: started
 
     - name: Promote shared resource
-      shell: '/usr/sbin/drbdadm --force primary {{ drbd_shared_resource_name }}'
+      shell: '/usr/sbin/drbdadm --force primary {{ item.name | replace("/","_") }}'
+      with_items: drbd_fs_disks
 
     - name: Creating a file system on shared resource
       filesystem:
         fstype: xfs
-        dev: '/dev/drbd/by-res/{{ drbd_shared_resource_name }}'
+        dev: '/dev/drbd/by-res/{{ item.name | replace("/","_") }}'
         force: yes
         opts: -b size=4096 -s size=4096
+      with_items: drbd_fs_disks
       ignore_errors: yes
 
     - name: Create a fake fstab for the next step
@@ -63,21 +66,24 @@
 
     - name: Temporarily mount DRBD disk
       mount:
-        src: "/dev/drbd/by-res/{{ drbd_shared_resource_name }}"
-        path: "{{ trix_root }}-temp"
+        src: '/dev/drbd/by-res/{{ item.name | replace("/","_") }}'
+        path: '{{ item.name | replace("/","_") }}-temp'
         fstype: ext4
         state: mounted
         fstab: "{{ drbd_fake_fstab.path }}"
+      with_items: drbd_fs_disks
 
-    - name: Copy contents of {{ trix_root }} from local drives to DRBD
+    - name: Copy contents of {{ item.name }} from local drives to DRBD
       synchronize:
-        src: "{{ trix_root }}/"
-        dest: "{{ trix_root }}-temp/"
+        src: "{{ item.name }}/"
+        dest: '{{ item.name | replace("/","_") }}-temp/'
+      with_items: drbd_fs_disks
 
     - name: Temporarily umount DRBD disk
       mount:
-        path: "{{ trix_root }}-temp"
+        path: '{{ item.name | replace("/","_") }}-temp'
         state: unmounted
+      with_items: drbd_fs_disks
 
     - name: Temporarily shut DRBD down
       service:
@@ -92,10 +98,11 @@
     pcs_resource:
       name: DRBD
       resource_type: ocf:linbit:drbd
-      options: 'drbd_resource={{ drbd_shared_resource_name }} op monitor interval=59s promote
+      options: 'drbd_resource={{ item.name | replace("/","_") }} op monitor interval=59s promote
           interval=67s master master-max=1 master-node-max=1 clone-max=2
           clone-node-max=1 notify=true'
       state: present
+    with_items: drbd_fs_disks
 
   - name: Add pacemaker resource wait-for-device
     pcs_resource:
@@ -110,11 +117,12 @@
       name: trinity-fs
       resource_class: ocf
       resource_type: Filesystem
-      options: 'device=/dev/drbd/by-res/{{ drbd_shared_resource_name }}
+      options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
           directory="{{ trix_root }}" fstype=xfs options="nodiscard,inode64"
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs'
       state: present
+    with_items: drbd_fs_disks
 
   - name: Add pacemaker resource fs-ready
     pcs_resource:
