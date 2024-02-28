@@ -20,25 +20,10 @@
     path: "{{ trix_shared }}/corosync/authkey"
   register: stat_corosync_key
 
-- block:
-  - name: Ensure corosync shared directory exists
-    file:
-      path: '{{ trix_shared }}/corosync'
-      state: directory
-
-  - name: Create corosync key
-    command: "corosync-keygen -l"
-    args:
-      creates: '/etc/corosync/authkey'
-
-#    - name: Create corosync key
-#      shell: "corosync-keygen"
-
-  - name: Copy corosync key to shared storage
-    copy:
-      src: '/etc/corosync/authkey'
-      dest: '{{ trix_shared }}/corosync/'
-      mode: '0640'
+- name: Create corosync key
+  command: "corosync-keygen -l"
+  args:
+    creates: '/etc/corosync/authkey'
   when: 
     - not stat_corosync_key.stat.exists
     - primary

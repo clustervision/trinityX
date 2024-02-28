@@ -102,14 +102,6 @@ resolv_search_domains: '{{ trix_domain }} ipmi'
 
 
 # -----------------------------------------------------------------------
-# Backend type and block device to use for the specified backend.
-# Works in conjunction with H/A. shared_fs_type can be: drbd, nfs or das
-
-shared_fs_type: 'drbd'
-shared_fs_device: '/dev/vdb'
-
-
-# -----------------------------------------------------------------------
 # Path to which the standard TrinityX files will be installed.
 # If not set, it will default to /trinity
 
@@ -146,6 +138,20 @@ trix_licenses: '{{ trix_shared }}/licenses'
 trix_docs: '{{ trix_shared }}/docs'
 trix_examples: '{{ trix_shared }}/examples'
 trix_modulefiles: '{{ trix_shared }}/modulefiles'
+
+
+# -----------------------------------------------------------------------
+# Backend type and block device to use for the specified backend.
+# Works in conjunction with H/A. 'type' can be: drbd, nfs or das.
+# 'name' serves as the mountpoint.
+
+shared_fs_disks: 
+  - name: '{{ trix_shared }}'
+    type: 'drbd'
+    device: '/dev/vdb'
+  - name: '{{ trix_home }}'
+    type: 'drbd'
+    device: '/dev/vdc'
 
 
 # -----------------------------------------------------------------------

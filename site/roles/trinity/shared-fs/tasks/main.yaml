@@ -1,0 +1,18 @@
+---
+
+- name: Build DRBD disk list
+  vars:
+      drbd_fs_disks:
+        - name: "{{ item.name }}"
+          device: "{{ item.device }}"
+  with_items: "{{ shared_fs_disks }}"
+  when: item.type == 'drbd'
+
+- debug:
+    msg: "{{ drbd_fs_disks }}"
+
+#- name: Configure DRBD
+#  ansible.builtin.include_tasks:
+#    file: drbd.yml
+#  when: drbd_fs_disks is defined
+

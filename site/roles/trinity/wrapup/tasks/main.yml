@@ -10,3 +10,20 @@
 - name: Refresh exportfs
   shell: "exportfs -a"
   ignore_errors: true
+
+
+- block: Synchronizing corosync keys between controllers
+  - name: Ensure corosync shared directory exists
+    file:
+      path: '{{ trix_shared }}/corosync'
+      state: directory
+
+  - name: Copy corosync key to shared storage
+    copy:
+      src: '/etc/corosync/authkey'
+      dest: '{{ trix_shared }}/corosync/'
+      mode: '0640'
+  when: 
+    - primary
+    - ha
+

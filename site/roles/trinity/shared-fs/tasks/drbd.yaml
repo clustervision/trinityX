@@ -65,7 +65,7 @@
       mount:
         src: "/dev/drbd/by-res/{{ drbd_shared_resource_name }}"
         path: "{{ trix_root }}-temp"
-        fstype: xfs
+        fstype: ext4
         state: mounted
         fstab: "{{ drbd_fake_fstab.path }}"
 
@@ -85,6 +85,7 @@
         state: stopped
 
     when:  drbd_mounted.rc != 0
+
 # TODO: with pcs_resource one cannot pass master/slave id, so it defaults to
 # DRBD-master instead of Trinity-drbd
   - name: Add pacemaker resource DRBD
@@ -167,7 +168,6 @@
 
   - name: Wait for Pacemaker to settle
     command: /usr/sbin/crm_resource --wait
-
 
   when: primary
 
