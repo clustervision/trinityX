@@ -14,133 +14,125 @@
     state: present
   tags: install-only
 
-- name: Set up DRBD common settings configuration file
-  template:
-    src: global_common.conf.j2
-    dest: /etc/drbd.d/global_common.conf
-
-
-- name: Set up DRBD shared resource configuration file
-  template:
-    src: 'drbd_fs_disks.res.j2'
-    dest: "/etc/drbd.d/trinityx.res"
-
-- name: Initialize DRBD shared resources
-  shell: '/usr/sbin/drbdadm create-md {{ item.name | replace("/","_") }} --force'
-  loop: "{{ drbd_fs_disks }}"
-  ignore_errors: yes
-
-#- name: Initialize DRBD shared resources
-#  shell: '/usr/sbin/drbdadm up {{ item.name | replace("/","_") }}'
-#  loop: "{{ drbd_fs_disks }}"
-#  ignore_errors: yes
-
-- name: Populate service facts
-  service_facts:
+- name: Verify if DRBD is already configured
+  stat:
+     path: "/etc/drbd.d/trinityx.res"
+  register: drbd_res_config
 
 - block:
-  - debug:
-      msg: "{{ ansible_facts.services['drbd.service'] }}"
-
-  - name: Temporarily start DRBD up
-    service:
-      name: drbd
-      state: started
-    register: drbd_started
-
-  - name: Status DRBD shared resources
-    shell: '/usr/sbin/drbdadm attach {{ item.name | replace("/","_") }}'
-    loop: "{{ drbd_fs_disks }}"
-    ignore_errors: yes
-
-  - name: Status DRBD shared resources
-    shell: '/usr/sbin/drbdadm status {{ item.name | replace("/","_") }}'
-    loop: "{{ drbd_fs_disks }}"
-    ignore_errors: yes
-
-#  - name: Apply-al DRBD shared resources
-#    shell: '/usr/sbin/drbdadm apply-al {{ item.name | replace("/","_") }}'
-#    loop: "{{ drbd_fs_disks }}"
-#    ignore_errors: yes
-
-  - name: Check if DRBD is already mounted
-    command: '/usr/bin/findmnt -S /dev/drbd/by-res/ -T {{ item.name | replace("/","_") }}'
-    register: drbd_mounted
-    changed_when: false
-    failed_when: false
-    loop: "{{ drbd_fs_disks }}"
-
-#  - debug:
-#      msg: "{{ drbd_mounted }}"
-
-#  - debug:
-#      msg: "{{ item.item['name'] }}"
-#    loop: "{{ drbd_mounted.results }}"
-
-  - name: Create a fake fstab for the next step
-    tempfile:
-      path: /tmp
-      prefix: fstab.
-      state: file
-    register: drbd_fake_fstab
-
   - block:
-    - name: Promote shared resources
-      shell: '/usr/sbin/drbdadm primary --force {{ item.item["name"] | replace("/","_") }}'
-      loop: "{{ drbd_mounted.results }}"
-      when: item.rc != 0
+    - name: Set up DRBD common settings configuration file
+      template:
+        src: global_common.conf.j2
+        dest: /etc/drbd.d/global_common.conf
 
-    - name: Creating a file system on shared resources
-      filesystem:
-        fstype: ext4
-        dev: '/dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}'
-        force: yes
-        opts: -b 4096
+    - name: Set up DRBD shared resource configuration file
+      template:
+        src: 'drbd_fs_disks.res.j2'
+        dest: "/etc/drbd.d/trinityx.res"
+
+    - name: Initialize DRBD shared resources
+      shell: '/usr/sbin/drbdadm create-md {{ item.name | replace("/","_") }} --force'
+      loop: "{{ drbd_fs_disks }}"
       ignore_errors: yes
-      loop: "{{ drbd_mounted.results }}"
-      when: item.rc != 0
 
-    - name: Temporarily mount DRBD disks
-      mount:
-        src: '/dev/drbd/by-res/{{ item.item.name | replace("/","_") }}'
-        path: '{{ item.item["name"] | replace("/","_") }}-temp'
-        fstype: ext4
-        state: mounted
-        fstab: "{{ drbd_fake_fstab.path }}"
-      loop: "{{ drbd_mounted.results }}"
-      when: item.rc != 0
+    - name: Populate service facts
+      service_facts:
 
-    - name: Copy contents from local drives to DRBD
-      synchronize:
-        src: '{{ item.item["name"] }}/'
-        dest: '{{ item.item["name"] | replace("/","_") }}-temp/'
-      loop: "{{ drbd_mounted.results }}"
-      when: item.rc != 0
+    - name: Temporarily start DRBD up
+      service:
+        name: drbd
+        state: started
+      register: drbd_started
 
-    - name: Temporarily umount DRBD disks
-      mount:
-        path: '{{ item.item["name"] | replace("/","_") }}-temp'
-        state: unmounted
-      loop: "{{ drbd_mounted.results }}"
-      when: item.rc != 0
-    when: 
-      - drbd_mounted is defined #.rc != 0
-      - ansible_facts.services['drbd.service'] is defined and ansible_facts.services['drbd.service'].state == 'stopped'
+    - name: Status DRBD shared resources
+      shell: '/usr/sbin/drbdadm attach {{ item.name | replace("/","_") }}'
+      loop: "{{ drbd_fs_disks }}"
+      ignore_errors: yes
 
-  - name: stop DRBD
-    service:
-      name: drbd
-      state: stopped
-    when: drbd_started.rc is defined and drbd_started.rc == 0
+    - name: Status DRBD shared resources
+      shell: '/usr/sbin/drbdadm status {{ item.name | replace("/","_") }}'
+      loop: "{{ drbd_fs_disks }}"
+      ignore_errors: yes
 
-# TODO: with pcs_resource one cannot pass master/slave id, so it defaults to
-# DRBD-master instead of Trinity-drbd
+#    - name: Apply-al DRBD shared resources
+#      shell: '/usr/sbin/drbdadm apply-al {{ item.name | replace("/","_") }}'
+#      loop: "{{ drbd_fs_disks }}"
+#      ignore_errors: yes
+
+    - name: Check if DRBD is already mounted
+      command: '/usr/bin/findmnt -S /dev/drbd/by-res/ -T {{ item.name | replace("/","_") }}'
+      register: drbd_mounted
+      changed_when: false
+      failed_when: false
+      loop: "{{ drbd_fs_disks }}"
+
+    - name: Create a fake fstab for the next step
+      tempfile:
+        path: /tmp
+        prefix: fstab.
+        state: file
+      register: drbd_fake_fstab
+
+    - block:
+      - name: Promote shared resources
+        shell: '/usr/sbin/drbdadm primary --force {{ item.item["name"] | replace("/","_") }}'
+        loop: "{{ drbd_mounted.results }}"
+        when: item.rc != 0
+
+      - name: Creating a file system on shared resources
+        filesystem:
+          fstype: ext4
+          dev: '/dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}'
+          force: yes
+          opts: -b 4096
+        ignore_errors: yes
+        loop: "{{ drbd_mounted.results }}"
+        when: item.rc != 0
+
+      - name: Temporarily mount DRBD disks
+        mount:
+          src: '/dev/drbd/by-res/{{ item.item.name | replace("/","_") }}'
+          path: '{{ item.item["name"] | replace("/","_") }}-temp'
+          fstype: ext4
+          state: mounted
+          fstab: "{{ drbd_fake_fstab.path }}"
+        loop: "{{ drbd_mounted.results }}"
+        when: item.rc != 0
+
+      - name: Copy contents from local drives to DRBD
+        synchronize:
+          src: '{{ item.item["name"] }}/'
+          dest: '{{ item.item["name"] | replace("/","_") }}-temp/'
+        loop: "{{ drbd_mounted.results }}"
+        when: item.rc != 0
+
+      - name: Temporarily umount DRBD disks
+        mount:
+          path: '{{ item.item["name"] | replace("/","_") }}-temp'
+          state: unmounted
+        loop: "{{ drbd_mounted.results }}"
+        when: item.rc != 0
+      when: 
+        - drbd_mounted is defined #.rc != 0
+        - ansible_facts.services['drbd.service'] is defined and ansible_facts.services['drbd.service'].state == 'stopped'
+
+    - name: stop DRBD
+      service:
+        name: drbd
+        state: stopped
+      when: drbd_started is defined and drbd_started.state == "started"
+
+    when: not drbd_res_config.stat.exists
+
+  # TODO: with pcs_resource one cannot pass master/slave id, so it defaults to
+  # DRBD-master instead of Trinity-drbd
   - name: Add pacemaker resource DRBD
     pcs_resource:
       name: DRBD
       resource_type: ocf:linbit:drbd
       options: 'drbd_resource={{ item.name | replace("/","_") }} op monitor interval=59s promote
-          interval=67s master master-max=1 master-node-max=1 clone-max=2
+          interval=67s promotable promoted-max=1 promoted-node-max=1 clone-max={{ all_ctrl_hostname|length }}
           clone-node-max=1 notify=true'
       state: present
     loop: "{{ drbd_fs_disks }}"
@@ -159,7 +151,7 @@
       resource_class: ocf
       resource_type: Filesystem
       options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
-          directory="{{ trix_root }}" fstype=xfs options="nodiscard,inode64"
+          directory="{{ item.name }}" fstype=ext4 options="nodiscard,inode64"
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs'
       state: present
@@ -176,26 +168,25 @@
     pcs_constraint_order:
       resource1: Trinity
       #resource2: Trinity-drbd
-      resource2: DRBD-master
+      resource2: DRBD-clone
       state: present
 
   - name: Add pacemaker order constraint - Trinity-drbd then Trinity-fs
     pcs_constraint_order:
       #resource1: Trinity-drbd
-      resource1: DRBD-master
+      resource1: DRBD-clone
       resource2: Trinity-fs
       state: present
 
-  - name: Add pacemaker order constraint - Trinity-fs then Trinity-secondary
-    pcs_constraint_order:
-      resource1: Trinity-fs
-      resource2: Trinity-secondary
-      state: present
+#  - name: Add pacemaker order constraint - Trinity-fs then Trinity-secondary
+#    pcs_constraint_order:
+#      resource1: Trinity-fs
+#      resource2: Trinity-secondary
+#      state: present
 
   - name: Add pacemaker colocation constraint - Trinity-drbd with Trinity
     pcs_constraint_colocation:
-      #resource1: Trinity-drbd
-      resource1: DRBD-master
+      resource1: DRBD-clone
       resource1_role: Master
       resource2: Trinity
       score: INFINITY
@@ -209,8 +200,7 @@
 
   - name: Add pacemaker order constraint - promote Trinity-drbd then wait-for-device
     pcs_constraint_order:
-      #resource1: Trinity-drbd
-      resource1: DRBD-master
+      resource1: DRBD-clone
       resource1_action: promote
       resource2: wait-for-device
       state: present
