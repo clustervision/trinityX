@@ -19,14 +19,15 @@
     src: global_common.conf.j2
     dest: /etc/drbd.d/global_common.conf
 
+
 - name: Set up DRBD shared resource configuration file
   template:
-    src: 'drbd_fs_disk.res.j2'
+    src: 'drbd_fs_disks.res.j2'
     dest: "/etc/drbd.d/trinityx.res"
 
 - name: Initialize DRBD shared resource
   shell: '/usr/sbin/drbdadm --force create-md {{ item.name | replace("/","_") }}'
-  with_items: drbd_fs_disks
+  loop: "{{ drbd_fs_disks }}"
   ignore_errors: yes
 
 - block:
@@ -36,7 +37,7 @@
     register: drbd_mounted
     changed_when: false
     failed_when: false
-    with_items: drbd_fs_disks
+    loop: "{{ drbd_fs_disks }}"
 
   - block:
     - name: Temporarily start DRBD up
@@ -46,7 +47,7 @@
 
     - name: Promote shared resource
       shell: '/usr/sbin/drbdadm --force primary {{ item.name | replace("/","_") }}'
-      with_items: drbd_fs_disks
+      loop: "{{ drbd_fs_disks }}"
 
     - name: Creating a file system on shared resource
       filesystem:
@@ -54,7 +55,7 @@
         dev: '/dev/drbd/by-res/{{ item.name | replace("/","_") }}'
         force: yes
         opts: -b size=4096 -s size=4096
-      with_items: drbd_fs_disks
+      loop: "{{ drbd_fs_disks }}"
       ignore_errors: yes
 
     - name: Create a fake fstab for the next step
@@ -71,19 +72,19 @@
         fstype: ext4
         state: mounted
         fstab: "{{ drbd_fake_fstab.path }}"
-      with_items: drbd_fs_disks
+      loop: "{{ drbd_fs_disks }}"
 
     - name: Copy contents of {{ item.name }} from local drives to DRBD
       synchronize:
         src: "{{ item.name }}/"
         dest: '{{ item.name | replace("/","_") }}-temp/'
-      with_items: drbd_fs_disks
+      loop: "{{ drbd_fs_disks }}"
 
     - name: Temporarily umount DRBD disk
       mount:
         path: '{{ item.name | replace("/","_") }}-temp'
         state: unmounted
-      with_items: drbd_fs_disks
+      loop: "{{ drbd_fs_disks }}"
 
     - name: Temporarily shut DRBD down
       service:
@@ -102,7 +103,7 @@
           interval=67s master master-max=1 master-node-max=1 clone-max=2
           clone-node-max=1 notify=true'
       state: present
-    with_items: drbd_fs_disks
+    loop: "{{ drbd_fs_disks }}"
 
   - name: Add pacemaker resource wait-for-device
     pcs_resource:
@@ -122,7 +123,7 @@
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs'
       state: present
-    with_items: drbd_fs_disks
+    loop: "{{ drbd_fs_disks }}"
 
   - name: Add pacemaker resource fs-ready
     pcs_resource:
