@@ -20,22 +20,25 @@
   register: drbd_res_config
 
 - block:
+  - name: Set up DRBD common settings configuration file
+    template:
+      src: global_common.conf.j2
+      dest: /etc/drbd.d/global_common.conf
+
+  - name: Set up DRBD shared resource configuration file
+    template:
+      src: 'drbd_fs_disks.res.j2'
+      dest: "/etc/drbd.d/trinityx.res"
+
+  - name: Initialize DRBD shared resources
+    shell: '/usr/sbin/drbdadm create-md {{ item.name | replace("/","_") }} --force'
+    loop: "{{ drbd_fs_disks }}"
+    ignore_errors: yes
+
+  when: not drbd_res_config.stat.exists
+
+- block:
   - block:
-    - name: Set up DRBD common settings configuration file
-      template:
-        src: global_common.conf.j2
-        dest: /etc/drbd.d/global_common.conf
-
-    - name: Set up DRBD shared resource configuration file
-      template:
-        src: 'drbd_fs_disks.res.j2'
-        dest: "/etc/drbd.d/trinityx.res"
-
-    - name: Initialize DRBD shared resources
-      shell: '/usr/sbin/drbdadm create-md {{ item.name | replace("/","_") }} --force'
-      loop: "{{ drbd_fs_disks }}"
-      ignore_errors: yes
-
     - name: Populate service facts
       service_facts:
 
