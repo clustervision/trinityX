@@ -137,15 +137,33 @@
 
     when: not drbd_res_config.stat.exists
 
+
+#[root@pcmk-1 ~]# pcs -f drbd_cfg resource create WebData ocf:linbit:drbd \
+#     drbd_resource=wwwdata op monitor interval=29s role=Promoted \
+#     monitor interval=31s role=Unpromoted
+#[root@pcmk-1 ~]# pcs -f drbd_cfg resource promotable WebData \
+#     promoted-max=1 promoted-node-max=1 clone-max=2 clone-node-max=1 \
+#     notify=true
+
+# [root@pcmk-1 ~]# pcs resource create WebData ocf:linbit:drbd \
+#    drbd_resource=wwwdata op monitor interval=29s role=Promoted \
+#    monitor interval=31s role=Unpromoted \
+#    promotable promoted-max=1 promoted-node-max=1 clone-max=2  \
+#    clone-node-max=1 notify=true
+
   # TODO: with pcs_resource one cannot pass master/slave id, so it defaults to
   # DRBD-master instead of Trinity-drbd
   - name: Add pacemaker resource DRBD
     pcs_resource:
       name: 'DRBD-{{ item.name | replace("/","_") }}'
       resource_type: ocf:linbit:drbd
-      options: 'drbd_resource={{ item.name | replace("/","_") }} op monitor interval=59s promote
-          interval=67s promotable promoted-max=1 promoted-node-max=1 clone-max={{ all_ctrl_hostname|length }}
-          clone-node-max=1 notify=true'
+      options: 'drbd_resource={{ item.name | replace("/","_") }} op monitor interval=59s 
+          role=Promoted monitor interval=67s 
+          role=Unpromoted promotable promoted-max=1 promoted-node-max=1 
+          clone-max={{ all_ctrl_hostname|length }} clone-node-max=1 notify=true'
+#      options: 'drbd_resource={{ item.name | replace("/","_") }} op monitor interval=59s promote
+#          interval=67s promotable promoted-max=1 promoted-node-max=1 clone-max={{ all_ctrl_hostname|length }}
+#          clone-node-max=1 notify=true'
       state: present
     loop: "{{ drbd_fs_disks }}"
 
@@ -164,9 +182,9 @@
       resource_class: ocf
       resource_type: Filesystem
       options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
-          directory="{{ item.name }}" fstype=ext4 options="nodiscard,inode64"
+          directory="{{ item.name }}" fstype=ext4 
           run_fsck=force force_unmount=safe op monitor interval=31s op
-          monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs'
+          monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
 
@@ -174,7 +192,7 @@
     pcs_resource:
       name: 'fs-ready-{{ item.name | replace("/","_") }}'
       resource_type: 'ocf:pacemaker:Dummy'
-      options: op monitor interval=183s --group=Trinity-fs
+      options: 'op monitor interval=183s --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
 
@@ -207,6 +225,7 @@
       score: INFINITY
       state: present
     loop: "{{ drbd_fs_disks }}"
+    ignore_errors: yes
 
   - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
     pcs_constraint_colocation:

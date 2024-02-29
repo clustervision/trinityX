@@ -21,6 +21,13 @@ resource {{ disk.name | replace("/","_") }} {
         protocol      C;
         transport     "tcp";
 #        transport     "rdma";
+
+        fencing resource-and-stonith;
+        verify-alg sha1;
+    }
+    handlers {
+        fence-peer "/usr/lib/drbd/crm-fence-peer.9.sh";
+        unfence-peer "/usr/lib/drbd/crm-unfence-peer.9.sh";
     }
 
     on "{{ trix_ctrl1_hostname }}" {
