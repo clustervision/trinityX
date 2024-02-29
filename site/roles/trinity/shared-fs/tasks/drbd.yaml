@@ -129,7 +129,7 @@
   # DRBD-master instead of Trinity-drbd
   - name: Add pacemaker resource DRBD
     pcs_resource:
-      name: DRBD
+      name: 'DRBD-{{ item.name | replace("/","_") }}'
       resource_type: ocf:linbit:drbd
       options: 'drbd_resource={{ item.name | replace("/","_") }} op monitor interval=59s promote
           interval=67s promotable promoted-max=1 promoted-node-max=1 clone-max={{ all_ctrl_hostname|length }}
@@ -139,15 +139,16 @@
 
   - name: Add pacemaker resource wait-for-device
     pcs_resource:
-      name: wait-for-device
+      name: 'wait-for-device-{{ item.name | replace("/","_") }}'
       resource_class: ocf
       resource_type: Delay
-      options: startdelay=10 stopdelay=3 --group=Trinity-fs
+      options: 'startdelay=10 stopdelay=3 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
+    loop: "{{ drbd_fs_disks }}"
 
   - name: Add pacemaker resource trinity-fs
     pcs_resource:
-      name: trinity-fs
+      name: 'trinity-fs-{{ item.name | replace("/","_") }}'
       resource_class: ocf
       resource_type: Filesystem
       options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
@@ -159,24 +160,26 @@
 
   - name: Add pacemaker resource fs-ready
     pcs_resource:
-      name: fs-ready
+      name: 'fs-ready-{{ item.name | replace("/","_") }}'
       resource_type: 'ocf:pacemaker:Dummy'
       options: op monitor interval=183s --group=Trinity-fs
       state: present
+    loop: "{{ drbd_fs_disks }}"
 
   - name: Add pacemaker order constraint - Trinity then Trinity-drbd
     pcs_constraint_order:
       resource1: Trinity
-      #resource2: Trinity-drbd
-      resource2: DRBD-clone
+      resource2: 'DRBD-{{ item.name | replace("/","_") }}-clone'
       state: present
+    loop: "{{ drbd_fs_disks }}"
 
   - name: Add pacemaker order constraint - Trinity-drbd then Trinity-fs
     pcs_constraint_order:
       #resource1: Trinity-drbd
-      resource1: DRBD-clone
-      resource2: Trinity-fs
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
+      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
+    loop: "{{ drbd_fs_disks }}"
 
 #  - name: Add pacemaker order constraint - Trinity-fs then Trinity-secondary
 #    pcs_constraint_order:
@@ -186,24 +189,27 @@
 
   - name: Add pacemaker colocation constraint - Trinity-drbd with Trinity
     pcs_constraint_colocation:
-      resource1: DRBD-clone
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
       resource1_role: Master
       resource2: Trinity
       score: INFINITY
       state: present
+    loop: "{{ drbd_fs_disks }}"
 
   - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
     pcs_constraint_colocation:
-      resource1: Trinity-fs
+      resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       resource2: Trinity
       state: present
+    loop: "{{ drbd_fs_disks }}"
 
   - name: Add pacemaker order constraint - promote Trinity-drbd then wait-for-device
     pcs_constraint_order:
-      resource1: DRBD-clone
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
       resource1_action: promote
-      resource2: wait-for-device
+      resource2: 'wait-for-device-{{ item.name | replace("/","_") }}'
       state: present
+    loop: "{{ drbd_fs_disks }}"
 
   - name: Wait for Pacemaker to settle
     command: /usr/sbin/crm_resource --wait
