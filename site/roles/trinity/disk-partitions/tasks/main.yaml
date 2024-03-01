@@ -22,33 +22,50 @@
       state: file
     register: disk_partitions_fake_fstab
 
-  - name: Creating the partition
-    filesystem:
-      fstype: "{{ item.item['fstype'] }}"
-      dev: '/dev/mapper/vg_rhel-lv_/{{ item.item["name"] | replace("/","_") }}'
-      force: yes
-      opts: "{{ item.item['options'] | default('') }}"
-    ignore_errors: yes
-    loop: "{{ drbd_mounted.results }}"
-    when: 
-      - item.rc != 0
-      - item.item['fstype'] is defined
+  # ------------------------------------------
 
-  - name: Creating a file system on partition
+# lvcreate --addtag pacemaker -l 100%FREE -n Newlvvdb newvdb --config 'activation { volume_list = [ "@pacemaker" ] } 
+
+  - name: Creating the Logical Volume
+    shell: >
+      lvcreate --addtag pacemaker -L {{ item.item['size'] }} -n {{ item.item['name'] | replace("/","_") }} 
+      {{ item.item['vgroup'] }} --config 'activation { volume_list = [ "@pacemaker" ] }'
+    loop: "{{ disk_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['vgroup'] is defined
+
+
+# mkfs -t ext4 -m 1 -v /dev/yournewvg/lv_yournewlv
+
+#  - name: Creating the partition
+#    filesystem:
+#      fstype: "{{ item.item['fstype'] }}"
+#      dev: '/dev/{{ item.item["vgroup"] }}/{{ item.item["name"] | replace("/","_") }}'
+#      force: yes
+#      opts: "{{ item.item['options'] | default('') }}"
+#    ignore_errors: yes
+#    loop: "{{ disk_partitions_mounted.results }}"
+#    when: 
+#      - item.rc != 0
+#      - item.item['vgroup'] is not defined
+
+  - name: Creating a file system on LV partition
     filesystem:
       fstype: "{{ item.item['fstype'] }}"
-      dev: '/dev/mapper/vg_rhel-lv_/{{ item.item["name"] | replace("/","_") }}'
+      dev: '/dev/{{ item.item["vgroup"] }}/{{ item.item["name"] | replace("/","_") }}'
       force: yes
       opts: "{{ item.item['options'] | default('') }}"
     ignore_errors: yes
-    loop: "{{ drbd_mounted.results }}"
+    loop: "{{ disk_partitions_mounted.results }}"
     when: 
       - item.rc != 0
+      - item.item['vgroup'] is defined
       - item.item['fstype'] is defined
 
   - name: Temporarily mount the disks
     mount:
-      src: '/dev/mapper/vg_rhel-lv_{{ item.item.name | replace("/","_") }}'
+      src: '/dev/{{ item.item["vgroup"] }}/{{ item.item["name"] | replace("/","_") }}'
       path: '{{ item.item["name"] | replace("/","_") }}-temp'
       fstype: "{{ item.item['fstype'] }}"
       state: mounted
@@ -57,6 +74,7 @@
     when: 
       - item.rc != 0
       - item.item['fstype'] is defined
+      - item.item['vgroup'] is defined
       - item.item['mount'] is defined and item.item['mount'] == True
 
   - name: Copy contents from local drives to DRBD
@@ -74,7 +92,38 @@
       state: unmounted
     loop: "{{ disk_partitions_mounted.results }}"
     when: item.rc != 0 and item.item['mount'] is defined and item.item['mount'] == True
+
+  # ------------------------------------------
+
+  - name: Add pacemaker resource trinity-fs
+    pcs_resource:
+      name: 'trinity-fs-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Filesystem
+      options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
+          directory="{{ item.name }}" fstype={{ item.fstype }} 
+          run_fsck=force force_unmount=safe op monitor interval=31s op
+          monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ disk_partitions_mounted.results }}"
+    when:
+#      - item.rc != 0
+      - item.item['vgroup'] is defined
+      - item.item['ha'] is defined and item.item['ha'] == True
+
+  - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ disk_partitions_mounted.results }}"
+    when:
+#      - item.rc != 0
+      - item.item['vgroup'] is defined
+      - item.item['ha'] is defined and item.item['ha'] == True
+
   when: 
     - primary | default(False)
     - disk_partitions_mounted is defined
+
 
