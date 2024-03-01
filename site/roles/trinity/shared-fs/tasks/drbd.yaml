@@ -146,7 +146,7 @@
         loop: "{{ drbd_mounted.results }}"
         when: 
           - item.rc != 0
-          - item.item['mount'] is defined and item.item['mount'] == True
+          - item.item['fstype'] != 'lvm'
 
       - name: Copy contents from local drives to DRBD
         synchronize:
@@ -155,7 +155,7 @@
         loop: "{{ drbd_mounted.results }}"
         when: 
           - item.rc != 0
-          - item.item['mount'] is defined and item.item['mount'] == True
+          - item.item['fstype'] != 'lvm'
 
       - name: Temporarily umount DRBD disks
         mount:
@@ -164,7 +164,7 @@
         loop: "{{ drbd_mounted.results }}"
         when: 
           - item.rc != 0
-          - item.item['mount'] is defined and item.item['mount'] == True
+          - item.item['fstype'] != 'lvm'
       when: 
         - drbd_mounted is defined
         - ansible_facts.services['drbd.service'] is defined and ansible_facts.services['drbd.service'].state == 'stopped'

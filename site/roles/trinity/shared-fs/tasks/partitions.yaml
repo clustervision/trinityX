@@ -1,18 +1,21 @@
 ---
 
 - debug:
-    msg: "{{ item }}"
-  loop: "{{ disk_partitions }}"
+    msg: "{{ shared_fs_partitions }}"
 
 - name: Check if disk is already mounted
-  command: '/usr/bin/findmnt -T {{ item.name }}'
-  register: disk_partitions_mounted
+  shell: '/usr/bin/mount | grep "{{ item.name }}"'
+  register: shared_fs_partitions_mounted
   changed_when: false
   failed_when: false
-  loop: "{{ disk_partitions }}"
+  loop: "{{ shared_fs_partitions }}"
 
-- debug:
-    msg: "{{ disk_partitions_mounted }}"
+- name: Check if lv disk already exists
+  shell: '/usr/sbin/lvs | grep "{{ item.name | replace("/","_") }}"'
+  register: shared_fs_partitions_lvs
+  changed_when: false
+  failed_when: false
+  loop: "{{ shared_fs_partitions }}"
 
 - block:
   - name: Create a fake fstab for the next step
@@ -20,7 +23,7 @@
       path: /tmp
       prefix: fstab.
       state: file
-    register: disk_partitions_fake_fstab
+    register: shared_fs_partitions_fake_fstab
 
   # ------------------------------------------
 
@@ -30,7 +33,8 @@
     shell: >
       lvcreate --addtag pacemaker -L {{ item.item['size'] }} -n {{ item.item['name'] | replace("/","_") }} 
       {{ item.item['vgroup'] }} --config 'activation { volume_list = [ "@pacemaker" ] }'
-    loop: "{{ disk_partitions_mounted.results }}"
+    loop: "{{ shared_fs_partitions_lvs.results }}"
+    ignore_errors: yes
     when: 
       - item.rc != 0
       - item.item['vgroup'] is defined
@@ -45,7 +49,7 @@
 #      force: yes
 #      opts: "{{ item.item['options'] | default('') }}"
 #    ignore_errors: yes
-#    loop: "{{ disk_partitions_mounted.results }}"
+#    loop: "{{ shared_fs_partitions_mounted.results }}"
 #    when: 
 #      - item.rc != 0
 #      - item.item['vgroup'] is not defined
@@ -57,7 +61,7 @@
       force: yes
       opts: "{{ item.item['options'] | default('') }}"
     ignore_errors: yes
-    loop: "{{ disk_partitions_mounted.results }}"
+    loop: "{{ shared_fs_partitions_mounted.results }}"
     when: 
       - item.rc != 0
       - item.item['vgroup'] is defined
@@ -69,29 +73,26 @@
       path: '{{ item.item["name"] | replace("/","_") }}-temp'
       fstype: "{{ item.item['fstype'] }}"
       state: mounted
-      fstab: "{{ disk_partitions_fake_fstab.path }}"
-    loop: "{{ disk_partitions_mounted.results }}"
+      fstab: "{{ shared_fs_partitions_fake_fstab.path }}"
+    loop: "{{ shared_fs_partitions_mounted.results }}"
     when: 
       - item.rc != 0
       - item.item['fstype'] is defined
       - item.item['vgroup'] is defined
-      - item.item['mount'] is defined and item.item['mount'] == True
 
   - name: Copy contents from local drives to DRBD
     synchronize:
       src: '{{ item.item["name"] }}/'
       dest: '{{ item.item["name"] | replace("/","_") }}-temp/'
-    loop: "{{ disk_partitions_mounted.results }}"
-    when: 
-      - item.rc != 0
-      - item.item['mount'] is defined and item.item['mount'] == True
+    loop: "{{ shared_fs_partitions_mounted.results }}"
+    when: item.rc != 0
 
   - name: Temporarily umount DRBD disks
     mount:
       path: '{{ item.item["name"] | replace("/","_") }}-temp'
       state: unmounted
-    loop: "{{ disk_partitions_mounted.results }}"
-    when: item.rc != 0 and item.item['mount'] is defined and item.item['mount'] == True
+    loop: "{{ shared_fs_partitions_mounted.results }}"
+    when: item.rc != 0
 
   # ------------------------------------------
 
@@ -100,30 +101,29 @@
       name: 'trinity-fs-{{ item.name | replace("/","_") }}'
       resource_class: ocf
       resource_type: Filesystem
-      options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
+#      options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
+      options: 'device=/dev/{{ item["vgroup"] }}/{{ item["name"] | replace("/","_") }}
           directory="{{ item.name }}" fstype={{ item.fstype }} 
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
       state: present
-    loop: "{{ disk_partitions_mounted.results }}"
+    loop: "{{ shared_fs_partitions }}"
     when:
-#      - item.rc != 0
-      - item.item['vgroup'] is defined
-      - item.item['ha'] is defined and item.item['ha'] == True
+      - item['vgroup'] is defined
+      - item['ha'] is defined and item['ha'] == True
 
   - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
     pcs_constraint_colocation:
       resource1: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
-      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      resource2: 'trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
-    loop: "{{ disk_partitions_mounted.results }}"
+    loop: "{{ shared_fs_partitions }}"
     when:
-#      - item.rc != 0
-      - item.item['vgroup'] is defined
-      - item.item['ha'] is defined and item.item['ha'] == True
+      - item['vgroup'] is defined
+      - item['ha'] is defined and item['ha'] == True
 
   when: 
     - primary | default(False)
-    - disk_partitions_mounted is defined
+    - shared_fs_partitions_mounted is defined
 
 
