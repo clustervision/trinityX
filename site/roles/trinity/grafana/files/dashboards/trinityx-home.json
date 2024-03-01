@@ -101,7 +101,7 @@
           "showMiniMap": false
         },
         "content": "The webportal for users is available on port 8080.\n\n",
-        "mode": "markdown"
+        "mode": "html"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -133,7 +133,7 @@
       "nameFilter": "",
       "onlyAlertsOnDashboard": false,
       "options": {
-        "alertInstanceLabelFilter": "",
+        "alertInstanceLabelFilter": "{severity=\"critical\"}",
         "alertName": "",
         "dashboardAlerts": false,
         "groupBy": [],
@@ -387,15 +387,19 @@
           "displayName": "",
           "mappings": [],
           "thresholds": {
-            "mode": "percentage",
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
               },
               {
+                "color": "#EAB839",
+                "value": 80
+              },
+              {
                 "color": "red",
-                "value": 1
+                "value": 90
               }
             ]
           },
@@ -408,6 +412,22 @@
               "options": "/(.*_use)|(load.*)/"
             },
             "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "lcd",
+                  "type": "gauge",
+                  "valueDisplayMode": "color"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
               {
                 "id": "unit",
                 "value": "percent"
@@ -465,7 +485,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "node_load1",
+          "expr": "node_load1 * 100",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -483,7 +503,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "node_load5",
+          "expr": "node_load5 * 100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -502,7 +522,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "node_load15",
+          "expr": "node_load15 * 100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -705,15 +725,28 @@
               "type": "auto"
             },
             "filterable": false,
-            "inspect": true
+            "inspect": true,
+            "minWidth": 100
           },
           "mappings": [],
           "thresholds": {
-            "mode": "absolute",
+            "mode": "percentage",
             "steps": [
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
               }
             ]
           }
@@ -734,9 +767,44 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "mountpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "used_perc"
             },
             "properties": [
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 200
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "lcd",
+                  "type": "gauge",
+                  "valueDisplayMode": "color"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 99
+              },
               {
                 "id": "unit",
                 "value": "percent"
@@ -751,7 +819,285 @@
         "x": 0,
         "y": 17
       },
-      "id": 20,
+      "id": 24,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "node_filesystem_free_bytes{fstype=~\"ext4\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "free",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "node_filesystem_size_bytes{fstype=~\"ext4\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "tot",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "node_filesystem_free_bytes{fstype=~\"ext4\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}/node_filesystem_size_bytes{fstype=~\"ext4\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}*100",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "use"
+        }
+      ],
+      "title": " Controller Local filesystems",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Value #free": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #tot": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #use": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "device": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "fstype": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "instance": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "mountpoint": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "device": false,
+              "exporter": true,
+              "fstype (lastNotNull)": false,
+              "instance": false,
+              "job": true,
+              "luna_group": true,
+              "mountpoint": false
+            },
+            "indexByName": {
+              "Value #free (lastNotNull)": 3,
+              "Value #tot (lastNotNull)": 1,
+              "Value #use (lastNotNull)": 2,
+              "device": 5,
+              "fstype (lastNotNull)": 6,
+              "instance": 4,
+              "mountpoint": 0
+            },
+            "renameByName": {
+              "Value": "",
+              "Value #free": "",
+              "Value #free (lastNotNull)": "free",
+              "Value #tot (lastNotNull)": "size",
+              "Value #use (lastNotNull)": "used_perc",
+              "fstype (lastNotNull)": "fstype",
+              "instance": ""
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "size"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": true,
+            "minWidth": 100
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/free|size/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mountpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "used_perc"
+            },
+            "properties": [
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 200
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "lcd",
+                  "type": "gauge",
+                  "valueDisplayMode": "color"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 99
+              },
+              {
+                "id": "unit",
+                "value": "percent"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "id": 25,
       "options": {
         "cellHeight": "sm",
         "footer": {
@@ -821,7 +1167,7 @@
           "refId": "use"
         }
       ],
-      "title": "NFS and other (non-local) filesystems",
+      "title": " Controller Remote filesystems",
       "transformations": [
         {
           "id": "merge",
@@ -876,246 +1222,22 @@
             "excludeByName": {
               "Time": true,
               "__name__": true,
+              "device": false,
               "exporter": true,
+              "fstype (lastNotNull)": false,
               "instance": false,
               "job": true,
-              "luna_group": true
+              "luna_group": true,
+              "mountpoint": false
             },
             "indexByName": {
-              "Value #free (lastNotNull)": 5,
-              "Value #tot (lastNotNull)": 4,
-              "Value #use (lastNotNull)": 6,
-              "device": 1,
-              "fstype (lastNotNull)": 3,
-              "instance": 0,
-              "mountpoint": 2
-            },
-            "renameByName": {
-              "Value": "",
-              "Value #free": "",
-              "Value #free (lastNotNull)": "free",
-              "Value #tot (lastNotNull)": "size",
-              "Value #use (lastNotNull)": "used_perc",
-              "fstype (lastNotNull)": "fstype",
-              "instance": ""
-            }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "desc": true,
-                "field": "size"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": false,
-            "inspect": true
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/free|size/"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bytes"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "used_perc"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percent"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 17
-      },
-      "id": 24,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": true,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": []
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "node_filesystem_free_bytes{fstype=~\"ext4\", luna_group=\"controller\"}",
-          "format": "table",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "free",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "node_filesystem_size_bytes{fstype=~\"ext4\", luna_group=\"controller\"}",
-          "format": "table",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "tot",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "node_filesystem_free_bytes{fstype=~\"ext4\", luna_group=\"controller\"}/node_filesystem_size_bytes{fstype=~\"ext4\", luna_group=\"controller\"}*100",
-          "format": "table",
-          "hide": false,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "use"
-        }
-      ],
-      "title": " Local filesystems",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "Value #free": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "Value #tot": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "Value #use": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "device": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "fstype": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "instance": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "mountpoint": {
-                "aggregations": [],
-                "operation": "groupby"
-              }
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "exporter": true,
-              "instance": false,
-              "job": true,
-              "luna_group": true
-            },
-            "indexByName": {
-              "Value #free (lastNotNull)": 5,
-              "Value #tot (lastNotNull)": 4,
-              "Value #use (lastNotNull)": 6,
-              "device": 1,
-              "fstype (lastNotNull)": 3,
-              "instance": 0,
-              "mountpoint": 2
+              "Value #free (lastNotNull)": 3,
+              "Value #tot (lastNotNull)": 1,
+              "Value #use (lastNotNull)": 2,
+              "device": 5,
+              "fstype (lastNotNull)": 6,
+              "instance": 4,
+              "mountpoint": 0
             },
             "renameByName": {
               "Value": "",
@@ -1144,7 +1266,7 @@
       "type": "table"
     }
   ],
-  "refresh": false,
+  "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
@@ -1223,6 +1345,6 @@
   "timezone": "",
   "title": "Home",
   "uid": "trixhome",
-  "version": 6,
+  "version": 10,
   "weekStart": ""
 }
