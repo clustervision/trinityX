@@ -40,7 +40,7 @@
       dest: "/etc/drbd.d/trinityx.res"
 
   - name: Initialize DRBD shared resources
-    shell: '/usr/sbin/drbdadm create-md {{ item.name | replace("/","_") }} --force'
+    shell: '/usr/sbin/drbdadm create-md --force {{ item.name | replace("/","_") }}'
     loop: "{{ drbd_fs_disks }}"
     ignore_errors: yes
 
@@ -93,7 +93,7 @@
         when: item.rc != 0
 
       - name: Creating a Physical Volume on shared resources
-        shell: 'pvcreate /dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}'
+        shell: 'pvcreate {{ item.item["device"] }}'
         ignore_errors: no
         loop: "{{ drbd_mounted.results }}"
         when: 
@@ -102,9 +102,10 @@
 
       - name: Creating a Volume Group on shared resources
         shell: >
-             vgcreate {{ item.item["name"] | replace("/","_") }} 
-             /dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}
-             --addtag pacemaker --config 'activation { volume_list = [ "@pacemaker" ] }'
+             vgcreate {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
+             --addtag pacemaker --config 'activation { volume_list = [ "@pacemaker" ] }
+             devices {filter = [ "a|drbd*|", "r|.*|" ]}'
+        # note: you CANNOT use /dev/drbd/by-res/XXX as vgcreate will then barf at you...
         ignore_errors: no
         loop: "{{ drbd_mounted.results }}"
         when: 
