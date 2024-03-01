@@ -1,0 +1,80 @@
+---
+
+- debug:
+    msg: "{{ item }}"
+  loop: "{{ disk_partitions }}"
+
+- name: Check if disk is already mounted
+  command: '/usr/bin/findmnt -T {{ item.name }}'
+  register: disk_partitions_mounted
+  changed_when: false
+  failed_when: false
+  loop: "{{ disk_partitions }}"
+
+- debug:
+    msg: "{{ disk_partitions_mounted }}"
+
+- block:
+  - name: Create a fake fstab for the next step
+    tempfile:
+      path: /tmp
+      prefix: fstab.
+      state: file
+    register: disk_partitions_fake_fstab
+
+  - name: Creating the partition
+    filesystem:
+      fstype: "{{ item.item['fstype'] }}"
+      dev: '/dev/mapper/vg_rhel-lv_/{{ item.item["name"] | replace("/","_") }}'
+      force: yes
+      opts: "{{ item.item['options'] | default('') }}"
+    ignore_errors: yes
+    loop: "{{ drbd_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['fstype'] is defined
+
+  - name: Creating a file system on partition
+    filesystem:
+      fstype: "{{ item.item['fstype'] }}"
+      dev: '/dev/mapper/vg_rhel-lv_/{{ item.item["name"] | replace("/","_") }}'
+      force: yes
+      opts: "{{ item.item['options'] | default('') }}"
+    ignore_errors: yes
+    loop: "{{ drbd_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['fstype'] is defined
+
+  - name: Temporarily mount the disks
+    mount:
+      src: '/dev/mapper/vg_rhel-lv_{{ item.item.name | replace("/","_") }}'
+      path: '{{ item.item["name"] | replace("/","_") }}-temp'
+      fstype: "{{ item.item['fstype'] }}"
+      state: mounted
+      fstab: "{{ disk_partitions_fake_fstab.path }}"
+    loop: "{{ disk_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['fstype'] is defined
+      - item.item['mount'] is defined and item.item['mount'] == True
+
+  - name: Copy contents from local drives to DRBD
+    synchronize:
+      src: '{{ item.item["name"] }}/'
+      dest: '{{ item.item["name"] | replace("/","_") }}-temp/'
+    loop: "{{ disk_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['mount'] is defined and item.item['mount'] == True
+
+  - name: Temporarily umount DRBD disks
+    mount:
+      path: '{{ item.item["name"] | replace("/","_") }}-temp'
+      state: unmounted
+    loop: "{{ disk_partitions_mounted.results }}"
+    when: item.rc != 0 and item.item['mount'] is defined and item.item['mount'] == True
+  when: 
+    - primary | default(False)
+    - disk_partitions_mounted is defined
+

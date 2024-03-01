@@ -10,6 +10,9 @@
         '{{ drbd_fs_disks +
           [{ "name": item.name,
              "disk": item.disk,
+             "fstype": item.fstype | default(""),
+             "options": item.options | default(""),
+             "mount": item.mount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'drbd'

@@ -92,41 +92,80 @@
         loop: "{{ drbd_mounted.results }}"
         when: item.rc != 0
 
+      - name: Creating a Physical Volume on shared resources
+        shell: 'pvcreate /dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}'
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'lvm'
+
+      - name: Creating a Volume Group on shared resources
+        shell: >
+             vgcreate {{ item.item["name"] | replace("/","_") }} 
+             /dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}
+             --addtag pacemaker --config 'activation { volume_list = [ "@pacemaker" ] }'
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'lvm'
+
+#      - name: Creating a Volume Group on shared resources
+#        community.general.lvg:
+#          vg: '{{ item.item["name"] | replace("/","_") }}'
+#          pvs: '/dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}'
+#          vg_options: "--addtag pacemaker --config 'activation { volume_list = [ \"@pacemaker\" ] }'"
+#          force: yes
+#        ignore_errors: no
+#        loop: "{{ drbd_mounted.results }}"
+#        when: 
+#          - item.rc != 0
+#          - item.item['fstype'] == 'lvm'
+
       - name: Creating a file system on shared resources
         filesystem:
-          fstype: ext4
+          fstype: "{{ item.item['fstype'] }}"
           dev: '/dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}'
           force: yes
-          opts: -b 4096
+          opts: "{{ item.item['options'] | default('') }}"
         ignore_errors: yes
         loop: "{{ drbd_mounted.results }}"
-        when: item.rc != 0
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
 
       - name: Temporarily mount DRBD disks
         mount:
           src: '/dev/drbd/by-res/{{ item.item.name | replace("/","_") }}'
           path: '{{ item.item["name"] | replace("/","_") }}-temp'
-          fstype: ext4
+          fstype: "{{ item.item['fstype'] }}"
           state: mounted
           fstab: "{{ drbd_fake_fstab.path }}"
         loop: "{{ drbd_mounted.results }}"
-        when: item.rc != 0
+        when: 
+          - item.rc != 0
+          - item.item['mount'] is defined and item.item['mount'] == True
 
       - name: Copy contents from local drives to DRBD
         synchronize:
           src: '{{ item.item["name"] }}/'
           dest: '{{ item.item["name"] | replace("/","_") }}-temp/'
         loop: "{{ drbd_mounted.results }}"
-        when: item.rc != 0
+        when: 
+          - item.rc != 0
+          - item.item['mount'] is defined and item.item['mount'] == True
 
       - name: Temporarily umount DRBD disks
         mount:
           path: '{{ item.item["name"] | replace("/","_") }}-temp'
           state: unmounted
         loop: "{{ drbd_mounted.results }}"
-        when: item.rc != 0
+        when: 
+          - item.rc != 0
+          - item.item['mount'] is defined and item.item['mount'] == True
       when: 
-        - drbd_mounted is defined #.rc != 0
+        - drbd_mounted is defined
         - ansible_facts.services['drbd.service'] is defined and ansible_facts.services['drbd.service'].state == 'stopped'
 
     - name: stop DRBD
@@ -138,21 +177,10 @@
     when: not drbd_res_config.stat.exists
 
 
-#[root@pcmk-1 ~]# pcs -f drbd_cfg resource create WebData ocf:linbit:drbd \
-#     drbd_resource=wwwdata op monitor interval=29s role=Promoted \
-#     monitor interval=31s role=Unpromoted
-#[root@pcmk-1 ~]# pcs -f drbd_cfg resource promotable WebData \
-#     promoted-max=1 promoted-node-max=1 clone-max=2 clone-node-max=1 \
-#     notify=true
+  #--------------------------------------------
+  # Pace maker items
+  #--------------------------------------------
 
-# [root@pcmk-1 ~]# pcs resource create WebData ocf:linbit:drbd \
-#    drbd_resource=wwwdata op monitor interval=29s role=Promoted \
-#    monitor interval=31s role=Unpromoted \
-#    promotable promoted-max=1 promoted-node-max=1 clone-max=2  \
-#    clone-node-max=1 notify=true
-
-  # TODO: with pcs_resource one cannot pass master/slave id, so it defaults to
-  # DRBD-master instead of Trinity-drbd
   - name: Add pacemaker resource DRBD
     pcs_resource:
       name: 'DRBD-{{ item.name | replace("/","_") }}'
@@ -161,11 +189,20 @@
           role=Promoted monitor interval=67s 
           role=Unpromoted promotable promoted-max=1 promoted-node-max=1 
           clone-max={{ all_ctrl_hostname|length }} clone-node-max=1 notify=true'
-#      options: 'drbd_resource={{ item.name | replace("/","_") }} op monitor interval=59s promote
-#          interval=67s promotable promoted-max=1 promoted-node-max=1 clone-max={{ all_ctrl_hostname|length }}
-#          clone-node-max=1 notify=true'
       state: present
     loop: "{{ drbd_fs_disks }}"
+
+  #--------------------------------------------
+
+  - name: Add pacemaker resource wait-for-device
+    pcs_resource:
+      name: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Delay
+      options: 'startdelay=10 stopdelay=3 --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
 
   - name: Add pacemaker resource wait-for-device
     pcs_resource:
@@ -175,6 +212,28 @@
       options: 'startdelay=10 stopdelay=3 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
+    when: item.fstype != 'lvm'
+
+  #--------------------------------------------
+
+
+#pcs resource create yournewvg LVM volgrpname=yournewvg exclusive=true --group whateveryourclusternameis  -- ocf:heartbeat:LVM-activate
+# pcs resource create newvdb-vg ocf:heartbeat:LVM-activate vgname=newvdb activation_mode=exclusive vg_access_mode=tagging tag=pacemaker --group HA-LVM --after vgalv-fs
+
+  - name: Add pacemaker LVM resource trinity-fs
+    pcs_resource:
+      name: 'trinity-lvm-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: LVM-activate
+      options: 'vgname={{ item.name | replace("/","_") }} activation_mode=exclusive 
+          vg_access_mode=tagging tag=pacemaker 
+          --group Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+#pcs resource create yournewlv_lv Filesystem device=/dev/yournewvg/lv_yournewlv  directory=/some/path/to/lv/mount fstype=ext4  --group whateveryourclusternameis
+#pcs resource create Newlvvdb-fs ocf:heartbeat:Filesystem device=/dev/newvdb/Newlvvdb directory=/newfs fstype=xfs --group HA-LVM --after newvdb-vg
 
   - name: Add pacemaker resource trinity-fs
     pcs_resource:
@@ -182,11 +241,23 @@
       resource_class: ocf
       resource_type: Filesystem
       options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
-          directory="{{ item.name }}" fstype=ext4 
+          directory="{{ item.name }}" fstype={{ item.fstype }} 
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
+    when: item.fstype != 'lvm'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker resource lvm-ready
+    pcs_resource:
+      name: 'lvm-ready-{{ item.name | replace("/","_") }}'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
 
   - name: Add pacemaker resource fs-ready
     pcs_resource:
@@ -195,6 +266,9 @@
       options: 'op monitor interval=183s --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
+    when: item.fstype != 'lvm'
+
+  #--------------------------------------------
 
   - name: Add pacemaker order constraint - Trinity then Trinity-drbd
     pcs_constraint_order:
@@ -203,19 +277,31 @@
       state: present
     loop: "{{ drbd_fs_disks }}"
 
+  - name: Add pacemaker order constraint - Trinity-drbd then Trinity-lvm
+    pcs_constraint_order:
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
+      resource2: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
   - name: Add pacemaker order constraint - Trinity-drbd then Trinity-fs
     pcs_constraint_order:
-      #resource1: Trinity-drbd
       resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
       resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
+    when: item.fstype != 'lvm'
+
+  #--------------------------------------------
 
 #  - name: Add pacemaker order constraint - Trinity-fs then Trinity-secondary
 #    pcs_constraint_order:
 #      resource1: Trinity-fs
 #      resource2: Trinity-secondary
 #      state: present
+
+  #--------------------------------------------
 
   - name: Add pacemaker colocation constraint - Trinity-drbd with Trinity
     pcs_constraint_colocation:
@@ -227,12 +313,23 @@
     loop: "{{ drbd_fs_disks }}"
     ignore_errors: yes
 
+  - name: Add pacemaker colocation constraint - Trinity-lvm with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+      resource2: Trinity
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
   - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
     pcs_constraint_colocation:
       resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       resource2: Trinity
       state: present
     loop: "{{ drbd_fs_disks }}"
+    when: item.fstype != 'lvm'
+
+  #--------------------------------------------
 
   - name: Add pacemaker order constraint - promote Trinity-drbd then wait-for-device
     pcs_constraint_order:
@@ -241,6 +338,8 @@
       resource2: 'wait-for-device-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
+
+  #--------------------------------------------
 
   - name: Wait for Pacemaker to settle
     command: /usr/sbin/crm_resource --wait
