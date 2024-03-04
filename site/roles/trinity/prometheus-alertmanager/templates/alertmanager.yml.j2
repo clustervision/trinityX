@@ -45,6 +45,11 @@ receivers:
 {{ prometheus_alertmanager_receivers | to_nice_yaml(indent=2) }}
 {% endif %}
 {% if prometheus_alertmanager_inhibit_rules | length %}
+- name: 'webhook-receiver'
+  webhook_configs:
+  - url: 'http://localhost:5555/listener'
+    send_resolved: true
+
 inhibit_rules:
 {{ prometheus_alertmanager_inhibit_rules | to_nice_yaml(indent=2) }}
 {% endif %}
@@ -54,3 +59,7 @@ time_intervals:
 {% endif %}
 route:
   {{ prometheus_alertmanager_route | to_nice_yaml(indent=2) | indent(2, False) }}
+    routes:
+    - match:
+        severity: critical
+      receiver: webhook-receiver
