@@ -453,6 +453,46 @@
                 "value": 1
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cpus"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mem_tot"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "swap_tot"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
           }
         ]
       },
@@ -476,12 +516,7 @@
         },
         "frameIndex": 0,
         "showHeader": true,
-        "sortBy": [
-          {
-            "desc": false,
-            "displayName": "Value #C"
-          }
-        ]
+        "sortBy": []
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -491,9 +526,9 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "node_load1 * 100",
+          "expr": "(node_load1/count(node_cpu_seconds_total{mode=\"idle\"}) without (cpu,mode)) * 100",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -509,9 +544,9 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "node_load5 * 100",
+          "expr": "(node_load5/count(node_cpu_seconds_total{mode=\"idle\"}) without (cpu,mode)) * 100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -528,9 +563,9 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "node_load15 * 100",
+          "expr": "(node_load15/count(node_cpu_seconds_total{mode=\"idle\"}) without (cpu,mode)) * 100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -616,6 +651,21 @@
           "range": false,
           "refId": "swap_use",
           "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "count(node_cpu_seconds_total{mode=\"idle\"}) without (cpu,mode)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "cpus"
         }
       ],
       "title": "Available nodes",
@@ -632,6 +682,12 @@
           "id": "groupBy",
           "options": {
             "fields": {
+              "Value #cpus": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
               "Value #load1": {
                 "aggregations": [
                   "lastNotNull"
@@ -686,6 +742,24 @@
           "options": {
             "regex": "Value #(.*) \\(lastNotNull\\)",
             "renamePattern": "$1"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "cpus": 1,
+              "instance": 0,
+              "load1": 2,
+              "load15": 4,
+              "load5": 3,
+              "mem_tot": 5,
+              "mem_use": 6,
+              "swap_tot": 7,
+              "swap_use": 8
+            },
+            "renameByName": {}
           }
         }
       ],
@@ -800,7 +874,7 @@
         ]
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 12,
         "x": 0,
         "y": 16
@@ -828,9 +902,9 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "code",
+          "editorMode": "builder",
           "exemplar": false,
-          "expr": "node_filesystem_free_bytes{fstype=~\"ext4\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}",
+          "expr": "node_filesystem_free_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -848,7 +922,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_filesystem_size_bytes{fstype=~\"ext4\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}",
+          "expr": "node_filesystem_size_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -866,7 +940,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(node_filesystem_size_bytes{fstype=~\"ext4\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}-node_filesystem_free_bytes{fstype=~\"ext4\", luna_group=\"controller\", mountpoint!~\"/var/.*\"})/node_filesystem_size_bytes{fstype=~\"ext4\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}*100",
+          "expr": "(node_filesystem_size_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}-node_filesystem_free_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"})/node_filesystem_size_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}*100",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1072,13 +1146,29 @@
               {
                 "id": "unit",
                 "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "device"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 198
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 12,
         "x": 12,
         "y": 16
@@ -1106,9 +1196,9 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "code",
+          "editorMode": "builder",
           "exemplar": false,
-          "expr": "node_filesystem_free_bytes{fstype=~\"nfs\", luna_group=\"controller\"}",
+          "expr": "node_filesystem_free_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1126,7 +1216,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_filesystem_size_bytes{fstype=~\"nfs\", luna_group=\"controller\"}",
+          "expr": "node_filesystem_size_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"}",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1144,7 +1234,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(node_filesystem_size_bytes{fstype=~\"nfs\", luna_group=\"controller\"}-node_filesystem_free_bytes{fstype=~\"nfs\", luna_group=\"controller\"})/node_filesystem_size_bytes{fstype=~\"nfs\", luna_group=\"controller\"}*100",
+          "expr": "(node_filesystem_size_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"}-node_filesystem_free_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"})/node_filesystem_size_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"}*100",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1192,12 +1282,10 @@
                 "operation": "aggregate"
               },
               "instance": {
-                "aggregations": [],
-                "operation": "groupby"
+                "aggregations": []
               },
               "mountpoint": {
-                "aggregations": [],
-                "operation": "groupby"
+                "aggregations": []
               }
             }
           }
@@ -1220,10 +1308,8 @@
               "Value #free (lastNotNull)": 3,
               "Value #tot (lastNotNull)": 1,
               "Value #use (lastNotNull)": 2,
-              "device": 5,
-              "fstype (lastNotNull)": 6,
-              "instance": 4,
-              "mountpoint": 0
+              "device": 0,
+              "fstype (lastNotNull)": 4
             },
             "renameByName": {
               "Value": "",
@@ -1270,6 +1356,68 @@
         "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "ext4"
+          ],
+          "value": [
+            "ext4"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "trixprometheus"
+        },
+        "definition": "label_values(fstype)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "local_fs_types",
+        "multi": true,
+        "name": "local_fs_types",
+        "options": [],
+        "query": {
+          "query": "label_values(fstype)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "nfs4"
+          ],
+          "value": [
+            "nfs4"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "trixprometheus"
+        },
+        "definition": "label_values(fstype)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "remote_fs_types",
+        "multi": true,
+        "name": "remote_fs_types",
+        "options": [],
+        "query": {
+          "query": "label_values(fstype)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -1305,6 +1453,6 @@
   "timezone": "",
   "title": "Home",
   "uid": "trixhome",
-  "version": 5,
+  "version": 2,
   "weekStart": ""
 }

@@ -1045,15 +1045,13 @@
           "mappings": [
             {
               "options": {
-                "0": {
-                  "color": "red",
-                  "index": 1,
-                  "text": "DOWN"
-                },
-                "1": {
+                "active": {
                   "color": "green",
-                  "index": 0,
-                  "text": "UP"
+                  "index": 0
+                },
+                "inactive": {
+                  "color": "#6d6d6d",
+                  "index": 1
                 }
               },
               "type": "value"
@@ -1084,11 +1082,9 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+          "calcs": [],
+          "fields": "/^state$/",
+          "values": true
         },
         "textMode": "value_and_name"
       },
@@ -1101,17 +1097,57 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "node_systemd_unit_state{state=\"active\", name=~\"$processes\", instance=~\"$node:.*\"}",
+          "exemplar": false,
+          "expr": "node_systemd_unit_state{ name=~\"$services\", instance=~\"$node:.*\"}",
+          "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "{{name}}",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         }
       ],
       "title": "Monitored Processes",
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "greater",
+                  "options": {
+                    "value": 0
+                  }
+                },
+                "fieldName": "Value"
+              }
+            ],
+            "match": "any",
+            "type": "include"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "exporter": true,
+              "instance": true,
+              "job": true,
+              "luna_group": true,
+              "name": false,
+              "type": true
+            },
+            "indexByName": {},
+            "renameByName": {}
+          }
+        }
+      ],
       "type": "stat"
     },
     {
@@ -23712,8 +23748,8 @@
       {
         "current": {
           "selected": false,
-          "text": "el8.develop",
-          "value": "el8.develop"
+          "text": "controller1.cluster",
+          "value": "controller1.cluster"
         },
         "datasource": {
           "type": "prometheus",
@@ -23761,13 +23797,76 @@
         "type": "custom"
       },
       {
+        "current": {
+          "selected": true,
+          "text": [
+            "NetworkManager.service",
+            "aria2c.service",
+            "auditd.service",
+            "chronyd.service",
+            "dhcpd.service",
+            "firewalld.service",
+            "grafana-server.service",
+            "haveged.service",
+            "httpd.service",
+            "logrotate.service",
+            "mariadb.service",
+            "munge.service",
+            "named.service",
+            "nginx.service",
+            "prometheus-alertmanager.service",
+            "prometheus-ipmi-exporter.service",
+            "prometheus-node-exporter.service",
+            "prometheus-server.service",
+            "prometheus-slurm-exporter.service",
+            "slurmctld.service",
+            "slurmdbd.service",
+            "slurmd.service",
+            "ssh.service"
+          ],
+          "value": [
+            "NetworkManager.service",
+            "aria2c.service",
+            "auditd.service",
+            "chronyd.service",
+            "dhcpd.service",
+            "firewalld.service",
+            "grafana-server.service",
+            "haveged.service",
+            "httpd.service",
+            "logrotate.service",
+            "mariadb.service",
+            "munge.service",
+            "named.service",
+            "nginx.service",
+            "prometheus-alertmanager.service",
+            "prometheus-ipmi-exporter.service",
+            "prometheus-node-exporter.service",
+            "prometheus-server.service",
+            "prometheus-slurm-exporter.service",
+            "slurmctld.service",
+            "slurmdbd.service",
+            "slurmd.service",
+            "ssh.service"
+          ]
+        },
+        "definition": "label_values(node_systemd_unit_state{name!~\"blockdev.*\", name!~\"^dev-.*\"},name)",
         "description": "",
-        "hide": 2,
-        "label": "processes",
-        "name": "processes",
-        "query": "(aria2c|nfs-config|slurmctld|named|wg-quick@wg0|chronyd|docker|docker-registry|fail2ban|firewalld|corosync|nginx|logrotate|xinetd|dhcpd|named|luna2-daemon|mariadb|nfs-config|nfs-server|nscd|httpd|ondemand-dex|slapd|haveged|postfix|rsyslog|munge|slurm|slurmctld|slurmdbd|sshd|sssd).service",
+        "hide": 0,
+        "includeAll": true,
+        "label": "services",
+        "multi": true,
+        "name": "services",
+        "options": [],
+        "query": {
+          "query": "label_values(node_systemd_unit_state{name!~\"blockdev.*\", name!~\"^dev-.*\"},name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
         "skipUrlSync": false,
-        "type": "constant"
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -23803,6 +23902,6 @@
   "timezone": "browser",
   "title": "System Overview",
   "uid": "trixsystem",
-  "version": 4,
+  "version": 1,
   "weekStart": ""
 }
