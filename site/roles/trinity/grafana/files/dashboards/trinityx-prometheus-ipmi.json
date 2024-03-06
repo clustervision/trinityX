@@ -76,7 +76,7 @@
       "id": 2,
       "options": {
         "colorMode": "background",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -96,8 +96,9 @@
             "type": "prometheus",
             "uid": "trixprometheus"
           },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "ipmi_chassis_power_state",
+          "expr": "ipmi_chassis_power_state{hostname=\"$host\"}",
           "instant": false,
           "interval": "",
           "legendFormat": "{{instance}}",
@@ -106,6 +107,251 @@
       ],
       "title": "Power Status",
       "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "#808080",
+                  "index": 1,
+                  "text": "No"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Yes"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 4,
+        "y": 0
+      },
+      "id": 24,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "ipmi_up{hostname=\"$host\"}",
+          "instant": true,
+          "legendFormat": "{{collector}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Available Sensors",
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {
+            "keepLabels": [
+              "collector",
+              "instance",
+              "job"
+            ],
+            "valueLabel": "collector"
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "0": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "Ok"
+                      },
+                      "1": {
+                        "color": "yellow",
+                        "index": 1,
+                        "text": "Warning"
+                      },
+                      "2": {
+                        "color": "red",
+                        "index": 2,
+                        "text": "Critical"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 14,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "ipmi_sensor_state{hostname=\"$host\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "IPMI Sensors State",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "exporter": true,
+              "hostname": true,
+              "id": true,
+              "instance": true,
+              "job": true,
+              "luna_group": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value": "state",
+              "Value #A": "State"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -145,8 +391,8 @@
       "gridPos": {
         "h": 4,
         "w": 12,
-        "x": 4,
-        "y": 0
+        "x": 0,
+        "y": 4
       },
       "id": 6,
       "options": {
@@ -168,8 +414,9 @@
             "type": "prometheus",
             "uid": "trixprometheus"
           },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "ipmi_bmc_info",
+          "expr": "ipmi_bmc_info{hostname=\"$host\"}",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -187,10 +434,25 @@
               "Time": true,
               "Value": true,
               "__name__": true,
-              "firmware_revision": true,
-              "instance": false
+              "exporter": true,
+              "firmware_revision": false,
+              "hostname": true,
+              "instance": true,
+              "job": true,
+              "luna_group": true
             },
-            "indexByName": {},
+            "indexByName": {
+              "Time": 0,
+              "Value": 9,
+              "__name__": 1,
+              "exporter": 2,
+              "firmware_revision": 8,
+              "hostname": 3,
+              "instance": 4,
+              "job": 5,
+              "luna_group": 6,
+              "manufacturer_id": 7
+            },
             "renameByName": {}
           }
         }
@@ -198,14 +460,16 @@
       "type": "table"
     },
     {
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 8
       },
-      "id": 23,
-      "title": "Fans",
+      "id": 22,
+      "panels": [],
+      "title": "Power",
       "type": "row"
     },
     {
@@ -253,12 +517,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 24,
+        "h": 5,
+        "w": 4,
         "x": 0,
-        "y": 5
+        "y": 9
       },
-      "id": 10,
+      "id": 11,
       "options": {
         "colorMode": "background",
         "graphMode": "area",
@@ -283,98 +547,15 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "ipmi_fan_speed_state{instance=\"$instance\"}",
+          "expr": "ipmi_power_state{hostname=\"$host\"}",
           "interval": "",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Fan Speed State",
+      "title": "Power State",
       "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "trixprometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "rotrpm"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "editorMode": "builder",
-          "exemplar": true,
-          "expr": "ipmi_fan_speed_rpm{instance=\"$instance\"}",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "{{name}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Fan speed in rotations per minute",
-      "transformations": [],
-      "type": "stat"
-    },
-    {
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 12
-      },
-      "id": 22,
-      "title": "Power",
-      "type": "row"
     },
     {
       "datasource": {
@@ -437,10 +618,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 13
+        "h": 10,
+        "w": 20,
+        "x": 4,
+        "y": 9
       },
       "id": 8,
       "options": {
@@ -448,7 +629,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
           "mode": "single",
@@ -461,98 +642,17 @@
             "type": "prometheus",
             "uid": "trixprometheus"
           },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "ipmi_dcmi_power_consumption_watts{instance=\"$instance\"}",
+          "expr": "ipmi_dcmi_power_consumption_watts{hostname=\"$host\"}",
           "interval": "",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "__auto",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Power Consumption watts",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "trixprometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "color": "green",
-                  "index": 0,
-                  "text": "Normal"
-                },
-                "1": {
-                  "color": "yellow",
-                  "index": 1,
-                  "text": "Warning"
-                },
-                "2": {
-                  "color": "semi-dark-red",
-                  "index": 2,
-                  "text": "Critical"
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 4,
-        "x": 12,
-        "y": 13
-      },
-      "id": 11,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "exemplar": true,
-          "expr": "ipmi_power_state{instance=\"$instance\"}",
-          "interval": "",
-          "legendFormat": "{{name}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Power State",
-      "type": "stat"
     },
     {
       "datasource": {
@@ -579,10 +679,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 13
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 14
       },
       "id": 12,
       "options": {
@@ -605,10 +705,12 @@
             "type": "prometheus",
             "uid": "trixprometheus"
           },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "ipmi_power_watts{instance=\"$instance\"}",
+          "expr": "ipmi_power_watts{hostname=\"$host\"}",
           "interval": "",
           "legendFormat": "{{name}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -616,13 +718,15 @@
       "type": "gauge"
     },
     {
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 19
       },
       "id": 21,
+      "panels": [],
       "title": "Temperatures",
       "type": "row"
     },
@@ -634,13 +738,15 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "transparent",
+            "mode": "fixed"
           },
           "custom": {
-            "align": "auto",
+            "align": "left",
             "cellOptions": {
               "type": "auto"
             },
+            "filterable": false,
             "inspect": false
           },
           "mappings": [],
@@ -650,19 +756,16 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
-          }
+          },
+          "unit": "none"
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "Value"
+              "options": "state"
             },
             "properties": [
               {
@@ -673,7 +776,7 @@
                       "0": {
                         "color": "green",
                         "index": 0,
-                        "text": "Normal"
+                        "text": "Ok"
                       },
                       "1": {
                         "color": "yellow",
@@ -693,134 +796,35 @@
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "mode": "gradient",
                   "type": "color-background"
                 }
               }
             ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 22
-      },
-      "id": 14,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
           },
-          "exemplar": true,
-          "expr": "ipmi_sensor_state{instance=\"$instance\"}",
-          "format": "table",
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "IPMI Sensors State",
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "exporter": true,
-              "id": true,
-              "instance": true,
-              "job": true,
-              "luna_group": true
-            },
-            "indexByName": {},
-            "renameByName": {
-              "Value #A": "State"
-            }
-          }
-        }
-      ],
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "trixprometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "color": "green",
-                  "index": 0,
-                  "text": "Normal"
-                },
-                "1": {
-                  "color": "yellow",
-                  "index": 1,
-                  "text": "Warning"
-                },
-                "2": {
-                  "color": "semi-dark-red",
-                  "index": 2,
-                  "text": "Critical"
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "Value"
+              "options": "temperature"
             },
             "properties": [
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "mode": "gradient",
                   "type": "color-background"
+                }
+              },
+              {
+                "id": "min",
+                "value": 30
+              },
+              {
+                "id": "max",
+                "value": 90
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
                 }
               }
             ]
@@ -828,12 +832,12 @@
         ]
       },
       "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 12,
-        "y": 22
+        "h": 18,
+        "w": 8,
+        "x": 0,
+        "y": 20
       },
-      "id": 17,
+      "id": 16,
       "options": {
         "cellHeight": "sm",
         "footer": {
@@ -844,6 +848,7 @@
           ],
           "show": false
         },
+        "frameIndex": 1,
         "showHeader": true
       },
       "pluginVersion": "10.1.2",
@@ -853,31 +858,90 @@
             "type": "prometheus",
             "uid": "trixprometheus"
           },
-          "exemplar": true,
-          "expr": "ipmi_temperature_state{instance=\"$instance\"}",
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "exemplar": false,
+          "expr": "ipmi_temperature_celsius{hostname=\"$host\"}",
           "format": "table",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
           "instant": true,
           "interval": "",
-          "legendFormat": "{{name}}",
-          "refId": "A"
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "temperature",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "exemplar": false,
+          "expr": "ipmi_temperature_state{hostname=\"$host\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "state",
+          "useBackend": false
         }
       ],
-      "title": "Temperature State",
+      "title": "Temperatures",
       "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Value #state": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #temperature": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "name": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
         {
           "id": "organize",
           "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "exporter": true,
-              "id": true,
-              "instance": true,
-              "job": true,
-              "luna_group": true
-            },
+            "excludeByName": {},
             "indexByName": {},
-            "renameByName": {}
+            "renameByName": {
+              "Value #state (lastNotNull)": "state",
+              "Value #temperature (lastNotNull)": "temperature"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "name"
+              }
+            ]
           }
         }
       ],
@@ -891,147 +955,90 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "transparent",
+            "mode": "fixed"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
           },
           "mappings": [],
-          "max": 100,
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "#EAB839",
-                "value": 80
-              },
-              {
-                "color": "red",
-                "value": 90
               }
             ]
           },
-          "unit": "celsius"
+          "unit": "none"
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 18,
-        "y": 22
-      },
-      "id": 16,
-      "options": {
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "exemplar": true,
-          "expr": "ipmi_temperature_celsius{instance=\"$instance\"}",
-          "interval": "",
-          "legendFormat": "{{name}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Temperatures",
-      "type": "gauge"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 30
-      },
-      "id": 20,
-      "panels": [],
-      "title": "Voltages",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "trixprometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "color": "green",
-                  "index": 0,
-                  "text": "Normal"
-                },
-                "1": {
-                  "color": "yellow",
-                  "index": 1,
-                  "text": "Warning"
-                },
-                "2": {
-                  "color": "semi-dark-red",
-                  "index": 2,
-                  "text": "Critical"
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "state"
+            },
+            "properties": [
               {
-                "color": "green",
-                "value": null
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "0": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "Ok"
+                      },
+                      "1": {
+                        "color": "yellow",
+                        "index": 1,
+                        "text": "Warning"
+                      },
+                      "2": {
+                        "color": "red",
+                        "index": 2,
+                        "text": "Critical"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
               }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
       "gridPos": {
-        "h": 3,
-        "w": 24,
-        "x": 0,
-        "y": 31
+        "h": 18,
+        "w": 8,
+        "x": 8,
+        "y": 20
       },
-      "id": 18,
+      "id": 26,
       "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "vertical",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
           "fields": "",
-          "values": false
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "text": {},
-        "textMode": "auto"
+        "frameIndex": 1,
+        "showHeader": true
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -1040,15 +1047,101 @@
             "type": "prometheus",
             "uid": "trixprometheus"
           },
-          "exemplar": true,
-          "expr": "ipmi_voltage_state{instance=\"$instance\"}",
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "ipmi_fan_speed_rpm{hostname=\"$host\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": true,
           "interval": "",
-          "legendFormat": "{{name}}",
-          "refId": "A"
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "speed",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "ipmi_fan_speed_state{hostname=\"$host\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "state",
+          "useBackend": false
         }
       ],
-      "title": "Reported state of a voltage sensor",
-      "type": "stat"
+      "title": "Fan Speeds",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Value #speed": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #state": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #temperature": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "name": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Value #speed (lastNotNull)": "speed",
+              "Value #state (lastNotNull)": "state",
+              "Value #temperature (lastNotNull)": "temperature"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -1058,7 +1151,16 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "transparent",
+            "mode": "fixed"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -1067,37 +1169,72 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
-          "unit": "volt"
+          "unit": "none"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "state"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "0": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "Ok"
+                      },
+                      "1": {
+                        "color": "yellow",
+                        "index": 1,
+                        "text": "Warning"
+                      },
+                      "2": {
+                        "color": "red",
+                        "index": 2,
+                        "text": "Critical"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 3,
-        "w": 24,
-        "x": 0,
-        "y": 34
+        "h": 18,
+        "w": 8,
+        "x": 16,
+        "y": 20
       },
-      "id": 19,
+      "id": 25,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "vertical",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
           "fields": "",
-          "values": false
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "textMode": "auto"
+        "frameIndex": 1,
+        "showHeader": true
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -1106,15 +1243,101 @@
             "type": "prometheus",
             "uid": "trixprometheus"
           },
-          "exemplar": true,
-          "expr": "ipmi_voltage_volts{instance=\"$instance\"}",
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "exemplar": false,
+          "expr": "ipmi_voltage_volts{hostname=\"$host\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": true,
           "interval": "",
-          "legendFormat": "{{name}}",
-          "refId": "A"
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "voltage",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "exemplar": false,
+          "expr": "ipmi_voltage_state{hostname=\"$host\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "state",
+          "useBackend": false
         }
       ],
-      "title": "Voltage reading in Volts",
-      "type": "stat"
+      "title": "Voltages",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Value #state": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #temperature": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #voltage": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "name": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Value #state (lastNotNull)": "state",
+              "Value #temperature (lastNotNull)": "temperature",
+              "Value #voltage (lastNotNull)": "voltage"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
     }
   ],
   "refresh": "",
@@ -1125,24 +1348,24 @@
     "list": [
       {
         "current": {
-          "selected": false,
-          "text": "controller1.cluster:9102",
-          "value": "controller1.cluster:9102"
+          "selected": true,
+          "text": "node001.cluster",
+          "value": "node001.cluster"
         },
         "datasource": {
           "type": "prometheus",
           "uid": "trixprometheus"
         },
-        "definition": "label_values(ipmi_bmc_info,  instance)",
+        "definition": "label_values(ipmi_up,hostname)",
         "hide": 0,
         "includeAll": false,
-        "label": "instance",
+        "label": "Host",
         "multi": false,
-        "name": "instance",
+        "name": "host",
         "options": [],
         "query": {
-          "query": "label_values(ipmi_bmc_info,  instance)",
-          "refId": "StandardVariableQuery"
+          "query": "label_values(ipmi_up,hostname)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
         "regex": "",
@@ -1153,13 +1376,13 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
-  "title": "IPMI Exporter",
+  "title": "Thermals and Power",
   "uid": "UKjaSZf7z",
-  "version": 2,
+  "version": 6,
   "weekStart": ""
 }

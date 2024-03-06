@@ -385,7 +385,28 @@
           },
           "decimals": 1,
           "displayName": "",
-          "mappings": [],
+          "links": [],
+          "mappings": [
+            {
+              "options": {
+                "NaN": {
+                  "color": "transparent",
+                  "index": 0
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "transparent",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -493,11 +514,95 @@
                 "value": 90
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "temp"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "min",
+                "value": 30
+              },
+              {
+                "id": "max",
+                "value": 90
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed_processes"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Show Details",
+                    "url": "https://localhost:3000/d/trixsystem/system-overview?orgId=1&var-node=${__data.fields[\"hostname\"]}"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
       "gridPos": {
-        "h": 7,
+        "h": 10,
         "w": 24,
         "x": 0,
         "y": 9
@@ -514,7 +619,7 @@
           ],
           "show": false
         },
-        "frameIndex": 0,
+        "frameIndex": 3,
         "showHeader": true,
         "sortBy": []
       },
@@ -582,7 +687,7 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "exemplar": false,
           "expr": "node_memory_MemTotal_bytes",
           "format": "table",
@@ -601,7 +706,7 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "exemplar": false,
           "expr": "node_memory_SwapTotal_bytes",
           "format": "table",
@@ -622,7 +727,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(1-(avg_over_time(node_memory_MemAvailable_bytes[$__rate_interval]) / avg_over_time(node_memory_MemTotal_bytes[$__rate_interval])))*100",
+          "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)/node_memory_MemTotal_bytes*100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -641,7 +746,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(1-(avg_over_time(node_memory_SwapFree_bytes[$__rate_interval]) / avg_over_time(node_memory_SwapTotal_bytes[$__rate_interval])))*100",
+          "expr": "(node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes)/node_memory_SwapTotal_bytes*100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -666,14 +771,44 @@
           "legendFormat": "__auto",
           "range": false,
           "refId": "cpus"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "exemplar": false,
+          "expr": "ipmi_temperature_celsius{name=\"System Temp\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "temp",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum by (hostname, luna_group) (node_systemd_unit_state{state=\"failed\"})",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "failed_processes"
         }
       ],
       "title": "Available nodes",
       "transformations": [
-        {
-          "id": "seriesToRows",
-          "options": {}
-        },
         {
           "id": "merge",
           "options": {}
@@ -688,17 +823,17 @@
                 ],
                 "operation": "aggregate"
               },
-              "Value #load1": {
+              "Value #failed_processes": {
                 "aggregations": [
                   "lastNotNull"
                 ],
                 "operation": "aggregate"
               },
+              "Value #load1": {
+                "aggregations": []
+              },
               "Value #load15": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
+                "aggregations": []
               },
               "Value #load5": {
                 "aggregations": [
@@ -730,7 +865,17 @@
                 ],
                 "operation": "aggregate"
               },
-              "instance": {
+              "Value #temp": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "hostname": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "luna_group": {
                 "aggregations": [],
                 "operation": "groupby"
               }
@@ -749,15 +894,15 @@
           "options": {
             "excludeByName": {},
             "indexByName": {
-              "cpus": 1,
-              "instance": 0,
-              "load1": 2,
-              "load15": 4,
+              "cpus": 2,
+              "hostname": 0,
               "load5": 3,
-              "mem_tot": 5,
-              "mem_use": 6,
-              "swap_tot": 7,
-              "swap_use": 8
+              "luna_group": 1,
+              "mem_tot": 4,
+              "mem_use": 5,
+              "swap_tot": 6,
+              "swap_use": 7,
+              "temp": 8
             },
             "renameByName": {}
           }
@@ -889,10 +1034,10 @@
         ]
       },
       "gridPos": {
-        "h": 10,
+        "h": 9,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 19
       },
       "id": 24,
       "options": {
@@ -1163,10 +1308,10 @@
         ]
       },
       "gridPos": {
-        "h": 10,
+        "h": 9,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 19
       },
       "id": 25,
       "options": {
@@ -1448,6 +1593,6 @@
   "timezone": "",
   "title": "Home",
   "uid": "trixhome",
-  "version": 3,
+  "version": 7,
   "weekStart": ""
 }
