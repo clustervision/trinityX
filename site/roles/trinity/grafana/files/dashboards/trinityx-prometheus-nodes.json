@@ -1042,16 +1042,40 @@
           "color": {
             "mode": "thresholds"
           },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
           "mappings": [
             {
               "options": {
+                "activating": {
+                  "color": "yellow",
+                  "index": 2,
+                  "text": "Starting"
+                },
                 "active": {
                   "color": "green",
-                  "index": 0
+                  "index": 0,
+                  "text": "Running"
+                },
+                "deactivating": {
+                  "color": "yellow",
+                  "index": 3,
+                  "text": "Stopping"
+                },
+                "failed": {
+                  "color": "red",
+                  "index": 4,
+                  "text": "Failed"
                 },
                 "inactive": {
                   "color": "#6d6d6d",
-                  "index": 1
+                  "index": 1,
+                  "text": "Disabled"
                 }
               },
               "type": "value"
@@ -1067,7 +1091,22 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "state"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -1077,16 +1116,16 @@
       },
       "id": 324,
       "options": {
-        "colorMode": "background_solid",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [],
-          "fields": "/^state$/",
-          "values": true
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "textMode": "value_and_name"
+        "showHeader": true
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -1096,9 +1135,9 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "code",
+          "editorMode": "builder",
           "exemplar": false,
-          "expr": "node_systemd_unit_state{ name=~\"$services\", instance=~\"$node:.*\"}",
+          "expr": "node_systemd_unit_state{name=~\".*service\", instance=~\"$node:.*\", state=~\"$service_state\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1146,9 +1185,20 @@
             "indexByName": {},
             "renameByName": {}
           }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "name"
+              }
+            ]
+          }
         }
       ],
-      "type": "stat"
+      "type": "table"
     },
     {
       "collapsed": true,
@@ -23800,66 +23850,26 @@
         "current": {
           "selected": true,
           "text": [
-            "NetworkManager.service",
-            "aria2c.service",
-            "auditd.service",
-            "chronyd.service",
-            "dhcpd.service",
-            "firewalld.service",
-            "grafana-server.service",
-            "haveged.service",
-            "httpd.service",
-            "logrotate.service",
-            "mariadb.service",
-            "munge.service",
-            "named.service",
-            "nginx.service",
-            "prometheus-alertmanager.service",
-            "prometheus-ipmi-exporter.service",
-            "prometheus-node-exporter.service",
-            "prometheus-server.service",
-            "prometheus-slurm-exporter.service",
-            "slurmctld.service",
-            "slurmdbd.service",
-            "slurmd.service",
-            "ssh.service"
+            "failed"
           ],
           "value": [
-            "NetworkManager.service",
-            "aria2c.service",
-            "auditd.service",
-            "chronyd.service",
-            "dhcpd.service",
-            "firewalld.service",
-            "grafana-server.service",
-            "haveged.service",
-            "httpd.service",
-            "logrotate.service",
-            "mariadb.service",
-            "munge.service",
-            "named.service",
-            "nginx.service",
-            "prometheus-alertmanager.service",
-            "prometheus-ipmi-exporter.service",
-            "prometheus-node-exporter.service",
-            "prometheus-server.service",
-            "prometheus-slurm-exporter.service",
-            "slurmctld.service",
-            "slurmdbd.service",
-            "slurmd.service",
-            "ssh.service"
+            "failed"
           ]
         },
-        "definition": "label_values(node_systemd_unit_state{name!~\"blockdev.*\", name!~\"^dev-.*\"},name)",
-        "description": "",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "trixprometheus"
+        },
+        "definition": "label_values(node_systemd_unit_state,state)",
+        "description": "Display services with this state",
         "hide": 0,
         "includeAll": true,
-        "label": "services",
+        "label": "Service State",
         "multi": true,
-        "name": "services",
+        "name": "service_state",
         "options": [],
         "query": {
-          "query": "label_values(node_systemd_unit_state{name!~\"blockdev.*\", name!~\"^dev-.*\"},name)",
+          "query": "label_values(node_systemd_unit_state,state)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -23902,6 +23912,6 @@
   "timezone": "browser",
   "title": "System Overview",
   "uid": "trixsystem",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
