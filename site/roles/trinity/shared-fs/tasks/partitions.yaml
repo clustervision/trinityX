@@ -38,7 +38,9 @@
 
   - name: Creating the Logical Volume
     shell: >
-      lvcreate --addtag pacemaker -L {{ item.item['size'] }} -n {{ item.item['name'] | replace("/","_") }} 
+      lvcreate --addtag pacemaker -L {{ item.item['size'] }}
+      --wipesignatures y --yes --zero y
+      -n {{ item.item['name'] | replace("/","_") }} 
       {{ item.item['vgroup'] }} --config 'activation { volume_list = [ "@pacemaker" ] }'
     loop: "{{ shared_fs_partitions_lvs.results }}"
     ignore_errors: yes
