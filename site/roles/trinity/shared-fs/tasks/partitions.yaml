@@ -4,7 +4,7 @@
     msg: "{{ shared_fs_partitions }}"
 
 - name: Check if disk is already mounted
-  shell: '/usr/bin/mount | grep "{{ item.name }}"'
+  shell: '/usr/bin/mount | grep -w "{{ item.name }}"'
   register: shared_fs_partitions_mounted
   changed_when: false
   failed_when: false
@@ -115,6 +115,22 @@
       - item.rc != 0
       - item.item['zpool'] is defined
     ignore_errors: true
+
+  - name: Verifying existence of source location
+    stat:
+      path: '{{ item.item["name"] }}'
+    register: shared_fs_source_stat
+    loop: "{{ shared_fs_partitions_mounted.results }}"
+    when: item.rc != 0
+
+  - name: Create source location
+    file:
+      path: '{{ item.item.item["name"] }}'
+      owner: root
+      group: root
+      state: "{{ 'directory' if item.item.stat.exists else 'directory' }}"
+    loop: "{{ shared_fs_source_stat.results }}"
+    when: item.item.stat is defined
 
   - name: Copy contents from local drives to shared resource
     synchronize:
