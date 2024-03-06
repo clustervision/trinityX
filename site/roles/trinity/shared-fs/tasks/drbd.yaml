@@ -79,6 +79,9 @@
       failed_when: false
       loop: "{{ drbd_fs_disks }}"
 
+    - debug:
+        msg: "{{ drbd_mounted }}"
+
     - name: Create a fake fstab for the next step
       tempfile:
         path: /tmp
@@ -101,7 +104,7 @@
           - item.item['fstype'] == 'lvm'
 
       - name: Loading ZFS kernel module
-        shell: 'modprobe zfs'
+        shell: '/sbin/modprobe zfs'
         ignore_errors: no
         loop: "{{ drbd_mounted.results }}"
         when: 
@@ -109,7 +112,11 @@
           - item.item['fstype'] == 'zfs'
 
       - name: Creating a ZPool on shared resources
-        shell: 'zpool create -f {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}'
+        shell: >
+          zpool create -f 
+          -o cachefile=/etc/ha.d/zpool-{{ item.item["name"] | replace("/","_") }}.cache
+          -o ashift=12
+          {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
         ignore_errors: no
         loop: "{{ drbd_mounted.results }}"
         when: 
