@@ -146,13 +146,42 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 # 'name' serves as the mountpoint.
 
 shared_fs_disks: 
-  - name: '{{ trix_shared }}'
+  - name: '__ZFS1__'
     type: 'drbd'
-    device: '/dev/vdb'
+    disk: '/dev/sda4'
+    device: '/dev/drbd4'
+    fstype: 'zfs'
+  - name: '__LVM1__'
+    type: 'drbd'
+    disk: '/dev/sda3'
+    device: '/dev/drbd3'
+    fstype: 'lvm'
+#  - name: '__LVM1__'
+#    type: 'drbd'
+#    disk: '/dev/sdb1'
+#    device: '/dev/drbd1'
+#    fstype: 'lvm'
+#    mount: false
   - name: '{{ trix_home }}'
     type: 'drbd'
-    device: '/dev/vdc'
+    disk: '/dev/sda2'
+    device: '/dev/drbd2'
+    fstype: 'ext4'
+    options: '-b 4096'
 
+shared_fs_partitions:
+  - name: '{{ trix_shared }}'
+    vgroup: '__LVM1__'
+    size: '20480M'
+    fstype: 'ext4'
+    options: '-b 4096'
+  - name: '{{ trix_ohpc }}'
+    size: '10240M'
+    vgroup: '__LVM1__'
+    fstype: 'ext4'
+    options: '-b 4096'
+  - name: '/mnt/test/disk'
+    zpool: '__ZFS1__'
 
 # -----------------------------------------------------------------------
 # Luna credentials. These should be changed.
