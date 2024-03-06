@@ -100,6 +100,22 @@
           - item.rc != 0
           - item.item['fstype'] == 'lvm'
 
+      - name: Creating a ZPool on shared resources
+        shell: 'zpool create -f {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}'
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'zfs'
+
+      - name: Disable mount of ZPool
+        shell: 'zfs set mountpoint=none {{ item.item["name"] | replace("/","_") }}'
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'zfs'
+
       - name: Creating a Volume Group on shared resources
         shell: >
              vgcreate {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
@@ -112,17 +128,8 @@
           - item.rc != 0
           - item.item['fstype'] == 'lvm'
 
-#      - name: Creating a Volume Group on shared resources
-#        community.general.lvg:
-#          vg: '{{ item.item["name"] | replace("/","_") }}'
-#          pvs: '/dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}'
-#          vg_options: "--addtag pacemaker --config 'activation { volume_list = [ \"@pacemaker\" ] }'"
-#          force: yes
-#        ignore_errors: no
-#        loop: "{{ drbd_mounted.results }}"
-#        when: 
-#          - item.rc != 0
-#          - item.item['fstype'] == 'lvm'
+
+      # we create a single filesystem on top of here....
 
       - name: Creating a file system on shared resources
         filesystem:
@@ -135,6 +142,7 @@
         when: 
           - item.rc != 0
           - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
 
       - name: Temporarily mount DRBD disks
         mount:
@@ -147,6 +155,7 @@
         when: 
           - item.rc != 0
           - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
 
       - name: Copy contents from local drives to DRBD
         synchronize:
@@ -156,6 +165,7 @@
         when: 
           - item.rc != 0
           - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
 
       - name: Temporarily umount DRBD disks
         mount:
@@ -165,6 +175,7 @@
         when: 
           - item.rc != 0
           - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
       when: 
         - drbd_mounted is defined
         - ansible_facts.services['drbd.service'] is defined and ansible_facts.services['drbd.service'].state == 'stopped'
@@ -210,10 +221,22 @@
       name: 'wait-for-device-{{ item.name | replace("/","_") }}'
       resource_class: ocf
       resource_type: Delay
+      options: 'startdelay=10 stopdelay=3 --group=Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker resource wait-for-device
+    pcs_resource:
+      name: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Delay
       options: 'startdelay=10 stopdelay=3 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype != 'lvm'
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
 
   #--------------------------------------------
 
@@ -221,7 +244,7 @@
 #pcs resource create yournewvg LVM volgrpname=yournewvg exclusive=true --group whateveryourclusternameis  -- ocf:heartbeat:LVM-activate
 # pcs resource create newvdb-vg ocf:heartbeat:LVM-activate vgname=newvdb activation_mode=exclusive vg_access_mode=tagging tag=pacemaker --group HA-LVM --after vgalv-fs
 
-  - name: Add pacemaker LVM resource trinity-fs
+  - name: Add pacemaker LVM resource trinity-lvm
     pcs_resource:
       name: 'trinity-lvm-{{ item.name | replace("/","_") }}'
       resource_class: ocf
@@ -232,6 +255,16 @@
       state: present
     loop: "{{ drbd_fs_disks }}"
     when: item.fstype == 'lvm'
+
+  - name: Add pacemaker ZFS resource trinity-zfs
+    pcs_resource:
+      name: 'trinity-zfs-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: ZFS
+      options: 'pool={{ item.name | replace("/","_") }} --group Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
 
 #pcs resource create yournewlv_lv Filesystem device=/dev/yournewvg/lv_yournewlv  directory=/some/path/to/lv/mount fstype=ext4  --group whateveryourclusternameis
 #pcs resource create Newlvvdb-fs ocf:heartbeat:Filesystem device=/dev/newvdb/Newlvvdb directory=/newfs fstype=xfs --group HA-LVM --after newvdb-vg
@@ -247,7 +280,9 @@
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype != 'lvm'
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
 
   #--------------------------------------------
 
@@ -260,6 +295,15 @@
     loop: "{{ drbd_fs_disks }}"
     when: item.fstype == 'lvm'
 
+  - name: Add pacemaker resource zfs-ready
+    pcs_resource:
+      name: 'zfs-ready-{{ item.name | replace("/","_") }}'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
   - name: Add pacemaker resource fs-ready
     pcs_resource:
       name: 'fs-ready-{{ item.name | replace("/","_") }}'
@@ -267,7 +311,9 @@
       options: 'op monitor interval=183s --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype != 'lvm'
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
 
   #--------------------------------------------
 
@@ -286,13 +332,23 @@
     loop: "{{ drbd_fs_disks }}"
     when: item.fstype == 'lvm'
 
+  - name: Add pacemaker order constraint - Trinity-drbd then Trinity-zfs
+    pcs_constraint_order:
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
+      resource2: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
   - name: Add pacemaker order constraint - Trinity-drbd then Trinity-fs
     pcs_constraint_order:
       resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
       resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype != 'lvm'
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
 
   #--------------------------------------------
 
@@ -322,13 +378,23 @@
     loop: "{{ drbd_fs_disks }}"
     when: item.fstype == 'lvm'
 
+  - name: Add pacemaker colocation constraint - Trinity-zfs with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      resource2: Trinity
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
   - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
     pcs_constraint_colocation:
       resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       resource2: Trinity
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype != 'lvm'
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
 
   #--------------------------------------------
 

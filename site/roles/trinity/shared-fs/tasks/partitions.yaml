@@ -17,6 +17,13 @@
   failed_when: false
   loop: "{{ shared_fs_partitions }}"
 
+- name: Check if zfs disk already exists
+  shell: '/usr/sbin/zfs | grep "{{ item.name | replace("/","_") }}"'
+  register: shared_fs_partitions_zfs
+  changed_when: false
+  failed_when: false
+  loop: "{{ shared_fs_partitions }}"
+
 - block:
   - name: Create a fake fstab for the next step
     tempfile:
@@ -38,6 +45,24 @@
     when: 
       - item.rc != 0
       - item.item['vgroup'] is defined
+
+  - name: Creating the ZFS Volume
+    shell: >
+      zfs create {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }}  
+    loop: "{{ shared_fs_partitions_zfs.results }}"
+    ignore_errors: yes
+    when: 
+      - item.rc != 0
+      - item.item['zpool'] is defined
+
+  - name: Setting the mountlocation for ZFS Volume
+    shell: >
+      zfs set mountpoint={{ item.item['name'] }} {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }}
+    loop: "{{ shared_fs_partitions_zfs.results }}"
+    ignore_errors: yes
+    when: 
+      - item.rc != 0
+      - item.item['zpool'] is defined
 
 
 # mkfs -t ext4 -m 1 -v /dev/yournewvg/lv_yournewlv
@@ -67,7 +92,7 @@
       - item.item['vgroup'] is defined
       - item.item['fstype'] is defined
 
-  - name: Temporarily mount the disks
+  - name: Temporarily mount the LV disks
     mount:
       src: '/dev/{{ item.item["vgroup"] }}/{{ item.item["name"] | replace("/","_") }}'
       path: '{{ item.item["name"] | replace("/","_") }}-temp'
@@ -80,19 +105,36 @@
       - item.item['fstype'] is defined
       - item.item['vgroup'] is defined
 
-  - name: Copy contents from local drives to DRBD
+  - name: Temporarily mount the ZFS disks
+    shell: "zpool import -o cachefile=none {{ item.item['zpool'] }}"
+    loop: "{{ shared_fs_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['zpool'] is defined
+
+  - name: Copy contents from local drives to shared resource
     synchronize:
       src: '{{ item.item["name"] }}/'
       dest: '{{ item.item["name"] | replace("/","_") }}-temp/'
     loop: "{{ shared_fs_partitions_mounted.results }}"
     when: item.rc != 0
 
-  - name: Temporarily umount DRBD disks
+  - name: Temporarily umount the disks
     mount:
       path: '{{ item.item["name"] | replace("/","_") }}-temp'
       state: unmounted
     loop: "{{ shared_fs_partitions_mounted.results }}"
-    when: item.rc != 0
+    when: 
+      - item.rc != 0
+      - item.item['zpool'] is not defined
+
+  - name: Temporarily umount the ZFS disks
+    shell: 'zfs unmount {{ item.item["name"] }}'
+    loop: "{{ shared_fs_partitions_mounted.results }}"
+    loop: "{{ shared_fs_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['zpool'] is defined
 
   # ------------------------------------------
 
@@ -110,7 +152,6 @@
     loop: "{{ shared_fs_partitions }}"
     when:
       - item['vgroup'] is defined
-      - item['ha'] is defined and item['ha'] == True
 
   - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
     pcs_constraint_colocation:
@@ -120,7 +161,6 @@
     loop: "{{ shared_fs_partitions }}"
     when:
       - item['vgroup'] is defined
-      - item['ha'] is defined and item['ha'] == True
 
   when: 
     - primary | default(False)
