@@ -57,10 +57,10 @@
         state: started
       register: drbd_started
 
-    - name: Status DRBD shared resources
-      shell: '/usr/sbin/drbdadm attach {{ item.name | replace("/","_") }}'
-      loop: "{{ drbd_fs_disks }}"
-      ignore_errors: yes
+#    - name: Attach DRBD shared resources
+#      shell: '/usr/sbin/drbdadm attach {{ item.name | replace("/","_") }}'
+#      loop: "{{ drbd_fs_disks }}"
+#      ignore_errors: yes
 
     - name: Status DRBD shared resources
       shell: '/usr/sbin/drbdadm status {{ item.name | replace("/","_") }}'
@@ -99,6 +99,14 @@
         when: 
           - item.rc != 0
           - item.item['fstype'] == 'lvm'
+
+      - name: Loading ZFS kernel module
+        shell: 'modprobe zfs'
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'zfs'
 
       - name: Creating a ZPool on shared resources
         shell: 'zpool create -f {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}'
