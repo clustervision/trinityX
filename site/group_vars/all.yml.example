@@ -142,46 +142,68 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 
 # -----------------------------------------------------------------------
 # Backend type and block device to use for the specified backend.
-# Works in conjunction with H/A. 'type' can be: drbd, nfs or das.
-# 'name' serves as the mountpoint.
+# Works in conjunction with H/A only. 
+# 'type' can be: drbd, nfs or das.
+# 'fstype' can be: ext4, xfs or any regular filesystem
+#                  but also lvm or zfs
+# 'name' serves as the mountpoint or as reference for shared_fs_partition.
 
-shared_fs_disks: 
-  - name: '__ZFS1__'
+# example:
+# shared_fs_disks: 
+#   - name: 'ZFS1'
+#     type: 'drbd'
+#     disk: '/dev/sda4'
+#     device: '/dev/drbd4'
+#     fstype: 'zfs'
+#   - name: 'LVM1'
+#     type: 'drbd'
+#     disk: '/dev/sda3'
+#     device: '/dev/drbd3'
+#     fstype: 'lvm'
+#   - name: '{{ trix_home }}'
+#     type: 'drbd'
+#     disk: '/dev/sda2'
+#     device: '/dev/drbd2'
+#     fstype: 'ext4'
+#     options: '-b 4096'
+
+shared_fs_disks:
+  - name: 'trinityx'
     type: 'drbd'
-    disk: '/dev/sda4'
-    device: '/dev/drbd4'
+    disk: '/dev/vda'
+    device: '/dev/drbd0'
     fstype: 'zfs'
-  - name: '__LVM1__'
-    type: 'drbd'
-    disk: '/dev/sda3'
-    device: '/dev/drbd3'
-    fstype: 'lvm'
-#  - name: '__LVM1__'
-#    type: 'drbd'
-#    disk: '/dev/sdb1'
-#    device: '/dev/drbd1'
-#    fstype: 'lvm'
-#    mount: false
-  - name: '{{ trix_home }}'
-    type: 'drbd'
-    disk: '/dev/sda2'
-    device: '/dev/drbd2'
-    fstype: 'ext4'
-    options: '-b 4096'
+
+# shared_fs_partition is needed when using lvm or zfs as fstype 
+# in shared_fs_disks.
+
+# example:
+# shared_fs_partitions:
+#   - name: '{{ trix_shared }}'
+#     vgroup: 'LVM1'
+#     size: '20480M'
+#     fstype: 'ext4'
+#     options: '-b 4096'
+#   - name: '{{ trix_ohpc }}'
+#     size: '10240M'
+#     vgroup: 'LVM1'
+#     fstype: 'ext4'
+#     options: '-b 4096'
+#   - name: '/trinity/other'
+#     zpool: 'ZFS1'
+#     options: '-o xattr=sa'
 
 shared_fs_partitions:
+  - name: '{{ trix_home }}'
+    zpool: 'trinityx'
+    options: '-o xattr=sa'
   - name: '{{ trix_shared }}'
-    vgroup: '__LVM1__'
-    size: '20480M'
-    fstype: 'ext4'
-    options: '-b 4096'
+    zpool: 'trinityx'
+    options: '-o xattr=sa'
   - name: '{{ trix_ohpc }}'
-    size: '10240M'
-    vgroup: '__LVM1__'
-    fstype: 'ext4'
-    options: '-b 4096'
-  - name: '/mnt/test/disk'
-    zpool: '__ZFS1__'
+    zpool: 'trinityx'
+    options: '-o xattr=sa'
+    
 
 # -----------------------------------------------------------------------
 # Luna credentials. These should be changed.
