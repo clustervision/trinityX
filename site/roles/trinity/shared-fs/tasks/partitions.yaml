@@ -48,7 +48,8 @@
 
   - name: Creating the ZFS Volume
     shell: >
-      zfs create {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }}  
+      zfs create {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }} 
+      {{ item.item['options']|default('') }} 
     loop: "{{ shared_fs_partitions_zfs.results }}"
     ignore_errors: yes
     when: 

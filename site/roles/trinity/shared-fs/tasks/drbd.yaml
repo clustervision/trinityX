@@ -103,6 +103,18 @@
           - item.rc != 0
           - item.item['fstype'] == 'lvm'
 
+      - name: Creating a Volume Group on shared resources
+        shell: >
+             vgcreate {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
+             --addtag pacemaker --config 'activation { volume_list = [ "@pacemaker" ] }
+             devices {filter = [ "a|drbd*|", "r|.*|" ]}'
+        # note: you CANNOT use /dev/drbd/by-res/XXX as vgcreate will then barf at you...
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'lvm'
+
       - name: Loading ZFS kernel module
         shell: '/sbin/modprobe zfs'
         ignore_errors: no
@@ -115,6 +127,7 @@
         shell: >
           zpool create -f 
           -o cachefile=/etc/ha.d/zpool-{{ item.item["name"] | replace("/","_") }}.cache
+          -o autoexpand=on
           -o ashift=12
           {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
         ignore_errors: no
@@ -123,25 +136,13 @@
           - item.rc != 0
           - item.item['fstype'] == 'zfs'
 
-      - name: Disable mount of ZPool
-        shell: 'zfs set mountpoint=none {{ item.item["name"] | replace("/","_") }}'
-        ignore_errors: no
-        loop: "{{ drbd_mounted.results }}"
-        when: 
-          - item.rc != 0
-          - item.item['fstype'] == 'zfs'
-
-      - name: Creating a Volume Group on shared resources
-        shell: >
-             vgcreate {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
-             --addtag pacemaker --config 'activation { volume_list = [ "@pacemaker" ] }
-             devices {filter = [ "a|drbd*|", "r|.*|" ]}'
-        # note: you CANNOT use /dev/drbd/by-res/XXX as vgcreate will then barf at you...
-        ignore_errors: no
-        loop: "{{ drbd_mounted.results }}"
-        when: 
-          - item.rc != 0
-          - item.item['fstype'] == 'lvm'
+#      - name: Disable mount of ZPool
+#        shell: 'zfs set mountpoint=none {{ item.item["name"] | replace("/","_") }}'
+#        ignore_errors: no
+#        loop: "{{ drbd_mounted.results }}"
+#        when: 
+#          - item.rc != 0
+#          - item.item['fstype'] == 'zfs'
 
 
       # we create a single filesystem on top of here....
@@ -193,7 +194,11 @@
           - item.item['fstype'] != 'zfs'
       when: 
         - drbd_mounted is defined
-        - ansible_facts.services['drbd.service'] is defined and ansible_facts.services['drbd.service'].state == 'stopped'
+        - ansible_facts.services['drbd.service'] is defined
+        - ansible_facts.services['drbd.service'].state != 'started'
+
+    - debug:
+        msg: "{{ ansible_facts.services['drbd.service'] }}"
 
     - name: stop DRBD
       service:
