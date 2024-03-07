@@ -35,13 +35,14 @@
 
 # wrapping things up
 
-- name: Clear possible pacemaker dependency messages
-  shell: "pcs resource cleanup"
+- block:
+  - name: Clear possible pacemaker dependency messages
+    shell: "pcs resource cleanup"
 
-- name: Wait 10s for cleanup to take effect
-  wait_for:
-    timeout: 10
+  - name: Wait 10s for cleanup to take effect
+    wait_for:
+      timeout: 10
 
-- name: Clear possible pacemaker dependency messages
-  shell: "pcs resource cleanup"
-
+  - name: Clear possible pacemaker dependency messages
+    shell: "pcs resource cleanup"
+  when: primary
