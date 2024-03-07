@@ -155,6 +155,16 @@
       options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Trinity'
       state: present
 
+  - name: Render temporary dummy lmaster script
+    copy:
+      src: 'lmaster'
+      dest: '/usr/sbin/lmaster'
+      owner: root
+      group: root
+      mode: 0755
+      force: no
+      ignore_errors: true
+
   - name: Add luna2 master systemd service
     pcs_resource:
       name: 'luna2-master'
