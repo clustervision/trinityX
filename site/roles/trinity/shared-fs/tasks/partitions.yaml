@@ -175,16 +175,25 @@
       options: 'device=/dev/{{ item["vgroup"] }}/{{ item["name"] | replace("/","_") }}
           directory="{{ item.name }}" fstype={{ item.fstype }} 
           run_fsck=force force_unmount=safe op monitor interval=31s op
-          monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
+          monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ shared_fs_partitions }}"
     when:
       - item['vgroup'] is defined
 
-  - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
+  - name: Add pacemaker order constraint - Trinity-lvm then Trinity-fs
+    pcs_constraint_order:
+      resource1: 'Trinity-lvm-{{ item["vgroup"] }}'
+      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ shared_fs_partitions }}"
+    when:
+      - item['vgroup'] is defined
+
+  - name: Add pacemaker colocation constraint - Trinity-fs with Trinity-lvm
     pcs_constraint_colocation:
-      resource1: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
-      resource2: 'trinity-fs-{{ item.name | replace("/","_") }}'
+      resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-lvm-{{ item["vgroup"] }}'
       state: present
     loop: "{{ shared_fs_partitions }}"
     when:

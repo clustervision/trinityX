@@ -338,6 +338,15 @@
 
   #--------------------------------------------
 
+  - name: Add pacemaker resource Trinity-stack
+    pcs_resource:
+      name: 'trinity-stack-ready'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-stack'
+      state: present
+
+  #--------------------------------------------
+
   - name: Add pacemaker order constraint - Trinity then Trinity-drbd
     pcs_constraint_order:
       resource1: Trinity
@@ -373,11 +382,31 @@
 
   #--------------------------------------------
 
-#  - name: Add pacemaker order constraint - Trinity-fs then Trinity-secondary
-#    pcs_constraint_order:
-#      resource1: Trinity-fs
-#      resource2: Trinity-secondary
-#      state: present
+  - name: Add pacemaker order constraint - Trinity-lvm then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-stack'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker order constraint - Trinity-zfs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-stack'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker order constraint - Trinity-fs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-stack'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
 
   #--------------------------------------------
 
@@ -411,6 +440,34 @@
     pcs_constraint_colocation:
       resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       resource2: Trinity
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-lvm
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-zfs
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-fs
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
     when: 
