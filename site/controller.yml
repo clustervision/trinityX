@@ -104,7 +104,8 @@
       tags: bind
 
     - role: trinity/openldap
-      openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
+      #openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
+      openldap_server_dir_path: "{{ trix_ha ~ '/var/lib/ldap' if ha else trix_local ~ '/var/lib/ldap' }}"
       openldap_server_conf_path: '{{ trix_local }}/etc/openldap/slapd.d'
       openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       when: enable_authentication|default(True)
@@ -131,7 +132,8 @@
         - authentication
 
     - role: trinity/mariadb
-      mariadb_db_path: '{{ trix_local }}/var/lib/mysql'
+      mariadb_db_path: "{{ trix_ha ~ '/var/lib/mysql' if ha else trix_local ~ '/var/lib/mysql' }}"
+      #mariadb_db_path: '{{ trix_local }}/var/lib/mysql'
       tags: mariadb
 
     - role: trinity/openhpc
