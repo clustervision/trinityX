@@ -1,5 +1,12 @@
 ---
 
+- name: Ensure lvm can be controlled from pacemaker by adding empty volume in lvm activation
+  lineinfile:
+    dest: "/etc/lvm/lvm.conf"
+    insertafter: '^activation {'
+    line: "	volume_list = [ ]"
+  ignore_errors: true
+
 - name: Create empty DRBD disk list
   set_fact:
       drbd_fs_disks: []
