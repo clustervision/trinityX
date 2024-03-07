@@ -28,6 +28,13 @@
      path: "/etc/drbd.d/trinityx.res"
   register: drbd_res_config
 
+- name: Ensuring temporary mount location exists
+  file:
+    path: /mnt
+    owner: root
+    group: root
+    state: directory
+
 - block:
   - name: Set up DRBD common settings configuration file
     template:
@@ -160,7 +167,7 @@
       - name: Temporarily mount DRBD disks
         mount:
           src: '/dev/drbd/by-res/{{ item.item.name | replace("/","_") }}'
-          path: '{{ item.item["name"] | replace("/","_") }}-temp'
+          path: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp'
           fstype: "{{ item.item['fstype'] }}"
           state: mounted
           fstab: "{{ drbd_fake_fstab.path }}"
@@ -173,7 +180,7 @@
       - name: Copy contents from local drives to DRBD
         synchronize:
           src: '{{ item.item["name"] }}/'
-          dest: '{{ item.item["name"] | replace("/","_") }}-temp/'
+          dest: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp/'
         loop: "{{ drbd_mounted.results }}"
         when: 
           - item.rc != 0
@@ -182,7 +189,7 @@
 
       - name: Temporarily umount DRBD disks
         mount:
-          path: '{{ item.item["name"] | replace("/","_") }}-temp'
+          path: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp'
           state: unmounted
         loop: "{{ drbd_mounted.results }}"
         when: 

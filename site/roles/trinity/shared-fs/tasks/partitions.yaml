@@ -24,6 +24,13 @@
   failed_when: false
   loop: "{{ shared_fs_partitions }}"
 
+- name: Ensuring temporary mount location exists
+  file:
+    path: /mnt
+    owner: root
+    group: root
+    state: directory
+
 - block:
   - name: Create a fake fstab for the next step
     tempfile:
@@ -60,7 +67,8 @@
 
   - name: Setting temporary mountlocation for ZFS Volume
     shell: >
-      zfs set mountpoint={{ item.item['name'] }}-temp {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }}
+      zfs set mountpoint=/mnt/{{ item.item['name'] | replace("/","_") }}-temp 
+      {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }}
     loop: "{{ shared_fs_partitions_zfs.results }}"
     ignore_errors: yes
     when: 
@@ -98,7 +106,7 @@
   - name: Temporarily mount the LV disks
     mount:
       src: '/dev/{{ item.item["vgroup"] }}/{{ item.item["name"] | replace("/","_") }}'
-      path: '/{{ item.item["name"] | replace("/","_") }}-temp'
+      path: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp'
       fstype: "{{ item.item['fstype'] }}"
       state: mounted
       fstab: "{{ shared_fs_partitions_fake_fstab.path }}"
@@ -127,28 +135,25 @@
     loop: "{{ shared_fs_partitions_mounted.results }}"
     when: item.rc != 0
 
+  - name: Wait 10s for mounts to settle
+    wait_for:
+      timeout: 10
+
   - name: Copy contents from local drives to shared resource
     synchronize:
       src: '{{ item.item["name"] }}/'
-      dest: '/{{ item.item["name"] | replace("/","_") }}-temp/'
+      dest: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp/'
     loop: "{{ shared_fs_partitions_mounted.results }}"
     when: item.rc != 0
 
   - name: Temporarily umount the disks
     mount:
-      path: '/{{ item.item["name"] | replace("/","_") }}-temp'
+      path: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp'
       state: unmounted
     loop: "{{ shared_fs_partitions_mounted.results }}"
     when: 
       - item.rc != 0
       - item.item['zpool'] is not defined
-
-#  - name: Temporarily umount the ZFS disks
-#    shell: 'zfs unmount {{ item.item["name"] }}-temp'
-#    loop: "{{ shared_fs_partitions_mounted.results }}"
-#    when: 
-#      - item.rc != 0
-#      - item.item['zpool'] is defined
 
   - name: Setting the mountlocation for ZFS Volume
     shell: >
