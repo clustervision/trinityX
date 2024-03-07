@@ -45,10 +45,18 @@
   when: not ha|default(False)
 
 - block:
-
   - name: Create shared directory for data that should survive a failover
     file:
-      path: '{{ trix_local }}/var/lib/nfs'
+      path: '{{ trix_ha }}/var/lib/nfs'
       state: directory
 
+  - name: Add NFS server pacemaker resource
+    pcs_resource:
+      name: 'trinity-nfs-server'
+      resource_class: 'ocf'
+      resource_type: 'nfsserver'
+      options: 'nfs_shared_infodir="{{ trix_ha }}/var/lib/nfs" op monitor interval=47s --group Trinity-stack'
+      state: present
+    tags: pcs
   when: primary|default(True) and ha|default(False)
+    

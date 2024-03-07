@@ -34,6 +34,10 @@ else
 
   ansible-galaxy install OndrejHome.pcs-modules-2
 
+  # experimental ZFS support
+  yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
+  yes y | dnf -y install zfs zfs-dkms
+
   if [ ! -f site/hosts ]; then
     echo "Please modify the site/hosts.example and save it as site/hosts"  
   else
