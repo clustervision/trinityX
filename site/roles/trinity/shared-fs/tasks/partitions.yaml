@@ -4,7 +4,7 @@
     msg: "{{ shared_fs_partitions }}"
 
 - name: Check if disk is already mounted
-  shell: '/usr/bin/mount | grep -w "{{ item.name }}"'
+  shell: '/usr/bin/mount | grep " {{ item.name }} "'
   register: shared_fs_partitions_mounted
   changed_when: false
   failed_when: false
@@ -109,28 +109,23 @@
       - item.item['vgroup'] is defined
 
   - name: Temporarily mount the ZFS disks
-    shell: "zpool import -o cachefile=none {{ item.item['zpool'] }}"
+    #shell: "zpool import -o cachefile=none {{ item.item['zpool'] }}"
+    shell: >
+      zfs mount {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }}
     loop: "{{ shared_fs_partitions_mounted.results }}"
     when: 
       - item.rc != 0
       - item.item['zpool'] is defined
     ignore_errors: true
 
-  - name: Verifying existence of source location
-    stat:
-      path: '{{ item.item["name"] }}'
-    register: shared_fs_source_stat
-    loop: "{{ shared_fs_partitions_mounted.results }}"
-    when: item.rc != 0
-
-  - name: Create source location
+  - name: Ensuring source location exists
     file:
-      path: '{{ item.item.item["name"] }}'
+      path: '{{ item.item["name"] }}'
       owner: root
       group: root
-      state: "{{ 'directory' if item.item.stat.exists else 'directory' }}"
-    loop: "{{ shared_fs_source_stat.results }}"
-    when: item.item.stat is defined
+      state: directory
+    loop: "{{ shared_fs_partitions_mounted.results }}"
+    when: item.rc != 0
 
   - name: Copy contents from local drives to shared resource
     synchronize:
@@ -148,12 +143,12 @@
       - item.rc != 0
       - item.item['zpool'] is not defined
 
-  - name: Temporarily umount the ZFS disks
-    shell: 'zfs unmount {{ item.item["name"] }}-temp'
-    loop: "{{ shared_fs_partitions_mounted.results }}"
-    when: 
-      - item.rc != 0
-      - item.item['zpool'] is defined
+#  - name: Temporarily umount the ZFS disks
+#    shell: 'zfs unmount {{ item.item["name"] }}-temp'
+#    loop: "{{ shared_fs_partitions_mounted.results }}"
+#    when: 
+#      - item.rc != 0
+#      - item.item['zpool'] is defined
 
   - name: Setting the mountlocation for ZFS Volume
     shell: >
