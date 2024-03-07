@@ -190,10 +190,28 @@
     when:
       - item['vgroup'] is defined
 
+  - name: Add pacemaker order constraint - Trinity-fs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-stack'
+      state: present
+    loop: "{{ shared_fs_partitions }}"
+    when:
+      - item['vgroup'] is defined
+
   - name: Add pacemaker colocation constraint - Trinity-fs with Trinity-lvm
     pcs_constraint_colocation:
       resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       resource2: 'Trinity-lvm-{{ item["vgroup"] }}'
+      state: present
+    loop: "{{ shared_fs_partitions }}"
+    when:
+      - item['vgroup'] is defined
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-fs
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ shared_fs_partitions }}"
     when:
