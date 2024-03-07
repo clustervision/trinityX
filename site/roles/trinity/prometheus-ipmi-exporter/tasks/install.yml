@@ -60,3 +60,20 @@
     mode: 0755
   when:
     - prometheus_ipmi_exporter_log_dir is defined
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+
+- name: Print the prometheus_ipmi_exporter_packages variable
+  debug:
+    var: prometheus_ipmi_exporter_packages
+
+- name: Install prometheus_ipmi_exporter_packages packages
+  package:
+    name: "{{ item }}"
+    state: present
+  when: prometheus_ipmi_exporter_packages is defined
+  with_items: "{{ prometheus_ipmi_exporter_packages }}"
