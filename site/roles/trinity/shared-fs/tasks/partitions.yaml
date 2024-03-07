@@ -58,9 +58,9 @@
       - item.rc != 0
       - item.item['zpool'] is defined
 
-  - name: Setting the mountlocation for ZFS Volume
+  - name: Setting temporary mountlocation for ZFS Volume
     shell: >
-      zfs set mountpoint={{ item.item['name'] }} {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }}
+      zfs set mountpoint={{ item.item['name'] }}-temp {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }}
     loop: "{{ shared_fs_partitions_zfs.results }}"
     ignore_errors: yes
     when: 
@@ -98,7 +98,7 @@
   - name: Temporarily mount the LV disks
     mount:
       src: '/dev/{{ item.item["vgroup"] }}/{{ item.item["name"] | replace("/","_") }}'
-      path: '{{ item.item["name"] | replace("/","_") }}-temp'
+      path: '/{{ item.item["name"] | replace("/","_") }}-temp'
       fstype: "{{ item.item['fstype'] }}"
       state: mounted
       fstab: "{{ shared_fs_partitions_fake_fstab.path }}"
@@ -135,13 +135,13 @@
   - name: Copy contents from local drives to shared resource
     synchronize:
       src: '{{ item.item["name"] }}/'
-      dest: '{{ item.item["name"] | replace("/","_") }}-temp/'
+      dest: '/{{ item.item["name"] | replace("/","_") }}-temp/'
     loop: "{{ shared_fs_partitions_mounted.results }}"
     when: item.rc != 0
 
   - name: Temporarily umount the disks
     mount:
-      path: '{{ item.item["name"] | replace("/","_") }}-temp'
+      path: '/{{ item.item["name"] | replace("/","_") }}-temp'
       state: unmounted
     loop: "{{ shared_fs_partitions_mounted.results }}"
     when: 
@@ -149,9 +149,17 @@
       - item.item['zpool'] is not defined
 
   - name: Temporarily umount the ZFS disks
-    shell: 'zfs unmount {{ item.item["name"] }}'
+    shell: 'zfs unmount {{ item.item["name"] }}-temp'
     loop: "{{ shared_fs_partitions_mounted.results }}"
-    loop: "{{ shared_fs_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['zpool'] is defined
+
+  - name: Setting the mountlocation for ZFS Volume
+    shell: >
+      zfs set mountpoint={{ item.item['name'] }} {{ item.item['zpool'] }}/{{ item.item['name'] | replace("/","_") }}
+    loop: "{{ shared_fs_partitions_zfs.results }}"
+    ignore_errors: yes
     when: 
       - item.rc != 0
       - item.item['zpool'] is defined
