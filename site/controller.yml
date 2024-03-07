@@ -28,12 +28,12 @@
       tags: packages
 
     - role: OndrejHome.pcs-modules-2
-      tags: ha,pacemaker,shared-fs
+      tags: ha,pcs,pacemaker,shared-fs
       when: ha | default(False)
 
     - role: trinity/pacemaker
       fence_ipmilan_enabled: enable_ipmilan_fencing | default(True)
-      tags: ha,pacemaker
+      tags: ha,pcs,pacemaker
       when: ha | default(False)
 
     - role: trinity/shared-fs
@@ -144,9 +144,11 @@
     - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'
       slurm_ctrl_ip: '{{ trix_ctrl_ip }}'
-      slurm_ctrl_list: '{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }}'
+      #slurm_ctrl_list: '{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }}'
+      slurm_ctrl_list: '{{ all_ctrl_hostname | join(",") }}'
       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-      slurm_spool_path: '{{ trix_local }}/var/spool/slurm'
+      #slurm_spool_path: '{{ trix_local }}/var/spool/slurm'
+      slurm_spool_path: "{{ trix_ha ~ '/var/spool/slurm' if ha else trix_local ~ '/var/spool/slurm' }}"
       munge_conf_path: '{{ trix_shared }}/etc/munge'
       slurmdbd_sql_user: 'slurm_accounting'
       slurmdbd_sql_db: 'slurm_accounting'

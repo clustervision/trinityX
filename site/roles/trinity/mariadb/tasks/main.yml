@@ -100,4 +100,14 @@
       name: test
       state: absent
 
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'mariadb'
+      resource_class: 'systemd'
+      resource_type: 'systemd:mariadb'
+      options: 'op monitor interval=30 --group Trinity-stack'
+      state: present
+    when: ha | default(False)
+    tags: pcs
+
   when: primary | default(True)
