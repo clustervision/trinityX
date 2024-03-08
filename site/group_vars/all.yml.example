@@ -146,20 +146,31 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 # 'type' can be: drbd, nfs or das.
 # 'fstype' can be: ext4, xfs or any regular filesystem
 #                  but also lvm or zfs
-# 'name' serves as the mountpoint or as reference for shared_fs_partition.
 
-# example:
+# --- example:
 # shared_fs_disks: 
 #   - name: 'ZFS1'
 #     type: 'drbd'
 #     disk: '/dev/sda4'
 #     device: '/dev/drbd4'
 #     fstype: 'zfs'
+#     partitions:
+#     - name: '/trinity/other'
+#       options: '-o xattr=sa'
 #   - name: 'LVM1'
 #     type: 'drbd'
 #     disk: '/dev/sda3'
 #     device: '/dev/drbd3'
 #     fstype: 'lvm'
+#     partitions:
+#     - mount: '{{ trix_shared }}'
+#       size: '20480M'
+#       fstype: 'ext4'
+#       options: '-b 4096'
+#     - mount: '{{ trix_ohpc }}'
+#       size: '10240M'
+#       fstype: 'ext4'
+#       options: '-b 4096'
 #   - name: '{{ trix_home }}'
 #     type: 'drbd'
 #     disk: '/dev/sda2'
@@ -173,42 +184,17 @@ shared_fs_disks:
     disk: '/dev/vda'
     device: '/dev/drbd0'
     fstype: 'zfs'
-
-# shared_fs_partition is needed when using lvm or zfs as fstype 
-# in shared_fs_disks.
-
-# example:
-# shared_fs_partitions:
-#   - name: '{{ trix_shared }}'
-#     vgroup: 'LVM1'
-#     size: '20480M'
-#     fstype: 'ext4'
-#     options: '-b 4096'
-#   - name: '{{ trix_ohpc }}'
-#     size: '10240M'
-#     vgroup: 'LVM1'
-#     fstype: 'ext4'
-#     options: '-b 4096'
-#   - name: '/trinity/other'
-#     zpool: 'ZFS1'
-#     options: '-o xattr=sa'
-
-shared_fs_partitions:
-  - name: '{{ trix_home }}'
-    zpool: 'trinityx'
-    options: '-o xattr=sa'
-  - name: '{{ trix_shared }}'
-    zpool: 'trinityx'
-    options: '-o xattr=sa'
-  - name: '{{ trix_ohpc }}'
-    zpool: 'trinityx'
-    options: '-o xattr=sa'
-  - name: '{{ trix_ha }}'
-    zpool: 'trinityx'
-    options: '-o xattr=sa'
-  - name: '/var/log/cluster-messages'
-    zpool: 'trinityx'
-    options: '-o xattr=sa'
+    partitions:
+    - name: '{{ trix_home }}'
+      options: '-o xattr=sa'
+    - name: '{{ trix_shared }}'
+      options: '-o xattr=sa'
+    - name: '{{ trix_ohpc }}'
+      options: '-o xattr=sa'
+    - name: '{{ trix_ha }}'
+      options: '-o xattr=sa'
+    - name: '/var/log/cluster-messages'
+      options: '-o xattr=sa'
     
 
 # -----------------------------------------------------------------------

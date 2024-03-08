@@ -1,0 +1,105 @@
+---
+
+- debug:
+    msg: "{{ shared_fs_zfs_partitions }}"
+
+- name: Check if disk is already mounted
+  shell: '/usr/bin/mount | grep " {{ item.mount }} "'
+  register: shared_fs_zfs_partitions_mounted
+  changed_when: false
+  failed_when: false
+  loop: "{{ shared_fs_zfs_partitions }}"
+
+- name: Check if zfs disk already exists
+  shell: '/usr/sbin/zfs list | grep "{{ item.mount | replace("/","_") }}"'
+  register: shared_fs_zfs_partitions_zfs
+  changed_when: false
+  failed_when: false
+  loop: "{{ shared_fs_zfs_partitions }}"
+
+- name: Ensuring temporary mount location exists
+  file:
+    path: /mnt
+    owner: root
+    group: root
+    state: directory
+
+- block:
+  - name: Create a fake fstab for the next step
+    tempfile:
+      path: /tmp
+      prefix: fstab.
+      state: file
+    register: shared_fs_zfs_partitions_fake_fstab
+
+  # ------------------------------------------
+
+  - name: Creating the ZFS Volume
+    shell: >
+      zfs create {{ item.item['zpool'] }}/{{ item.item['mount'] | replace("/","_") }} 
+      {{ item.item['options']|default('') }} 
+    loop: "{{ shared_fs_zfs_partitions_zfs.results }}"
+    ignore_errors: yes
+    when: 
+      - item.rc != 0
+
+  - name: Setting temporary mountlocation for ZFS Volume
+    shell: >
+      zfs set mountpoint=/mnt/{{ item.item['mount'] | replace("/","_") }}-temp 
+      {{ item.item['zpool'] }}/{{ item.item['mount'] | replace("/","_") }}
+    loop: "{{ shared_fs_zfs_partitions_zfs.results }}"
+    ignore_errors: yes
+    when: 
+      - item.rc != 0
+
+  - name: Temporarily mount the ZFS disks
+    #shell: "zpool import -o cachefile=none {{ item.item['zpool'] }}"
+    shell: >
+      zfs mount {{ item.item['zpool'] }}/{{ item.item['mount'] | replace("/","_") }}
+    loop: "{{ shared_fs_zfs_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+    ignore_errors: true
+
+  - name: Ensuring source location exists
+    file:
+      path: '{{ item.item["mount"] }}'
+      owner: root
+      group: root
+      state: directory
+    loop: "{{ shared_fs_zfs_partitions_mounted.results }}"
+    when: item.rc != 0
+
+  - name: Wait 10s for mounts to settle
+    wait_for:
+      timeout: 10
+
+  - name: Copy contents from local drives to shared resource
+    synchronize:
+      src: '{{ item.item["mount"] }}/'
+      dest: '/mnt/{{ item.item["mount"] | replace("/","_") }}-temp/'
+    loop: "{{ shared_fs_zfs_partitions_mounted.results }}"
+    when: item.rc != 0
+
+  - name: Temporarily umount the disks
+    mount:
+      path: '/mnt/{{ item.item["mount"] | replace("/","_") }}-temp'
+      state: unmounted
+    loop: "{{ shared_fs_zfs_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['zpool'] is not defined
+
+  - name: Setting the mountlocation for ZFS Volume
+    shell: >
+      zfs set mountpoint={{ item.item['mount'] }} {{ item.item['zpool'] }}/{{ item.item['mount'] | replace("/","_") }}
+    loop: "{{ shared_fs_zfs_partitions_zfs.results }}"
+    ignore_errors: yes
+    when: 
+      - item.rc != 0
+
+  when: 
+    - primary | default(False)
+    - shared_fs_zfs_partitions_mounted is defined
+
+

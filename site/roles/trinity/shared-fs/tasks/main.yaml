@@ -8,19 +8,18 @@
     line: "	volume_list = [ ]"
   ignore_errors: true
 
-- name: Create empty DRBD disk list
-  set_fact:
-      drbd_fs_disks: []
+#- name: Create empty DRBD disk list
+#  set_fact:
+#      drbd_fs_disks: []
 
 - name: Build DRBD disk list
   set_fact:
       drbd_fs_disks:
-        '{{ drbd_fs_disks +
+        '{{ drbd_fs_disks|default([]) +
           [{ "name": item.name,
              "disk": item.disk,
              "fstype": item.fstype | default(""),
              "options": item.options | default(""),
-             "mount": item.mount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'drbd'
@@ -31,15 +30,44 @@
 - name: Configure DRBD
   ansible.builtin.include_tasks:
     file: drbd.yaml
-  when: drbd_fs_disks is defined and drbd_fs_disks|length > 0
+  when: drbd_fs_disks is defined and drbd_fs_disks|length > 0 and goo is defined
 
 # more types can be added here
 # ....
 
-- name: Configure Partitions
+- name: Build LVM partition list
+  set_fact:
+      shared_fs_lvm_partitions:
+        '{{ shared_fs_lvm_partitions|default([]) +
+            item.partitions | map("combine",{"vgroup": item.name}) }}'
+  loop: "{{ shared_fs_disks }}"
+  when: 
+    - item.partitions is defined
+    - item.fstype == 'lvm'
+
+- name: Build ZFS partition list
+  set_fact:
+      shared_fs_zfs_partitions:
+        '{{ shared_fs_zfs_partitions|default([]) +
+            item.partitions | map("combine",{"zpool": item.name}) }}'
+  loop: "{{ shared_fs_disks }}"
+  when: 
+    - item.partitions is defined
+    - item.fstype == 'zfs'
+
+- name: Configure LVM Partitions
   ansible.builtin.include_tasks:
-    file: partitions.yaml
-  when: shared_fs_partitions is defined
+    file: partitions_lvm.yaml
+  when: 
+    - shared_fs_lvm_partitions is defined
+    - shared_fs_lvm_partitions | length > 0
+
+- name: Configure ZFS Partitions
+  ansible.builtin.include_tasks:
+    file: partitions_zfs.yaml
+  when: 
+    - shared_fs_zfs_partitions is defined
+    - shared_fs_zfs_partitions | length > 0
 
 # wrapping things up
 
@@ -54,3 +82,4 @@
   - name: Clear possible pacemaker dependency messages
     shell: "pcs resource cleanup"
   when: primary
+
