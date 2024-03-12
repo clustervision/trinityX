@@ -1,13 +1,32 @@
 #!/bin/bash
+
+function add_message() {
+  echo -e "$1\n" | fold -w70 -s >> /tmp/mesg.$$.dat
+}
+
+function show_message() {
+  #echo $1 | fold -w70 -s > /tmp/warn.$$.dat
+  echo "****************************************************************************"
+  echo "*                                                                          *"
+  while read -r LINE
+  do
+    printf '*  %-70s  *\n' "$LINE"
+  done < /tmp/mesg.$$.dat
+  echo "*                                                                          *"
+  echo "****************************************************************************"
+}
+
+
 if [[ `getenforce` == "Disabled" ]]; then
-    echo "SELinux in disabled mode is not supported. Please reboot to run in permissive mode"
+    add_message "SELinux in disabled mode is not supported. Please reboot to run in permissive mode"
     if [[ `grep "^SELINUX=disabled$" /etc/selinux/config` ]]; then
         sed -i 's/SELINUX=disabled/SELINUX=permissive/g' /etc/selinux/config
+        show_message
         exit 1
     fi
 fi
 if [ ! -f TrinityX.pdf ]; then
-  echo "Please run from within the cloned TrinityX folder"
+  add_message "Please run from within the cloned TrinityX folder"
 else
   # To disable SElinux on the controller node
   setenforce 0
@@ -39,19 +58,36 @@ else
   yes y | dnf -y install zfs zfs-dkms
 
   if [ ! -f site/hosts ]; then
-    echo "Please modify the site/hosts.example and save it as site/hosts"  
+    add_message "Please modify the site/hosts.example and save it as site/hosts"  
   else
     if ! grep -q "^$(hostname -s)\s*" site/hosts; then
-      echo "Please note the hostnames are not matching (see site/hosts)."
+      add_message "Please note the hostnames are not matching (see site/hosts)."
     fi
   fi
   if [ ! -f site/group_vars/all.yml ]; then
-     echo "Please modify the site/group_vars/all.yml.example and save it as site/group_vars/all.yml"
+      add_message "Please modify the site/group_vars/all.yml.example and save it as site/group_vars/all.yml"
   else
     if ! grep -q "^trix_ctrl1_hostname:\s*$(hostname -s)\s*$" site/group_vars/all.yml; then
-      echo "Please note the hostnames are not matching (see site/group_vars/all.yml)."
+      add_message "Please note the hostnames are not matching (see site/group_vars/all.yml)."
     fi
   fi
-  echo
-  echo "#### Please configure the network before starting Ansible ####"
+  add_message "Please configure the network before starting Ansible"
+
+  # kernel check. Did we pull in a newer kernel?
+  CURRENT_KERNEL=$(uname -r)
+  LATEST_KERNEL=$(ls -tr /lib/modules/|tail -n1)
+
+  if [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ]; then
+    add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
+#    echo "**************************************************************************"
+#    echo "*                                                                        *"
+#    echo "*  Current running kernel is not the latest installed.                   *"
+#    echo "*  It comes highly recommended to reboot prior continuing installation   *"
+#    echo "*                                                                        *"
+#    echo "**************************************************************************"
+  fi
 fi
+
+show_message
+
+
