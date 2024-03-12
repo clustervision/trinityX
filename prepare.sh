@@ -14,6 +14,7 @@ function show_message() {
   done < /tmp/mesg.$$.dat
   echo "*                                                                          *"
   echo "****************************************************************************"
+  truncate -s0 /tmp/mesg.$$.dat
 }
 
 
@@ -53,6 +54,25 @@ else
 
   ansible-galaxy install OndrejHome.pcs-modules-2
 
+  # kernel check. Did we pull in a newer kernel?
+  CURRENT_KERNEL=$(uname -r)
+  LATEST_KERNEL=$(ls -tr /lib/modules/|tail -n1)
+
+  if [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ]; then
+    add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
+    add_message "after reboot, please re-run prepare.sh to make sure all requirements are met."
+    add_message "If you insist on proceeding though, please confirm with 'go', anything else stops the installation."
+    echo -n "Please let me know your preference (go|<anything else>): "
+    read -t 30 CONFIRM
+    RET=$?
+    if [ "$RET" == "142" ]; then
+      CONFIRM='yes'
+    fi
+    if [ "$CONFIRM" != "yes" ]; then
+       exit 1
+    fi
+  fi
+
   # experimental ZFS support
   yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
   yes y | dnf -y install zfs zfs-dkms
@@ -72,20 +92,6 @@ else
     fi
   fi
   add_message "Please configure the network before starting Ansible"
-
-  # kernel check. Did we pull in a newer kernel?
-  CURRENT_KERNEL=$(uname -r)
-  LATEST_KERNEL=$(ls -tr /lib/modules/|tail -n1)
-
-  if [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ]; then
-    add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
-#    echo "**************************************************************************"
-#    echo "*                                                                        *"
-#    echo "*  Current running kernel is not the latest installed.                   *"
-#    echo "*  It comes highly recommended to reboot prior continuing installation   *"
-#    echo "*                                                                        *"
-#    echo "**************************************************************************"
-  fi
 fi
 
 show_message
