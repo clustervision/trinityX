@@ -46,6 +46,16 @@
       - item.fstype == 'lvm'
     ignore_errors: true
 
+  - name: Ensure shared-fs directory exists
+    file:
+      path: '{{ trix_shared }}/ssl'
+      state: directory
+
+  - name: Add CA certificate to shared storage
+    copy:
+      src: '{{ ssl_cert_path }}/cluster-ca.crt'
+      dest: '{{ trix_shared }}/ssl/cluster-ca.crt'
+
   when: 
     - primary
     - ha
