@@ -469,6 +469,8 @@
       },
       "id": 22,
       "panels": [],
+      "repeat": "host_power",
+      "repeatDirection": "h",
       "title": "Power",
       "type": "row"
     },
@@ -573,6 +575,7 @@
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
+            "axisSoftMin": 0,
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 0,
@@ -593,7 +596,7 @@
             "spanNulls": false,
             "stacking": {
               "group": "A",
-              "mode": "none"
+              "mode": "normal"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -628,11 +631,11 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -643,12 +646,25 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "ipmi_dcmi_power_consumption_watts{hostname=\"$host\"}",
+          "exemplar": false,
+          "expr": "sum(ipmi_dcmi_power_consumption_watts{hostname=\"$host\"}) - sum(nvidia_smi_power_draw_watts{hostname=\"$host\"})",
           "interval": "",
-          "legendFormat": "__auto",
+          "legendFormat": "system",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "expr": "nvidia_smi_power_draw_watts{hostname=\"$host\"}",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "gpu",
+          "range": true,
+          "refId": "B"
         }
       ],
       "title": "Power Consumption watts",
@@ -686,6 +702,9 @@
       },
       "id": 12,
       "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -694,9 +713,7 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
+        "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -706,16 +723,17 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "ipmi_power_watts{hostname=\"$host\"}",
+          "exemplar": false,
+          "expr": "ipmi_dcmi_power_consumption_watts{hostname=\"$host\"}",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{name}}",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
       "title": "Power reading in Watts",
-      "type": "gauge"
+      "type": "stat"
     },
     {
       "collapsed": false,
@@ -836,7 +854,7 @@
         ]
       },
       "gridPos": {
-        "h": 18,
+        "h": 15,
         "w": 8,
         "x": 0,
         "y": 20
@@ -897,7 +915,7 @@
           "useBackend": false
         }
       ],
-      "title": "Temperatures",
+      "title": "IPMI Temperatures",
       "transformations": [
         {
           "id": "merge",
@@ -1037,7 +1055,7 @@
         ]
       },
       "gridPos": {
-        "h": 18,
+        "h": 15,
         "w": 8,
         "x": 8,
         "y": 20
@@ -1098,7 +1116,7 @@
           "useBackend": false
         }
       ],
-      "title": "Fan Speeds",
+      "title": "IPMI Fan Speeds",
       "transformations": [
         {
           "id": "merge",
@@ -1245,7 +1263,7 @@
         ]
       },
       "gridPos": {
-        "h": 18,
+        "h": 15,
         "w": 8,
         "x": 16,
         "y": 20
@@ -1306,7 +1324,7 @@
           "useBackend": false
         }
       ],
-      "title": "Voltages",
+      "title": "IPMI Voltages",
       "transformations": [
         {
           "id": "merge",
@@ -1366,6 +1384,393 @@
         }
       ],
       "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "transparent",
+            "mode": "fixed"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "state"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "0": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "Ok"
+                      },
+                      "1": {
+                        "color": "yellow",
+                        "index": 1,
+                        "text": "Warning"
+                      },
+                      "2": {
+                        "color": "red",
+                        "index": 2,
+                        "text": "Critical"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "temperature"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "min",
+                "value": 30
+              },
+              {
+                "id": "max",
+                "value": 90
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "celsius"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 35
+      },
+      "id": 27,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 1,
+        "showHeader": true
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "nvidia_smi_temperature_gpu{hostname=\"$host\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "temperature",
+          "useBackend": false
+        }
+      ],
+      "title": "GPU Temperatures",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "index",
+            "reduce": {
+              "include": [
+                "uuid"
+              ],
+              "reducer": "uniqueValues"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "name",
+            "binary": {
+              "left": "exporter",
+              "reducer": "sum",
+              "right": "Row"
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Row": true,
+              "Time": true,
+              "Value": false,
+              "__name__": true,
+              "exporter": true,
+              "hostname": true,
+              "instance": true,
+              "job": true,
+              "luna_group": true,
+              "uuid": true
+            },
+            "indexByName": {
+              "Row": 8,
+              "Time": 0,
+              "Value": 10,
+              "__name__": 1,
+              "exporter": 2,
+              "hostname": 3,
+              "instance": 4,
+              "job": 5,
+              "luna_group": 6,
+              "name": 9,
+              "uuid": 7
+            },
+            "renameByName": {
+              "Value": "temperature"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "transparent",
+            "mode": "fixed"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "fan_speed"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 35
+      },
+      "id": 28,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 1,
+        "showHeader": true
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "nvidia_smi_fan_speed_ratio{hostname=\"$host\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "fan_speed_perc",
+          "useBackend": false
+        }
+      ],
+      "title": "GPU Fans",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "index",
+            "reduce": {
+              "include": [
+                "uuid"
+              ],
+              "reducer": "uniqueValues"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "name",
+            "binary": {
+              "left": "exporter",
+              "reducer": "sum",
+              "right": "Row"
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Row": true,
+              "Time": true,
+              "Value": false,
+              "__name__": true,
+              "exporter": true,
+              "hostname": true,
+              "instance": true,
+              "job": true,
+              "luna_group": true,
+              "uuid": true
+            },
+            "indexByName": {
+              "Row": 8,
+              "Time": 0,
+              "Value": 10,
+              "__name__": 1,
+              "exporter": 2,
+              "hostname": 3,
+              "instance": 4,
+              "job": 5,
+              "luna_group": 6,
+              "name": 9,
+              "uuid": 7
+            },
+            "renameByName": {
+              "Value": "fan_speed"
+            }
+          }
+        }
+      ],
+      "type": "table"
     }
   ],
   "refresh": "",
@@ -1380,9 +1785,9 @@
     "list": [
       {
         "current": {
-          "selected": false,
-          "text": "node001.cluster",
-          "value": "node001.cluster"
+          "selected": true,
+          "text": "192.168.130.83",
+          "value": "192.168.130.83"
         },
         "datasource": {
           "type": "prometheus",
@@ -1415,6 +1820,6 @@
   "timezone": "",
   "title": "Thermals and Power",
   "uid": "UKjaSZf7z",
-  "version": 8,
+  "version": 10,
   "weekStart": ""
 }
