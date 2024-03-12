@@ -23,6 +23,29 @@
       src: '/etc/corosync/authkey'
       dest: '{{ trix_shared }}/corosync/'
       mode: '0640'
+
+
+  - name: Ensure shared-fs directory exists
+    file:
+      path: '{{ trix_shared }}/shared-fs'
+      state: directory
+
+  - name: Empty lvm info on shared storage
+    file:
+      path: '{{ trix_shared }}/shared-fs/lvm.devices'
+      state: absent
+    ignore_errors: true
+       
+  - name: Copy lvm info to shared storage
+    shell: >
+      grep {{ item.device }} /etc/lvm/devices/system.devices >>
+      {{ trix_shared }}/shared-fs/lvm.devices
+    loop: "{{ shared_fs_disks }}"
+    when:
+      - shared_fs_disks | length > 0
+      - item.fstype == 'lvm'
+    ignore_errors: true
+
   when: 
     - primary
     - ha

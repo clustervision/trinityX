@@ -72,9 +72,6 @@
     - shared_fs_zfs_partitions | length > 0
 
 
-# copy /etc/lvm/devices/system devices to the other side
-# use mount
-
 # wrapping things up
 
 - block:
@@ -88,4 +85,27 @@
   - name: Clear possible pacemaker dependency messages
     shell: "pcs resource cleanup"
   when: primary
+
+
+# We _HAD_ to make sure we have the block device in lvm config.
+# pvscan adds it, but it does NOT specify the device id which makes
+# vgscan simply ignore it completely. failover will not work then... sigh...
+
+- block:
+  - name: Temporarily mount trinity/shared from controller1
+    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
+
+  - name: Ugly insert lvm disk into lvm config
+    shell: >
+      grep {{ item.device }} /etc/lvm/devices/system.devices ||
+      grep {{ trix_shared }}/shared-fs/lvm.devices >> /etc/lvm/devices/system.devices
+    loop: "{{ shared_fs_disks }}"
+    when:
+      - shared_fs_disks | length > 0
+      - item.fstype == 'lvm'
+    ignore_errors: true
+
+  - name: Umount trinity/shared
+    shell: "umount -l {{ trix_shared }}"
+  when: not primary
 
