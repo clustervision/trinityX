@@ -62,6 +62,7 @@ else
     add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
     add_message "after reboot, please re-run prepare.sh to make sure all requirements are met."
     add_message "If you insist on proceeding though, please confirm with 'go', anything else stops the installation."
+    show_message
     echo -n "Please let me know your preference (go|<anything else>): "
     read -t 30 CONFIRM
     RET=$?
