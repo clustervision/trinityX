@@ -104,10 +104,11 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "slurm_nodes_alloc + slurm_nodes_down + slurm_nodes_drain + slurm_nodes_idle + slurm_nodes_mix + slurm_nodes_comp + slurm_nodes_maint + slurm_nodes_resv",
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -130,7 +131,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -212,7 +213,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "yellow",
+                  "fixedColor": "green",
                   "mode": "fixed"
                 }
               }
@@ -227,7 +228,22 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "green",
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Idle"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#8f93920d",
                   "mode": "fixed"
                 }
               }
@@ -307,6 +323,19 @@
           "intervalFactor": 2,
           "legendFormat": "Total Nodes",
           "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "slurm_nodes_idle",
+          "format": "time_series",
+          "hide": true,
+          "instant": false,
+          "intervalFactor": 2,
+          "legendFormat": "Idle",
+          "refId": "C"
         }
       ],
       "title": "Nodes",
@@ -382,10 +411,11 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "slurm_nodes_alloc",
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -472,10 +502,11 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "slurm_cpus_total",
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -498,7 +529,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -643,7 +674,7 @@
           },
           "editorMode": "code",
           "expr": "slurm_cpus_total",
-          "hide": false,
+          "hide": true,
           "instant": false,
           "legendFormat": "total",
           "range": true,
@@ -653,6 +684,7 @@
       "title": "CPUs Allocated per Partition",
       "transformations": [
         {
+          "disabled": true,
           "id": "configFromData",
           "options": {
             "configRefId": "B",
@@ -723,10 +755,11 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "slurm_cpus_alloc",
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -748,7 +781,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -845,7 +878,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -967,7 +1000,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -983,7 +1016,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": false,
+            "spanNulls": 31000,
             "stacking": {
               "group": "A",
               "mode": "normal"
@@ -1063,6 +1096,7 @@
           "exemplar": false,
           "expr": "slurm_queue_running",
           "format": "time_series",
+          "hide": false,
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "running",
@@ -1136,11 +1170,20 @@
         }
       ],
       "title": "JobQueue",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "mode": "outer"
+          }
+        }
+      ],
       "type": "timeseries"
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "trixprometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1153,7 +1196,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -1236,6 +1279,30 @@
                 }
               }
             ]
+          },
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "{__name__=\"slurm_user_jobs_running\", exporter=\"slurm\", instance=\"demo-controller1.cluster:9101\", job=\"file_sd\", luna_group=\"controller\", user=\"root\"}"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
           }
         ]
       },
@@ -1267,7 +1334,8 @@
           "datasource": {
             "type": "prometheus"
           },
-          "expr": "slurm_user_jobs_running > 10",
+          "editorMode": "code",
+          "expr": "slurm_user_jobs_running",
           "instant": false,
           "interval": "",
           "legendFormat": "{{user}}",
@@ -1292,7 +1360,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -1390,7 +1458,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -1504,7 +1572,7 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "slurm_account_jobs_running{account!~'none'} != 0",
+          "expr": "slurm_account_jobs_running",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1531,7 +1599,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -1550,7 +1618,7 @@
             "spanNulls": false,
             "stacking": {
               "group": "A",
-              "mode": "none"
+              "mode": "normal"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -1645,8 +1713,8 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "slurm_account_jobs_pending{account!~'none'} != 0",
-          "format": "table",
+          "expr": "slurm_account_jobs_pending",
+          "format": "time_series",
           "instant": false,
           "interval": "",
           "legendFormat": "{{account}}",
@@ -1694,8 +1762,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1771,8 +1838,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1834,8 +1900,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1951,8 +2016,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2059,8 +2123,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2169,8 +2232,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2239,8 +2301,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               },
@@ -2354,8 +2415,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2457,8 +2517,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2526,7 +2585,7 @@
       "type": "row"
     }
   ],
-  "refresh": "auto",
+  "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
@@ -2536,7 +2595,7 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {
@@ -2567,6 +2626,6 @@
   "timezone": "",
   "title": "Slurm Overview",
   "uid": "trixslurm",
-  "version": 1,
+  "version": 5,
   "weekStart": ""
 }
