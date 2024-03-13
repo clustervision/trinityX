@@ -23,7 +23,7 @@ for DISK in $LVM_DISKS; do
 	esac
 	if [ "$REAL_DISK" ]; then
 		echo "------------ $DISK -- $REAL_DISK -------------"
-		grep $REAL_DISK /tmp/dev-links.dat | awk -F'=' '{ print $1 }'
+		grep $REAL_DISK /tmp/dev-links.dat | awk -F'=' '{ print $1 }' | grep -v '/dev/drbd'
 		echo
 	fi
 
