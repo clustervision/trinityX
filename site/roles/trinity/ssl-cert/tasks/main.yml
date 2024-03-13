@@ -87,33 +87,41 @@
     args:
       creates: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
 
-  - block:
-    - name: Create a certificate request for floating H/A controller
-      command: >
-        openssl req -new -nodes -sha512
-          -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ trix_ctrl_hostname }}.{{ ansible_domain }}'
-          -out '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.csr'
-          -keyout '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.key'
-          -config '{{ ssl_cert_path }}/san.conf'
-      args:
-        creates: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.csr'
-
-    - name: Sign the certificate requests
-      command: >
-        openssl x509 -req
-          -days {{ ssl_cert_days }}
-          -in '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.csr'
-          -CA '{{ ssl_cert_path }}/cluster-ca.crt'
-          -CAkey '{{ ssl_cert_path }}/cluster-ca.key'
-          -out '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.crt'
-          -extensions req_ext
-          -extfile '{{ ssl_cert_path }}/san.conf'
-          -set_serial {{ ansible_date_time.epoch }}
-      args:
-        creates: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.crt'
+  - name: Create symlink for floating H/A controller
+    file:
+      src: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
+      dest: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.crt'
+      state: link
     when: 
      - ha | default(False)
-     - primary | default(False)
+
+#  - block:
+#    - name: Create a certificate request for floating H/A controller
+#      command: >
+#        openssl req -new -nodes -sha512
+#          -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ trix_ctrl_hostname }}.{{ ansible_domain }}'
+#          -out '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.csr'
+#          -keyout '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.key'
+#          -config '{{ ssl_cert_path }}/san.conf'
+#      args:
+#        creates: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.csr'
+#
+#    - name: Sign the certificate requests
+#      command: >
+#        openssl x509 -req
+#          -days {{ ssl_cert_days }}
+#          -in '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.csr'
+#          -CA '{{ ssl_cert_path }}/cluster-ca.crt'
+#          -CAkey '{{ ssl_cert_path }}/cluster-ca.key'
+#          -out '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.crt'
+#          -extensions req_ext
+#          -extfile '{{ ssl_cert_path }}/san.conf'
+#          -set_serial {{ ansible_date_time.epoch }}
+#      args:
+#        creates: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{{ ansible_domain }}.crt'
+#    when: 
+#     - ha | default(False)
+#     - primary | default(False)
 
   - name: Restrict access permissions to the private keys
     file:
