@@ -33,6 +33,7 @@
   when: 
     - drbd_fs_disks is defined
     - drbd_fs_disks|length > 0
+    - goo is defined
 
 # more types can be added here
 # ....
@@ -56,6 +57,7 @@
   when: 
     - item.partitions is defined
     - item.fstype == 'zfs'
+    - goo is defined
 
 - name: Configure LVM Partitions
   ansible.builtin.include_tasks:
@@ -70,6 +72,7 @@
   when: 
     - shared_fs_zfs_partitions is defined
     - shared_fs_zfs_partitions | length > 0
+    - goo is defined
 
 
 # wrapping things up
@@ -110,6 +113,15 @@
 #  when: not primary
 
 - block:
+  - name: Render lvm fix script
+    copy:
+      src: 'lvm-fixes.sh'
+      dest: '/tmp/lvm-fixes.sh'
+      owner: root
+      group: root
+      mode: 0750
+      force: yes
+
   - name: Generate lvm filter file
     template:
       src: 'lvm_filter.dat.j2'
@@ -119,6 +131,9 @@
     template:
       src: 'lvm_volumes.dat.j2'
       dest: '/tmp/lvm_volumes.dat'
+
+  - name: Run lvm fix script
+    shell: '/tmp/lvm-fixes.sh'
   when: 
     - shared_fs_disks | length > 0
 
