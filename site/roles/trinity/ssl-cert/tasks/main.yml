@@ -66,26 +66,26 @@
   - name: Create a certificate request for each controller
     command: >
       openssl req -new -nodes -sha512
-        -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ hostvars["fqdn"] }}'
-        -out '{{ ssl_cert_path }}/{{ hostvars["fqdn"] }}.csr'
-        -keyout '{{ ssl_cert_path }}/{{ hostvars["fqdn"] }}.key'
+        -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ ansible_fqdn }}'
+        -out '{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr'
+        -keyout '{{ ssl_cert_path }}/{{ ansible_fqdn }}.key'
         -config '{{ ssl_cert_path }}/san.conf'
     args:
-      creates: '{{ ssl_cert_path }}/{{ hostvars["fqdn"] }}.csr'
+      creates: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr'
 
   - name: Sign the certificate requests
     command: >
       openssl x509 -req
         -days {{ ssl_cert_days }}
-        -in '{{ ssl_cert_path }}/{{ hostvars["fqdn"] }}.csr'
+        -in '{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr'
         -CA '{{ ssl_cert_path }}/cluster-ca.crt'
         -CAkey '{{ ssl_cert_path }}/cluster-ca.key'
-        -out '{{ ssl_cert_path }}/{{ hostvars["fqdn"] }}.crt'
+        -out '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
         -extensions req_ext
         -extfile '{{ ssl_cert_path }}/san.conf'
         -set_serial {{ ansible_date_time.epoch }}
     args:
-      creates: '{{ ssl_cert_path }}/{{ hostvars["fqdn"] }}.crt'
+      creates: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
 
   - name: Restrict access permissions to the private keys
     file:
