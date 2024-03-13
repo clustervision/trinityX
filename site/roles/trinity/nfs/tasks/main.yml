@@ -15,13 +15,11 @@
   file:
     path: '{{ nfs_exports_path }}'
     state: directory
-  when: primary | default(True)
 
 - name: Setup NFS exports in {{ nfs_exports_path }}
   template:
     src: '{{ "HA_exports.j2" if ha == true else "nonHA_exports.j2" }}'
     dest: '{{ nfs_exports_path }}/trinity.exports'
-  when: primary | default(True)
 
 - name: Add link to the exports file in /etc/exports.d
   file:
