@@ -56,22 +56,31 @@ DEVICE_PRESENT=$(grep '^\s*use_devicesfile\s*=' $LVM_CONF)
 FILTER_PRESENT=$(grep '^\s*filter\s*=' $LVM_CONF)
 VOLUMES_PRESENT=$(grep '^\s*volume_list\s*=' $LVM_CONF)
 
-if [ "$DEVICE_PRESENT" ]; then
-	sed -i "s%^\(\s*use_devicesfile\s*=.*\)$%# TRINITYX \1\n\tuse_devicesfile = 0%g" $LVM_CONF
-else
-	echo -e "\tuse_devicesfile = 0" > /tmp/__lvm_device.dat
-	sed -i '/^devices {/r /tmp/__lvm_device.dat' $LVM_CONF
-fi
-if [ "$FILTER_PRESENT" ]; then
-	sed -i "s%^\(\s*filter\s*=.*\)$%# TRINITYX \1\n\tfilter = $FILTER%g" $LVM_CONF
-else
-	echo -e "\tfilter = $FILTER" > /tmp/__lvm_filter.dat
-	sed -i '/^devices {/r /tmp/__lvm_filter.dat' $LVM_CONF
-fi
-if [ "$VOLUMES_PRESENT" ]; then
-	sed -i "s%^\(\s*volume_list\s*=.*\)%# TRINITYX \1\n\tvolume_list = $VOLUMES%g" $LVM_CONF
-else
-	echo -e "\tvolume_list = $VOLUMES" > /tmp/__lvm_volumes.dat
-	sed -i '/^activation {/r /tmp/__lvm_volumes.dat' $LVM_CONF
-fi
+OK_DEVICE_PRESENT=$(grep '^\s*use_devicesfile\s*=\s*0' $LVM_CONF)
+OK_FILTER_PRESENT=$(grep '^\s*filter\s*=\s*' $LVM_CONF | grep -F "$FILTER")
+OK_VOLUMES_PRESENT=$(grep '^\s*volume_list\s*=\s*' $LVM_CONF | grep -F "$VOLUMES")
 
+if [ ! "$OK_DEVICE_PRESENT" ]; then
+	if [ "$DEVICE_PRESENT" ]; then
+		sed -i "s%^\(\s*use_devicesfile\s*=.*\)$%# TRINITYX \1\n\tuse_devicesfile = 0%g" $LVM_CONF
+	else
+		echo -e "\tuse_devicesfile = 0" > /tmp/__lvm_device.dat
+		sed -i '/^devices {/r /tmp/__lvm_device.dat' $LVM_CONF
+	fi
+fi
+if [ ! "$OK_FILTER_PRESENT" ]; then
+	if [ "$FILTER_PRESENT" ]; then
+		sed -i "s%^\(\s*filter\s*=.*\)$%# TRINITYX \1\n\tfilter = $FILTER%g" $LVM_CONF
+	else
+		echo -e "\tfilter = $FILTER" > /tmp/__lvm_filter.dat
+		sed -i '/^devices {/r /tmp/__lvm_filter.dat' $LVM_CONF
+	fi
+fi
+if [ ! "$OK_VOLUMES_PRESENT" ]; then
+	if [ "$VOLUMES_PRESENT" ]; then
+		sed -i "s%^\(\s*volume_list\s*=.*\)%# TRINITYX \1\n\tvolume_list = $VOLUMES%g" $LVM_CONF
+	else
+		echo -e "\tvolume_list = $VOLUMES" > /tmp/__lvm_volumes.dat
+		sed -i '/^activation {/r /tmp/__lvm_volumes.dat' $LVM_CONF
+	fi
+fi
