@@ -72,21 +72,6 @@
     - shared_fs_zfs_partitions | length > 0
 
 
-# wrapping things up
-
-- block:
-  - name: Clear possible pacemaker dependency messages
-    shell: "pcs resource cleanup"
-
-  - name: Wait 10s for cleanup to take effect
-    wait_for:
-      timeout: 10
-
-  - name: Clear possible pacemaker dependency messages
-    shell: "pcs resource cleanup"
-  when: primary
-
-
 # We had to make a lot of magic to make LVM work with drbd or das.
 # We ditch the use_devices parameter, but this _might_ clash with the initrd
 # if we don't vgscan simply ignore lvms completely and failover will not work... sigh...
@@ -116,4 +101,18 @@
   when: 
     - shared_fs_disks | length > 0
 
+
+# wrapping things up
+
+- block:
+  - name: Clear possible pacemaker dependency messages
+    shell: "pcs resource cleanup"
+
+  - name: Wait 10s for cleanup to take effect
+    wait_for:
+      timeout: 10
+
+  - name: Clear possible pacemaker dependency messages
+    shell: "pcs resource cleanup"
+  when: primary
 
