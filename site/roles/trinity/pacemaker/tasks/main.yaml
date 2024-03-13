@@ -17,7 +17,8 @@
 
 - name: Verify if corosync key exists
   stat:
-    path: "{{ trix_shared }}/corosync/authkey"
+    #path: "{{ trix_ha }}/sync/corosync/authkey"
+    path: /etc/corosync/authkey
   register: stat_corosync_key
 
 - name: Create corosync key
@@ -29,17 +30,17 @@
     - primary
 
 - block:
-  - name: Temporarily mount trinity/shared from controller1
-    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
+  - name: Temporarily mount trinity/ha from controller1
+    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_ha }} {{ trix_ha }}"
 
-  - name: Copy corosync key from shared storage
+  - name: Copy corosync key from ha storage
     copy:
-      src: '{{ trix_shared }}/corosync/authkey'
+      src: '{{ trix_ha }}/sync/corosync/authkey'
       dest: '/etc/corosync/'
       mode: '0640'
 
-  - name: Umount trinity/shared
-    shell: "umount -l {{ trix_shared }}"
+  - name: Umount trinity/ha
+    shell: "umount -l {{ trix_ha }}"
   when: 
     - not primary
 

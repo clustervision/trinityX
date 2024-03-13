@@ -15,31 +15,31 @@
 - block:
   - name: Ensure corosync shared directory exists
     file:
-      path: '{{ trix_shared }}/corosync'
+      path: '{{ trix_ha }}/sync/corosync'
       state: directory
 
   - name: Copy corosync key to shared storage
     copy:
       src: '/etc/corosync/authkey'
-      dest: '{{ trix_shared }}/corosync/'
+      dest: '{{ trix_ha }}/sync/corosync/'
       mode: '0640'
 
 
   - name: Ensure shared-fs directory exists
     file:
-      path: '{{ trix_shared }}/shared-fs'
+      path: '{{ trix_ha }}/sync/shared-fs'
       state: directory
 
   - name: Empty lvm info on shared storage
     file:
-      path: '{{ trix_shared }}/shared-fs/lvm.devices'
+      path: '{{ trix_ha }}/sync/shared-fs/lvm.devices'
       state: absent
     ignore_errors: true
        
   - name: Copy lvm info to shared storage
     shell: >
       grep '{{ item.device }}' /etc/lvm/devices/system.devices >>
-      {{ trix_shared }}/shared-fs/lvm.devices
+      {{ trix_ha }}/sync/shared-fs/lvm.devices
     loop: "{{ shared_fs_disks }}"
     when:
       - shared_fs_disks | length > 0
@@ -48,13 +48,16 @@
 
   - name: Ensure shared-fs directory exists
     file:
-      path: '{{ trix_shared }}/ssl'
+      path: '{{ trix_ha }}/sync/ssl'
       state: directory
 
   - name: Add CA certificate to shared storage
     copy:
-      src: '{{ ssl_cert_path }}/cluster-ca.crt'
-      dest: '{{ trix_shared }}/ssl/cluster-ca.crt'
+      src: '{{ ssl_cert_path }}/{{ item }}'
+      dest: '{{ trix_ha }}/sync/ssl/{{ item }}'
+    with_items:
+      - cluster-ca.crt
+      - cluster-ca.key
 
   when: 
     - primary

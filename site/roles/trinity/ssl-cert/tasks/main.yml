@@ -17,74 +17,96 @@
   when: on_controller|default(False)
 
 - block:
+  - name: Ensure {{ ssl_cert_path }} exists
+    file:
+      path: '{{ ssl_cert_path }}'
+      state: directory
+      setype: cert_t
+      seuser: system_u
 
-    - name: Ensure {{ ssl_cert_path }} exists
-      file:
-        path: '{{ ssl_cert_path }}'
-        state: directory
-        setype: cert_t
-        seuser: system_u
+  - name: Generate a certificate authority for the cluster
+    command: >
+      openssl req -newkey rsa:4096
+        -nodes -sha512 -x509
+        -days {{ ssl_cert_days }}
+        -subj "/C=NL/L=Amsterdam/O=ClusterVision Solutions BV./CN=clustervision.com"
+        -out '{{ ssl_cert_path }}/cluster-ca.crt'
+        -keyout '{{ ssl_cert_path }}/cluster-ca.key'
+    args:
+      creates: '{{ ssl_cert_path }}/cluster-ca.crt'
+  when: 
+    - primary|default(True)
+    - on_controller|default(False)
 
-    - name: Generate a certificate authority for the cluster
-      command: >
-        openssl req -newkey rsa:4096
-          -nodes -sha512 -x509
-          -days {{ ssl_cert_days }}
-          -subj "/C=NL/L=Amsterdam/O=ClusterVision Solutions BV./CN=clustervision.com"
-          -out '{{ ssl_cert_path }}/cluster-ca.crt'
-          -keyout '{{ ssl_cert_path }}/cluster-ca.key'
-      args:
-        creates: '{{ ssl_cert_path }}/cluster-ca.crt'
+- block:
+  - name: Temporarily mount trinity/shared from controller1
+    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_ha }} {{ trix_ha }}"
 
-    - name: Render subjectAltName configuration
-      template:
-        src: 'san.conf.j2'
-        dest: '{{ ssl_cert_path }}/san.conf'
-        mode: '0660'
+  - name: Copy cluster CA certificate from shared storage
+    copy:
+      src: '{{ trix_ha }}/sync/ssl/{{ item }}'
+      dest: '/etc/openldap/certs/'
+    with_items:
+      - cluster-ca.crt
+      - cluster-ca.key
 
-    - name: Create a certificate request for each controller
-      command: >
-        openssl req -new -nodes -sha512
-          -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ hostvars[item]["ansible_fqdn"] }}'
-          -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
-          -keyout '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.key'
-          -config '{{ ssl_cert_path }}/san.conf'
-      args:
-        creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
-      with_items: '{{ groups["controllers"] }}'
+  - name: Umount trinity/shared
+    shell: "umount -l {{ trix_ha }}"
+  when: 
+    - not primary
+    - on_controller|default(False)
 
-    - name: Sign the certificate requests
-      command: >
-        openssl x509 -req
-          -days {{ ssl_cert_days }}
-          -in '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
-          -CA '{{ ssl_cert_path }}/cluster-ca.crt'
-          -CAkey '{{ ssl_cert_path }}/cluster-ca.key'
-          -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
-          -extensions req_ext
-          -extfile '{{ ssl_cert_path }}/san.conf'
-          -set_serial {{ ansible_date_time.epoch }}
-      args:
-        creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
-      with_items: '{{ groups["controllers"] }}'
+- block:
+  - name: Render subjectAltName configuration
+    template:
+      src: 'san.conf.j2'
+      dest: '{{ ssl_cert_path }}/san.conf'
+      mode: '0660'
 
-    - name: Restrict access permissions to the private keys
-      file:
-        path: '{{ item }}'
-        mode: 0640
-      with_fileglob:
-        - '{{ ssl_cert_path }}/*.key'
+  - name: Create a certificate request for each controller
+    command: >
+      openssl req -new -nodes -sha512
+        -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ hostvars[item]["ansible_fqdn"] }}'
+        -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
+        -keyout '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.key'
+        -config '{{ ssl_cert_path }}/san.conf'
+    args:
+      creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
+    #with_items: '{{ groups["controllers"] }}'
+    with_items: '{{ all_ctrl_hostname }}'
 
-    - name: Update ownership of the certificates
-      file:
-        path: '{{ ssl_cert_path }}'
-        owner: '{{ ssl_cert_owner }}'
-        group: '{{ ssl_cert_group }}'
-        setype: cert_t
-        seuser: system_u
-        recurse: 'yes'
+  - name: Sign the certificate requests
+    command: >
+      openssl x509 -req
+        -days {{ ssl_cert_days }}
+        -in '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
+        -CA '{{ ssl_cert_path }}/cluster-ca.crt'
+        -CAkey '{{ ssl_cert_path }}/cluster-ca.key'
+        -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
+        -extensions req_ext
+        -extfile '{{ ssl_cert_path }}/san.conf'
+        -set_serial {{ ansible_date_time.epoch }}
+    args:
+      creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
+    #with_items: '{{ groups["controllers"] }}'
+    with_items: '{{ all_ctrl_hostname }}'
 
-  when: primary|default(True) and on_controller|default(False)
+  - name: Restrict access permissions to the private keys
+    file:
+      path: '{{ item }}'
+      mode: 0640
+    with_fileglob:
+      - '{{ ssl_cert_path }}/*.key'
+
+  - name: Update ownership of the certificates
+    file:
+      path: '{{ ssl_cert_path }}'
+      owner: '{{ ssl_cert_owner }}'
+      group: '{{ ssl_cert_group }}'
+      setype: cert_t
+      seuser: system_u
+      recurse: 'yes'
+  when: on_controller|default(False)
 
 - name: Add CA certificate to default trust store
   copy:

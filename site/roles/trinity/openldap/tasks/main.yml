@@ -110,31 +110,17 @@
   when: openldap_server_conf_path|string not in '/etc/openldap/slapd.d'
         and default_openldap_path.stat.isdir
 
+
 - name: Add cluster CA certificate to /etc/openldap/certs
   copy:
     src: '{{ openldap_tls_cacrt }}'
     dest: '/etc/openldap/certs/'
-  when: 
-    - primary | default(True)
-
-- block:
-  - name: Temporarily mount trinity/shared from controller1
-    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
-
-  - name: Copy cluster CA certificate from shared storage
-    copy:
-      src: '{{ trix_shared }}/ssl/cluster-ca.crt'
-      dest: '/etc/openldap/certs/'
-
-  - name: Umount trinity/shared
-    shell: "umount -l {{ trix_shared }}"
-  when: 
-    - not primary
 
 - name: Ensure OpenLDAP has access to the ssl certificates
   user:
     name: '{{ openldap_default_user }}'
     groups: '{{ ssl_cert_group }}'
+
 
 - block:
   - name: Ensure OpenLDAP data directory exists
