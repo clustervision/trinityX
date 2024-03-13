@@ -42,7 +42,7 @@
   - name: Temporarily mount trinity/shared from controller1
     shell: "mount {{ trix_ctrl1_ip }}:{{ trix_ha }} {{ trix_ha }}"
 
-  - name: Copy cluster CA certificate from shared storage
+  - name: Copy cluster CA certificate from ha storage
     copy:
       src: '{{ trix_ha }}/sync/ssl/{{ item }}'
       dest: '/etc/openldap/certs/'
@@ -66,30 +66,26 @@
   - name: Create a certificate request for each controller
     command: >
       openssl req -new -nodes -sha512
-        -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ hostvars[item]["ansible_fqdn"] }}'
-        -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
-        -keyout '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.key'
+        -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ hostvars["ansible_fqdn"] }}'
+        -out '{{ ssl_cert_path }}/{{ hostvars["ansible_fqdn"] }}.csr'
+        -keyout '{{ ssl_cert_path }}/{{ hostvars["ansible_fqdn"] }}.key'
         -config '{{ ssl_cert_path }}/san.conf'
     args:
-      creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
-    #with_items: '{{ groups["controllers"] }}'
-    with_items: '{{ all_ctrl_hostname }}'
+      creates: '{{ ssl_cert_path }}/{{ hostvars["ansible_fqdn"] }}.csr'
 
   - name: Sign the certificate requests
     command: >
       openssl x509 -req
         -days {{ ssl_cert_days }}
-        -in '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.csr'
+        -in '{{ ssl_cert_path }}/{{ hostvars["ansible_fqdn"] }}.csr'
         -CA '{{ ssl_cert_path }}/cluster-ca.crt'
         -CAkey '{{ ssl_cert_path }}/cluster-ca.key'
-        -out '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
+        -out '{{ ssl_cert_path }}/{{ hostvars["ansible_fqdn"] }}.crt'
         -extensions req_ext
         -extfile '{{ ssl_cert_path }}/san.conf'
         -set_serial {{ ansible_date_time.epoch }}
     args:
-      creates: '{{ ssl_cert_path }}/{{ hostvars[item]["ansible_fqdn"] }}.crt'
-    #with_items: '{{ groups["controllers"] }}'
-    with_items: '{{ all_ctrl_hostname }}'
+      creates: '{{ ssl_cert_path }}/{{ hostvars["ansible_fqdn"] }}.crt'
 
   - name: Restrict access permissions to the private keys
     file:
