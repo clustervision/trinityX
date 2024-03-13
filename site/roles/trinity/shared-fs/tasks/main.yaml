@@ -33,7 +33,6 @@
   when: 
     - drbd_fs_disks is defined
     - drbd_fs_disks|length > 0
-    - goo is defined
 
 # more types can be added here
 # ....
@@ -57,7 +56,6 @@
   when: 
     - item.partitions is defined
     - item.fstype == 'zfs'
-    - goo is defined
 
 - name: Configure LVM Partitions
   ansible.builtin.include_tasks:
@@ -72,7 +70,6 @@
   when: 
     - shared_fs_zfs_partitions is defined
     - shared_fs_zfs_partitions | length > 0
-    - goo is defined
 
 
 # wrapping things up
@@ -90,27 +87,9 @@
   when: primary
 
 
-# We _HAD_ to make sure we have the block device in lvm config.
-# pvscan adds it, but it does NOT specify the device id which makes
-# vgscan simply ignore it completely. failover will not work then... sigh...
-
-#- block:
-#  - name: Temporarily mount trinity/shared from controller1
-#    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
-#
-#  - name: Ugly insert lvm disk into lvm config
-#    shell: >
-#      grep '{{ item.device }}' /etc/lvm/devices/system.devices ||
-#      grep '{{ item.device }}' {{ trix_shared }}/shared-fs/lvm.devices >> /etc/lvm/devices/system.devices
-#    loop: "{{ shared_fs_disks }}"
-#    when:
-#      - shared_fs_disks | length > 0
-#      - item.fstype == 'lvm'
-#    ignore_errors: true
-#
-#  - name: Umount trinity/shared
-#    shell: "umount -l {{ trix_shared }}"
-#  when: not primary
+# We had to make a lot of magic to make LVM work with drbd or das.
+# We ditch the use_devices parameter, but this _might_ clash with the initrd
+# if we don't vgscan simply ignore lvms completely and failover will not work... sigh...
 
 - block:
   - name: Render lvm fix script
