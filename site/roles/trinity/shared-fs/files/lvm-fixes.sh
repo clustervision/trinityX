@@ -28,6 +28,10 @@ for DISK in $LVM_DISKS; do
 			echo $F
 			FILTER="$FILTER \"r|$F|\","
 		done
+		if [ "$DISK" != "$REAL_DISK" ]; then
+			echo $DISK
+			FILTER="$FILTER \"r|$REAL_DISK|\","
+		fi
 		echo
 	fi
 done
@@ -53,19 +57,19 @@ FILTER_PRESENT=$(grep '^\s*filter\s*=' $LVM_CONF)
 VOLUMES_PRESENT=$(grep '^\s*volume_list\s*=' $LVM_CONF)
 
 if [ "$DEVICE_PRESENT" ]; then
-	sed -i "s%^\(\s\+use_devicesfile\s\+?=.*\)$%# TRINITYX \1\n\tuse_devicesfile = 0%g" $LVM_CONF
+	sed -i "s%^\(\s*use_devicesfile\s*=.*\)$%# TRINITYX \1\n\tuse_devicesfile = 0%g" $LVM_CONF
 else
 	echo -e "\tuse_devicesfile = 0" > /tmp/__lvm_device.dat
 	sed -i '/^devices {/r /tmp/__lvm_device.dat' $LVM_CONF
 fi
 if [ "$FILTER_PRESENT" ]; then
-	sed -i "s%^\(\s\+filter\s\+?=.*\)$%# TRINITYX \1\n\tfilter = $FILTER%g" $LVM_CONF
+	sed -i "s%^\(\s*filter\s*=.*\)$%# TRINITYX \1\n\tfilter = $FILTER%g" $LVM_CONF
 else
 	echo -e "\tfilter = $FILTER" > /tmp/__lvm_filter.dat
 	sed -i '/^devices {/r /tmp/__lvm_filter.dat' $LVM_CONF
 fi
 if [ "$VOLUMES_PRESENT" ]; then
-	sed -i "s%^\(\s\+volume_list\s\+=.*\)%# TRINITYX \1\n\tvolume_list = $VOLUMES%g" $LVM_CONF
+	sed -i "s%^\(\s*volume_list\s*=.*\)%# TRINITYX \1\n\tvolume_list = $VOLUMES%g" $LVM_CONF
 else
 	echo -e "\tvolume_list = $VOLUMES" > /tmp/__lvm_volumes.dat
 	sed -i '/^activation {/r /tmp/__lvm_volumes.dat' $LVM_CONF
