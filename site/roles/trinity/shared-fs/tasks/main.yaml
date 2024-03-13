@@ -91,21 +91,35 @@
 # pvscan adds it, but it does NOT specify the device id which makes
 # vgscan simply ignore it completely. failover will not work then... sigh...
 
+#- block:
+#  - name: Temporarily mount trinity/shared from controller1
+#    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
+#
+#  - name: Ugly insert lvm disk into lvm config
+#    shell: >
+#      grep '{{ item.device }}' /etc/lvm/devices/system.devices ||
+#      grep '{{ item.device }}' {{ trix_shared }}/shared-fs/lvm.devices >> /etc/lvm/devices/system.devices
+#    loop: "{{ shared_fs_disks }}"
+#    when:
+#      - shared_fs_disks | length > 0
+#      - item.fstype == 'lvm'
+#    ignore_errors: true
+#
+#  - name: Umount trinity/shared
+#    shell: "umount -l {{ trix_shared }}"
+#  when: not primary
+
 - block:
-  - name: Temporarily mount trinity/shared from controller1
-    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
+  - name: Generate lvm filter file
+    template:
+      src: 'lvm_filter.dat.j2'
+      dest: '/tmp/lvm_filter.dat'
 
-  - name: Ugly insert lvm disk into lvm config
-    shell: >
-      grep '{{ item.device }}' /etc/lvm/devices/system.devices ||
-      grep '{{ item.device }}' {{ trix_shared }}/shared-fs/lvm.devices >> /etc/lvm/devices/system.devices
-    loop: "{{ shared_fs_disks }}"
-    when:
-      - shared_fs_disks | length > 0
-      - item.fstype == 'lvm'
-    ignore_errors: true
+  - name: Generate lvm volume file
+    template:
+      src: 'lvm_volumes.dat.j2'
+      dest: '/tmp/lvm_volumes.dat'
+  when: 
+    - shared_fs_disks | length > 0
 
-  - name: Umount trinity/shared
-    shell: "umount -l {{ trix_shared }}"
-  when: not primary
 
