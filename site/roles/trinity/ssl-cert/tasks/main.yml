@@ -89,9 +89,12 @@
 
   - name: Create symlink for floating H/A controller
     file:
-      src: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
-      dest: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.crt'
+      src: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.{{ item }}'
+      dest: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname }}.{ item }}'
       state: link
+    with_items:
+      - crt
+      - key
     when: 
      - ha | default(False)
 
