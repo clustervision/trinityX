@@ -64,7 +64,7 @@ else
     add_message "If you insist on proceeding though, please confirm with 'go', anything else stops the installation."
     show_message
     echo -n "Please let me know your preference (go|<anything else>): "
-    read -t 30 CONFIRM
+    read -t 60 CONFIRM
     RET=$?
     if [ "$RET" == "142" ]; then
       CONFIRM='yes'
