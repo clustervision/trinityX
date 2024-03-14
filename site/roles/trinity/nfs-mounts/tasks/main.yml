@@ -28,6 +28,39 @@
     state: directory
   with_items: '{{ nfs_mounts }}'
 
+- block:
+  - name: Render nfs_mounts based on shared_fs_disks info
+    set_fact:
+      nfs_mounts_: "{{ nfs_mounts_|d([]) + [item|combine({'remote': _remote|from_yaml})] }}"
+    loop: "{{ nfs_mounts }}"
+    vars:
+      _remote: |
+        {% if item.path in shared_fs_disks | map(attribute="name") %}
+          {% for disk in shared_fs_disks %}
+            {% if disk.name == item.path %}
+              {% if disk["type"] == "nfs" %}
+                {{ disk["remote"] }}
+              {% else %}
+                {{ item.remote }}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          {{ item.remote }}
+        {% endif %}
+
+  - name: Overwrite nfs_mounts fact
+    set_fact:
+      new_nfs_mounts: "{{ nfs_mounts_ }}"
+  when: 
+    - shared_fs_disks is defined
+    - shared_fs_disks | length > 0
+
+- name: Overwrite nfs_mounts fact
+  set_fact:
+    new_nfs_mounts: "{{ nfs_mounts }}"
+  when: nfs_mounts_ is not defined
+
 - name: Setup NFS mounts
   mount:
     path: '{{ item.path }}'
@@ -35,7 +68,7 @@
     fstype: 'nfs'
     opts: '{{ item.options }},proto={{ "rdma" if nfs_enable_rdma else "tcp" }}'
     state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
-  with_items: '{{ nfs_mounts }}'
+  with_items: '{{ new_nfs_mounts }}'
   when: ansible_facts['os_family'] == "RedHat"
 
 - name: Setup NFS mounts
@@ -45,5 +78,5 @@
     fstype: 'nfs'
     opts: '{{ item.options }}'
     state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
-  with_items: '{{ nfs_mounts }}'
+  with_items: '{{ new_nfs_mounts }}'
   when: ansible_facts['os_family'] == "Debian"
