@@ -177,14 +177,13 @@
   # Pace maker items
   #--------------------------------------------
 
+  # we say no to udev as iscsiadm creates a slightly different name
   - name: Add pacemaker resource iSCSI
     pcs_resource:
       name: 'iSCSI-{{ item.name | replace("/","_") }}'
       resource_type: ocf:heartbeat:iscsi
-      options: 'portals={{ item.portal }} iqn={{ item.target }} op monitor interval=59s 
-          role=Promoted monitor interval=67s 
-          role=Unpromoted promotable promoted-max=1 promoted-node-max=1 
-          clone-max={{ all_ctrl_hostname|length }} clone-node-max=1 notify=true'
+      options: 'portal={{ item.portal }} target={{ item.target }} try_recovery=true udev=no
+          op monitor interval=59s '
       state: present
     loop: "{{ iscsi_fs_disks }}"
 
@@ -306,13 +305,13 @@
   - name: Add pacemaker order constraint - Trinity then Trinity-iscsi
     pcs_constraint_order:
       resource1: Trinity
-      resource2: 'iSCSI-{{ item.name | replace("/","_") }}-clone'
+      resource2: 'iSCSI-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ iscsi_fs_disks }}"
 
   - name: Add pacemaker order constraint - Trinity-iscsi then Trinity-lvm
     pcs_constraint_order:
-      resource1: 'iSCSI-{{ item.name | replace("/","_") }}-clone'
+      resource1: 'iSCSI-{{ item.name | replace("/","_") }}'
       resource2: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ iscsi_fs_disks }}"
@@ -320,7 +319,7 @@
 
   - name: Add pacemaker order constraint - Trinity-iscsi then Trinity-zfs
     pcs_constraint_order:
-      resource1: 'iSCSI-{{ item.name | replace("/","_") }}-clone'
+      resource1: 'iSCSI-{{ item.name | replace("/","_") }}'
       resource2: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ iscsi_fs_disks }}"
@@ -328,7 +327,7 @@
 
   - name: Add pacemaker order constraint - Trinity-iscsi then Trinity-fs
     pcs_constraint_order:
-      resource1: 'iSCSI-{{ item.name | replace("/","_") }}-clone'
+      resource1: 'iSCSI-{{ item.name | replace("/","_") }}'
       resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ iscsi_fs_disks }}"
@@ -360,7 +359,7 @@
 
   - name: Add pacemaker colocation constraint - Trinity-iscsi with Trinity
     pcs_constraint_colocation:
-      resource1: 'iSCSI-{{ item.name | replace("/","_") }}-clone'
+      resource1: 'iSCSI-{{ item.name | replace("/","_") }}'
       resource1_role: Master
       resource2: Trinity
       score: INFINITY
@@ -418,7 +417,7 @@
 
   - name: Add pacemaker order constraint - promote Trinity-iscsi then wait-for-device
     pcs_constraint_order:
-      resource1: 'iSCSI-{{ item.name | replace("/","_") }}-clone'
+      resource1: 'iSCSI-{{ item.name | replace("/","_") }}'
       resource1_action: promote
       resource2: 'wait-for-device-{{ item.name | replace("/","_") }}'
       state: present
