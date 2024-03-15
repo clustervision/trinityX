@@ -112,16 +112,19 @@
     state: started
     enabled: true
 
-# ---------------------- Add custom ZFS resource agent --------
+# ---------------------- Add custom resource agents ----------
 
-- name: Ensure ZFS resource agent exists
+- name: Ensure custom resource agents exist
   copy:
-    src: 'ZFS'
-    dest: '/usr/lib/ocf/resource.d/heartbeat/ZFS'
+    src: '{{ items }}'
+    dest: '/usr/lib/ocf/resource.d/heartbeat/{{ item }}'
     owner: root
     group: root
     mode: 0755
     force: no
+  with_items:
+    - ZFS
+    - scsi
   ignore_errors: true
 
 # ---------------------- resources and config -----------------
