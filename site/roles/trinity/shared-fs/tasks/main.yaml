@@ -21,6 +21,36 @@
   when: 
     - drbd_fs_disks is defined
     - drbd_fs_disks|length > 0
+    - goo is defined
+
+# ---
+
+- name: Build iSCSI disk list
+  set_fact:
+      iscsi_fs_disks:
+        '{{ iscsi_fs_disks|default([]) +
+          [{ "name": item.name,
+             "portal": item.portal,
+             "target": item.target,
+             "node_auth": item.authmethod | default("None"),
+             "node_user": item.username | default(""),
+             "node_pass": item.password | default(""),
+             "fstype": item.fstype | default(""),
+             "options": item.options | default(""),
+             "device": "/dev/disk/by-path/ip-"+item.portal+":3260-iscsi-"+item.target+"-lun-0" }] }}'
+  with_items: "{{ shared_fs_disks }}"
+  when: item.type == 'iscsi'
+
+- debug:
+    msg: "{{ iscsi_fs_disks }}"
+
+- name: Configure iSCSI
+  ansible.builtin.include_tasks:
+    file: iscsi.yaml
+  when: 
+    - iscsi_fs_disks is defined
+    - iscsi_fs_disks|length > 0
+    - goo is defined
 
 # more types can be added here
 # ....
@@ -51,6 +81,7 @@
   when: 
     - shared_fs_lvm_partitions is defined
     - shared_fs_lvm_partitions | length > 0
+    - goo is defined
 
 - name: Configure ZFS Partitions
   ansible.builtin.include_tasks:
@@ -58,6 +89,7 @@
   when: 
     - shared_fs_zfs_partitions is defined
     - shared_fs_zfs_partitions | length > 0
+    - goo is defined
 
 
 # We had to make a lot of magic to make LVM work with drbd or das.
@@ -73,6 +105,11 @@
       group: root
       mode: 0750
       force: yes
+
+  - name: Render lvm exclusion filter fact
+    set_fact:
+        shared_lvm_disks:
+          '{{ drbd_fs_disks|default([]) + iscsi_fs_disks|default([]) }}'
 
   - name: Generate lvm filter file
     template:

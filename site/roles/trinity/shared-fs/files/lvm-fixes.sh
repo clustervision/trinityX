@@ -8,6 +8,11 @@ find /dev -type l -exec echo -n {}'=' \; -exec readlink -f {} \; > /tmp/dev-link
 FILTER="["
 for DISK in $LVM_DISKS; do
 	REAL_DISK=""
+	EXCL_LINK=""
+	if [ "$(echo $DISK | grep '^!')" ]; then
+		EXCL_LINK=1
+	fi
+	DISK=$(echo $DISK | sed -e 's/^!//')
 	# we have deeper nested disks, i.e. not /dev/vda or so
 	DISK_TYPE=$(file -b $DISK | awk '{ print $1" "$2 }')
 	case $DISK_TYPE in
@@ -25,11 +30,11 @@ for DISK in $LVM_DISKS; do
 		echo "------------ $DISK -- $REAL_DISK -------------"
 		EXCL=$(grep $REAL_DISK /tmp/dev-links.dat | awk -F'=' '{ print $1 }')
 		for F in $EXCL; do
-			echo $F
+			echo "1: $F"
 			FILTER="$FILTER \"r|$F|\","
 		done
-		if [ "$DISK" != "$REAL_DISK" ]; then
-			echo $DISK
+		if [ "$DISK" != "$REAL_DISK" ] && [ ! "$EXCL_LINK" ]; then
+			echo "2: $DISK"
 			FILTER="$FILTER \"r|$REAL_DISK|\","
 		fi
 		echo
