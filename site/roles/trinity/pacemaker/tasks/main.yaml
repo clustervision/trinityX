@@ -100,18 +100,6 @@
   with_items:
     - pcmk
 
-- name: Start pacemaker service
-  service:
-    name: pacemaker
-    state: started
-    enabled: true
-
-- name: Start corosync service
-  service:
-    name: corosync
-    state: started
-    enabled: true
-
 # ---------------------- Add custom resource agents ----------
 
 - name: Ensure custom resource agents exist
@@ -127,7 +115,21 @@
     - iscsi
   ignore_errors: true
 
-# ---------------------- resources and config -----------------
+# ---------------------- start pacemaker and corosync --------
+#
+- name: Start pacemaker service
+  service:
+    name: pacemaker
+    state: started
+    enabled: true
+
+- name: Start corosync service
+  service:
+    name: corosync
+    state: started
+    enabled: true
+
+# ---------------------- resources and config ----------------
 
 - name: Render /etc/systemd/system/luna2-master.service
   copy:

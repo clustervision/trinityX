@@ -271,7 +271,8 @@
       resource_class: ocf
       resource_type: LVM-activate
       options: 'vgname={{ item.name | replace("/","_") }} activation_mode=exclusive 
-          vg_access_mode=tagging tag=pacemaker 
+          vg_access_mode=tagging tag=pacemaker
+          meta migration-threshold=3 failure-timeout=120s
           --group Trinity-lvm-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
