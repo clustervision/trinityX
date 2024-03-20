@@ -360,7 +360,6 @@
   - name: Add pacemaker colocation constraint - Trinity-iscsi with Trinity
     pcs_constraint_colocation:
       resource1: 'iSCSI-{{ item.name | replace("/","_") }}'
-      resource1_role: Master
       resource2: Trinity
       score: INFINITY
       state: present
@@ -415,10 +414,9 @@
 
   #--------------------------------------------
 
-  - name: Add pacemaker order constraint - promote Trinity-iscsi then wait-for-device
+  - name: Add pacemaker order constraint - activate Trinity-iscsi then wait-for-device
     pcs_constraint_order:
       resource1: 'iSCSI-{{ item.name | replace("/","_") }}'
-      resource1_action: promote
       resource2: 'wait-for-device-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ iscsi_fs_disks }}"

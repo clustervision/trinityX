@@ -17,6 +17,13 @@
   failed_when: false
   loop: "{{ shared_fs_lvm_partitions }}"
 
+- name: Check if lv disk already active
+  shell: '/usr/sbin/lvs | grep "{{ item.mount | replace("/","_") }}" | awk "{ print $3 }" | grep ao'
+  register: shared_fs_lvm_partitions_active
+  changed_when: false
+  failed_when: false
+  loop: "{{ shared_fs_lvm_partitions }}"
+
 - name: Ensuring temporary mount location exists
   file:
     path: /mnt
@@ -47,19 +54,13 @@
     when: 
       - item.rc != 0
 
-# mkfs -t ext4 -m 1 -v /dev/yournewvg/lv_yournewlv
-
-#  - name: Creating the partition
-#    filesystem:
-#      fstype: "{{ item.item['fstype'] }}"
-#      dev: '/dev/{{ item.item["vgroup"] }}/{{ item.item["mount"] | replace("/","_") }}'
-#      force: yes
-#      opts: "{{ item.item['options'] | default('') }}"
-#    ignore_errors: yes
-#    loop: "{{ shared_fs_lvm_partitions_mounted.results }}"
-#    when: 
-#      - item.rc != 0
-#      - item.item['vgroup'] is not defined
+  - name: Temporary activate the LV partition
+    shell: >
+      lvchange -a y {{ item.item["vgroup"] }}/{{ item.item["mount"] | replace("/","_") }} 
+      --config 'activation { volume_list = [ "@pacemaker" ] }'
+    loop: "{{ shared_fs_lvm_partitions_active.results }}"
+    when: 
+      - item.rc != 0
 
   - name: Creating a file system on LV partition
     filesystem:
@@ -111,6 +112,12 @@
       state: unmounted
     loop: "{{ shared_fs_lvm_partitions_mounted.results }}"
     when:
+      - item.rc != 0
+
+  - name: Temporary deactivate the LV partition
+    shell: 'lvchange -a n {{ item.item["vgroup"] }}/{{ item.item["mount"] | replace("/","_") }}'
+    loop: "{{ shared_fs_lvm_partitions_active.results }}"
+    when: 
       - item.rc != 0
 
   # ------------------------------------------
