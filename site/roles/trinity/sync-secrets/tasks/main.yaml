@@ -1,16 +1,22 @@
 ---
 
 - block:
-  - name: Temporarily mount trinity/ha from controller1
-    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_ha }} {{ trix_ha }}"
 
-  - name: Copy all secrets from ha storage
+  - name: Ensure temporary sync mount location exists
+    file:
+      path: /mnt/sync
+      state: directory
+
+  - name: Temporarily mount sync from controller1
+    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_local }}/sync /mnt/sync"
+
+  - name: Copy all secrets
     copy:
-      src: '{{ trix_ha }}/sync'
-      dest: '{{ trix_local }}/'
+      src: '/mnt/sync'
+      dest: '{{ trix_local }}/sync'
 
-  - name: Umount trinity/ha
-    shell: "umount -l {{ trix_ha }}"
+  - name: Umount sync
+    shell: "umount -l /mnt/sync"
   when:
     - not primary
 
