@@ -41,7 +41,7 @@
 # -- start sync
 - name: Copy cluster CA certificate from sync
   copy:
-    src: '{{ trix_local }}/sync/ssl/{{ item }}'
+    src: '{{ trix_sync }}/ssl/{{ item }}'
     dest: '{{ ssl_cert_path }}'
   with_items:
     - cluster-ca.crt
@@ -117,13 +117,13 @@
 - block:
   - name: Ensure ssl sync directory exists
     file:
-      path: '{{ trix_local }}/sync/ssl'
+      path: '{{ trix_sync }}/ssl'
       state: directory
 
   - name: Add CA certificate to sync
     copy:
       src: '{{ ssl_cert_path }}/{{ item }}'
-      dest: '{{ trix_local }}/sync/ssl/{{ item }}'
+      dest: '{{ trix_sync }}/ssl/{{ item }}'
       mode: 0640
     with_items:
       - cluster-ca.crt

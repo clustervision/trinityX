@@ -33,13 +33,13 @@
 - block:
   - name: Ensure corosync sync directory exists
     file:
-      path: '{{ trix_local }}/sync/corosync'
+      path: '{{ trix_sync }}/corosync'
       state: directory
 
   - name: Copy corosync key to sync
     copy:
       src: '/etc/corosync/authkey'
-      dest: '{{ trix_local }}/sync/corosync/'
+      dest: '{{ trix_sync }}/corosync/'
       mode: '0640'
   when: 
     - stat_corosync_key.stat.exists
@@ -47,7 +47,7 @@
 
 - name: Copy corosync key from sync
   copy:
-    src: '{{ trix_local }}/sync/corosync/authkey'
+    src: '{{ trix_sync }}/corosync/authkey'
     dest: '/etc/corosync/'
     mode: '0640'
   when: 

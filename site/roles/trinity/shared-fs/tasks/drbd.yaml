@@ -54,13 +54,13 @@
 - block:
   - name: Ensure drbd sync directory exists
     file:
-      path: '{{ trix_local }}/sync/drbd'
+      path: '{{ trix_sync }}/drbd'
       state: directory
 
   - name: Copy drbd shared secret to sync
     copy:
       src: '/etc/drbd.d/sharedsecret'
-      dest: '{{ trix_local }}/sync/drbd/'
+      dest: '{{ trix_sync }}/drbd/'
       mode: '0640'
   when: 
     - stat_drbd_shared_secret.stat.exists
@@ -68,7 +68,7 @@
 
 - name: Copy DRBD shared secret from ha storage
   copy:
-    src: '{{ trix_local }}/sync/drbd/sharedsecret'
+    src: '{{ trix_sync }}/drbd/sharedsecret'
     dest: '/etc/drbd.d/'
     mode: '0640'
   when: 
