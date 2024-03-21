@@ -31,32 +31,25 @@
     - primary
 
 - block:
-  - name: Ensure corosync shared directory exists
+  - name: Ensure corosync sync directory exists
     file:
-      path: '{{ trix_ha }}/sync/corosync'
+      path: '{{ trix_local }}/sync/corosync'
       state: directory
 
-  - name: Copy corosync key to shared storage
+  - name: Copy corosync key to sync
     copy:
       src: '/etc/corosync/authkey'
-      dest: '{{ trix_ha }}/sync/corosync/'
+      dest: '{{ trix_local }}/sync/corosync/'
       mode: '0640'
   when: 
     - stat_corosync_key.stat.exists
     - primary
 
-- block:
-  - name: Temporarily mount trinity/ha from controller1
-    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_ha }} {{ trix_ha }}"
-
-  - name: Copy corosync key from ha storage
-    copy:
-      src: '{{ trix_ha }}/sync/corosync/authkey'
-      dest: '/etc/corosync/'
-      mode: '0640'
-
-  - name: Umount trinity/ha
-    shell: "umount -l {{ trix_ha }}"
+- name: Copy corosync key from sync
+  copy:
+    src: '{{ trix_local }}/sync/corosync/authkey'
+    dest: '/etc/corosync/'
+    mode: '0640'
   when: 
     - not primary
 

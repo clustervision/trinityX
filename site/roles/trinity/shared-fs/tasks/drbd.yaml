@@ -52,32 +52,25 @@
     - primary
 
 - block:
-  - name: Ensure drbd shared directory exists
+  - name: Ensure drbd sync directory exists
     file:
-      path: '{{ trix_ha }}/sync/drbd'
+      path: '{{ trix_local }}/sync/drbd'
       state: directory
 
-  - name: Copy drbd shared secret to shared storage
+  - name: Copy drbd shared secret to sync
     copy:
       src: '/etc/drbd.d/sharedsecret'
-      dest: '{{ trix_ha }}/sync/drbd/'
+      dest: '{{ trix_local }}/sync/drbd/'
       mode: '0640'
   when: 
     - stat_drbd_shared_secret.stat.exists
     - primary
 
-- block:
-  - name: Temporarily mount trinity/ha from controller1
-    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_ha }} {{ trix_ha }}"
-
-  - name: Copy DRBD shared secret from ha storage
-    copy:
-      src: '{{ trix_ha }}/sync/drbd/sharedsecret'
-      dest: '/etc/drbd.d/'
-      mode: '0640'
-
-  - name: Umount trinity/ha
-    shell: "umount -l {{ trix_ha }}"
+- name: Copy DRBD shared secret from ha storage
+  copy:
+    src: '{{ trix_local }}/sync/drbd/sharedsecret'
+    dest: '/etc/drbd.d/'
+    mode: '0640'
   when: 
     - not primary
 

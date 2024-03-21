@@ -39,20 +39,13 @@
     - on_controller | default(False)
 
 # -- start sync
-- block:
-  - name: Temporarily mount trinity/shared from controller1
-    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_ha }} {{ trix_ha }}"
-
-  - name: Copy cluster CA certificate from ha storage
-    copy:
-      src: '{{ trix_ha }}/sync/ssl/{{ item }}'
-      dest: '{{ ssl_cert_path }}'
-    with_items:
-      - cluster-ca.crt
-      - cluster-ca.key
-
-  - name: Umount trinity/shared
-    shell: "umount -l {{ trix_ha }}"
+- name: Copy cluster CA certificate from sync
+  copy:
+    src: '{{ trix_local }}/sync/ssl/{{ item }}'
+    dest: '{{ ssl_cert_path }}'
+  with_items:
+    - cluster-ca.crt
+    - cluster-ca.key
   when: 
     - not primary | default(False)
     - on_controller|default(False)
@@ -122,15 +115,15 @@
 
 # -- start sync
 - block:
-  - name: Ensure shared-fs directory exists
+  - name: Ensure ssl sync directory exists
     file:
-      path: '{{ trix_ha }}/sync/ssl'
+      path: '{{ trix_local }}/sync/ssl'
       state: directory
 
-  - name: Add CA certificate to shared storage
+  - name: Add CA certificate to sync
     copy:
       src: '{{ ssl_cert_path }}/{{ item }}'
-      dest: '{{ trix_ha }}/sync/ssl/{{ item }}'
+      dest: '{{ trix_local }}/sync/ssl/{{ item }}'
       mode: 0640
     with_items:
       - cluster-ca.crt
