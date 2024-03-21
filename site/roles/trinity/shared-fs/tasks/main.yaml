@@ -14,12 +14,13 @@
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'drbd'
 
-- debug:
-    msg: "{{ drbd_fs_disks }}"
+- block:
+  - debug:
+      msg: "{{ drbd_fs_disks }}"
 
-- name: Configure DRBD
-  ansible.builtin.include_tasks:
-    file: drbd.yaml
+  - name: Configure DRBD
+    ansible.builtin.include_tasks:
+      file: drbd.yaml
   when: 
     - drbd_fs_disks is defined
     - drbd_fs_disks|length > 0
@@ -42,12 +43,13 @@
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'iscsi'
 
-- debug:
-    msg: "{{ iscsi_fs_disks }}"
+- block:
+  - debug:
+      msg: "{{ iscsi_fs_disks }}"
 
-- name: Configure iSCSI
-  ansible.builtin.include_tasks:
-    file: iscsi.yaml
+  - name: Configure iSCSI
+    ansible.builtin.include_tasks:
+      file: iscsi.yaml
   when: 
     - iscsi_fs_disks is defined
     - iscsi_fs_disks|length > 0
@@ -65,12 +67,13 @@
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'direct'
 
-- debug:
-    msg: "{{ direct_fs_disks }}"
+- block:
+  - debug:
+      msg: "{{ direct_fs_disks }}"
 
-- name: Configure Direct attached disks
-  ansible.builtin.include_tasks:
-    file: direct.yaml
+  - name: Configure Direct attached disks
+    ansible.builtin.include_tasks:
+      file: direct.yaml
   when: 
     - direct_fs_disks is defined
     - direct_fs_disks|length > 0
