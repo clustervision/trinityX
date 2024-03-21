@@ -1,0 +1,30 @@
+---
+- name: Assert usage of systemd as an init system
+  assert:
+    that: ansible_service_mgr == 'systemd'
+    msg: "This role only works with systemd"
+
+- name: Get systemd version
+  command: systemctl --version
+  changed_when: false
+  check_mode: false
+  register: __systemd_version
+
+- name: Set systemd version fact
+  set_fact:
+    prometheus_ipmi_exporter_systemd_version: "{{ __systemd_version.stdout_lines[0] | regex_replace('^systemd\\s(\\d+).*$', '\\1') }}"
+
+- name: Ensure that prometheus_ipmi_exporter_version is set
+  assert:
+    that:
+      - prometheus_ipmi_exporter_version is defined
+      - prometheus_ipmi_exporter_version | length > 0
+  tags:
+    - prometheus-ipmi-exporter-install
+
+- name: Register prometheus_ipmi_exporter binary
+  set_fact:
+    prometheus_ipmi_exporter_binary: "prometheus-ipmi-exporter-{{ prometheus_ipmi_exporter_version }}-{{ ansible_architecture }}"
+  tags:
+    - prometheus-ipmi-exporter-install
+

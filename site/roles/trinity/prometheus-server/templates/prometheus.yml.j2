@@ -44,6 +44,12 @@ scrape_configs:
       {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
       luna_group: controller
       {% endif %}
+  relabel_configs:
+  - source_labels: [__address__]
+    regex: "(.*):(.*)"
+    replacement: "${1}"
+    target_label: hostname
+
 {% if prometheus_server_tls.get('enabled', False) %}
   scheme: https
 {% endif %}
@@ -53,6 +59,11 @@ scrape_configs:
 {% endif %}
 {% if prometheus_server_file_sd | length > 0 %}
 - job_name: file_sd
+  relabel_configs:
+  - source_labels: [__address__]
+    regex: "(.*):(.*)"
+    replacement: "${1}"
+    target_label: hostname
   file_sd_configs:
   - files:
   {% for item in prometheus_server_file_sd %}
@@ -61,6 +72,11 @@ scrape_configs:
 {% endif %}
 {% if prometheus_server_http_sd | length > 0 %}
 - job_name: http_sd
+  relabel_configs:
+  - source_labels: [__address__]
+    regex: "(.*):(.*)"
+    replacement: "${1}"
+    target_label: hostname
   http_sd_configs:
   {% for item in prometheus_server_http_sd %}
   - url: {{'https' if item.tls.get('enabled', False) else 'http' }}://{{ item.target }}
