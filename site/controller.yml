@@ -311,7 +311,26 @@
       # Prometheus slurm exporter
       prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
       tags: prometheus-slurm-exporter, prometheus, monitoring
-      
+
+    - role: trinity/prometheus-ipmi-exporter
+      # Prometheus ipmi exporter
+      prometheus_ipmi_exporter_system_user: root
+      prometheus_ipmi_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      tags: prometheus-ipmi-exporter, prometheus, monitoring
+
+    - role: trinity/prometheus-nvidia-exporter
+      # Prometheus ipmi exporter
+      prometheus_nvidia_exporter_system_user: root
+      prometheus_nvidia_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      tags: prometheus-nvidia-exporter, prometheus, monitoring
+
+    - role: trinity/prometheus-ha-exporter
+      # Prometheus ipmi exporter
+      prometheus_ha_exporter_system_user: root
+      prometheus_ha_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      tags: prometheus-ha-exporter, prometheus, monitoring, ha
+      when: ha | default(False)
+
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"
       enable_ssl: true
