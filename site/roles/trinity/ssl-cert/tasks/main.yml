@@ -48,7 +48,7 @@
     - cluster-ca.key
   when: 
     - not primary | default(False)
-    - on_controller|default(False)
+    - on_controller | default(False)
     - ansible_connection not in 'chroot'
 # -- end sync
 
@@ -129,7 +129,7 @@
       - cluster-ca.crt
       - cluster-ca.key
   when:
-    - primary
+    - primary | default(True)
     - ha | default(False)
     - on_controller|default(False)
     - ansible_connection not in 'chroot'
@@ -140,7 +140,9 @@
     src: '{{ ssl_cert_path }}/cluster-ca.crt'
     dest: '/etc/pki/ca-trust/source/anchors/cluster-ca.crt'
   register: cert_copy
-  when: primary|default(True) and on_controller|default(False)
+  when: 
+    - primary | default(True)
+    - on_controller | default(False)
 
 - name: Update certificate trust store
   shell: update-ca-trust
