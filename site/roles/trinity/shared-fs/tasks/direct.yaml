@@ -1,0 +1,409 @@
+---
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  ignore_errors: true
+
+- name: Verify if Direct attached disks are already configured
+  stat:
+     path: "/etc/trinity/direct_disks.conf"
+  register: direct_res_config
+
+- name: Ensuring temporary mount location exists
+  file:
+    path: /mnt
+    owner: root
+    group: root
+    state: directory
+
+- block:
+  - block:
+    - name: Check if Direct attached disk is already mounted
+      shell: '/usr/bin/mount | grep " {{ item.name }} "'
+      register: direct_mounted
+      changed_when: false
+      failed_when: false
+      loop: "{{ direct_fs_disks }}"
+
+    - name: Create a fake fstab for the next step
+      tempfile:
+        path: /tmp
+        prefix: fstab.
+        state: file
+      register: direct_fake_fstab
+
+    - block:
+      - name: Wipe all data on shared resources
+        shell: 'wipefs --all --backup {{ item.item["device"] }}'
+        ignore_errors: yes
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'lvm'
+
+      - name: Creating a Physical Volume on shared resources
+        shell: 'pvcreate -ff {{ item.item["device"] }}'
+        ignore_errors: no
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'lvm'
+
+      - name: Creating a Volume Group on shared resources
+        shell: >
+             vgcreate {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
+             --addtag pacemaker --config 'activation { volume_list = [ "@pacemaker" ] }
+             devices {filter = [ "a|{{ item.item["device"] }}|", "r|.*|" ]}'
+        # note: you CANNOT use /dev/XXX as vgcreate will then barf at you...
+        ignore_errors: no
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'lvm'
+
+      - name: Loading ZFS kernel module
+        shell: '/sbin/modprobe zfs'
+        ignore_errors: no
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'zfs'
+
+      - name: Creating a ZPool on shared resources
+        shell: >
+          zpool create -f 
+          -o cachefile=/etc/ha.d/zpool-{{ item.item["name"] | replace("/","_") }}.cache
+          -o autoexpand=on
+          -o ashift=12
+          {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
+        ignore_errors: no
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'zfs'
+
+      - name: Disable mount of ZPool
+        shell: 'zfs set mountpoint=none {{ item.item["name"] | replace("/","_") }}'
+        ignore_errors: no
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'zfs'
+
+
+      # we create a single filesystem on top of here....
+
+      - name: Creating a file system on shared resources
+        filesystem:
+          fstype: "{{ item.item['fstype'] }}"
+          dev: '{{ item.item["device"] }}'
+          force: yes
+          opts: "{{ item.item['options'] | default('') }}"
+        ignore_errors: yes
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
+      - name: Temporarily mount Direct attached disks
+        mount:
+          src: '{{ item.item["device"] }}'
+          path: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp'
+          fstype: "{{ item.item['fstype'] }}"
+          state: mounted
+          fstab: "{{ direct_fake_fstab.path }}"
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
+      - name: Copy contents from local drives to Direct
+        synchronize:
+          src: '{{ item.item["name"] }}/'
+          dest: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp/'
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
+      - name: Temporarily umount Direct attached disks
+        mount:
+          path: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp'
+          state: unmounted
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+      when: 
+        - direct_mounted is defined
+
+    - name: Set Direct already configured
+      file:
+        path: "/etc/trinity/direct_disks.conf"
+        state: touch
+
+    when: not direct_res_config.stat.exists
+
+
+  #--------------------------------------------
+  # Pace maker items
+  #--------------------------------------------
+
+  # Though below resource makes no sense, we keep it here to be consistent.
+  - name: Add pacemaker resource Direct disk
+    pcs_resource:
+      name: 'Direct-{{ item.name | replace("/","_") }}'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=187s'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+
+  #--------------------------------------------
+
+  - name: Add pacemaker resource wait-for-device
+    pcs_resource:
+      name: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Delay
+      options: 'startdelay=10 stopdelay=3 --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker resource wait-for-device
+    pcs_resource:
+      name: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Delay
+      options: 'startdelay=10 stopdelay=3 --group=Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker resource wait-for-device
+    pcs_resource:
+      name: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Delay
+      options: 'startdelay=10 stopdelay=3 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker LVM resource trinity-lvm
+    pcs_resource:
+      name: 'trinity-lvm-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: LVM-activate
+      options: 'vgname={{ item.name | replace("/","_") }} activation_mode=exclusive 
+          vg_access_mode=tagging tag=pacemaker
+          meta migration-threshold=3 failure-timeout=120s
+          --group Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker ZFS resource trinity-zfs
+    pcs_resource:
+      name: 'trinity-zfs-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: ZFS
+      options: 'pool={{ item.name | replace("/","_") }} --group Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker resource trinity-fs
+    pcs_resource:
+      name: 'trinity-fs-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Filesystem
+      options: 'device={{ item.device }}
+          directory="{{ item.name }}" fstype={{ item.fstype }} 
+          run_fsck=force force_unmount=safe op monitor interval=31s op
+          monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker resource lvm-ready
+    pcs_resource:
+      name: 'lvm-ready-{{ item.name | replace("/","_") }}'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker resource zfs-ready
+    pcs_resource:
+      name: 'zfs-ready-{{ item.name | replace("/","_") }}'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker resource fs-ready
+    pcs_resource:
+      name: 'fs-ready-{{ item.name | replace("/","_") }}'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker resource Trinity-stack
+    pcs_resource:
+      name: 'trinity-stack-ready'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-stack'
+      state: present
+
+  #--------------------------------------------
+
+  - name: Add pacemaker order constraint - Trinity then Trinity-iscsi
+    pcs_constraint_order:
+      resource1: Trinity
+      resource2: 'Direct-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+
+  - name: Add pacemaker order constraint - Trinity-iscsi then Trinity-lvm
+    pcs_constraint_order:
+      resource1: 'Direct-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker order constraint - Trinity-iscsi then Trinity-zfs
+    pcs_constraint_order:
+      resource1: 'Direct-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker order constraint - Trinity-iscsi then Trinity-fs
+    pcs_constraint_order:
+      resource1: 'Direct-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker order constraint - Trinity-zfs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-stack'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker order constraint - Trinity-fs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-stack'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker colocation constraint - Trinity-iscsi with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Direct-{{ item.name | replace("/","_") }}'
+      resource2: Trinity
+      score: INFINITY
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    ignore_errors: yes
+
+  - name: Add pacemaker colocation constraint - Trinity-lvm with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+      resource2: Trinity
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker colocation constraint - Trinity-zfs with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      resource2: Trinity
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      resource2: Trinity
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-zfs
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-fs
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker order constraint - activate Trinity-iscsi then wait-for-device
+    pcs_constraint_order:
+      resource1: 'Direct-{{ item.name | replace("/","_") }}'
+      resource2: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ direct_fs_disks }}"
+
+  #--------------------------------------------
+
+  - name: Wait for Pacemaker to settle
+    command: /usr/sbin/crm_resource --wait
+
+  when: primary
+
