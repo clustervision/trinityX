@@ -31,6 +31,11 @@ resource {{ disk.name | replace("/","_") }} {
 
         fencing resource-and-stonith;
         verify-alg sha1;
+
+        # peer authentication
+        cram-hmac-alg sha1;
+        shared-secret "{{ drbd_shared_secret }}";
+
     }
     handlers {
         fence-peer "/usr/lib/drbd/crm-fence-peer.9.sh";

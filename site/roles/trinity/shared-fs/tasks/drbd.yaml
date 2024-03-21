@@ -23,17 +23,76 @@
     msg: "DRBD kernel module not found in current running kernel version. Please reboot first and try again"
   when: drbd_kernel_module.stdout|int < 1
 
-- name: Verify if DRBD is already configured
-  stat:
-     path: "/etc/drbd.d/trinityx.res"
-  register: drbd_res_config
-
 - name: Ensuring temporary mount location exists
   file:
     path: /mnt
     owner: root
     group: root
     state: directory
+
+## --- start syncing shared secrets ---
+
+- name: Verify if drbd shared secret exists
+  stat:
+    path: /etc/drbd.d/sharedsecret
+  register: stat_drbd_shared_secret
+
+- block:
+  - name: Generate DRBD shared secret
+    set_fact:
+      drbd_shared_secret: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+
+  - name: Write DRBD shared secret
+    copy:
+      content: "{{ drbd_shared_secret }}"
+      dest: /etc/drbd.d/sharedsecret
+      mode: 0640
+  when: 
+    - not stat_drbd_shared_secret.stat.exists
+    - primary
+
+- block:
+  - name: Ensure drbd shared directory exists
+    file:
+      path: '{{ trix_ha }}/sync/drbd'
+      state: directory
+
+  - name: Copy drbd shared secret to shared storage
+    copy:
+      src: '/etc/drbd.d/sharedsecret'
+      dest: '{{ trix_ha }}/sync/drbd/'
+      mode: '0640'
+  when: 
+    - stat_drbd_shared_secret.stat.exists
+    - primary
+
+- block:
+  - name: Temporarily mount trinity/ha from controller1
+    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_ha }} {{ trix_ha }}"
+
+  - name: Copy DRBD shared secret from ha storage
+    copy:
+      src: '{{ trix_ha }}/sync/drbd/sharedsecret'
+      dest: '/etc/drbd.d/'
+      mode: '0640'
+
+  - name: Umount trinity/ha
+    shell: "umount -l {{ trix_ha }}"
+  when: 
+    - not primary
+
+- name: Reading in DRBD shared secret
+  set_fact:
+    drbd_shared_secret: "{{ lookup('file', /etc/drbd.d/sharedsecret) }}"
+  when:
+    - stat_drbd_shared_secret.stat.exists
+
+## --- end syncing shared secrets ---
+
+- name: Verify if DRBD is already configured
+  stat:
+     path: "/etc/drbd.d/trinityx.res"
+  register: drbd_res_config
 
 - block:
   - name: Set up DRBD common settings configuration file

@@ -15,9 +15,10 @@
       - ha
       - resilientstorage
 
+# --- start syncing keys ---
+
 - name: Verify if corosync key exists
   stat:
-    #path: "{{ trix_ha }}/sync/corosync/authkey"
     path: /etc/corosync/authkey
   register: stat_corosync_key
 
@@ -27,6 +28,21 @@
     creates: '/etc/corosync/authkey'
   when: 
     - not stat_corosync_key.stat.exists
+    - primary
+
+- block:
+  - name: Ensure corosync shared directory exists
+    file:
+      path: '{{ trix_ha }}/sync/corosync'
+      state: directory
+
+  - name: Copy corosync key to shared storage
+    copy:
+      src: '/etc/corosync/authkey'
+      dest: '{{ trix_ha }}/sync/corosync/'
+      mode: '0640'
+  when: 
+    - stat_corosync_key.stat.exists
     - primary
 
 - block:
@@ -43,6 +59,8 @@
     shell: "umount -l {{ trix_ha }}"
   when: 
     - not primary
+
+# --- end syncing keys ---
 
 - name: Configure corosync
   template:

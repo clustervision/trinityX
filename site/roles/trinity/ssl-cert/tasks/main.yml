@@ -38,6 +38,7 @@
     - primary | default(True)
     - on_controller | default(False)
 
+# -- start sync
 - block:
   - name: Temporarily mount trinity/shared from controller1
     shell: "mount {{ trix_ctrl1_ip }}:{{ trix_ha }} {{ trix_ha }}"
@@ -56,6 +57,7 @@
     - not primary | default(False)
     - on_controller|default(False)
     - ansible_connection not in 'chroot'
+# -- end sync
 
 - block:
   - name: Render subjectAltName configuration
@@ -97,7 +99,7 @@
       - crt
       - key
     when: 
-     - ha | default(False)
+      - ha | default(False)
 
   - name: Restrict access permissions to the private keys
     file:
@@ -117,6 +119,28 @@
   when: 
     - on_controller|default(False)
     - ansible_connection not in 'chroot'
+
+# -- start sync
+- block:
+  - name: Ensure shared-fs directory exists
+    file:
+      path: '{{ trix_ha }}/sync/ssl'
+      state: directory
+
+  - name: Add CA certificate to shared storage
+    copy:
+      src: '{{ ssl_cert_path }}/{{ item }}'
+      dest: '{{ trix_ha }}/sync/ssl/{{ item }}'
+      mode: 0640
+    with_items:
+      - cluster-ca.crt
+      - cluster-ca.key
+  when:
+    - primary
+    - ha | default(False)
+    - on_controller|default(False)
+    - ansible_connection not in 'chroot'
+# --- end sync
 
 - name: Add CA certificate to default trust store
   copy:
