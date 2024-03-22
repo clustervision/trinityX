@@ -198,8 +198,6 @@
       name: stonith-enabled
       value: '{{ fence_ipmilan_enabled }}'
 
-  # pcs property set stonith-enabled=false
-
   - name: Configure fencing resources using the ipmilan fencing agent
     pcs_resource:
       name: 'fence-{{ item.0 }}'
@@ -222,5 +220,12 @@
   when: 
     - primary
     - fence_ipmilan_enabled == true
+
+- name: Disable fencing
+  shell: '/usr/local/sbin/pcs property set stonith-enabled=false'
+  tags: fencing
+  when: 
+    - primary
+    - fence_ipmilan_enabled != true
 
 
