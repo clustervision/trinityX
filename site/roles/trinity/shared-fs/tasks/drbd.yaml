@@ -227,6 +227,16 @@
           - item.item['fstype'] != 'lvm'
           - item.item['fstype'] != 'zfs'
 
+      - name: Ensuring source location exists
+        file:
+          path: '{{ item.item["name"] }}'
+          state: directory
+        loop: "{{ drbd_mounted.results }}"
+        when:
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
       - name: Copy contents from local drives to DRBD
         synchronize:
           src: '{{ item.item["name"] }}/'

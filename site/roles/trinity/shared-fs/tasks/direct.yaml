@@ -122,6 +122,16 @@
           - item.item['fstype'] != 'lvm'
           - item.item['fstype'] != 'zfs'
 
+      - name: Ensuring source location exists
+        file:
+          path: '{{ item.item["name"] }}'
+          state: directory
+        loop: "{{ direct_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
       - name: Copy contents from local drives to Direct
         synchronize:
           src: '{{ item.item["name"] }}/'
@@ -143,6 +153,11 @@
           - item.item['fstype'] != 'zfs'
       when: 
         - direct_mounted is defined
+
+    - name: Ensuring /etc/trinity exists
+      file:
+        path: '/etc/trinity/'
+        state: directory
 
     - name: Set Direct already configured
       file:
