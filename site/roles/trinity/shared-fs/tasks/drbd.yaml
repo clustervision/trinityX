@@ -38,20 +38,18 @@
   register: stat_drbd_shared_secret
 
 - block:
-  - name: Generate DRBD shared secret
-    set_fact:
-      drbd_shared_secret: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+  - block:
+    - name: Generate DRBD shared secret
+      set_fact:
+        drbd_shared_secret: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
 
-  - name: Write DRBD shared secret
-    copy:
-      content: "{{ drbd_shared_secret }}"
-      dest: /etc/drbd.d/sharedsecret
-      mode: 0640
-  when: 
-    - not stat_drbd_shared_secret.stat.exists
-    - primary
+    - name: Write DRBD shared secret
+      copy:
+        content: "{{ drbd_shared_secret }}"
+        dest: /etc/drbd.d/sharedsecret
+        mode: 0640
+    when: not stat_drbd_shared_secret.stat.exists
 
-- block:
   - name: Ensure drbd sync directory exists
     file:
       path: '{{ trix_sync }}/drbd'
@@ -63,7 +61,6 @@
       dest: '{{ trix_sync }}/drbd/'
       mode: '0640'
   when: 
-    - stat_drbd_shared_secret.stat.exists
     - primary
 
 - name: Copy DRBD shared secret from ha storage
@@ -77,8 +74,6 @@
 - name: Reading in DRBD shared secret
   set_fact:
     drbd_shared_secret: "{{ lookup('file', '/etc/drbd.d/sharedsecret') }}"
-  when:
-    - stat_drbd_shared_secret.stat.exists
 
 - debug:
     msg: "{{ drbd_shared_secret }}"
