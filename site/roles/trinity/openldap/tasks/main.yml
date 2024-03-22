@@ -10,6 +10,22 @@
     state: installed
   tags: install-only
 
+# -- start sync
+- block:
+  - name: Ensure password loction exists
+    file:
+      path: '/etc/trinity/passwords/openldap'
+      state: directory
+
+  - name: Copy openldap password from sync
+    copy:
+      src: '{{ trix_sync }}/openldap/root.txt'
+      dest: '/etc/trinity/passwords/openldap/'
+  when: 
+    - not primary | default(False)
+    - ha | default(False)
+# -- end sync
+
 - name: Generate openldap root password and save it to /etc/trinity/passwords
   set_fact:
     tmp_pwd: "{{ lookup('password',
@@ -21,6 +37,25 @@
     openldap_root_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/openldap/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
+
+# sync
+# -- start sync
+- block:
+  - name: Ensure openldap sync directory exists
+    file:
+      path: '{{ trix_sync }}/openldap'
+      state: directory
+
+  - name: Add openldap password to sync
+    copy:
+      src: '/etc/trinity/passwords/openldap/root.txt'
+      dest: '{{ trix_sync }}/openldap/'
+      mode: 0640
+  when:
+    - primary | default(True)
+    - ha | default(False)
+# -- end sync
+
 
 - name: Install OpenLDAP packages
   yum:

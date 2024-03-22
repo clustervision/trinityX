@@ -143,6 +143,16 @@
           - item.item['fstype'] != 'lvm'
           - item.item['fstype'] != 'zfs'
 
+      - name: Ensuring source location exists
+        file:
+          path: '{{ item.item["name"] }}'
+          state: directory
+        loop: "{{ iscsi_mounted.results }}"
+        when:
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
       - name: Copy contents from local drives to iSCSI
         synchronize:
           src: '{{ item.item["name"] }}/'
