@@ -107,6 +107,14 @@
     key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
     path: "{{ image_path }}/root/.ssh/authorized_keys"
 
+- name: Add cluster key to authorized keys
+  authorized_key:
+    user: root
+    state: present
+    key: '{{ lookup("file", "/root/.ssh/id_cluster_rsa.pub") }}'
+    path: "{{ image_path }}/root/.ssh/authorized_keys"
+  when: ha | default(False)
+
 - name: Verify if image already exists in luna
   shell: "luna osimage show {{ image_name }}"
   register: ubuntu_image_in_luna
