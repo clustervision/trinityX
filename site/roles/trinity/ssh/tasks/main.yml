@@ -37,19 +37,28 @@
     - ha | default(False)
   # -- end sync
 
+- block:
   # -- start sync
-- name: Copy cluster ssh keys from sync
-  copy:
-    src: '{{ trix_sync }}/ssh/{{ item.0 }}'
-    dest: '/root/.ssh/'
-    mode: '{{ item.1 }}'
-  with_together:
-    - ['id_cluster_rsa', 'id_cluster_rsa.pub']
-    - ['0600','0644']
+  - name: Copy cluster ssh keys from sync
+    copy:
+      src: '{{ trix_sync }}/ssh/{{ item.0 }}'
+      dest: '/root/.ssh/'
+      mode: '{{ item.1 }}'
+    with_together:
+      - ['id_cluster_rsa', 'id_cluster_rsa.pub']
+      - ['0600','0644']
+  # -- end sync
+
+  - name: Update ssh and sshd configuration files
+    copy:
+      src: 'ssh_cluster_config'
+      dest: '/root/.ssh/config'
+      mode: '0644'
+      owner: root
+      group: root
   when: 
     - not primary | default(False)
     - ha | default(False)
-  # -- end sync
 
 
   # we only add our own key. if the admin prefers to have cross
