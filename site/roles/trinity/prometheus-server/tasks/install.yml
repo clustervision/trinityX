@@ -33,25 +33,9 @@
   with_items:
     - "{{ prometheus_server_config_dir }}"
     - "{{ prometheus_server_config_dir }}/rules"
-    # - "{{ prometheus_server_config_dir }}/file_sd"
-
-- name: Create file_sd directories if needed
-  ansible.builtin.file:
-    path: "{{ item.target | dirname }}"
-    state: directory
-    owner: root
-    group: "{{prometheus_server_system_group}}"
-    mode: 0750
-  loop: "{{ prometheus_server_file_sd }}"
-
-- name: Create file_sd files if needed
-  ansible.builtin.file:
-    path: "{{ item.target }}"
-    state: touch
-    owner: root
-    group: "{{prometheus_server_system_group}}"
-    mode: 0750
-  loop: "{{ prometheus_server_file_sd }}"
+    - "{{ prometheus_server_config_dir }}/file_sd"
+    - "{{ prometheus_server_config_dir }}/file_sd/trix"
+    - "{{ prometheus_server_config_dir }}/file_sd/other"
 
 - name: Create log directory
   ansible.builtin.file:

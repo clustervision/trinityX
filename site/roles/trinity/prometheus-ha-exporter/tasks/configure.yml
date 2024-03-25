@@ -18,6 +18,13 @@
     - ansible_version.full is version_compare('2.4', '>=')
     - ansible_selinux.status == "enabled"
 
+- name: Create prometheus_ha_exporter_sd_file if not exists
+  file:
+    path: "{{ prometheus_ha_exporter_sd_file }}"
+    state: touch
+  when:
+    - prometheus_ha_exporter_sd_file is defined
+
 - name: Configure prometheus ha-exporter if prometheus_ha_exporter_sd_file is defined
   blockinfile:
     path: "{{ prometheus_ha_exporter_sd_file }}"
