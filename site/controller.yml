@@ -320,29 +320,34 @@
       prometheus_node_exporter_config_dir: "{{trix_etc}}/prometheus_node_exporter"
       prometheus_node_exporter_db_dir: "{{trix_local}}/var/lib/prometheus_node_exporter"
       prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      prometheus_node_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-node-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-slurm-exporter
       # Prometheus slurm exporter
       prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      prometheus_slurm_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-slurm-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-ipmi-exporter
       # Prometheus ipmi exporter
       prometheus_ipmi_exporter_system_user: root
       prometheus_ipmi_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      prometheus_ipmi_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-ipmi-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-nvidia-exporter
       # Prometheus ipmi exporter
       prometheus_nvidia_exporter_system_user: root
       prometheus_nvidia_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      prometheus_nvidia_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-nvidia-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-ha-exporter
       # Prometheus ipmi exporter
       prometheus_ha_exporter_system_user: root
       prometheus_ha_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      prometheus_ha_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-ha-exporter, prometheus, monitoring, ha
       when: ha | default(False)
 

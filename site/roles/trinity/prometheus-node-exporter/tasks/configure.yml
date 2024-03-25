@@ -21,13 +21,14 @@
   blockinfile:
     path: "{{ prometheus_node_exporter_sd_file }}"
     block: |
+      {% for target_ip, target_hostname, target_domain in prometheus_node_exporter_targets %}
       - targets:
-        - {{ ansible_fqdn }}:{{ prometheus_node_exporter_web_listen_port }}
+        - {{ target_ip }}:{{ prometheus_node_exporter_web_listen_port }}
         labels:
           exporter: node
-      {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
           luna_group: controller
-      {% endif %}
+          hostname: {{ target_hostname }}.{{ target_domain }}
+      {% endfor %}
     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_node_exporter)"
   when:
     - prometheus_node_exporter_sd_file is defined
