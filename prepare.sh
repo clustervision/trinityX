@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ ! -d /etc/trinity ]; then
+    mkdir /etc/trinity
+fi
+
+# --------------------------------------------------------------------------------------
+
 function add_message() {
   echo -e "$1\n" | fold -w70 -s >> /tmp/mesg.$$.dat
 }
@@ -17,6 +23,33 @@ function show_message() {
   truncate -s0 /tmp/mesg.$$.dat
 }
 
+function store_config() {
+  key=$1
+  value=$2
+  if [ -f /etc/trinity/prepare.conf ] && [ "$(grep '^'$key'=' /etc/trinity/prepare.conf)" ]; then
+    sed -i 's/^'$key'=/'$key'='$value'/' /etc/trinity/prepare.conf
+  else
+    echo "$key=$value" >> /etc/trinity/prepare.conf
+  fi
+}
+
+# --------------------------------------------------------------------------------------
+
+if [ -f /etc/trinity/prepare.conf ]; then
+  while IFS='=' read -ra line; do
+    comment=$(echo $line | grep '^#')
+    if [ ! "$comment" ]; then
+      if [ "$line" ]; then
+	key=$(echo ${line[0]})
+        value=$(echo ${line[1]})
+        declare -x "${key}"="${value}"
+        echo "$key = $value"
+      fi
+    fi
+  done < /etc/trinity/prepare.conf
+fi
+
+# --------------------------------------------------------------------------------------
 
 if [[ `getenforce` == "Disabled" ]]; then
     add_message "SELinux in disabled mode is not supported. Please reboot to run in permissive mode"
@@ -64,7 +97,7 @@ else
     add_message "If you insist on proceeding though, please confirm with 'go', anything else stops the installation."
     show_message
     echo -n "Please let me know your preference (go|<anything else>): "
-    read -t 60 CONFIRM
+    read -t 240 CONFIRM
     RET=$?
     if [ "$RET" == "142" ]; then
       CONFIRM='yes'
@@ -74,9 +107,30 @@ else
     fi
   fi
 
-  # experimental ZFS support
-  yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
-  yes y | dnf -y install zfs zfs-dkms
+  if [ ! "$WITH_ZFS" ] && [ ! "$INSIDE_RUNNER" ]; then
+    add_message "Would you prefer to include ZFS?" 
+    add_message "ZFS is supported in the shared_fs_disk/HA role. If you prefer to use ZFS there, please confirm below."
+    show_message
+    echo -n "Please let me know your preference (no|<anything else>): "
+    read -t 240 WITH_ZFS
+    RET=$?
+    if [ "$RET" == "142" ]; then
+      WITH_ZFS=yes
+    fi
+    if [ "$WITH_ZFS" != "no" ]; then
+      WITH_ZFS="yes"
+    else
+      WITH_ZFS="no"
+    fi
+  fi
+  store_config 'WITH_ZFS' $WITH_ZFS
+
+  if [ "$WITH_ZFS" == "yes" ]; then
+    yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
+    yes y | dnf -y install zfs zfs-dkms
+    echo "zfs" >> /etc/modules-load.d/zfs.conf
+    modprobe zfs
+  fi
 
   if [ ! -f site/hosts ]; then
     add_message "Please modify the site/hosts.example and save it as site/hosts"  
@@ -95,6 +149,7 @@ else
   add_message "Please configure the network before starting Ansible"
 fi
 
+touch /etc/trinity/prepare.done
 show_message
 
 
