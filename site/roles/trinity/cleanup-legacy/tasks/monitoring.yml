@@ -20,3 +20,15 @@
   ignore_errors: yes
   when: enabled_services.stdout_lines is search(item)
 
+- name: Remove old dashboards from /var/lib/grafana/dashboards/
+  file:
+    path: /var/lib/grafana/dashboards/{{ item }}
+    state: absent
+  with_items:
+    - trinityx-home.json
+    - trinityx-ipmi-env.json
+    - trinityx-nvidia-gpu.json
+    - trinityx-sysinfo-detail.json
+    - trinityx-workloadmanagement.json
+    - trinityx-workloadmanagement-detail.json
+  notify: restart grafana-server

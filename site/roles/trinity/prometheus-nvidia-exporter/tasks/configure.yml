@@ -18,17 +18,25 @@
     - ansible_version.full is version_compare('2.4', '>=')
     - ansible_selinux.status == "enabled"
 
+- name: Create prometheus_nvidia_exporter_sd_file if not exists
+  file:
+    path: "{{ prometheus_nvidia_exporter_sd_file }}"
+    state: touch
+  when:
+    - prometheus_nvidia_exporter_sd_file is defined
+
 - name: Configure prometheus nvidia-exporter if prometheus_nvidia_exporter_sd_file is defined
   blockinfile:
     path: "{{ prometheus_nvidia_exporter_sd_file }}"
     block: |
+      {% for target_ip, target_hostname, target_domain in prometheus_nvidia_exporter_targets %}
       - targets:
-        - {{ ansible_fqdn }}:{{ prometheus_nvidia_exporter_web_listen_port }}
+        - {{ target_ip }}:{{ prometheus_nvidia_exporter_web_listen_port }}
         labels:
           exporter: nvidia
-      {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
           luna_group: controller
-      {% endif %}
+          hostname: {{ target_hostname }}.{{ target_domain }}
+      {% endfor %}
     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_nvidia_exporter)"
   when:
     - prometheus_nvidia_exporter_sd_file is defined

@@ -272,14 +272,12 @@
       prometheus_server_db_dir: "{{trix_local}}/var/lib/prometheus_server"
       prometheus_server_additional_system_groups:
         - "{{ssl_cert_group}}"
-      prometheus_server_file_sd:
-        - target: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
-        - target: "{{trix_etc}}/prometheus_server/file_sd/targets.yml"
-      prometheus_server_http_sd:
-        - target: "localhost:7050/export/prometheus"
-          tls:
-            enabled: "{{ luna_protocol == 'https' }}"
-            insecure_skip_verify: true
+      prometheus_server_additional_sd:
+        - job_name: luna_nodes
+          http_sd_configs:
+          - url: "{{ luna_protocol }}://localhost:7050/export/prometheus"
+            tls_config:
+              insecure_skip_verify: true
       prometheus_server_alertmanagers:
         - target: "localhost:9093"
           tls:
@@ -319,26 +317,39 @@
       # Prometheus node exporter
       prometheus_node_exporter_config_dir: "{{trix_etc}}/prometheus_node_exporter"
       prometheus_node_exporter_db_dir: "{{trix_local}}/var/lib/prometheus_node_exporter"
-      prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_node_exporter.yml"
+      prometheus_node_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-node-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-slurm-exporter
       # Prometheus slurm exporter
-      prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      prometheus_slurm_exporter_system_user: root
+      prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_slurm_exporter.yml"
+      prometheus_slurm_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-slurm-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-ipmi-exporter
       # Prometheus ipmi exporter
       prometheus_ipmi_exporter_system_user: root
-      prometheus_ipmi_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      prometheus_ipmi_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_ipmi_exporter.yml"
+      prometheus_ipmi_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-ipmi-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-nvidia-exporter
       # Prometheus ipmi exporter
       prometheus_nvidia_exporter_system_user: root
-      prometheus_nvidia_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/luna_targets.yml"
+      prometheus_nvidia_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_nvidia_exporter.yml"
+      prometheus_nvidia_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-nvidia-exporter, prometheus, monitoring
-      
+
+    - role: trinity/prometheus-ha-exporter
+      # Prometheus ipmi exporter
+      prometheus_ha_exporter_system_user: root
+      prometheus_ha_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_ha_exporter.yml"
+      prometheus_ha_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      tags: prometheus-ha-exporter, prometheus, monitoring, ha
+      when: ha | default(False)
+
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"
       enable_ssl: true

@@ -1,6 +1,154 @@
 {{ ansible_managed | comment }}
 
 groups:
-- name: ansible managed alert rules
+- name: trinityx
   rules:
-  {{ prometheus_server_alert_rules | to_nice_yaml(indent=2,sort_keys=False) | indent(2,False) }}
+  - alert: ExporterDown
+    expr: 'up == 0'
+    for: 5m
+    labels:
+      severity: info
+    annotations:
+      description: '{% raw %}Exporter {{$labels.exporter}} on server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
+      summary: '{% raw %}}Exporter {{$labels.exporter}} down{% endraw %}'
+
+  - alert: ControllerServerDown
+    expr: 'max by(job, hostname, luna_group) (up{job="luna_controllers"}) == 0'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} down{% endraw %}'
+
+  - alert: NodeServerDown
+    expr: 'max by(job, hostname, luna_group) (up{job="luna_nodes"}) == 0'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} down{% endraw %}'
+
+  # - alert: HighLocalFilesystemUsage
+  #   expr: 'node_filesystem_avail_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} * 100 < 20'
+  #   for: 5m
+  #   labels:
+  #     severity: warning
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 20% free space available.{% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
+  # - alert: HighLocalFilesystemUsage
+  #   expr: 'node_filesystem_avail_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} * 100 < 10'
+  #   for: 5m
+  #   labels:
+  #     severity: critical
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 10% free space available.{% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
+  # - alert: HighRemoteFilesystemUsage
+  #   expr: 'node_filesystem_avail_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 20'
+  #   for: 5m
+  #   labels:
+  #     severity: warning
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 20% free space available.{% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
+  # - alert: HighRemoteFilesystemUsage
+  #   expr: 'node_filesystem_avail_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 10'
+  #   for: 5m
+  #   labels:
+  #     severity: critical
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 10% free space available.{% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
+  # - alert: HighCpuLoad
+  #   expr: 'node_load1{luna_group="controller"} > 2.75'
+  #   for: 5m
+  #   labels:
+  #     severity: warning
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} load average is above 2.75 (current value: {{ $value }}){% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} load average is high{% endraw %}'
+  # - alert: HighCpuLoad
+  #   expr: 'node_load1{luna_group="controller"} > 3.5'
+  #   for: 5m
+  #   labels:
+  #     severity: critical
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} load average is above 3.5 (current value: {{ $value }}){% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} load average is high{% endraw %}'
+  # - alert: HighMemoryUsage
+  #   expr: 'node_memory_MemAvailable_bytes{luna_group="controller"} / node_memory_MemTotal_bytes{luna_group="controller"} * 100 < 20'
+  #   for: 5m
+  #   labels:
+  #     severity: warning
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} memory usage is above 80% (current value: {{ $value }}){% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} memory usage is high{% endraw %}'
+  # - alert: HighMemoryUsage
+  #   expr: 'node_memory_MemAvailable_bytes{luna_group="controller"} / node_memory_MemTotal_bytes{luna_group="controller"} * 100 < 10'
+  #   for: 5m
+  #   labels:
+  #     severity: critical
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} memory usage is above 90% (current value: {{ $value }}){% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} memory usage is high{% endraw %}'
+  # - alert: HighSwapUsage
+  #   expr: 'node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes * 100 < 20'
+  #   for: 5m
+  #   labels:
+  #     severity: warning
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} swap usage is above 80% (current value: {{ $value }}){% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} swap usage is high{% endraw %}'
+  # - alert: HighSwapUsage
+  #   expr: 'node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes * 100 < 10'
+  #   for: 5m
+  #   labels:
+  #     severity: critical
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} swap usage is above 90% (current value: {{ $value }}){% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} swap usage is high{% endraw %}'
+  # - alert: NodeClockSkewDetected
+  #   expr: "(node_timex_offset_seconds > 0.05) or (node_timex_offset_seconds < -0.05) "
+  #   for: 5m
+  #   labels:
+  #     severity: warning
+  #   annotations:
+  #     message: '{% raw %}Clock on {{ $labels.instance }} is out of sync by more than 50ms. Ensure NTP is configured correctly on this host.{% endraw %}'
+  #     summary: 'Clock skew detected.'
+  # - alert: NodeClockSkewDetected
+  #   expr: "(node_timex_offset_seconds > 0.1) or (node_timex_offset_seconds < -0.1) "
+  #   for: 5m
+  #   labels:
+  #     severity: critical
+  #   annotations:
+  #     message: '{% raw %}Clock on {{ $labels.instance }} is out of sync by more than 100ms. Ensure NTP is configured correctly on this host.{% endraw %}'
+  #     summary: 'Clock skew detected.'
+  # - alert: NodeClockNotSynchronising
+  #   expr: "min_over_time(node_timex_sync_status[5m]) == 0\n"
+  #   for: 5m
+  #   labels:
+  #     severity: critical
+  #   annotations:
+  #     message: '{% raw %}Clock on {{ $labels.instance }} is not synchronising. Ensure NTP is configured on this host.{% endraw %}'
+  #     summary: 'Clock not synchronising.'
+  # - alert: ExcessiveTCPConnections
+  #   expr: 'node_netstat_Tcp_CurrEstab > 800'
+  #   for: 5m
+  #   labels:
+  #     severity: warning
+  #   annotations:
+  #     description: '{% raw %}{{ $labels.instance }} has more than 10000 established TCP connections (current value: {{ $value }}){% endraw %}'
+  #     summary: '{% raw %}Instance {{ $labels.instance }} has excessive TCP connections{% endraw %}'
+  # - alert: ExcessiveTCPConnections
+    {# expr: 'node_netstat_Tcp_CurrEstab > 1000'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}{{ $labels.instance }} has more than 20000 established TCP connections (current value: {{ $value }}){% endraw %}'
+      summary: '{% raw %}Instance {{ $labels.instance }} has excessive TCP connections{% endraw %}'
+ #}
+
