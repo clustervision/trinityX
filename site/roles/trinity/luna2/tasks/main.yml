@@ -169,7 +169,7 @@
 #  when: luna2_utils_names is defined
 
 
-# -- done with pip
+# -- we're done with pip
 
 - name: Render /etc/systemd/system/luna2-daemon.service
   template:
@@ -283,6 +283,21 @@
     owner: root
     group: root
     mode: 0755
+
+- name: Ensuring bash completion path exists
+  file:
+    path: '/etc/bash_completion.d/'
+    state: directory
+    owner: root
+    group: root
+
+- name: Copy bash completion script
+  copy:
+    src: "{{ trix_luna }}/cli/addons/bash_completion.sh"
+    dest: '/etc/bash_completion.d/luna.sh' 
+    owner: root
+    group: root
+    mode: 0644
 
 - name: Copy tftp configuration to /etc/xinetd.d
   copy:
