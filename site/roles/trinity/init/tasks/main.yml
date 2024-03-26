@@ -43,10 +43,25 @@
   - debug:
       msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
 
+    # we HAVE to make sure we determine who is primary, else a re-run of the playbook
+    # at a later stage WILL cause trouble if there was a failover.
+  - name: Check with pacemaker who is the primary controller
+    shell: "pcs resource status|(grep trinity-ip || echo 'Started not_available') | awk -F'tarted ' '{ print $2 }'"
+    register: pcs_primary
+    ignore_errors: true
+    when: ha|default(False)
+
   - name: Check if this node is the primary controller
     set_fact:
       primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses and on_controller else False }}'
       on_controller: true
+    when: pcs_primary.stdout == "not_available"
+
+  - name: Set this node as the primary controller based on pacemaker data
+    set_fact:
+      primary: '{{ True if pcs_primary.stdout == ansible_hostname else False }}'
+      on_controller: true
+    when: pcs_primary.stdout != "not_available"
 
   - debug:
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}"
