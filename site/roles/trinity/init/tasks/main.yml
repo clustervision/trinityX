@@ -49,13 +49,12 @@
     shell: "pcs resource status|(grep trinity-ip || echo 'Started not_available') | awk -F'tarted ' '{ print $2 }'"
     register: pcs_primary
     ignore_errors: true
-    when: ha|default(False)
 
   - name: Check if this node is the primary controller
     set_fact:
       primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses and on_controller else False }}'
       on_controller: true
-    when: pcs_primary is not defined or pcs_primary.stdout == "not_available"
+    when: pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
 
   - name: Set this node as the primary controller based on pacemaker data
     set_fact:
