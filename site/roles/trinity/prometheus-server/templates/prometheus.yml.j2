@@ -12,6 +12,11 @@ rule_files:
 
 {% if prometheus_server_alertmanagers | length > 0 %}
 alerting:
+  alert_relabel_configs:
+    # Drop the "replica" label.
+    - action: labeldrop
+      regex: "instance"
+
   alertmanagers:
     - static_configs:
   {% for alertmanager in prometheus_server_alertmanagers %}
