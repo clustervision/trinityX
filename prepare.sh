@@ -27,7 +27,7 @@ function store_config() {
   key=$1
   value=$2
   if [ -f /etc/trinity/prepare.conf ] && [ "$(grep '^'$key'=' /etc/trinity/prepare.conf)" ]; then
-    sed -i 's/^'$key'=/'$key'='$value'/' /etc/trinity/prepare.conf
+    sed -i 's/^'$key'=.*$/'$key'='$value'/' /etc/trinity/prepare.conf
   else
     echo "$key=$value" >> /etc/trinity/prepare.conf
   fi
