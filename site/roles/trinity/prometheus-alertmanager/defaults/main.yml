@@ -76,24 +76,51 @@ prometheus_alertmanager_time_intervals: []
 prometheus_alertmanager_inhibit_rules:
   # Inhibit alerts with severity level `warning` or lower for critical alerts
   - source_match:
+      severity: 'info'
+    target_match:
+      severity: 'warning'
+    equal: ['hostname', 'alertname']
+  - source_match:
+      severity: 'warning'
+    target_match:
+      severity: 'danger'
+    equal: ['hostname', 'alertname']
+  - source_match:
+      severity: 'danger'
+    target_match:
       severity: 'critical'
-    target_match_re:
-      severity: 'warning|critical'
-    equal: ['cluster', 'controller', 'alertname']
+    equal: ['hostname', 'alertname']
 
 
 
 prometheus_alertmanager_route: 
   group_by: ['cluster']
   group_wait: 30s
-  group_interval: 5m
-  repeat_interval: 4h
+  group_interval: 30s
+  repeat_interval: 1h
   receiver: 'null'
   routes:
-  - match_re:
-      severity: 'critical|warning'
+  - match:
+      severity: 'warning'
+    group_interval: 4h
+    repeat_interval: 720h
     receiver: 'mail'
-  
+    continue: true
+  - match:
+      severity: 'danger'
+    group_interval: 30m
+    repeat_interval: 4h
+    receiver: 'mail'
+    continue: true
+  - match:
+      severity: 'critical'
+    group_interval: 30s
+    repeat_interval: 4h
+    receiver: 'mail'
+
+  - match_re:
+      severity: 'danger|critical'
+    receiver: prometheus-sensu-bridge
 
 #   # This routes performs a regular expression match on alert labels to
 #   # catch alerts that are related to a list of services.
