@@ -20,7 +20,7 @@ resource {{ disk.name | replace("/","_") }} {
         # if it cannot resync cleanly.
 
         after-sb-0pri discard-zero-changes;
-        # after-sb-1pri discard-secondary; # <-- forces the primary to overwrite the others
+#        after-sb-1pri discard-secondary; # <-- forces the primary to overwrite the others
         after-sb-1pri consensus; # <------------ should be commented out if above is used
         after-sb-2pri disconnect;
 
@@ -31,6 +31,8 @@ resource {{ disk.name | replace("/","_") }} {
 
 {% if fence_resource_stonith_enabled %}
         fencing resource-and-stonith;
+{% else %}
+#        fencing resource-and-stonith;
 {% endif %}
         verify-alg sha1;
 
