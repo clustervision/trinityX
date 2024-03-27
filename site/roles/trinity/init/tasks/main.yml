@@ -184,10 +184,6 @@
     loop_control:
       loop_var: inner_loop_var
 
-  - debug:
-      msg: "trix_ctrl_interface: {{ trix_ctrl_interface }}"
-    when: trix_ctrl_interface is defined
-
   - block:
     - name: Configuring interface if required
       ansible.builtin.include_tasks:
@@ -201,10 +197,10 @@
       with_items: "{{ all_ctrl_ip }}"
       loop_control:
         loop_var: inner_loop_var
-
-    - debug:
-        msg: "trix_ctrl_interface: {{ trix_ctrl_interface|default('Undefined') }}"
     when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
+
+  - debug:
+      msg: "trix_ctrl_interface: {{ trix_ctrl_interface|default('Undefined') }}"
 
   - name: Verify internal controller interface is configured
     fail:
