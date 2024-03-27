@@ -12,12 +12,16 @@ commonName          = Common Name (e.g. server FQDN)
 subjectAltName = @alt_names                         
 
 [alt_names]
-{% set all_ssl_cert_altname = [] -%}
+{% set all_ssl_cert_altname = [] %}
 {% for alt_list in ssl_cert_altname -%}
-{% if isinstance(alt_list, list) -%}
-{% set all_ssl_cert_altname = all_ssl_cert_altname + alt_list -%}
+{% if alt_list is iterable and alt_list is not string -%}
+{% for alt_name in alt_list -%}
+{% if all_ssl_cert_altname.append(alt_name) -%}
+{% endif -%}
+{% endfor -%}
 {% else -%}
-{% set all_ssl_cert_altname = all_ssl_cert_altname + [alt_list] -%}
+{% if all_ssl_cert_altname.append(alt_list) -%}
+{% endif -%}
 {% endif -%}
 {% endfor -%}
 {% for alt_name in all_ssl_cert_altname|unique -%}
