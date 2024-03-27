@@ -68,8 +68,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 4,
+        "h": 6,
+        "w": 3,
         "x": 0,
         "y": 0
       },
@@ -150,9 +150,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 4,
+        "h": 6,
+        "w": 3,
+        "x": 3,
         "y": 0
       },
       "id": 7,
@@ -198,28 +198,17 @@
           "color": {
             "mode": "thresholds"
           },
-          "custom": {
-            "fillOpacity": 70,
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1
-          },
           "mappings": [
             {
               "options": {
-                "Primary": {
-                  "color": "green",
-                  "index": 0
-                },
-                "Secondary": {
+                "match": "null",
+                "result": {
                   "color": "#808080",
-                  "index": 1
+                  "index": 0,
+                  "text": "Unknown"
                 }
               },
-              "type": "value"
+              "type": "special"
             }
           ],
           "thresholds": {
@@ -228,10 +217,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -239,26 +224,28 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 16,
-        "x": 8,
+        "h": 6,
+        "w": 3,
+        "x": 6,
         "y": 0
       },
-      "id": 2,
+      "id": 19,
       "options": {
-        "colWidth": 0.9,
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^node$/",
+          "values": false
         },
-        "rowHeight": 0.9,
-        "showValue": "auto",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "textMode": "value"
       },
+      "pluginVersion": "10.1.2",
+      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
@@ -267,54 +254,29 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_drbd_resources > 0",
+          "expr": "max by (node) (ha_cluster_pacemaker_resources{resource=\"trinity-ip\"} != 0)",
           "format": "table",
-          "instant": false,
-          "legendFormat": "{{hostname}}",
-          "range": true,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
           "refId": "A"
         }
       ],
-      "title": "DRBD Resources",
+      "title": "Floating IP",
       "transformations": [
         {
-          "id": "groupBy",
+          "id": "organize",
           "options": {
-            "fields": {
-              "Time": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "hostname": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "role": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              }
-            }
-          }
-        },
-        {
-          "id": "partitionByValues",
-          "options": {
-            "fields": [
-              "hostname"
-            ]
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "role \\(lastNotNull\\) (.*)",
-            "renamePattern": "$1"
+            "excludeByName": {
+              "Time": true,
+              "Value": true
+            },
+            "indexByName": {},
+            "renameByName": {}
           }
         }
       ],
-      "type": "status-history"
+      "type": "stat"
     },
     {
       "datasource": {
@@ -375,10 +337,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 5
+        "h": 6,
+        "w": 15,
+        "x": 9,
+        "y": 0
       },
       "id": 6,
       "options": {
@@ -416,7 +378,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 6
       },
       "id": 13,
       "panels": [],
@@ -493,7 +455,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 14
+        "y": 7
       },
       "id": 10,
       "options": {
@@ -692,7 +654,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 14
+        "y": 7
       },
       "id": 11,
       "options": {
@@ -875,7 +837,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 22
+        "y": 15
       },
       "id": 9,
       "options": {
@@ -1074,7 +1036,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 22
+        "y": 15
       },
       "id": 12,
       "options": {
