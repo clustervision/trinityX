@@ -126,7 +126,7 @@ else
   fi
   store_config 'WITH_ZFS' $WITH_ZFS
 
-  if [ "$WITH_ZFS" == "yes" ]; then
+  if [ "$WITH_ZFS" == "yes" ] || [ "$INSIDE_RUNNER" ]; then
     yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
     yes y | dnf -y install zfs zfs-dkms
     echo "zfs" >> /etc/modules-load.d/zfs.conf
