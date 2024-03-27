@@ -3,6 +3,7 @@
 groups:
 - name: trinityx
   rules:
+
   - alert: ExporterDown
     expr: 'up == 0'
     for: 5m
@@ -10,145 +11,271 @@ groups:
       severity: info
     annotations:
       description: '{% raw %}Exporter {{$labels.exporter}} on server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
-      summary: '{% raw %}}Exporter {{$labels.exporter}} down{% endraw %}'
+
+
 
   - alert: ControllerServerDown
-    expr: 'max by(job, hostname, luna_group) (up{job="luna_controllers"}) == 0'
+    expr: 'max by(hostname) (up{job="luna_controllers"}) == 0'
     for: 5m
     labels:
       severity: critical
     annotations:
-      description: '{% raw %}server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
-      summary: '{% raw %}Instance {{ $labels.instance }} down{% endraw %}'
+      description: '{% raw %}Controller server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
 
-  - alert: NodeServerDown
-    expr: 'max by(job, hostname, luna_group) (up{job="luna_nodes"}) == 0'
+  - alert: ServerDown
+    expr: 'max by(hostname) (up{job="luna_nodes"}) == 0'
     for: 5m
     labels:
       severity: warning
     annotations:
-      description: '{% raw %}server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
-      summary: '{% raw %}Instance {{ $labels.instance }} down{% endraw %}'
+      description: '{% raw %}Server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
 
-  # - alert: HighLocalFilesystemUsage
-  #   expr: 'node_filesystem_avail_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} * 100 < 20'
-  #   for: 5m
-  #   labels:
-  #     severity: warning
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 20% free space available.{% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
-  # - alert: HighLocalFilesystemUsage
-  #   expr: 'node_filesystem_avail_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} * 100 < 10'
-  #   for: 5m
-  #   labels:
-  #     severity: critical
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 10% free space available.{% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
-  # - alert: HighRemoteFilesystemUsage
-  #   expr: 'node_filesystem_avail_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 20'
-  #   for: 5m
-  #   labels:
-  #     severity: warning
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 20% free space available.{% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
-  # - alert: HighRemoteFilesystemUsage
-  #   expr: 'node_filesystem_avail_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} / node_filesystem_size_bytes{luna_group="controller", fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay"} * 100 < 10'
-  #   for: 5m
-  #   labels:
-  #     severity: critical
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} filesystem {{ $labels.mountpoint }} has less than 10% free space available.{% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} filesystem almost out of space{% endraw %}'
-  # - alert: HighCpuLoad
-  #   expr: 'node_load1{luna_group="controller"} > 2.75'
-  #   for: 5m
-  #   labels:
-  #     severity: warning
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} load average is above 2.75 (current value: {{ $value }}){% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} load average is high{% endraw %}'
-  # - alert: HighCpuLoad
-  #   expr: 'node_load1{luna_group="controller"} > 3.5'
-  #   for: 5m
-  #   labels:
-  #     severity: critical
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} load average is above 3.5 (current value: {{ $value }}){% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} load average is high{% endraw %}'
-  # - alert: HighMemoryUsage
-  #   expr: 'node_memory_MemAvailable_bytes{luna_group="controller"} / node_memory_MemTotal_bytes{luna_group="controller"} * 100 < 20'
-  #   for: 5m
-  #   labels:
-  #     severity: warning
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} memory usage is above 80% (current value: {{ $value }}){% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} memory usage is high{% endraw %}'
-  # - alert: HighMemoryUsage
-  #   expr: 'node_memory_MemAvailable_bytes{luna_group="controller"} / node_memory_MemTotal_bytes{luna_group="controller"} * 100 < 10'
-  #   for: 5m
-  #   labels:
-  #     severity: critical
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} memory usage is above 90% (current value: {{ $value }}){% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} memory usage is high{% endraw %}'
-  # - alert: HighSwapUsage
-  #   expr: 'node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes * 100 < 20'
-  #   for: 5m
-  #   labels:
-  #     severity: warning
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} swap usage is above 80% (current value: {{ $value }}){% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} swap usage is high{% endraw %}'
-  # - alert: HighSwapUsage
-  #   expr: 'node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes * 100 < 10'
-  #   for: 5m
-  #   labels:
-  #     severity: critical
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} swap usage is above 90% (current value: {{ $value }}){% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} swap usage is high{% endraw %}'
-  # - alert: NodeClockSkewDetected
-  #   expr: "(node_timex_offset_seconds > 0.05) or (node_timex_offset_seconds < -0.05) "
-  #   for: 5m
-  #   labels:
-  #     severity: warning
-  #   annotations:
-  #     message: '{% raw %}Clock on {{ $labels.instance }} is out of sync by more than 50ms. Ensure NTP is configured correctly on this host.{% endraw %}'
-  #     summary: 'Clock skew detected.'
-  # - alert: NodeClockSkewDetected
-  #   expr: "(node_timex_offset_seconds > 0.1) or (node_timex_offset_seconds < -0.1) "
-  #   for: 5m
-  #   labels:
-  #     severity: critical
-  #   annotations:
-  #     message: '{% raw %}Clock on {{ $labels.instance }} is out of sync by more than 100ms. Ensure NTP is configured correctly on this host.{% endraw %}'
-  #     summary: 'Clock skew detected.'
-  # - alert: NodeClockNotSynchronising
-  #   expr: "min_over_time(node_timex_sync_status[5m]) == 0\n"
-  #   for: 5m
-  #   labels:
-  #     severity: critical
-  #   annotations:
-  #     message: '{% raw %}Clock on {{ $labels.instance }} is not synchronising. Ensure NTP is configured on this host.{% endraw %}'
-  #     summary: 'Clock not synchronising.'
-  # - alert: ExcessiveTCPConnections
-  #   expr: 'node_netstat_Tcp_CurrEstab > 800'
-  #   for: 5m
-  #   labels:
-  #     severity: warning
-  #   annotations:
-  #     description: '{% raw %}{{ $labels.instance }} has more than 10000 established TCP connections (current value: {{ $value }}){% endraw %}'
-  #     summary: '{% raw %}Instance {{ $labels.instance }} has excessive TCP connections{% endraw %}'
-  # - alert: ExcessiveTCPConnections
-    {# expr: 'node_netstat_Tcp_CurrEstab > 1000'
+
+
+  - alert: MultipleServerDown
+    expr: 'avg(max by(hostname) (up{job="luna_nodes"})) < 0.9'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}More of 10% of the nodes have been down for more than 15 minutes.{% endraw %}'
+
+  - alert: MultipleServerDown
+    expr: 'avg(max by(hostname) (up{job="luna_nodes"})) < 0.8'
+    for: 5m
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}More of 10% of the nodes have been down for more than 15 minutes.{% endraw %}'
+
+  - alert: MultipleServerDown
+    expr: 'avg(max by(hostname) (up{job="luna_nodes"})) < 0.5'
     for: 5m
     labels:
       severity: critical
     annotations:
-      description: '{% raw %}{{ $labels.instance }} has more than 20000 established TCP connections (current value: {{ $value }}){% endraw %}'
-      summary: '{% raw %}Instance {{ $labels.instance }} has excessive TCP connections{% endraw %}'
- #}
+      description: '{% raw %}More of 10% of the nodes have been down for more than 15 minutes.{% endraw %}'
+
+
+
+  - alert: HighSystemTemperature
+    expr: 'ipmi_temperature_celsius{name=~"[Ss]ystem.*[Tt]emp"} > 70'
+    for: 15m
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}Controller server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
+
+  - alert: HighCPUTemperature
+    expr: 'ipmi_temperature_celsius{name=~"[Cc][Pp][Uu].*[Tt]emp"} > 90'
+    for: 1h
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}Compute server {{$labels.hostname}} has been down more than 5 minutes.{% endraw %}'
+
+
+
+  - alert: ProcessorFaultDetected
+    expr: 'ipmi_sensor_state{type="Processor", job="luna_nodes"} > 0'
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}Processor fault detected on server {{$labels.hostname}}.{% endraw %}'
+
+  - alert: ProcessorFaultDetected
+    expr: 'ipmi_sensor_state{type="Processor", job="luna_controllers"} > 0'
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}Processor fault detected on server {{$labels.hostname}}.{% endraw %}'
+
+  - alert: PowerSupplyFaultDetected
+    expr: 'ipmi_sensor_state{type="Power Supply", job="luna_nodes"} > 0'
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}Power Supply fault detected on server {{$labels.hostname}}.{% endraw %}'
+
+  - alert: PowerSupplyFaultDetected
+    expr: 'ipmi_sensor_state{type="Power Supply", job="luna_controllers"} > 0'
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}Power Supply fault detected on server {{$labels.hostname}}.{% endraw %}'
+
+
+
+  - alert: LocalFilesystemBusy
+    expr: 'node_filesystem_avail_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} < 0.1'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}Filesystem {{$labels.mountpoint}} on server {{$labels.hostname}} has less than 10% of capacity available {% endraw %}'
+
+  - alert: LocalFilesystemBusy
+    expr: 'node_filesystem_avail_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} < 0.05'
+    for: 5m
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}Filesystem {{$labels.mountpoint}} on server {{$labels.hostname}} has less than 5% of capacity available {% endraw %}'
+
+  - alert: LocalFilesystemBusy
+    expr: 'node_filesystem_avail_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} < 0.03'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}Filesystem {{$labels.mountpoint}} on server {{$labels.hostname}} has less than 3% of capacity available {% endraw %}'
+
+
+
+  - alert: RemoteFilesystemBusy
+    expr: 'max by (device, fstype, mountpoint) (node_filesystem_avail_bytes{fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay|rpc_pipefs"} / node_filesystem_size_bytes{fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay|rpc_pipefs"}) < 0.2'
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}Filesystem {{$labels.mountpoint}} on server {{$labels.hostname}} has less than 10% of capacity available {% endraw %}'
+
+  - alert: RemoteFilesystemBusy
+    expr: 'max by (device, fstype, mountpoint) (node_filesystem_avail_bytes{fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay|rpc_pipefs"} / node_filesystem_size_bytes{fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay|rpc_pipefs"}) < 0.1'
+    for: 5m
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}Filesystem {{$labels.mountpoint}} on server {{$labels.hostname}} has less than 5% of capacity available {% endraw %}'
+
+  - alert: RemoteFilesystemBusy
+    expr: 'max by (device, fstype, mountpoint) (node_filesystem_avail_bytes{fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay|rpc_pipefs"} / node_filesystem_size_bytes{fstype!~"nsfs|xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat|tmpfs|sysv|proc|debugfs|cgmfs|tracefs|rootfs|overlay|rpc_pipefs"}) < 0.03'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}Filesystem {{$labels.mountpoint}} on server {{$labels.hostname}} has less than 3% of capacity available {% endraw %}'
+
+
+
+  - alert: HighCpuLoad
+    expr: '(node_load5{job="luna_controllers"}/count(node_cpu_seconds_total{mode="idle", job="luna_controllers"}) without (cpu,mode)) > 0.5'
+    for: 1h
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}High CPU usage on server {{$labels.hostname}} for more than 1h{% endraw %}'
+
+  - alert: HighCpuLoad
+    expr: '(node_load5{job="luna_controllers"}/count(node_cpu_seconds_total{mode="idle", job="luna_controllers"}) without (cpu,mode)) > 0.9'
+    for: 1h
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}High CPU usage on server {{$labels.hostname}} for more than 1h{% endraw %}'
+
+  - alert: HighCpuLoad
+    expr: '(node_load5{job="luna_controllers"}/count(node_cpu_seconds_total{mode="idle", job="luna_controllers"}) without (cpu,mode)) > 1'
+    for: 1h
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}High CPU usage on server {{$labels.hostname}} for more than 1h{% endraw %}'
+
+
+
+  - alert: HighMemoryUsage
+    expr: 'node_memory_MemAvailable_bytes{job="luna_controllers"} / node_memory_MemTotal_bytes{job="luna_controllers"} < 0.25'
+    for: 1h
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}High memory usage on server {{$labels.hostname}} for more than 1h{% endraw %}'
+
+  - alert: HighMemoryUsage
+    expr: 'node_memory_MemAvailable_bytes{job="luna_controllers"} / node_memory_MemTotal_bytes{job="luna_controllers"} < 0.05'
+    for: 1h
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}High memory usage on server {{$labels.hostname}} for more than 1h {% endraw %}'
+
+
+
+  - alert: Swapping
+    expr: '(node_memory_SwapCached_bytes{job="luna_controllers"} / node_memory_SwapTotal_bytes{job="luna_controllers"} > 0.5) or (node_memory_SwapCached_bytes{job="luna_controllers"} > 1e9)'
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}Swap usage above 50% or 1GB detected on server {{$labels.hostname}}{% endraw %}'
+  
+  - alert: Swapping
+    expr: '(node_memory_SwapCached_bytes{job="luna_nodes"} / node_memory_SwapTotal_bytes{job="luna_nodes"} > 0.5) or (node_memory_SwapCached_bytes{job="luna_nodes"} > 1e9)'
+    for: 1h
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}Swap usage above 50% or 1GB detected on server {{$labels.hostname}}{% endraw %}'
+
+
+
+  - alert: ClockSkewDetected
+    expr: "((node_timex_offset_seconds > 1) or (node_timex_offset_seconds < -1)) > 0"
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}Clock on {{ $labels.hostname }} is out of sync by more than 1s (current value: {{ $value }}){% endraw %}'
+
+  - alert: ClockSkewDetected
+    expr: "((node_timex_offset_seconds > 2) or (node_timex_offset_seconds < -2)) > 0"
+    for: 5m
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}Clock on {{ $labels.hostname }} is out of sync by more than 2s (current value: {{ $value }}){% endraw %}'
+
+  - alert: ClockSkewDetected
+    expr: "((node_timex_offset_seconds > 3) or (node_timex_offset_seconds < 3)) > 0"
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}Clock on {{ $labels.hostname }} is out of sync by more than 3s (current value: {{ $value }}){% endraw %}'
+
+#  - alert: ClockNotSynchronising
+#    expr: "min_over_time(node_timex_sync_status[15m]) == 0"
+#    labels:
+#      severity: warning
+#    annotations:
+#      description: '{% raw %}Clock on {{ $labels.hostname }} hasn't been synchronizing in the last 15m{% endraw %}'
+
+
+
+  - alert: ExcessiveTCPConnections
+    expr: 'node_netstat_Tcp_CurrEstab > 1000'
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      description: '{% raw %}Server {{ $labels.hostname }} has more than 1000 established TCP connections (current value: {{ $value }}){% endraw %}'
+
+
+
+  - alert: ServiceFailed
+    expr: 'node_systemd_unit_state{name=~"(dhcpd|named|nginx|luna2-daemon|slurmctld|sssd|slapd|rsyslogd).service", state="failed", job="luna_controllers"} > 0'
+    for: 1h
+    labels:
+      severity: critical
+    annotations:
+      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
+
+  - alert: ServiceFailed
+    expr: 'node_systemd_unit_state{name=~"(rsyslogd|slurmd).service", state="failed", job="luna_nodes"} > 0'
+    for: 1h
+    labels:
+      severity: danger
+    annotations:
+      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
 
