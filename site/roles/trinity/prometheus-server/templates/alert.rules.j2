@@ -221,7 +221,7 @@ groups:
 
 
   - alert: ClockSkewDetected
-    expr: "(node_timex_offset_seconds > 1) or (node_timex_offset_seconds < -1) "
+    expr: "((node_timex_offset_seconds > 1) or (node_timex_offset_seconds < -1)) > 0"
     for: 5m
     labels:
       severity: warning
@@ -229,7 +229,7 @@ groups:
       description: '{% raw %}Clock on {{ $labels.hostname }} is out of sync by more than 1s (current value: {{ $value }}){% endraw %}'
 
   - alert: ClockSkewDetected
-    expr: "(node_timex_offset_seconds > 2) or (node_timex_offset_seconds < -2) "
+    expr: "((node_timex_offset_seconds > 2) or (node_timex_offset_seconds < -2)) > 0"
     for: 5m
     labels:
       severity: danger
@@ -237,19 +237,19 @@ groups:
       description: '{% raw %}Clock on {{ $labels.hostname }} is out of sync by more than 2s (current value: {{ $value }}){% endraw %}'
 
   - alert: ClockSkewDetected
-    expr: "(node_timex_offset_seconds > 3) or (node_timex_offset_seconds < 3) "
+    expr: "((node_timex_offset_seconds > 3) or (node_timex_offset_seconds < 3)) > 0"
     for: 5m
     labels:
       severity: critical
     annotations:
       description: '{% raw %}Clock on {{ $labels.hostname }} is out of sync by more than 3s (current value: {{ $value }}){% endraw %}'
 
-  - alert: ClockNotSynchronising
-    expr: "min_over_time(node_timex_sync_status[15m]) == 0\n"
-    labels:
-      severity: warning
-    annotations:
-      description: '{% raw %}Clock on {{ $labels.hostname }} hasn't been synchronizing in the last 15m{% endraw %}'
+#  - alert: ClockNotSynchronising
+#    expr: "min_over_time(node_timex_sync_status[15m]) == 0"
+#    labels:
+#      severity: warning
+#    annotations:
+#      description: '{% raw %}Clock on {{ $labels.hostname }} hasn't been synchronizing in the last 15m{% endraw %}'
 
 
 
