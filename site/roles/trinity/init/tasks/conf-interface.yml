@@ -1,0 +1,45 @@
+---
+
+- set_fact:
+    use_this_interface: '{{ item }}'
+  with_items: '{{ firewalld_trusted_interfaces }}'
+  when: 
+    - firewalld_trusted_interfaces | length == 1
+    - hostvars[inventory_hostname]['ansible_'+item] is not defined
+
+- set_fact:
+    use_this_ip: '{{ item.1 }}'
+  with_together:
+    - '{{ all_ctrl_hostname }}'
+    - '{{ all_ctrl_ip }}'
+  when: item.0 == ansible_hostname
+
+#- debug:
+#    msg: "{{ hostvars }}"
+
+- block:
+  - debug:
+      msg: "Going to configure an interface using this config: {{ use_this_interface + ' :: ' + use_this_ip + '/' + trix_cluster_netprefix }}"
+
+  - name: Install needed network manager libs
+    ansible.builtin.package:
+      name:
+        - NetworkManager-libnm
+        - nm-connection-editor
+        - libsemanage-python
+      state: present
+
+    # we ignore errors here so we can catch a non existing nic later and tell the admin
+  - name: Add and configure controller interface
+    community.general.nmcli:
+      conn_name: 'trinity-{{ use_this_interface }}'
+      ifname: '{{ use_this_interface }}'
+      type: ethernet
+      ip4: '{{ use_this_ip }}/{{ trix_cluster_netprefix }}'
+      state: present
+    ignore_errors: true
+  when:
+    - use_this_interface is defined
+    - use_this_ip is defined
+    - trix_cluster_netprefix is defined
+
