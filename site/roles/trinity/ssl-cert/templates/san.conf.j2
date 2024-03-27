@@ -15,11 +15,9 @@ subjectAltName = @alt_names
 {% set all_ssl_cert_altname = [] -%}
 {% for alt_list in ssl_cert_altname -%}
 {% if isinstance(alt_list, list) -%}
-{% for alt_name in alt_list|unique -%}
-{% ssl_cert_altname.append(alt_name) -%}
-{% endfor -%}
+{% set all_ssl_cert_altname = all_ssl_cert_altname + alt_list -%}
 {% else -%}
-{% ssl_cert_altname.append(alt_list) -%}
+{% set all_ssl_cert_altname = all_ssl_cert_altname + [alt_list] -%}
 {% endif -%}
 {% endfor -%}
 {% for alt_name in all_ssl_cert_altname|unique -%}
