@@ -191,6 +191,7 @@
   when: primary
 
 # --------------------- fencing ----------------------------
+# /usr/local/sbin/pcs property set stonith-enabled=false|true
 
 - block:
   - name: Toggle pacemaker stonith property
@@ -198,34 +199,28 @@
       name: stonith-enabled
       value: '{{ fence_ipmilan_enabled }}'
 
-  - name: Configure fencing resources using the ipmilan fencing agent
-    pcs_resource:
-      name: 'fence-{{ item.0 }}'
-      resource_class: 'stonith'
-      resource_type: 'fence_ipmilan'
-      options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
-      state: present
-    with_together:
-      - '{{ all_ctrl_hostname }}'
-      - '{{ all_ctrl_bmc }}'
+  - block:
+    - name: Configure fencing resources using the ipmilan fencing agent
+      pcs_resource:
+        name: 'fence-{{ item.0 }}'
+        resource_class: 'stonith'
+        resource_type: 'fence_ipmilan'
+        options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
+        state: present
+      with_together:
+        - '{{ all_ctrl_hostname }}'
+        - '{{ all_ctrl_bmc }}'
 
-  - name: Add fencing location constraints
-    pcs_constraint_location:
-      resource: 'fence-{{ item }}'
-      node_name: '{{ item }}'
-      score: '-INFINITY'
-      state: present
-    with_items: '{{ all_ctrl_hostname }}'
+    - name: Add fencing location constraints
+      pcs_constraint_location:
+        resource: 'fence-{{ item }}'
+        node_name: '{{ item }}'
+        score: '-INFINITY'
+        state: present
+      with_items: '{{ all_ctrl_hostname }}'
+    when: fence_ipmilan_enabled
+  when: primary
   tags: fencing
-  when: 
-    - primary
-    - fence_ipmilan_enabled
 
-- name: Disable fencing
-  shell: '/usr/local/sbin/pcs property set stonith-enabled=false'
-  tags: fencing
-  when: 
-    - primary
-    - not fence_ipmilan_enabled
 
 
