@@ -3,6 +3,11 @@
 LVM_CONF=/etc/lvm/lvm.conf
 
 LVM_DISKS=$(cat /tmp/lvm_filter.dat | grep -v '^#')
+VGROUPS=$(cat /tmp/lvm_volumes.dat | grep -v '^#' )
+if [ ! "$LVM_DISKS" ] && [ ! "$VGROUPS" ]; then
+        # we have no lvm disks and groups so we keep everything default
+        exit 0
+fi
 find /dev -type l -exec echo -n {}'=' \; -exec readlink -f {} \; > /tmp/dev-links.dat
 
 FILTER="["
@@ -44,15 +49,16 @@ FILTER="$FILTER \"a|.*|\" ]"
 echo "filter = $FILTER"
 
 VOLUMES="["
-VGROUPS=$(cat /tmp/lvm_volumes.dat | grep -v '^#' )
 if [ "$VGROUPS" ]; then
 	VGROUPS=$(echo $VGROUPS | sed -e 's/ / -e /g')
 	VGS=$(vgs | grep -v arning | tail -n+2 | awk '{ print $1 }' | grep -v -e $VGROUPS)
-	for V in $VGS; do
-		VOLUMES="$VOLUMES \"$V\","
-	done
-	VOLUMES=$(echo $VOLUMES | sed -e 's/,$//')
+else
+	VGS=$(vgs | grep -v arning | tail -n+2 | awk '{ print $1 }')
 fi
+for V in $VGS; do
+	VOLUMES="$VOLUMES \"$V\","
+done
+VOLUMES=$(echo $VOLUMES | sed -e 's/,$//')
 VOLUMES="$VOLUMES ]"
 
 echo "volume_list = $VOLUMES"
