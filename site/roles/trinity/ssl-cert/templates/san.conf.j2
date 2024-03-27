@@ -12,6 +12,15 @@ commonName          = Common Name (e.g. server FQDN)
 subjectAltName = @alt_names                         
 
 [alt_names]
-{% for alt_name in ssl_cert_altname|unique -%}
+{% set all_ssl_cert_altname = [] -%}
+{% for alt_list in ssl_cert_altname -%}
+{% if isinstance(alt_list, list) -%}
+{% for alt_name in alt_list|unique -%}
+{% ssl_cert_altname.append(alt_name)
+{% endfor -%}
+{% else -%}
+{% ssl_cert_altname.append(alt_list)
+{% endif -%}
+{% for alt_name in all_ssl_cert_altname|unique -%}
 DNS.{{ loop.index }} = {{ alt_name }}
 {% endfor -%}

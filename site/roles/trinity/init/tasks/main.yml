@@ -207,6 +207,18 @@
       msg: "Interface with config set in 'trix_ctrl1_ip' ({{ trix_ctrl1_ip }}) or 'trix_ctrlX_ip' ({{ trix_ctrl2_ip }}, ...) not found. Please make sure the interface is configured and up"
     when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
 
+    # we figure out our local ip. handy if we want local connection but through ip.
+  - set_fact:
+      trix_ctrl_local_ip: '{{ item.1 }}'
+    with_together:
+      - '{{ all_ctrl_hostname }}'
+      - '{{ all_ctrl_ip }}'
+    when: item.0 == ansible_hostname
+
+  - set_fact:
+      trix_ctrl_local_ip: '{{ trix_ctrl_ip }}'
+    when: trix_ctrl_local_ip is not defined
+
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
