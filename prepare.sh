@@ -96,7 +96,7 @@ else
     add_message "after reboot, please re-run prepare.sh to make sure all requirements are met."
     add_message "If you insist on proceeding though, please confirm with 'go', anything else stops the installation."
     show_message
-    echo -n "Please let me know your preference (go|<anything else>): "
+    echo -n "Please let me know your preference (go|<stop/enter>): "
     read -t 240 CONFIRM
     RET=$?
     if [ "$RET" == "142" ]; then
@@ -110,8 +110,9 @@ else
   if [ ! "$WITH_ZFS" ] && [ ! "$INSIDE_RUNNER" ]; then
     add_message "Would you prefer to include ZFS?" 
     add_message "ZFS is supported in the shared_fs_disk/HA role. If you prefer to use ZFS there, please confirm below."
+    add_message "'no' skips the ZFS installation, anything else proceeds with ZFS installation."
     show_message
-    echo -n "Please let me know your preference (no|<anything else>): "
+    echo -n "Please let me know your preference (no|<yes/enter>): "
     read -t 240 WITH_ZFS
     RET=$?
     if [ "$RET" == "142" ]; then
@@ -125,7 +126,7 @@ else
   fi
   store_config 'WITH_ZFS' $WITH_ZFS
 
-  if [ "$WITH_ZFS" == "yes" ]; then
+  if [ "$WITH_ZFS" == "yes" ] || [ "$INSIDE_RUNNER" ]; then
     yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
     yes y | dnf -y install zfs zfs-dkms
     echo "zfs" >> /etc/modules-load.d/zfs.conf

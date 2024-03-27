@@ -177,6 +177,7 @@
   tags: always,ha
 
 
+  # checking nic configs and fix if it can
 - block:
   - name: Collecting controller interface information
     include_tasks: find-interface.yml
@@ -218,7 +219,6 @@
   - set_fact:
       trix_ctrl_local_ip: '{{ trix_ctrl_ip }}'
     when: trix_ctrl_local_ip is not defined
-
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
@@ -240,6 +240,7 @@
       msg: "admin_group: {{ admin_group }}"
   when: not enable_authentication|default(False)
   tags: always
+
 
 - name: Collect number of controllers
   set_fact:
