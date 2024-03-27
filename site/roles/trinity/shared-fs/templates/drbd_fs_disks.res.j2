@@ -29,7 +29,9 @@ resource {{ disk.name | replace("/","_") }} {
         transport     "tcp";
 #        transport     "rdma";
 
+{% if fence_resource_stonith_enabled %}
         fencing resource-and-stonith;
+{% endif %}
         verify-alg sha1;
 
         # peer authentication
