@@ -193,6 +193,15 @@
       ansible.builtin.include_tasks:
         file: conf-interface.yml
 
+    - name: Re-gather facts to get latest information
+      setup:
+
+    - name: Collecting controller interface information
+      include_tasks: find-interface.yml
+      with_items: "{{ all_ctrl_ip }}"
+      loop_control:
+        loop_var: inner_loop_var
+
     - debug:
         msg: "trix_ctrl_interface: {{ trix_ctrl_interface }}"
       when: trix_ctrl_interface is defined
