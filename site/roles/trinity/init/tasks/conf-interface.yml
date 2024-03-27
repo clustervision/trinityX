@@ -19,14 +19,13 @@
 
 - block:
   - debug:
-      msg: "Going to configure an interface using this config: {{ use_this_interface + ' :: ' + use_this_ip + '/' + trix_cluster_netprefix }}"
+      msg: "Going to configure an interface using this config: {{ use_this_interface + ' :: ' + use_this_ip + '/' + trix_cluster_netprefix|string }}"
 
   - name: Install needed network manager libs
     ansible.builtin.package:
       name:
         - NetworkManager-libnm
         - nm-connection-editor
-        - libsemanage-python
       state: present
 
     # we ignore errors here so we can catch a non existing nic later and tell the admin

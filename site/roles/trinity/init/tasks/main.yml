@@ -56,19 +56,12 @@
   - name: Check if this node is the primary controller
     set_fact:
       primary: >-
-        '{{ if on_controller
-              if trix_ctrl1_ip in ansible_all_ipv4_addresses
-                True
-              elif trix_ctrl1_hostname == ansible_hostname
-                True
-              else
-                False
-              endif 
-            else
-              False
-            endif }}'
-#        '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses and on_controller else False }}'
-    when: pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
+        {{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses
+           or trix_ctrl1_hostname == ansible_hostname
+           else False }}
+    when:
+      - on_controller
+      - pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
 
   - name: Set this node as the primary controller based on pacemaker data
     set_fact:
@@ -77,6 +70,11 @@
     when: 
       - pcs_primary is defined 
       - pcs_primary.stdout != "not_available"
+
+  - name: Set primary false if we cannot confirm with confidence
+    set_fact:
+       primary: False
+    when: primary is not defined
 
   - debug:
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}"

@@ -102,7 +102,7 @@ else
     if [ "$RET" == "142" ]; then
       CONFIRM='yes'
     fi
-    if [ "$CONFIRM" != "yes" ]; then
+    if [ "$CONFIRM" != "go" ]; then
        exit 1
     fi
   fi
