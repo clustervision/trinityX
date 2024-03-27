@@ -31,7 +31,7 @@
     # we ignore errors here so we can catch a non existing nic later and tell the admin
   - name: Add and configure controller interface
     community.general.nmcli:
-      conn_name: '{{ use_this_interface }}'
+      conn_name: 'trinity-{{ use_this_interface }}'
       ifname: '{{ use_this_interface }}'
       type: ethernet
       ip4: '{{ use_this_ip }}/{{ trix_cluster_netprefix }}'
@@ -40,7 +40,7 @@
 
   - name: Bring the controller interface up
     command: 
-      cmd: "nmcli con up {{ use_this_interface }}"
+      cmd: "nmcli con up trinity-{{ use_this_interface }}"
     ignore_errors: true
   when:
     - use_this_interface is defined
