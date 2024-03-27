@@ -94,31 +94,29 @@ else
   if [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ] && [ ! "$INSIDE_RUNNER" ]; then
     add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
     add_message "after reboot, please re-run prepare.sh to make sure all requirements are met."
-    add_message "If you insist on proceeding though, please confirm with 'go', anything else stops the installation."
     show_message
-    echo -n "Please let me know your preference (go|<stop/enter>): "
+    echo -n "Do you want to proceed with current kernel? (y|<n>): "
     read -t 240 CONFIRM
     RET=$?
     if [ "$RET" == "142" ]; then
-      CONFIRM='yes'
+      CONFIRM='y'
     fi
-    if [ "$CONFIRM" != "go" ]; then
-       exit 1
+    if [ "$CONFIRM" != "y" ]; then
+      exit 1
     fi
   fi
 
   if [ ! "$WITH_ZFS" ] && [ ! "$INSIDE_RUNNER" ]; then
     add_message "Would you prefer to include ZFS?" 
     add_message "ZFS is supported in the shared_fs_disk/HA role. If you prefer to use ZFS there, please confirm below."
-    add_message "'no' skips the ZFS installation, anything else proceeds with ZFS installation."
     show_message
-    echo -n "Please let me know your preference (no|<yes/enter>): "
+    echo -n "Do you want to install ZFS? (<y>|n): "
     read -t 240 WITH_ZFS
     RET=$?
     if [ "$RET" == "142" ]; then
       WITH_ZFS=yes
     fi
-    if [ "$WITH_ZFS" != "no" ]; then
+    if [ "$WITH_ZFS" != "n" ]; then
       WITH_ZFS="yes"
     else
       WITH_ZFS="no"
