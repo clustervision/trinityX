@@ -27,3 +27,18 @@ subjectAltName = @alt_names
 {% for alt_name in all_ssl_cert_altname|unique -%}
 DNS.{{ loop.index }} = {{ alt_name }}
 {% endfor -%}
+{% set all_ssl_cert_altip = [] %}
+{% for alt_list in ssl_cert_altip -%}
+{% if alt_list is iterable and alt_list is not string -%}
+{% for alt_ip in alt_list -%}
+{% if all_ssl_cert_altip.append(alt_ip) -%}
+{% endif -%}
+{% endfor -%}
+{% else -%}
+{% if all_ssl_cert_altip.append(alt_list) -%}
+{% endif -%}
+{% endif -%}
+{% endfor -%}
+{% for alt_ip in all_ssl_cert_altip|unique -%}
+IP.{{ loop.index }} = {{ alt_ip }}
+{% endfor -%}
