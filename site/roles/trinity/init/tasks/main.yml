@@ -50,10 +50,24 @@
     register: pcs_primary
     ignore_errors: true
 
+    # we assume that we start with controller 1 as being the first installed and primary
+    # technically controller2 could be the primary but i do not dare to judge if things
+    # would work as expected. for now we leave it as it is.
   - name: Check if this node is the primary controller
     set_fact:
-      primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses and on_controller else False }}'
-      on_controller: true
+      primary: >-
+        '{{ if on_controller
+              if trix_ctrl1_ip in ansible_all_ipv4_addresses
+                True
+              elif trix_ctrl1_hostname == ansible_hostname
+                True
+              else
+                False
+              endif 
+            else
+              False
+            endif }}'
+#        '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses and on_controller else False }}'
     when: pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
 
   - name: Set this node as the primary controller based on pacemaker data
@@ -167,7 +181,7 @@
 
 - block:
   - name: Collecting controller interface information
-    include_tasks: interface.yml
+    include_tasks: find-interface.yml
     with_items: "{{ all_ctrl_ip }}"
     loop_control:
       loop_var: inner_loop_var
@@ -175,6 +189,16 @@
   - debug:
       msg: "trix_ctrl_interface: {{ trix_ctrl_interface }}"
     when: trix_ctrl_interface is defined
+
+  - block:
+    - name: Configuring interface if required
+      ansible.builtin.include_tasks:
+        file: conf-interface.yml
+
+    - debug:
+        msg: "trix_ctrl_interface: {{ trix_ctrl_interface }}"
+      when: trix_ctrl_interface is defined
+    when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
 
   - name: Verify internal controller interface is configured
     fail:
