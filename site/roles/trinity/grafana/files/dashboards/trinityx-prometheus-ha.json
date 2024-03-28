@@ -645,7 +645,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "shades"
           },
           "custom": {
             "fillOpacity": 70,
@@ -654,12 +654,14 @@
               "tooltip": false,
               "viz": false
             },
-            "lineWidth": 1
+            "insertNulls": 60000,
+            "lineWidth": 0,
+            "spanNulls": false
           },
           "mappings": [
             {
               "options": {
-                "pattern": ".*faile",
+                "pattern": ".*failed",
                 "result": {
                   "color": "red",
                   "index": 0
@@ -718,12 +720,13 @@
       },
       "id": 11,
       "options": {
-        "colWidth": 0.9,
+        "alignValue": "left",
         "legend": {
-          "displayMode": "table",
-          "placement": "right",
+          "displayMode": "list",
+          "placement": "bottom",
           "showLegend": true
         },
+        "mergeValues": true,
         "rowHeight": 0.9,
         "showValue": "auto",
         "tooltip": {
@@ -752,82 +755,43 @@
       "title": "Pacemaker resources",
       "transformations": [
         {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "Time": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "agent": {
-                "aggregations": []
-              },
-              "group": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "node": {
-                "aggregations": []
-              },
-              "resource": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "role": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "status": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              }
-            }
-          }
-        },
-        {
           "id": "calculateField",
           "options": {
-            "alias": "status",
+            "alias": "state",
             "binary": {
-              "left": "role (lastNotNull)",
+              "left": "role",
               "reducer": "sum",
-              "right": "status (lastNotNull)"
+              "right": "status"
             },
             "mode": "binary",
             "reduce": {
               "reducer": "sum"
-            },
-            "replaceFields": false
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "group": true,
-              "role (lastNotNull)": true,
-              "status (lastNotNull)": true
-            },
-            "indexByName": {},
-            "renameByName": {
-              "status": ""
             }
           }
         },
         {
-          "id": "partitionByValues",
+          "id": "groupingToMatrix",
           "options": {
-            "fields": [
-              "resource"
-            ]
+            "columnField": "resource",
+            "emptyValue": "empty",
+            "rowField": "Time",
+            "valueField": "state"
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "time",
+                "targetField": "Time\\resource"
+              }
+            ],
+            "fields": {}
           }
         }
       ],
-      "type": "status-history"
+      "type": "state-timeline"
     },
     {
       "datasource": {
@@ -1027,7 +991,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "shades"
           },
           "custom": {
             "fillOpacity": 70,
@@ -1036,12 +1000,14 @@
               "tooltip": false,
               "viz": false
             },
-            "lineWidth": 1
+            "insertNulls": 60000,
+            "lineWidth": 0,
+            "spanNulls": false
           },
           "mappings": [
             {
               "options": {
-                "pattern": ".*faile",
+                "pattern": ".*failed",
                 "result": {
                   "color": "red",
                   "index": 0
@@ -1098,14 +1064,15 @@
         "x": 8,
         "y": 15
       },
-      "id": 12,
+      "id": 25,
       "options": {
-        "colWidth": 0.9,
+        "alignValue": "left",
         "legend": {
-          "displayMode": "table",
-          "placement": "right",
+          "displayMode": "list",
+          "placement": "bottom",
           "showLegend": true
         },
+        "mergeValues": true,
         "rowHeight": 0.9,
         "showValue": "auto",
         "tooltip": {
@@ -1123,7 +1090,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=\"$controllers\", group='Trinity-stack'} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=~\"$controllers\", group=\"Trinity-stack\"} != 0",
           "format": "table",
           "instant": false,
           "legendFormat": "__auto",
@@ -1131,85 +1098,46 @@
           "refId": "A"
         }
       ],
-      "title": "Pacemaker Triniity-stack resources",
+      "title": "Pacemaker Trinity-stack resources",
       "transformations": [
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "Time": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "agent": {
-                "aggregations": []
-              },
-              "group": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "node": {
-                "aggregations": []
-              },
-              "resource": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "role": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "status": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              }
-            }
-          }
-        },
         {
           "id": "calculateField",
           "options": {
-            "alias": "status",
+            "alias": "state",
             "binary": {
-              "left": "role (lastNotNull)",
+              "left": "role",
               "reducer": "sum",
-              "right": "status (lastNotNull)"
+              "right": "status"
             },
             "mode": "binary",
             "reduce": {
               "reducer": "sum"
-            },
-            "replaceFields": false
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "group": true,
-              "role (lastNotNull)": true,
-              "status (lastNotNull)": true
-            },
-            "indexByName": {},
-            "renameByName": {
-              "status": ""
             }
           }
         },
         {
-          "id": "partitionByValues",
+          "id": "groupingToMatrix",
           "options": {
-            "fields": [
-              "resource"
-            ]
+            "columnField": "resource",
+            "emptyValue": "empty",
+            "rowField": "Time",
+            "valueField": "state"
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "time",
+                "targetField": "Time\\resource"
+              }
+            ],
+            "fields": {}
           }
         }
       ],
-      "type": "status-history"
+      "type": "state-timeline"
     }
   ],
   "refresh": "30s",
@@ -1255,13 +1183,13 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "High Availability",
   "uid": "trixha",
-  "version": 1,
+  "version": 13,
   "weekStart": ""
 }
