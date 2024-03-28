@@ -22,3 +22,12 @@
   ignore_errors: true
   when: wrapup_fix_firewalld_zones_script.stat.exists
 
+- name: set property 'standby' to 'absent' for non-primary node (unstandby)
+  pcs_property:
+    name: 'standby'
+    node: '{{ ansible_hostname }}'
+    state: 'absent'
+  ignore_errors: true
+  when:
+    - ha
+    - not primary

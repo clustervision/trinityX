@@ -140,6 +140,14 @@
     state: started
     enabled: true
 
+  # this should calm pcs down, trying to failover to this incomplete non primary node....
+- name: set property 'standby' to 'on' for non primary node (standby)
+  pcs_property:
+    name: 'standby'
+    node: '{{ ansible_hostname }}'
+    value: 'on'
+  when: not primary
+
 # ---------------------- resources and config ----------------
 
 - name: Render /etc/systemd/system/luna2-master.service
