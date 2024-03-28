@@ -300,6 +300,20 @@
       with_items:
         - slurmctld
 
+    - name: Add slurm pacemaker resources
+      pcs_resource:
+        name: '{{ item }}'
+        resource_class: 'systemd'
+        resource_type: 'systemd:{{ item }}'
+        options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+        state: present
+      when: ha|default(False)
+      with_items:
+        - munge
+        - slurmdbd
+        - slurmctld
+      tags: pcs
+
     - name: Register slurm cluster in slurmdbd
       shell: 'sacctmgr -i add cluster cluster | grep -i adding'
       register: sacctmgr_success

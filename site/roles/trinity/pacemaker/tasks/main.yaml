@@ -15,48 +15,45 @@
       - ha
       - resilientstorage
 
+# --- start syncing keys ---
+
 - name: Verify if corosync key exists
   stat:
-    path: "{{ trix_shared }}/corosync/authkey"
+    path: /etc/corosync/authkey
   register: stat_corosync_key
 
-- block:
-  - name: Ensure corosync shared directory exists
-    file:
-      path: '{{ trix_shared }}/corosync'
-      state: directory
-
-  - name: Create corosync key
-    command: "corosync-keygen -l"
-    args:
-      creates: '/etc/corosync/authkey'
-
-#    - name: Create corosync key
-#      shell: "corosync-keygen"
-
-  - name: Copy corosync key to shared storage
-    copy:
-      src: '/etc/corosync/authkey'
-      dest: '{{ trix_shared }}/corosync/'
-      mode: '0640'
+- name: Create corosync key
+  command: "corosync-keygen -l"
+  args:
+    creates: '/etc/corosync/authkey'
   when: 
     - not stat_corosync_key.stat.exists
     - primary
 
 - block:
-  - name: Temporarily mount trinity/shared from controller1
-    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_shared }} {{ trix_shared }}"
+  - name: Ensure corosync sync directory exists
+    file:
+      path: '{{ trix_sync }}/corosync'
+      state: directory
 
-  - name: Copy corosync key from shared storage
+  - name: Copy corosync key to sync
     copy:
-      src: '{{ trix_shared }}/corosync/authkey'
-      dest: '/etc/corosync/'
+      src: '/etc/corosync/authkey'
+      dest: '{{ trix_sync }}/corosync/'
       mode: '0640'
+  when: 
+    - stat_corosync_key.stat.exists
+    - primary
 
-  - name: Umount trinity/shared
-    shell: "umount -l {{ trix_shared }}"
+- name: Copy corosync key from sync
+  copy:
+    src: '{{ trix_sync }}/corosync/authkey'
+    dest: '/etc/corosync/'
+    mode: '0640'
   when: 
     - not primary
+
+# --- end syncing keys ---
 
 - name: Configure corosync
   template:
@@ -114,6 +111,23 @@
   with_items:
     - pcmk
 
+# ---------------------- Add custom resource agents ----------
+
+- name: Ensure custom resource agents exist
+  copy:
+    src: '{{ item }}'
+    dest: '/usr/lib/ocf/resource.d/heartbeat/{{ item }}'
+    owner: root
+    group: root
+    mode: 0755
+    force: no
+  with_items:
+    - ZFS
+    - iscsi
+  ignore_errors: true
+
+# ---------------------- start pacemaker and corosync --------
+#
 - name: Start pacemaker service
   service:
     name: pacemaker
@@ -126,7 +140,16 @@
     state: started
     enabled: true
 
-# ---------------------- resources and config -----------------
+  # this should calm pcs down, trying to failover to this incomplete non primary node....
+- name: set property 'standby' to 'on' for non primary node (standby)
+  pcs_property:
+    name: 'standby'
+    node: '{{ ansible_hostname }}'
+    value: 'on'
+  ignore_errors: true
+  when: not primary
+
+# ---------------------- resources and config ----------------
 
 - name: Render /etc/systemd/system/luna2-master.service
   copy:
@@ -158,6 +181,16 @@
       options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Trinity'
       state: present
 
+  - name: Render temporary dummy lmaster script
+    copy:
+      src: 'lmaster'
+      dest: '/usr/sbin/lmaster'
+      owner: root
+      group: root
+      mode: 0755
+      force: no
+    ignore_errors: true
+
   - name: Add luna2 master systemd service
     pcs_resource:
       name: 'luna2-master'
@@ -167,6 +200,7 @@
   when: primary
 
 # --------------------- fencing ----------------------------
+# /usr/local/sbin/pcs property set stonith-enabled=false|true
 
 - block:
   - name: Toggle pacemaker stonith property
@@ -174,29 +208,28 @@
       name: stonith-enabled
       value: '{{ fence_ipmilan_enabled }}'
 
-  # pcs property set stonith-enabled=false
+  - block:
+    - name: Configure fencing resources using the ipmilan fencing agent
+      pcs_resource:
+        name: 'fence-{{ item.0 }}'
+        resource_class: 'stonith'
+        resource_type: 'fence_ipmilan'
+        options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
+        state: present
+      with_together:
+        - '{{ all_ctrl_hostname }}'
+        - '{{ all_ctrl_bmc }}'
 
-  - name: Configure fencing resources using the ipmilan fencing agent
-    pcs_resource:
-      name: 'fence-{{ item.0 }}'
-      resource_class: 'stonith'
-      resource_type: 'fence_ipmilan'
-      options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
-      state: present
-    with_together:
-      - '{{ all_ctrl_hostname }}'
-      - '{{ all_ctrl_bmc }}'
-
-  - name: Add fencing location constraints
-    pcs_constraint_location:
-      resource: 'fence-{{ item }}'
-      node_name: '{{ item }}'
-      score: '-INFINITY'
-      state: present
-    with_items: '{{ all_ctrl_hostname }}'
+    - name: Add fencing location constraints
+      pcs_constraint_location:
+        resource: 'fence-{{ item }}'
+        node_name: '{{ item }}'
+        score: '-INFINITY'
+        state: present
+      with_items: '{{ all_ctrl_hostname }}'
+    when: fence_ipmilan_enabled
+  when: primary
   tags: fencing
-  when: 
-    - primary
-    - fence_ipmilan_enabled == true
+
 
 

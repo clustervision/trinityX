@@ -1,0 +1,87 @@
+{{ ansible_managed | comment }}
+
+# TrinityX shared disk resource file
+
+{% set port = [7789] -%}
+
+{% for disk in drbd_fs_disks %}
+resource {{ disk.name | replace("/","_") }} {
+    device    {{ disk.device }};
+    disk      {{ disk.disk }};
+    meta-disk internal;
+
+    options {
+        # zfs needs this
+        auto-promote no;
+    }
+    net {
+        # Default policies after split brain is detected. This is the safe
+        # behaviour, i.e. it will not destroy data and will disconnect the disks
+        # if it cannot resync cleanly.
+
+        after-sb-0pri discard-zero-changes;
+#        after-sb-1pri discard-secondary; # <-- forces the primary to overwrite the others
+        after-sb-1pri consensus; # <------------ should be commented out if above is used
+        after-sb-2pri disconnect;
+
+        # protocol and transport
+        protocol      C;
+        transport     "tcp";
+#        transport     "rdma";
+
+{% if drbd_shared_resource_stonith_enabled %}
+        fencing resource-and-stonith;
+{% else %}
+#        fencing resource-and-stonith;
+{% endif %}
+        verify-alg sha1;
+
+        # peer authentication
+        cram-hmac-alg sha1;
+        shared-secret "{{ drbd_shared_secret }}";
+
+    }
+    handlers {
+        fence-peer "/usr/lib/drbd/crm-fence-peer.9.sh";
+        unfence-peer "/usr/lib/drbd/crm-unfence-peer.9.sh";
+    }
+
+    on "{{ trix_ctrl1_hostname }}" {
+        node-id   0;
+        address   {{ drbd_ctrl1_ip }}:{{ port[0] }};
+    }
+
+    on "{{ trix_ctrl2_hostname }}" {
+        node-id   1;
+        address   {{ drbd_ctrl2_ip }}:{{ port[0] }};
+    }
+
+{% if trix_ctrl3_hostname is defined %}
+    on "{{ trix_ctrl3_hostname }}" {
+        node-id   2;
+        address   {{ drbd_ctrl3_ip }}:{{ port[0] }};
+    }
+{% endif %}
+
+{% if trix_ctrl4_hostname is defined %}
+    on "{{ trix_ctrl4_hostname }}" {
+        node-id   3;
+        address   {{ drbd_ctrl4_ip }}:{{ port[0] }};
+    }
+{% endif %}
+
+    connection-mesh {
+        hosts     "{{ trix_ctrl1_hostname }}" "{{ trix_ctrl2_hostname }}"
+{%- if trix_ctrl3_hostname is defined %}
+ "{{ trix_ctrl3_hostname }}" 
+{%- endif -%}
+{%- if trix_ctrl4_hostname is defined %}
+ "{{ trix_ctrl4_hostname }}" 
+{%- endif -%};
+    }
+}
+
+{% if port.append(port.pop() + 1) %}{% endif %}
+{% endfor %}
+
+

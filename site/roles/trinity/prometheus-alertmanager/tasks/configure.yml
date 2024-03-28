@@ -1,4 +1,15 @@
 ---
+
+# -- start sync
+- name: Copy prometheus password from sync
+  copy:
+    src: '{{ trix_sync }}/prometheus/{{ prometheus_alertmanager_auth.credentials_file | basename }}'
+    dest: '{{ prometheus_alertmanager_auth.credentials_file }}'
+  when: 
+    - not primary | default(False)
+    - ha | default(False)
+# -- end sync
+
 - name: "Collect prometheus_alertmanager_auth_user from prometheus_alertmanager_auth.credentials_file filename"
   ansible.builtin.set_fact:
     prometheus_alertmanager_auth_user: "{{ prometheus_alertmanager_auth.credentials_file | basename | replace('.txt', '') }}"
@@ -19,6 +30,23 @@
   ansible.builtin.set_fact:
     prometheus_alertmanager_auth_password_hash: "{{ _bcrypt.stdout }}"
   when: prometheus_alertmanager_auth_password is defined
+
+# -- start sync
+- block:
+  - name: Ensure prometheus alertmanager sync directory exists
+    file:
+      path: '{{ trix_sync }}/prometheus'
+      state: directory
+
+  - name: Add prometheus password to sync
+    copy:
+      src: '{{ prometheus_alertmanager_auth.credentials_file }}'
+      dest: '{{ trix_sync }}//prometheus/'
+      mode: 0640
+  when:
+    - primary | default(True)
+    - ha | default(False)
+# -- end sync
 
 - name: Copy alertmanager config
   ansible.builtin.template:

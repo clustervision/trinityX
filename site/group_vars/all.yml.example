@@ -10,7 +10,7 @@ administrator_email: 'root@localhost'
 # -----------------------------------------------------------------------
 # Trinity version number
 
-trix_version: '14'
+trix_version: '14.1'
 
 # What stream to follow. Stable is the default and recommended.
 trix_stream: 'stable'
@@ -22,11 +22,34 @@ trix_stream: 'stable'
 project_id: '000000'
 
 
+#########################################################################
+#                         High Availability                             #
+#########################################################################
 # -----------------------------------------------------------------------
 # Do we want HA?
 # Set to 'False' to disable HA, set to 'True' to enable it.
 
 ha: false
+
+# -----------------------------------------------------------------------
+# whether we want to use ipmi for H/A fencing
+
+enable_ipmilan_fencing: true
+
+# -----------------------------------------------------------------------
+# IPMI HA fencing credentials. Used in conjunction with HA
+# Being ignored if setting enable_ipmilan_fencing is set to false
+
+fence_ipmilan_login: 'user'
+fence_ipmilan_passwd: 'password'
+
+# -----------------------------------------------------------------------
+# Whether or not to configure the corosync heartbeat link (ring 1)
+# Requires correct configured trix_ctrlX_heartbeat_ip.
+
+enable_heartbeat_link: true
+
+#########################################################################
 
 
 # -----------------------------------------------------------------------
@@ -126,6 +149,8 @@ trix_root: '/trinity'
 trix_images: '{{ trix_root }}/images'
 trix_shared: '{{ trix_root }}/shared'
 trix_local: '{{ trix_root }}/local'
+trix_ha: '{{ trix_root }}/ha'
+trix_sync: '{{ trix_local }}/sync'
 trix_luna: '{{ trix_local }}/luna'
 trix_etc: '{{ trix_local }}/etc'
 trix_sbin: '{{ trix_local }}/sbin'
@@ -139,6 +164,92 @@ trix_docs: '{{ trix_shared }}/docs'
 trix_examples: '{{ trix_shared }}/examples'
 trix_modulefiles: '{{ trix_shared }}/modulefiles'
 
+
+# -----------------------------------------------------------------------
+# Backend type and block device to use for the specified backend.
+# Works in conjunction with H/A. Combinations are supported.
+# 'type' can be: drbd, nfs, iscsi or direct (e.g. multipath).
+# 'fstype' can be: ext4, xfs or any regular filesystem
+#                  but also lvm or zfs. In this case
+#                  partitions have to be defined.
+
+# --- examples:
+#
+# shared_fs_disks: 
+#   - name: 'ZFS1'
+#     type: 'drbd'
+#     disk: '/dev/sda4'
+#     device: '/dev/drbd4'
+#     fstype: 'zfs'
+#     partitions:
+#     - name: '/trinity/other'
+#       options: '-o xattr=sa'
+#
+#   - name: 'LVM1'
+#     type: 'drbd'
+#     disk: '/dev/sda3'
+#     device: '/dev/drbd3'
+#     fstype: 'lvm'
+#     partitions:
+#     - mount: '{{ trix_shared }}'
+#       size: '20480M'
+#       fstype: 'ext4'
+#       options: '-b 4096'
+#     - mount: '{{ trix_ohpc }}'
+#       size: '10240M'
+#       fstype: 'ext4'
+#       options: '-b 4096'
+#
+#   - name: '{{ trix_home }}'
+#     type: 'drbd'
+#     disk: '/dev/sda2'
+#     device: '/dev/drbd2'
+#     fstype: 'ext4'
+#     options: '-b 4096'
+#
+#   - name: 'LVM2'
+#     type: 'iscsi'
+#     fstype: 'lvm'
+#     portal: '192.168.0.1'
+#     target: 'iqn.2003-01.org.linux-iscsi.iscsi-host.x8664:sn.693ca380655e'
+#     partitions:
+#     - mount: '/trinity/ext1'
+#       size: '8192M'
+#       fstype: 'ext4'
+#       options: '-b 4096'
+#
+#   - name: 'LVM3'
+#     type: 'direct'
+#     device: /dev/sdz
+#     fstype: 'lvm'
+#     partitions:
+#     - mount: '/trinity/ext2'
+#       size: '16384M'
+#       fstype: 'ext4'
+#       options: '-b 4096'
+#
+#   - name: '{{ trix_home }}'
+#     type: 'nfs'
+#     remote: '192.168.0.1:/homes'
+#     options: 'nfsvers=4,rw,retrans=4,_netdev'
+
+
+shared_fs_disks:
+  - name: 'trinityx'
+    type: 'drbd'
+    disk: '/dev/vda'
+    device: '/dev/drbd0'
+    fstype: 'zfs'
+    partitions:
+    - mount: '{{ trix_home }}'
+      options: '-o xattr=sa'
+    - mount: '{{ trix_shared }}'
+      options: '-o xattr=sa'
+    - mount: '{{ trix_ohpc }}'
+      options: '-o xattr=sa'
+    - mount: '{{ trix_ha }}'
+      options: '-o xattr=sa'
+    
 
 # -----------------------------------------------------------------------
 # Luna credentials. These should be changed.
@@ -218,16 +329,11 @@ image_default_target: 'multi-user'
 # The following variables give the ability to enable or disable
 # certain features in TrinityX:
 
+
 # -----------------------------------------------------------------------
 # Whether or not to enable SELinux throughout the cluster
 
 enable_selinux: true
-
-
-# -----------------------------------------------------------------------
-# Whether or not to configure the corosync heartbeat link (ring 1)
-
-enable_heartbeat_link: true
 
 
 # -----------------------------------------------------------------------

@@ -2,13 +2,12 @@
 - name: Alerting rules file
   ansible.builtin.template:
     src: "alert.rules.j2"
-    dest: "{{ prometheus_server_config_dir }}/rules/ansible_managed.rules"
+    dest: "{{ prometheus_server_config_dir }}/rules/trix.rules"
     owner: root
     group: "{{prometheus_server_system_group}}"
     mode: 0640
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
   when:
-    - prometheus_server_alert_rules != []
     - not prometheus_server_agent_mode
   notify:
     - reload prometheus-server

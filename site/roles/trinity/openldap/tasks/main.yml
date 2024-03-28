@@ -1,11 +1,30 @@
 ---
 # tasks file for openldap
 
+- debug:
+    msg: "{{ openldap_server_dir_path }}"
+
 - name: Install dependencies
   yum:
     name: python3-policycoreutils
     state: installed
   tags: install-only
+
+# -- start sync
+- block:
+  - name: Ensure password loction exists
+    file:
+      path: '/etc/trinity/passwords/openldap'
+      state: directory
+
+  - name: Copy openldap password from sync
+    copy:
+      src: '{{ trix_sync }}/openldap/root.txt'
+      dest: '/etc/trinity/passwords/openldap/'
+  when: 
+    - not primary | default(False)
+    - ha | default(False)
+# -- end sync
 
 - name: Generate openldap root password and save it to /etc/trinity/passwords
   set_fact:
@@ -18,6 +37,25 @@
     openldap_root_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/openldap/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
+
+# sync
+# -- start sync
+- block:
+  - name: Ensure openldap sync directory exists
+    file:
+      path: '{{ trix_sync }}/openldap'
+      state: directory
+
+  - name: Add openldap password to sync
+    copy:
+      src: '/etc/trinity/passwords/openldap/root.txt'
+      dest: '{{ trix_sync }}/openldap/'
+      mode: 0640
+  when:
+    - primary | default(True)
+    - ha | default(False)
+# -- end sync
+
 
 - name: Install OpenLDAP packages
   yum:
@@ -107,6 +145,7 @@
   when: openldap_server_conf_path|string not in '/etc/openldap/slapd.d'
         and default_openldap_path.stat.isdir
 
+
 - name: Add cluster CA certificate to /etc/openldap/certs
   copy:
     src: '{{ openldap_tls_cacrt }}'
@@ -116,6 +155,7 @@
   user:
     name: '{{ openldap_default_user }}'
     groups: '{{ ssl_cert_group }}'
+
 
 - block:
   - name: Ensure OpenLDAP data directory exists
@@ -283,5 +323,17 @@
   when: (primary | default(True)) and (openldap_version is defined and openldap_version.stdout|int > 24)
 
 # ---------------------
+
+- name: Add pacemaker resource
+  pcs_resource:
+    name: 'openldap'
+    resource_class: 'systemd'
+    resource_type: 'systemd:slapd'
+    options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+    state: present
+  when: 
+    - primary | default(True)
+    - ha | default(False)
+  tags: pcs
 
 - meta: flush_handlers

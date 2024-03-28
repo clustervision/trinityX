@@ -15,13 +15,11 @@
   file:
     path: '{{ nfs_exports_path }}'
     state: directory
-  when: primary | default(True)
 
 - name: Setup NFS exports in {{ nfs_exports_path }}
   template:
     src: '{{ "HA_exports.j2" if ha == true else "nonHA_exports.j2" }}'
     dest: '{{ nfs_exports_path }}/trinity.exports'
-  when: primary | default(True)
 
 - name: Add link to the exports file in /etc/exports.d
   file:
@@ -45,10 +43,18 @@
   when: not ha|default(False)
 
 - block:
-
   - name: Create shared directory for data that should survive a failover
     file:
-      path: '{{ trix_local }}/var/lib/nfs'
+      path: '{{ trix_ha }}/var/lib/nfs'
       state: directory
 
+  - name: Add NFS server pacemaker resource
+    pcs_resource:
+      name: 'nfs-server'
+      resource_class: 'ocf'
+      resource_type: 'nfsserver'
+      options: 'nfs_shared_infodir="{{ trix_ha }}/var/lib/nfs" meta migration-threshold=3 failure-timeout=120s op monitor interval=47s --group Trinity-stack'
+      state: present
+    tags: pcs
   when: primary|default(True) and ha|default(False)
+    
