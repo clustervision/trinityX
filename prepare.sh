@@ -96,7 +96,7 @@ else
     add_message "after reboot, please re-run prepare.sh to make sure all requirements are met."
     show_message
     echo -n "Do you want to proceed with current kernel? (y|<n>): "
-    read -t 240 CONFIRM
+    read -t 600 CONFIRM
     RET=$?
     if [ "$RET" == "142" ]; then
       CONFIRM='y'
@@ -111,7 +111,7 @@ else
     add_message "ZFS is supported in the shared_fs_disk/HA role. If you prefer to use ZFS there, please confirm below."
     show_message
     echo -n "Do you want to install ZFS? (<y>|n): "
-    read -t 240 WITH_ZFS
+    read -t 600 WITH_ZFS
     RET=$?
     if [ "$RET" == "142" ]; then
       WITH_ZFS=yes
