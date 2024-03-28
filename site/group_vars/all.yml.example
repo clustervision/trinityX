@@ -232,7 +232,14 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     type: 'nfs'
 #     remote: '192.168.0.1:/homes'
 #     options: 'nfsvers=4,rw,retrans=4,_netdev'
+#
 
+# As an absolute bare minimum trix_ha requires a shared disk.
+# For trix_home, trix_shared and trix_ohpc it comes extremely highly
+# recommended to have a shared disk as well. Below is what's
+# considered a standard shared disk configuration. Note that /dev/vda
+# needs to be configured to be a real disk which is 100% equal
+# on each controller when using drbd.
 
 shared_fs_disks:
   - name: 'trinityx'
@@ -250,6 +257,7 @@ shared_fs_disks:
     - mount: '{{ trix_ha }}'
       options: '-o xattr=sa'
     
+
 
 # -----------------------------------------------------------------------
 # Luna credentials. These should be changed.
