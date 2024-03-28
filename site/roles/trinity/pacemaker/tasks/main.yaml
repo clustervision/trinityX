@@ -40,7 +40,9 @@
     copy:
       src: '/etc/corosync/authkey'
       dest: '{{ trix_sync }}/corosync/'
-      mode: '0640'
+      mode: 0640
+      owner: root
+      group: root
   when: 
     - stat_corosync_key.stat.exists
     - primary
@@ -49,7 +51,9 @@
   copy:
     src: '{{ trix_sync }}/corosync/authkey'
     dest: '/etc/corosync/'
-    mode: '0640'
+    mode: 0640
+    owner: root
+    group: root
   when: 
     - not primary
 
@@ -95,9 +99,9 @@
   copy:
     src: 'pcs'
     dest: '/usr/local/sbin/'
-    owner: 'root'
-    group: 'root'
-    mode: '0755'
+    owner: root
+    group: root
+    mode: 0755
 
 - name: Ensure corosync service.d directory exists
   file:
