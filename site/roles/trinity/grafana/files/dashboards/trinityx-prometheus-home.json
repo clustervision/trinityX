@@ -18,7 +18,36 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "home"
+      ],
+      "targetBlank": false,
+      "title": "TrinityX Home",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "dashboard"
+      ],
+      "targetBlank": false,
+      "title": "TrinityX Dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "liveNow": true,
   "panels": [
     {
@@ -53,7 +82,7 @@
         "uid": "P2AEA19AFD95365FD"
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 4,
         "x": 0,
         "y": 1
@@ -99,13 +128,36 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 0,
           "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Ok"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "from": 1,
+                "result": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "Degraded"
+                },
+                "to": "nan"
+              },
+              "type": "range"
+            },
             {
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "N/A"
+                  "color": "#808080",
+                  "index": 2,
+                  "text": "Disabled"
                 }
               },
               "type": "special"
@@ -117,34 +169,35 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
-          },
-          "unit": "none"
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 3,
+        "h": 4,
+        "w": 2,
         "x": 4,
         "y": 1
       },
-      "id": 7,
-      "links": [],
-      "maxDataPoints": 100,
+      "id": 27,
+      "links": [
+        {
+          "title": "",
+          "url": "/d/trixha/high-availability"
+        }
+      ],
       "options": {
-        "colorMode": "none",
+        "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": {
-          "calcs": [],
-          "fields": "/^sum\\(count without\\(cpu, mode\\) \\(node_cpu_seconds_total\\{mode=\"idle\"\\}\\)\\)$/",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
           "values": false
         },
         "textMode": "auto"
@@ -156,22 +209,419 @@
             "type": "prometheus",
             "uid": "trixprometheus"
           },
-          "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
+          "expr": "max  (ha_cluster_pacemaker_fail_count)",
+          "instant": false,
+          "legendFormat": "e",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "HA Resources and Services",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-RdYlGr"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 6,
+        "y": 1
+      },
+      "id": 28,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(count without(cpu, mode) (node_cpu_seconds_total{mode=\"idle\"}))",
+          "expr": "",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(max by(hostname) (up{job=\"luna_nodes\"}))/ avg(count by(hostname) (up{job=\"luna_nodes\"}))",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "% Nodes Up ",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/free|size/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mountpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "used_perc"
+            },
+            "properties": [
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 200
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "lcd",
+                  "type": "gauge",
+                  "valueDisplayMode": "color"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/(size|free|fstype)/"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hostname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 143
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 10,
+        "x": 8,
+        "y": 1
+      },
+      "id": 31,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "node_filesystem_free_bytes{fstype=~\"$fs_types\", hostname=~\"$fs_hosts\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "free",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "node_filesystem_size_bytes{fstype=~\"$fs_types\", hostname=~\"$fs_hosts\"}",
+          "format": "table",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
           "instant": true,
           "legendFormat": "__auto",
           "range": false,
-          "refId": "A",
+          "refId": "tot",
           "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "(node_filesystem_size_bytes{fstype=~\"$fs_types\", hostname=~\"$fs_hosts\"}-node_filesystem_free_bytes{fstype=~\"$fs_types\", hostname=~\"$fs_hosts\"})/node_filesystem_size_bytes{fstype=~\"$fs_types\", hostname=~\"$fs_hosts\"}*100",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "use"
         }
       ],
-      "title": "Cores",
-      "type": "stat"
+      "title": " Controller Filesystems",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": []
+              },
+              "Value #free": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #tot": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #use": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "device": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "fstype": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "hostname": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "instance": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "mountpoint": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "device": false,
+              "exporter": true,
+              "fstype (lastNotNull)": false,
+              "instance": true,
+              "job": true,
+              "luna_group": true,
+              "mountpoint": false
+            },
+            "indexByName": {
+              "Value #free (lastNotNull)": 5,
+              "Value #tot (lastNotNull)": 3,
+              "Value #use (lastNotNull)": 4,
+              "device": 2,
+              "fstype (lastNotNull)": 7,
+              "hostname": 0,
+              "instance": 6,
+              "mountpoint": 1
+            },
+            "renameByName": {
+              "Value": "",
+              "Value #free": "",
+              "Value #free (lastNotNull)": "free",
+              "Value #tot (lastNotNull)": "size",
+              "Value #use (lastNotNull)": "used_perc",
+              "fstype (lastNotNull)": "fstype",
+              "instance": ""
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "size"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "dashboardFilter": "",
@@ -181,9 +631,9 @@
         "uid": "P2AEA19AFD95365FD"
       },
       "gridPos": {
-        "h": 9,
-        "w": 9,
-        "x": 7,
+        "h": 11,
+        "w": 6,
+        "x": 18,
         "y": 1
       },
       "id": 4,
@@ -230,7 +680,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed"
           },
           "mappings": [],
           "thresholds": {
@@ -250,19 +700,19 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "none"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
         "w": 2,
-        "x": 16,
-        "y": 1
+        "x": 4,
+        "y": 5
       },
-      "id": 28,
+      "id": 29,
       "options": {
-        "colorMode": "background",
+        "colorMode": "none",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
@@ -284,31 +734,106 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by(hostname) (up{job=\"luna_nodes\"})",
-          "format": "table",
+          "expr": "avg(count by(hostname) (up{job=\"luna_nodes\"}))",
+          "format": "time_series",
           "instant": true,
           "legendFormat": "__auto",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Nodes Availability",
+      "title": "Nodes",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-RdYlGr"
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 6,
+        "y": 5
+      },
+      "id": 32,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(max by(hostname) (up{job=\"luna_nodes\"}))",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "expr": "avg(count by(hostname) (up{job=\"luna_nodes\"}))",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Nodes Up",
       "transformations": [
         {
-          "id": "groupBy",
+          "id": "configFromData",
           "options": {
-            "fields": {
-              "Time": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "Value": {
-                "aggregations": [
-                  "mean"
-                ],
-                "operation": "aggregate"
+            "configRefId": "B",
+            "mappings": [
+              {
+                "fieldName": "avg(count by(hostname) (up{job=\"luna_nodes\"}))",
+                "handlerKey": "max"
               }
-            }
+            ]
           }
         }
       ],
@@ -316,42 +841,87 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "P2AEA19AFD95365FD"
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 6,
-        "x": 18,
-        "y": 1
+        "h": 3,
+        "w": 3,
+        "x": 0,
+        "y": 9
       },
-      "id": 5,
+      "id": 7,
+      "links": [],
+      "maxDataPoints": 100,
       "options": {
-        "folderId": 1,
-        "includeVars": false,
-        "keepTime": false,
-        "maxItems": 5,
-        "query": "",
-        "showHeadings": false,
-        "showRecentlyViewed": false,
-        "showSearch": true,
-        "showStarred": false,
-        "tags": []
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "/^sum\\(count without\\(cpu, mode\\) \\(node_cpu_seconds_total\\{mode=\"idle\"\\}\\)\\)$/",
+          "values": false
+        },
+        "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
-      "tags": [],
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "P2AEA19AFD95365FD"
+            "type": "prometheus",
+            "uid": "trixprometheus"
           },
-          "refId": "A"
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "exemplar": false,
+          "expr": "sum(count without(cpu, mode) (node_cpu_seconds_total{mode=\"idle\"}))",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A",
+          "useBackend": false
         }
       ],
-      "title": "TrinityX Dashboards",
-      "transparent": true,
-      "type": "dashlist"
+      "title": "Cores",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -392,8 +962,8 @@
       "gridPos": {
         "h": 3,
         "w": 3,
-        "x": 4,
-        "y": 4
+        "x": 3,
+        "y": 9
       },
       "id": 26,
       "links": [],
@@ -456,108 +1026,6 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "color": "green",
-                  "index": 0,
-                  "text": "Ok"
-                }
-              },
-              "type": "value"
-            },
-            {
-              "options": {
-                "from": 1,
-                "result": {
-                  "color": "red",
-                  "index": 1,
-                  "text": "Degraded"
-                },
-                "to": "nan"
-              },
-              "type": "range"
-            },
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "color": "#808080",
-                  "index": 2,
-                  "text": "Disabled"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 2,
-        "x": 16,
-        "y": 6
-      },
-      "id": 27,
-      "links": [
-        {
-          "title": "",
-          "url": "/d/trixha/high-availability"
-        }
-      ],
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "editorMode": "code",
-          "expr": "max  (ha_cluster_pacemaker_fail_count)",
-          "instant": false,
-          "legendFormat": "e",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "HA Resources and Services",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "trixprometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
           "decimals": 0,
           "mappings": [
             {
@@ -585,9 +1053,9 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 3,
-        "x": 4,
-        "y": 7
+        "w": 2,
+        "x": 6,
+        "y": 9
       },
       "id": 8,
       "links": [],
@@ -612,7 +1080,7 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "exemplar": false,
           "expr": "sum(node_memory_MemAvailable_bytes)",
           "fullMetaSearch": false,
@@ -902,7 +1370,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 12
       },
       "id": 10,
       "options": {
@@ -1229,606 +1697,9 @@
         }
       ],
       "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "trixprometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "left",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": false,
-            "inspect": true
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "percentage",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "#EAB839",
-                "value": 80
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/free|size/"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bytes"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "mountpoint"
-            },
-            "properties": [
-              {
-                "id": "custom.minWidth"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "used_perc"
-            },
-            "properties": [
-              {
-                "id": "min",
-                "value": 0
-              },
-              {
-                "id": "custom.minWidth",
-                "value": 200
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "mode": "lcd",
-                  "type": "gauge",
-                  "valueDisplayMode": "color"
-                }
-              },
-              {
-                "id": "min",
-                "value": 0
-              },
-              {
-                "id": "max",
-                "value": 100
-              },
-              {
-                "id": "unit",
-                "value": "percent"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              },
-              {
-                "id": "custom.width",
-                "value": 200
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/(size|free|fstype)/"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 75
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 20
-      },
-      "id": 24,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": true,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": []
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "exemplar": false,
-          "expr": "node_filesystem_free_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}",
-          "format": "table",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "free",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "node_filesystem_size_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}",
-          "format": "table",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "tot",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "(node_filesystem_size_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}-node_filesystem_free_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"})/node_filesystem_size_bytes{fstype=~\"$local_fs_types\", luna_group=\"controller\", mountpoint!~\"/var/.*\"}*100",
-          "format": "table",
-          "hide": false,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "use"
-        }
-      ],
-      "title": " Controller Local filesystems",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "Value #free": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "Value #tot": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "Value #use": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "device": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "fstype": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "instance": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "mountpoint": {
-                "aggregations": [],
-                "operation": "groupby"
-              }
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "device": false,
-              "exporter": true,
-              "fstype (lastNotNull)": false,
-              "instance": true,
-              "job": true,
-              "luna_group": true,
-              "mountpoint": false
-            },
-            "indexByName": {
-              "Value #free (lastNotNull)": 4,
-              "Value #tot (lastNotNull)": 2,
-              "Value #use (lastNotNull)": 3,
-              "device": 1,
-              "fstype (lastNotNull)": 6,
-              "instance": 5,
-              "mountpoint": 0
-            },
-            "renameByName": {
-              "Value": "",
-              "Value #free": "",
-              "Value #free (lastNotNull)": "free",
-              "Value #tot (lastNotNull)": "size",
-              "Value #use (lastNotNull)": "used_perc",
-              "fstype (lastNotNull)": "fstype",
-              "instance": ""
-            }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "desc": true,
-                "field": "size"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "trixprometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "left",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": false,
-            "inspect": true
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "percentage",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "#EAB839",
-                "value": 80
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/free|size/"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bytes"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/(size|free|fstype)/"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 75
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "used_perc"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "mode": "lcd",
-                  "type": "gauge",
-                  "valueDisplayMode": "color"
-                }
-              },
-              {
-                "id": "min",
-                "value": 0
-              },
-              {
-                "id": "max",
-                "value": 100
-              },
-              {
-                "id": "unit",
-                "value": "percent"
-              },
-              {
-                "id": "custom.width",
-                "value": 200
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 20
-      },
-      "id": 25,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": true,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": []
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "exemplar": false,
-          "expr": "node_filesystem_free_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"}",
-          "format": "table",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "free",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "node_filesystem_size_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"}",
-          "format": "table",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "tot",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "trixprometheus"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "(node_filesystem_size_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"}-node_filesystem_free_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"})/node_filesystem_size_bytes{fstype=~\"$remote_fs_types\", mountpoint!~\"/var/.*\"}*100",
-          "format": "table",
-          "hide": false,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "use"
-        }
-      ],
-      "title": " Controller Remote filesystems",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "Value #free": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "Value #tot": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "Value #use": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "device": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "fstype": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
-                "operation": "aggregate"
-              },
-              "instance": {
-                "aggregations": []
-              },
-              "mountpoint": {
-                "aggregations": []
-              }
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "device": false,
-              "exporter": true,
-              "fstype (lastNotNull)": false,
-              "instance": false,
-              "job": true,
-              "luna_group": true,
-              "mountpoint": false
-            },
-            "indexByName": {
-              "Value #free (lastNotNull)": 3,
-              "Value #tot (lastNotNull)": 1,
-              "Value #use (lastNotNull)": 2,
-              "device": 0,
-              "fstype (lastNotNull)": 4
-            },
-            "renameByName": {
-              "Value": "",
-              "Value #free": "",
-              "Value #free (lastNotNull)": "free",
-              "Value #tot (lastNotNull)": "size",
-              "Value #use (lastNotNull)": "used_perc",
-              "fstype (lastNotNull)": "fstype",
-              "instance": ""
-            }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "desc": true,
-                "field": "size"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "table"
     }
   ],
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": true,
-      "keepTime": true,
-      "tags": [
-        "home"
-      ],
-      "targetBlank": false,
-      "title": "TrinityX Home",
-      "tooltip": "",
-      "type": "dashboards",
-      "url": ""
-    },
-    {
-      "asDropdown": true,
-      "icon": "external link",
-      "includeVars": true,
-      "keepTime": true,
-      "tags": [
-        "dashboard"
-      ],
-      "targetBlank": false,
-      "title": "TrinityX Dashboards",
-      "tooltip": "",
-      "type": "dashboards",
-      "url": ""
-    }
-  ],
-  "refresh": "15s",
+  "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
@@ -1838,24 +1709,44 @@
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "trixprometheus"
         },
-        "filters": [],
+        "definition": "label_values(up{job=\"luna_controllers\"},hostname)",
         "hide": 0,
-        "name": "Filters",
+        "includeAll": true,
+        "label": "Filter Filesystem Host",
+        "multi": true,
+        "name": "fs_hosts",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=\"luna_controllers\"},hostname)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
         "skipUrlSync": false,
-        "type": "adhoc"
+        "sort": 1,
+        "type": "query"
       },
       {
         "current": {
           "selected": true,
           "text": [
-            "ext4"
+            "All"
           ],
           "value": [
-            "ext4"
+            "$__all"
           ]
         },
         "datasource": {
@@ -1864,37 +1755,10 @@
         },
         "definition": "label_values(fstype)",
         "hide": 0,
-        "includeAll": false,
-        "label": "local_fs_types",
+        "includeAll": true,
+        "label": "Filter Filesystem Type ",
         "multi": true,
-        "name": "local_fs_types",
-        "options": [],
-        "query": {
-          "query": "label_values(fstype)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "ext4",
-          "value": "ext4"
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "trixprometheus"
-        },
-        "definition": "label_values(fstype)",
-        "hide": 0,
-        "includeAll": false,
-        "label": "remote_fs_types",
-        "multi": true,
-        "name": "remote_fs_types",
+        "name": "fs_types",
         "options": [],
         "query": {
           "query": "label_values(fstype)",
@@ -1968,6 +1832,6 @@
   "timezone": "",
   "title": "Home",
   "uid": "trixhome",
-  "version": 7,
+  "version": 2,
   "weekStart": ""
 }
