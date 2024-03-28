@@ -44,12 +44,9 @@ templates:
 receivers:
 {{ prometheus_alertmanager_receivers | to_nice_yaml(indent=2) }}
 {% endif %}
-{% if prometheus_alertmanager_inhibit_rules | length %}
-- name: 'prometheus-sensu-bridge'
-  webhook_configs:
-  - url: 'http://localhost:5555/listener'
-    send_resolved: true
 
+
+{% if prometheus_alertmanager_inhibit_rules | length %}
 inhibit_rules:
 {{ prometheus_alertmanager_inhibit_rules | to_nice_yaml(indent=2) }}
 {% endif %}
