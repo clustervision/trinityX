@@ -36,3 +36,11 @@
     - '{{ trix_modulefiles }}'
   when: ansible_connection not in 'chroot'
         and not compute|default(False)
+
+- name: Create Trinity H/A directory structure on controllers
+  file:
+    path: '{{ trix_ha }}'
+    state: directory
+  when:
+    - ha
+    - trix_ha is defined

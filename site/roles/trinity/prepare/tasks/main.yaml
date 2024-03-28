@@ -1,0 +1,13 @@
+---
+
+# simple method to verify if the prepare.sh script did run.
+
+- name: Get prepare
+  stat:
+    path: '/etc/trinity/prepare.done'
+  register: prepare_done
+
+- name: Verify if prepare was run prior to playbook
+  fail:
+    msg: "prepare.sh did not run or did not complete. Please run prepare.sh till completion first"
+  when: not prepare_done.stat.exists

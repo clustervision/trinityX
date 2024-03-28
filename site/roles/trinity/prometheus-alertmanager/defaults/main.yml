@@ -1,0 +1,169 @@
+---
+prometheus_alertmanager_version: 0.26.0
+prometheus_alertmanager_binary_url: "https://github.com/{{ _prometheus_alertmanager_repo }}/releases/download/v{{ prometheus_alertmanager_version }}/\
+                          alertmanager-{{ prometheus_alertmanager_version }}.linux-{{ go_arch }}.tar.gz"
+prometheus_alertmanager_checksums_url: "https://github.com/{{ _prometheus_alertmanager_repo }}/releases/download/v{{ prometheus_alertmanager_version }}/sha256sums.txt"
+
+prometheus_alertmanager_bcrypt_binary_url: "https://updates.clustervision.com/trinityx/external/monitoring/prometheus/binaries/{{ ansible_architecture }}/prometheus-bcrypt"
+prometheus_alertmanager_bcrypt_binary_install_dir: "/tmp"
+
+prometheus_alertmanager_config_dir: /etc/alertmanager
+prometheus_alertmanager_db_dir: /var/lib/alertmanager
+prometheus_alertmanager_log_dir: /var/log/prometheus
+
+prometheus_alertmanager_template_files:
+  - alertmanager/templates/*.tmpl
+
+# First read: https://github.com/prometheus/alertmanager#high-availability
+prometheus_alertmanager_cluster: {}
+prometheus_alertmanager_auth:
+  enabled: false
+
+prometheus_alertmanager_tls:
+  enabled: false
+
+prometheus_alertmanager_web_listen_host: '0.0.0.0'
+prometheus_alertmanager_web_listen_port: 9093
+prometheus_alertmanager_web_external_url: 'http://{{ trix_external_fqdn }}:{{prometheus_alertmanager_web_listen_port}}/'
+
+prometheus_alertmanager_system_user: "prometheus-alertmanager"
+prometheus_alertmanager_system_group: "prometheus"
+prometheus_alertmanager_additional_system_groups: []
+
+
+
+# SMTP default params
+prometheus_alertmanager_smtp:
+  from: 'alertmanager@{{ ansible_fqdn }}'
+  smarthost: 'localhost:25'
+#   auth_username: ''
+#   auth_password: ''
+#   auth_secret: ''
+#   auth_identity: ''
+  require_tls: "False"
+
+# Default values you can see here -> https://prometheus.io/docs/alerting/configuration/
+prometheus_alertmanager_slack_api_url: ''
+prometheus_alertmanager_pagerduty_url: ''
+prometheus_alertmanager_opsgenie_api_key: ''
+prometheus_alertmanager_opsgenie_api_url: ''
+prometheus_alertmanager_victorops_api_key: ''
+prometheus_alertmanager_victorops_api_url: ''
+prometheus_alertmanager_hipchat_api_url: ''
+prometheus_alertmanager_hipchat_auth_token: ''
+prometheus_alertmanager_wechat_url: ''
+prometheus_alertmanager_wechat_secret: ''
+prometheus_alertmanager_wechat_corp_id: ''
+
+
+
+prometheus_alertmanager_receivers:
+- name: 'null'
+- name: 'mail'
+  email_configs:
+  - to: '{{prometheus_alertmanager_mail}}'
+- name: 'prometheus-sensu-bridge'
+  webhook_configs:
+  - url: 'http://localhost:5555/listener'
+    send_resolved: true
+
+prometheus_alertmanager_time_intervals: []
+# prometheus_alertmanager_time_intervals:
+#   - name: offhours
+#      time_intervals:
+#        - times:
+#            - start_time: "21:00"
+#              end_time: "24:00"
+#          location: "Africa/Johannesburg"
+
+
+prometheus_alertmanager_inhibit_rules:
+  # Inhibit alerts with severity level `warning` or lower for critical alerts
+  - source_match:
+      severity: 'info'
+    target_match:
+      severity: 'warning'
+    equal: ['hostname', 'alertname']
+  - source_match:
+      severity: 'warning'
+    target_match:
+      severity: 'danger'
+    equal: ['hostname', 'alertname']
+  - source_match:
+      severity: 'danger'
+    target_match:
+      severity: 'critical'
+    equal: ['hostname', 'alertname']
+
+  - source_match:
+      severity: 'ServerDown'
+    target_match:
+      severity: 'MultipleServerDown'
+    equal: ['cluster']
+
+
+prometheus_alertmanager_route: 
+  group_by: ['cluster']
+  group_wait: 30s
+  group_interval: 30s
+  repeat_interval: 1h
+  receiver: 'null'
+  routes:
+    
+  - match:
+      severity: 'warning'
+    group_interval: 4h
+    repeat_interval: 720h
+    receiver: 'mail'
+    continue: true
+  - match:
+      severity: 'danger'
+    group_interval: 30m
+    repeat_interval: 4h
+    receiver: 'mail'
+    continue: true
+  - match:
+      severity: 'critical'
+    group_interval: 30s
+    repeat_interval: 4h
+    receiver: 'mail'
+
+  - match_re:
+      severity: 'danger|critical'
+    receiver: prometheus-sensu-bridge
+
+#   # This routes performs a regular expression match on alert labels to
+#   # catch alerts that are related to a list of services.
+#   routes:
+#     - match_re:
+#         service: ^(foo1|foo2|baz)$
+#       receiver: team-X-mails
+#       # The service has a sub-route for critical alerts, any alerts
+#       # that do not match, i.e. severity != critical, fall-back to the
+#       # parent node and are sent to 'team-X-mails'
+#       routes:
+#         - match:
+#             severity: critical
+#           receiver: team-X-pager
+#     - match:
+#         service: files
+#       receiver: team-Y-mails
+#       routes:
+#         - match:
+#             severity: critical
+#           receiver: team-Y-pager
+#     # This route handles all alerts coming from a database service. If there's
+#     # no team to handle it, it defaults to the DB team.
+#     - match:
+#         service: database
+#       receiver: team-DB-pager
+#       # Also group alerts by affected database.
+#       group_by: [alertname, cluster, database]
+#       routes:
+#         - match:
+#             owner: team-X
+#           receiver: team-X-pager
+#         - match:
+#             owner: team-Y
+#           receiver: team-Y-pager
+

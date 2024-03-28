@@ -1,0 +1,50 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{{ ansible_managed | comment }}
+# http://prometheus.io/docs/operating/configuration/
+
+global:
+  {{ prometheus_server_global | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
+  external_labels:
+    {{ prometheus_server_external_labels | to_nice_yaml(indent=2,sort_keys=False) | indent(4, False) }}
+
+rule_files:
+  - {{ prometheus_server_config_dir }}/rules/*.rules
+
+{% if prometheus_server_alertmanagers | length > 0 %}
+alerting:
+  alert_relabel_configs:
+    # Drop the "replica" label.
+    - action: labeldrop
+      regex: "instance"
+
+  alertmanagers:
+    - static_configs:
+  {% for alertmanager in prometheus_server_alertmanagers %}
+        - targets:
+          - {{ alertmanager.target }}
+  {% if alertmanager.get('tls', {}).get('enabled', False) %}
+      scheme: https
+  {% endif %}
+  {% if alertmanager.get('tls', {}).get('insecure_skip_verify', False) %}
+      tls_config:
+        insecure_skip_verify: true
+  {% endif %}
+  {% if alertmanager.get('basic_auth', False) %}
+      basic_auth:
+        username: {{ alertmanager.basic_auth.credentials_file.rsplit('.', 1)[0] | basename }}
+        password: {{ lookup('password', alertmanager.basic_auth.credentials_file, chars='ascii_letters,digits,hexdigits') }}
+  {% endif %}
+  {% endfor %}
+{% endif %}
+
+scrape_configs:
+  - job_name: luna_controllers
+    file_sd_configs:
+    - files:
+      - {{prometheus_server_config_dir}}/file_sd/trix/*.yml
+  - job_name: other_nodess
+    file_sd_configs:
+    - files:
+      - {{prometheus_server_config_dir}}/file_sd/other/*.yml
+{{ prometheus_server_additional_sd | default([]) | to_nice_yaml(indent=2,sort_keys=False) | indent(2, True) }}
+

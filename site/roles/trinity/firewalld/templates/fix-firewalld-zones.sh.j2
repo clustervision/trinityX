@@ -1,0 +1,10 @@
+#!/bin/bash
+
+{% for interface in firewalld_trusted_interfaces|unique %}
+firewall-cmd --list-all --zone=trusted | grep interface | awk -F ': ' '{ print $2 }' | grep -w {{ interface }} || firewall-cmd --permanent --zone=trusted --change-interface={{ interface }}
+{% endfor %}
+
+{% for interface in firewalld_public_interfaces|unique %}
+firewall-cmd --list-all --zone=public | grep interface | awk -F ': ' '{ print $2 }' | grep -w {{ interface }} || firewall-cmd --permanent --zone=public --change-interface={{ interface }}
+{% endfor %}
+

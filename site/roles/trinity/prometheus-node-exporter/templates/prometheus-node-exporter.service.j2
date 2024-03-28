@@ -1,0 +1,50 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=Prometheus Node Exporter
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ prometheus_node_exporter_system_user }}
+Group={{ prometheus_node_exporter_system_group }}
+ExecStart={{ prometheus_node_exporter_binary_install_dir }}/prometheus_node_exporter \
+{% for collector in prometheus_node_exporter_enabled_collectors -%}
+{%   if not collector is mapping %}
+    '--collector.{{ collector }}' \
+{%   else -%}
+{%     set name, options = (collector.items()|list)[0] -%}
+    '--collector.{{ name }}' \
+{%     for k,v in options|dictsort %}
+    '--collector.{{ name }}.{{ k }}={{ v }}' \
+{%     endfor -%}
+{%   endif -%}
+{% endfor -%}
+{% for collector in prometheus_node_exporter_disabled_collectors %}
+    '--no-collector.{{ collector }}' \
+{% endfor %}
+{% if prometheus_node_exporter_tls.enabled %}
+    '--web.config.file={{prometheus_node_exporter_config_dir}}/node_exporter.web.yml' \
+{% endif %}
+    '--web.listen-address={{ prometheus_node_exporter_web_listen_host }}:{{ prometheus_node_exporter_web_listen_port }}' \
+    '--web.telemetry-path=/metrics'
+
+SyslogIdentifier=prometheus_node_exporter
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+NoNewPrivileges=yes
+{% if prometheus_node_exporter_log_dir is defined %}
+StandardOutput=append:{{prometheus_node_exporter_log_dir}}/prometheus_node_exporter.log
+{% endif %}
+{% if (ansible_facts.packages.systemd | first).version is version('232', '>=') %}
+ProtectSystem=strict
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=yes
+{% else %}
+ProtectSystem=full
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target

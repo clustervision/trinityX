@@ -1,0 +1,49 @@
+---
+- name: Create the prometheus_ha_exporter group
+  group:
+    name: "{{ prometheus_ha_exporter_system_group }}"
+    state: present
+    system: true
+  when: prometheus_ha_exporter_system_group != "root"
+
+- name: Create the prometheus_ha_exporter user
+  user:
+    name: "{{ prometheus_ha_exporter_system_user }}"
+    group: "{{ prometheus_ha_exporter_system_group }}"
+    groups: "{{ prometheus_ha_exporter_additional_system_groups }}"
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    createhome: false
+    home: /
+  when: prometheus_ha_exporter_system_user != "root"
+
+- name: Create prometheus_ha_exporter_binary_install_dir
+  file:
+    path: "{{prometheus_ha_exporter_binary_install_dir}}"
+    state: directory
+    mode: 0755
+
+- name: Create prometheus_ha_exporter_binary_install_dir
+  file:
+    path: "{{prometheus_ha_exporter_binary_install_dir}}"
+    state: directory
+    mode: 0755
+
+- name: Download prometheus-ha-exporter binary to local folder
+  get_url:
+    url: "{{ prometheus_ha_exporter_binary_url }}"
+    dest: "{{prometheus_ha_exporter_binary_install_dir}}/prometheus-ha-exporter"
+    mode: 0755
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 5
+  delay: 2
+
+- name: Create log dir if prometheus_ha_exporter_log_dir is defined
+  ansible.builtin.file:
+    path: "{{ prometheus_ha_exporter_log_dir }}"
+    state: directory
+    mode: 0755
+  when:
+    - prometheus_ha_exporter_log_dir is defined

@@ -1,0 +1,56 @@
+---
+- name: Preflight
+  ansible.builtin.include_tasks:
+    file: preflight.yml
+    apply:
+      tags:
+        - prometheus-server-install
+        - prometheus-server-configure
+        - prometheus-server-selinux
+        - prometheus-server-run
+  tags:
+    - prometheus-server-install
+    - prometheus-server-configure
+    - prometheus-server-selinux
+    - prometheus-server-run
+
+- name: Install
+  ansible.builtin.include_tasks:
+    file: install.yml
+    apply:
+      become: true
+      tags:
+        - prometheus-server-install
+  tags:
+    - prometheus-server-install
+
+- name: Configure
+  ansible.builtin.include_tasks:
+    file: configure.yml
+    apply:
+      become: true
+      tags:
+        - prometheus-server-configure
+  tags:
+    - prometheus-server-configure
+
+- name: SELinux
+  ansible.builtin.include_tasks:
+    file: selinux.yml
+    apply:
+      become: true
+      tags:
+        - prometheus-server-selinux
+  when: ansible_selinux.status == "enabled"
+  tags:
+    - prometheus-server-selinux
+
+- name: Ensure prometheus service is started and enabled
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: prometheus-server
+    state: started
+    enabled: true
+  tags:
+    - prometheus-server-run

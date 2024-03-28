@@ -10,3 +10,25 @@
 - name: Refresh exportfs
   shell: "exportfs -a"
   ignore_errors: true
+
+- name: Verify if interface and zone mismatch fix script exists
+  stat:
+    path: /tmp/fix-firewalld-zones.sh
+  register: wrapup_fix_firewalld_zones_script
+
+  # https://github.com/ansible-collections/ansible.posix/issues/75
+- name: Run interface and zone mismatch fix script again...
+  shell: '/tmp/fix-firewalld-zones.sh'
+  ignore_errors: true
+  when: wrapup_fix_firewalld_zones_script.stat.exists
+
+- name: set property 'standby' to 'absent' for non-primary node (unstandby)
+  pcs_property:
+    name: 'standby'
+    node: '{{ ansible_hostname }}'
+    state: 'absent'
+  ignore_errors: true
+  tags: ha,pcs,pacemaker
+  when:
+    - ha
+    - not primary

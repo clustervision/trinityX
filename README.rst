@@ -5,7 +5,7 @@ Overview
 
 Welcome to TrinityX!
 
-TrinityX is the new generation of ClusterVision's open-source HPC platform. It is designed from the ground up to provide all services required in a modern HPC system, and to allow full customization of the installation. Also it includes optional modules for specific needs, please check the controller and compute playbooks.
+TrinityX is the new generation of ClusterVision's open-source HPC, AI and cloud platform. It is designed from the ground up to provide all services required in a modern HPC, AI and cloud system, and to allow full customization of the installation. Also it includes optional modules for specific needs, please check the controller and compute playbooks.
 
 
 

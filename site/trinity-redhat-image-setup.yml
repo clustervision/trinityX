@@ -11,6 +11,9 @@
   - role: trinity/packages
     tags: packages
 
+  - role: OndrejHome.pcs-modules-2
+    tags: pcs
+
   - role: trinity/tunables
     tags: tunables
 
@@ -40,6 +43,7 @@
     - path: '{{ trix_home }}'
       remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
       options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
+    nfs_remote_mask: '{{ shared_fs_disks }}'
     tags: nfs-mounts
 
   - role: trinity/environment-modules
@@ -87,15 +91,16 @@
     - path: '/opt/ohpc'
       remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
       options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+    nfs_remote_mask: '{{ shared_fs_disks }}'
     when: enable_openhpc == true
     tags: nfs-mounts
 
-  - role: trinity/telegraf
-    tags: monitoring
-    influxdb_server: "{{ trix_ctrl_ip }}"
+#  - role: trinity/telegraf
+#    tags: monitoring
+#    influxdb_server: "{{ trix_ctrl_ip }}"
 
-  - role: trinity/sensu-client
-    tags: monitoring
+#  - role: trinity/sensu-client
+#    tags: monitoring
 
   - role: trinity/ood-vnc
     tags: ood
@@ -103,6 +108,28 @@
   - role: trinity/target
     default_target: "{{ image_default_target | default('multi-user') }}"
     tags: target
+  
+  - role: trinity/prometheus-node-exporter
+    # Prometheus system exporter
+    tags: prometheus, prometheus-node-exporter, monitoring
+
+  - role: trinity/prometheus-ipmi-exporter
+    # Prometheus ipmi exporter
+    prometheus_ipmi_exporter_system_user: root
+    tags: prometheus-ipmi-exporter, prometheus, monitoring
+  
+  - role: trinity/prometheus-ipmi-exporter
+    # Prometheus ipmi exporter
+    prometheus_ipmi_exporter_system_user: root
+    tags: prometheus-ipmi-exporter, prometheus, monitoring
+  
+  - role: trinity/prometheus-nvidia-exporter
+    # Prometheus nvidia exporter
+    prometheus_nvidia_exporter_system_user: root
+    tags: prometheus-nvidia-exporter, prometheus, monitoring
+    
+  - role: trinity/cleanup-legacy
+    tags: cleanup-legacy
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }}"

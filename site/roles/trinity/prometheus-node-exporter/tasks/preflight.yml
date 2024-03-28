@@ -1,0 +1,59 @@
+---
+- name: Assert usage of systemd as an init system
+  ansible.builtin.assert:
+    that: ansible_service_mgr == 'systemd'
+    msg: "This role only works with systemd"
+
+- name: Install package fact dependencies
+  become: true
+  ansible.builtin.package:
+    name: "{{ _pkg_fact_req }}"
+    state: present
+  when: (_pkg_fact_req)
+  vars:
+    _pkg_fact_req: "{% if (ansible_pkg_mgr == 'apt') %}\
+      {{ ('python-apt' if ansible_python_version is version('3', '<') else 'python3-apt') }}
+      {% else %}\
+      {% endif %}"
+
+# - name: Ensure passlib is installed
+#   pip:
+#     name:
+#     - passlib
+#     state: present
+
+- name: Gather package facts
+  ansible.builtin.package_facts:
+  when: "not 'packages' in ansible_facts"
+
+- name: Discover latest version
+  ansible.builtin.set_fact:
+    prometheus_node_exporter_version: "{{ (lookup('url', 'https://api.github.com/repos/{{ _prometheus_node_exporter_repo }}/releases/latest', headers=_github_api_headers,
+                            split_lines=False) | from_json).get('tag_name') | replace('v', '') }}"
+  run_once: true
+  until: prometheus_node_exporter_version is version('0.0.0', '>=')
+  retries: 10
+  when:
+    - prometheus_node_exporter_version == "latest"
+
+- name: Get prometheus_node_exporter binary checksum
+  block:
+    - name: Get checksum list from github
+      ansible.builtin.set_fact:
+        __prometheus_node_exporter_checksums: "{{ lookup('url', prometheus_node_exporter_checksums_url, headers=_github_api_headers, wantlist=True) | list }}"
+      run_once: true
+      until: __prometheus_node_exporter_checksums is search('linux-' + go_arch + '.tar.gz')
+      retries: 10
+
+    - name: "Get checksum for {{ go_arch }}"
+      ansible.builtin.set_fact:
+        __prometheus_node_exporter_checksum: "{{ item.split(' ')[0] }}"
+      with_items: "{{ __prometheus_node_exporter_checksums }}"
+      when:
+        - "('linux-' + go_arch + '.tar.gz') in item"
+
+- name: Assert collectors are not both disabled and enabled at the same time
+  ansible.builtin.assert:
+    that:
+      - "item not in prometheus_node_exporter_enabled_collectors"
+  with_items: "{{ prometheus_node_exporter_disabled_collectors }}"

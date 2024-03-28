@@ -1,0 +1,52 @@
+---
+prometheus_server_version: 2.49.1
+prometheus_server_binary_url: "https://github.com/{{ _prometheus_server_repo }}/releases/download/v{{ prometheus_server_version }}/\
+                        prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
+prometheus_server_checksums_url: "https://github.com/{{ _prometheus_server_repo }}/releases/download/v{{ prometheus_server_version }}/sha256sums.txt"
+
+prometheus_server_config_dir: /etc/prometheus
+prometheus_server_db_dir: /var/lib/prometheus
+prometheus_server_log_dir: /var/log/prometheus
+
+prometheus_server_web_listen_port: "9090"
+prometheus_server_web_listen_host: "0.0.0.0"
+
+prometheus_server_alert_rules_files:
+  - prometheus/rules/*.rules
+
+prometheus_server_tls:
+  enabled: false
+
+prometheus_server_system_user: "prometheus-server"
+prometheus_server_system_group: "prometheus"
+prometheus_server_additional_system_groups: []
+
+
+prometheus_server_storage_retention: "30d"
+# Available since Prometheus 2.7.0
+# [EXPERIMENTAL] Maximum number of bytes that can be stored for blocks. Units
+# supported: KB, MB, GB, TB, PB.
+prometheus_server_storage_retention_size: "0"
+
+# The Agent mode optimizes Prometheus for the remote write use case: https://prometheus.io/blog/2021/11/16/agent/
+prometheus_server_agent_mode: false
+
+prometheus_server_config_flags_extra: {}
+# prometheus_server_config_flags_extra:
+#   storage.tsdb.retention: 15d
+#   alertmanager.timeout: 10s
+
+prometheus_server_alert_relabel_configs: []
+# prometheus_server_alert_relabel_configs:
+#   - action: labeldrop
+#     regex: replica
+
+prometheus_server_global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+prometheus_server_external_labels:
+  cluster: "trinityX"
+
+prometheus_server_stop_timeout: '600s'
