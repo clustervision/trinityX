@@ -18,6 +18,18 @@
   - debug:
       msg: "{{ drbd_fs_disks }}"
 
+  - name: Gather the disks used for DRBD
+    stat:
+      path: "{{ item.disk }}"
+    with_items: "{{ drbd_fs_disks }}"
+    register: drbd_disks_stat
+
+  - name: Verify if requested disks exist
+    fail:
+      msg: "Disk {{ item }} does not seem to exist. DRBD config cannot continue, but can be re-run after enabling the device or changing the configuration."
+    with_items: "{{ drbd_disks_stat.results | rejectattr('stat.exists') | map(attribute='item') | list }}"
+    when: drbd_disks_stat is defined
+
   - name: Configure DRBD
     ansible.builtin.include_tasks:
       file: drbd.yaml
@@ -70,6 +82,18 @@
 - block:
   - debug:
       msg: "{{ direct_fs_disks }}"
+
+  - name: Gather the disks used for Direct
+    stat:
+      path: "{{ item.device }}"
+    with_items: "{{ direct_fs_disks }}"
+    register: direct_disks_stat
+
+  - name: Verify if requested devices exist
+    fail:
+      msg: "Disk {{ item }} does not seem to exist. Direct config cannot continue, but can be re-run after enabling the device or changing the configuration."
+    with_items: "{{ direct_disks_stat.results | rejectattr('stat.exists') | map(attribute='item') | list }}"
+    when: direct_disks_stat is defined
 
   - name: Configure Direct attached disks
     ansible.builtin.include_tasks:
