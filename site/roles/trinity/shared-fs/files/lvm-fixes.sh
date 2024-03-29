@@ -10,7 +10,12 @@ if [ ! "$LVM_DISKS" ] && [ ! "$VGROUPS" ]; then
 fi
 find /dev -type l -exec echo -n {}'=' \; -exec readlink -f {} \; > /tmp/dev-links.dat
 
-FILTER="["
+# Default is empty filter, but we have seen sometimes partlabel causing issues
+# where the kernel sees it at a later point, after this script ran.
+# we assume(!) that no-one is using a disk by /dev/disk/by-partlabel/primary
+# and therefor we block it from the get go.
+# FILTER = "[ "
+FILTER="[ \"r|/dev/disk/by-partlabel/primary|\","
 for DISK in $LVM_DISKS; do
 	REAL_DISK=""
 	EXCL_LINK=""

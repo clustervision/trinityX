@@ -17,7 +17,7 @@ In standard configuration TrinityX provides the following services to the cluste
 * Luna, our default super-efficient node provisioner
 * OpenLDAP
 * SLURM or OpenPBS
-* Telegraf, InfluxDB, Grafana and Sensu Core
+* Prometheus and Grafana
 * Infrastructure services such as NTP, DNS, DHCP
 * and more
 
@@ -27,6 +27,7 @@ It will also set up:
 * OpenHPC applications and libraries
 * environment modules
 * rsyslog
+* High Availability
 * and more
 
 .. image:: img/triX_300.png
