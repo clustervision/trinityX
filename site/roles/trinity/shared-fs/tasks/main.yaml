@@ -26,7 +26,7 @@
 
   - name: Verify if requested disks exist
     fail:
-      msg: "Disk {{ item }} does not seem to exist. DRBD config cannot continue, but can be re-run after enabling the device or changing the configuration."
+      msg: "Disk {{ item.disk }} does not seem to exist. DRBD config cannot continue, but can be re-run after enabling the disk or changing the configuration."
     with_items: "{{ drbd_disks_stat.results | rejectattr('stat.exists') | map(attribute='item') | list }}"
     when: drbd_disks_stat is defined
 
@@ -91,7 +91,7 @@
 
   - name: Verify if requested devices exist
     fail:
-      msg: "Disk {{ item }} does not seem to exist. Direct config cannot continue, but can be re-run after enabling the device or changing the configuration."
+      msg: "Disk {{ item.device }} does not seem to exist. Direct config cannot continue, but can be re-run after enabling the device or changing the configuration."
     with_items: "{{ direct_disks_stat.results | rejectattr('stat.exists') | map(attribute='item') | list }}"
     when: direct_disks_stat is defined
 
