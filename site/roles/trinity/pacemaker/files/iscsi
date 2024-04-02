@@ -1,0 +1,517 @@
+#!/bin/sh
+#
+# iSCSI OCF resource agent
+# Description: manage iSCSI disks (add/remove) using open-iscsi
+#
+# Copyright Dejan Muhamedagic <dejan@suse.de>
+# (C) 2007 Novell Inc. All Rights Reserved.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of version 2 of the GNU General Public License as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it would be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# Further, this software is distributed without any warranty that it is
+# free of the rightful claim of any third person regarding infringement
+# or the like.  Any license provided herein, whether implied or
+# otherwise, applies only to this software file.  Patent licenses, if
+# any, provided herein do not apply to combinations of this program with
+# other software, or any other product whatsoever.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write the Free Software Foundation,
+# Inc., 59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
+#
+# See usage() and meta_data() below for more details...
+#
+# OCF instance parameters:
+#	OCF_RESKEY_portal: the iSCSI portal address or host name (required)
+#	OCF_RESKEY_target: the iSCSI target (required)
+#	OCF_RESKEY_iscsiadm: iscsiadm program path (optional)
+#	OCF_RESKEY_discovery_type: discovery type (optional; default: sendtargets)
+#	OCF_RESKEY_try_recovery: wait for iSCSI recovery in monitor (optional; default: false)
+#
+# Initialization:
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+# Defaults
+OCF_RESKEY_udev_default="yes"
+OCF_RESKEY_iscsiadm_default="iscsiadm"
+OCF_RESKEY_discovery_type_default="sendtargets"
+OCF_RESKEY_try_recovery_default="false"
+
+: ${OCF_RESKEY_udev=${OCF_RESKEY_udev_default}}
+: ${OCF_RESKEY_iscsiadm=${OCF_RESKEY_iscsiadm_default}}
+: ${OCF_RESKEY_discovery_type=${OCF_RESKEY_discovery_type_default}}
+
+usage() {
+  methods=`iscsi_methods`
+  methods=`echo $methods | tr ' ' '|'`
+  cat <<EOF
+	usage: $0 {$methods}
+
+	$0 manages an iSCSI target
+
+	The 'start' operation starts (adds) the iSCSI target.
+	The 'stop' operation stops (removes) the iSCSI target.
+	The 'status' operation reports whether the iSCSI target is connected
+	The 'monitor' operation reports whether the iSCSI target is connected
+	The 'validate-all' operation reports whether the parameters are valid
+	The 'methods' operation reports on the methods $0 supports
+
+EOF
+}
+
+meta_data() {
+	cat <<EOF
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="iscsi" version="1.0">
+<version>1.0</version>
+
+<longdesc lang="en">
+OCF Resource Agent for iSCSI. Add (start) or remove (stop) iSCSI
+targets.
+</longdesc>
+<shortdesc lang="en">Manages a local iSCSI initiator and its connections to iSCSI targets</shortdesc>
+
+<parameters>
+
+<parameter name="portal" unique="0" required="1">
+<longdesc lang="en">
+The iSCSI portal address in the form: {ip_address|hostname}[":"port]
+</longdesc>
+<shortdesc lang="en">Portal address</shortdesc>
+<content type="string" />
+</parameter>
+
+<parameter name="target" unique="1" required="1">
+<longdesc lang="en">
+The iSCSI target IQN.
+</longdesc>
+<shortdesc lang="en">Target IQN</shortdesc>
+<content type="string" />
+</parameter>
+
+<parameter name="discovery_type" unique="0" required="0">
+<longdesc lang="en">
+Target discovery type. Check the open-iscsi documentation for
+supported discovery types.
+</longdesc>
+<shortdesc lang="en">Target discovery type</shortdesc>
+<content type="string" default="${OCF_RESKEY_discovery_type_default}" />
+</parameter>
+
+<parameter name="iscsiadm" unique="0" required="0">
+<longdesc lang="en">
+open-iscsi administration utility binary.
+</longdesc>
+<shortdesc lang="en">iscsiadm binary</shortdesc>
+<content type="string" default="${OCF_RESKEY_iscsiadm_default}" />
+</parameter>
+
+<parameter name="udev" unique="0" required="0">
+<longdesc lang="en">
+If the next resource depends on the udev creating a device then
+we wait until it is finished. On a normally loaded host this
+should be done quickly, but you may be unlucky. If you are not
+using udev set this to "no", otherwise we will spin in a loop
+until a timeout occurs.
+</longdesc>
+<shortdesc lang="en">udev</shortdesc>
+<content type="string" default="${OCF_RESKEY_udev_default}" />
+</parameter>
+
+<parameter name="try_recovery" unique="0" required="0">
+<longdesc lang="en">
+If the iSCSI session exists but is currently inactive/broken,
+which is most probably due to network problems, the iSCSI layer
+will try to recover. If this parameter is set to true, we'll wait
+for the recovery to succeed. In that case the monitor operation
+can only time out so you should set the monitor op timeout
+attribute appropriately.
+</longdesc>
+<shortdesc lang="en">On error wait for iSCSI recovery in monitor</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_try_recovery_default}" />
+</parameter>
+
+</parameters>
+
+<actions>
+<action name="start" timeout="120s" />
+<action name="stop" timeout="120s" />
+<action name="status" timeout="30s" />
+<action name="monitor" depth="0" timeout="30s" interval="120s" />
+<action name="validate-all" timeout="5s" />
+<action name="methods" timeout="5s" />
+<action name="meta-data" timeout="5s" />
+</actions>
+</resource-agent>
+EOF
+}
+
+iscsi_methods() {
+  cat <<EOF
+	start
+	stop
+	status
+	monitor
+	validate-all
+	methods
+	meta-data
+	usage
+EOF
+}
+
+#
+# open-iscsi interface
+#
+
+is_iscsid_running() {
+	ps -e -o cmd | grep -qs '[i]scsid'
+}
+open_iscsi_setup() {
+	discovery=open_iscsi_discovery
+	add_disk=open_iscsi_add
+	remove_disk=open_iscsi_remove
+	disk_status=open_iscsi_monitor
+	iscsiadm=${OCF_RESKEY_iscsiadm}
+
+	have_binary ${iscsiadm} ||
+		return 3
+	if is_iscsid_running; then
+		return 0
+	elif grep -qs '^iscsid.startup' /etc/iscsi/iscsid.conf; then
+		# apparently on RedHat (perhaps elsewhere?), there is a
+		# kind of iscsid autostart once root invokes some
+		# open_iscsi command; the iscsid.startup hook should take
+		# care of it; reported by m.richardson@ed.ac.uk (see also
+		# the discussion at the linux-ha-dev ML)
+		return 1
+	else
+		ocf_exit_reason "iscsid not running; please start open-iscsi utilities"
+		return 2
+	fi
+}
+
+#
+# discovery return codes:
+#   0: ok (variable portal set)
+#   1: target not found
+#   2: target found but can't connect it unambigously
+#   3: iscsiadm returned error
+#
+# open-iscsi >= "2.0-872" changed discovery semantics
+# see http://www.mail-archive.com/open-iscsi@googlegroups.com/msg04883.html
+# there's a new discoverydb command which should be used instead discovery
+ 
+open_iscsi_discovery() {
+	local output
+	local discovery_variant="discovery"
+	local options=""
+	local cmd
+	local version=`$iscsiadm --version | awk '{print $3}'`
+
+	ocf_version_cmp "$version" "2.0-871"
+	if [ $? -eq 2 ]; then # newer than 2.0-871?
+		discovery_variant="discoverydb"
+		[ "$discovery_type" = "sendtargets" ] &&
+			options="-D"
+	fi
+	cmd="$iscsiadm -m $discovery_variant -p $OCF_RESKEY_portal -t $discovery_type $options"
+	output=`$cmd`
+	if [ $? -ne 0 -o x = "x$output" ]; then
+		[ x != "x$output" ] && {
+			ocf_exit_reason "$cmd FAILED"
+			echo "$output"
+		}
+		return 3
+	fi
+	PORTAL=`echo "$output" |
+		awk -v target="$OCF_RESKEY_target" '
+		$NF==target{
+			if( NF==3 ) portal=$2; # sles compat mode
+			else portal=$1;
+			sub(",.*","",portal);
+			print portal;
+		}'`
+
+	case `echo "$PORTAL" | wc -w` in
+	0) #target not found
+		echo "$output"
+		ocf_exit_reason "target $OCF_RESKEY_target not found at portal $OCF_RESKEY_portal"
+		return 1
+	;;
+	1) #we're ok
+		return 0
+	;;
+	*) # handle multihome hosts reporting multiple portals
+		for p in $PORTAL; do
+			if [ "$OCF_RESKEY_portal" = "$p" ]; then
+				PORTAL="$OCF_RESKEY_portal"
+				return 0
+			fi
+		done
+		echo "$output"
+		ocf_exit_reason "sorry, can't handle multihomed hosts unless you specify the portal exactly"
+		return 2
+	;;
+	esac
+}
+open_iscsi_add() {
+	$iscsiadm -m node -p $1 -T $2 -l
+}
+open_iscsi_get_session_id() {
+	local target="$1"
+	local portal="$2"
+	$iscsiadm -m session 2>/dev/null |
+		grep -E "$target($|[[:space:]])" |
+		grep -E "] $portal" |
+		awk '{print $2}' | tr -d '[]'
+}
+open_iscsi_remove() {
+	local target="$1"
+	local session_id
+	session_id=`open_iscsi_get_session_id "$target" "$OCF_RESKEY_portal"`
+	if [ "$session_id" ]; then
+		$iscsiadm -m session -r $session_id -u
+	else
+		ocf_exit_reason "cannot find session id for target $target"
+		return 1
+	fi
+}
+# open_iscsi_monitor return codes:
+#   0: target running (logged in)
+#   1: target not running and target record exists
+#   2: iscsiadm -m session error (unexpected)
+#   3: target record does not exist (discovery necessary)
+#
+open_iscsi_monitor() {
+	local target="$1"
+	local session_id conn_state outp
+	local prev_state
+	local recov
+
+	recov=${2:-$OCF_RESKEY_try_recovery}
+	session_id=`open_iscsi_get_session_id "$target" "$OCF_RESKEY_portal"`
+	prev_state=""
+	if [ -z "$session_id" ]; then
+		if $iscsiadm -m node -p $OCF_RESKEY_portal -T $target >/dev/null 2>&1; then
+			return 1 # record found
+		else
+			return 3
+		fi
+	fi
+	while :; do
+		outp=`$iscsiadm -m session -r $session_id -P 1` ||
+			return 2
+		conn_state=`echo "$outp" | sed -n '/Connection State/s/.*: //p'`
+		# some drivers don't return connection state, in that case
+		# we'll assume that we're still connected
+		case "$conn_state" in
+			"LOGGED IN")
+				[ -n "$msg_logged" ] &&
+					ocf_log info "connection state $conn_state. Session restored."
+				return 0;;
+			"Unknown"|"") # this is also probably OK
+				[ -n "$msg_logged" ] &&
+					ocf_log info "connection state $conn_state. Session restored."
+				return 0;;
+			*) # failed
+				if [ "$__OCF_ACTION" != stop ] && ! ocf_is_probe && ocf_is_true $recov; then
+					if [ "$conn_state" != "$prev_state" ]; then
+						ocf_log warning "connection state $conn_state, waiting for recovery..."
+						prev_state="$conn_state"
+					fi
+					sleep 1
+				else
+					ocf_exit_reason "iscsiadm output: $outp"
+					return 2
+				fi
+			;;
+		esac
+	done
+}
+
+disk_discovery() {
+	discovery_type=${OCF_RESKEY_discovery_type}
+	$discovery  # discover and setup the real portal string (address)
+	case $? in
+	0) ;;
+	1|2) exit $OCF_ERR_GENERIC ;;
+	3) if ! is_iscsid_running; then
+			[ $setup_rc -eq 1 ] &&
+				ocf_log warning "iscsid.startup probably not correctly set in /etc/iscsi/iscsid.conf"
+			exit $OCF_ERR_INSTALLED
+	   fi
+	   exit $OCF_ERR_GENERIC
+	;;
+	esac
+}
+
+#
+# NB: this is udev specific!
+#
+wait_for_udev() {
+	dev=/dev/disk/by-path/ip-$PORTAL-iscsi-$OCF_RESKEY_target
+	while :; do
+		ls $dev* >/dev/null 2>&1 && break
+		ocf_log warning "waiting for udev to create $dev" 
+		sleep 1
+	done
+}
+iscsi_monitor() {
+	$disk_status $OCF_RESKEY_target $*
+	case $? in
+		0) return $OCF_SUCCESS;;
+		1|3) return $OCF_NOT_RUNNING;;
+		2) return $OCF_ERR_GENERIC;;
+	esac
+}
+iscsi_start() {
+	local rc
+	$disk_status $OCF_RESKEY_target
+	rc=$?
+	if [ $rc -eq 3 ]; then
+		disk_discovery
+		$disk_status $OCF_RESKEY_target
+		rc=$?
+	fi
+	case $rc in
+	0)
+		ocf_log info "iscsi $PORTAL $OCF_RESKEY_target already running"
+		return $OCF_SUCCESS
+	;;
+	1)
+		$add_disk $PORTAL $OCF_RESKEY_target ||
+			return $OCF_ERR_GENERIC
+		case "$OCF_RESKEY_udev" in
+		[Yy]es) wait_for_udev ||
+			return $OCF_ERR_GENERIC
+		;;
+		*) ;;
+		esac
+	;;
+	*) # the session exists, but it's broken
+		ocf_log warning "iscsi $PORTAL $OCF_RESKEY_target in failed state"
+	;;
+	esac
+	iscsi_monitor 1 # enforce wait
+	if [ $? -eq $OCF_SUCCESS ]; then
+		return $OCF_SUCCESS
+	else
+		return $OCF_ERR_GENERIC
+	fi
+}
+iscsi_stop() {
+	iscsi_monitor
+	if [ $? -ne $OCF_NOT_RUNNING ] ; then
+		$remove_disk $OCF_RESKEY_target ||
+			return $OCF_ERR_GENERIC
+		iscsi_monitor
+		if [ $? -ne $OCF_NOT_RUNNING ] ; then
+			return $OCF_ERR_GENERIC
+		else
+			return $OCF_SUCCESS
+		fi
+	else
+		ocf_log info "iscsi $OCF_RESKEY_target already stopped"
+		return $OCF_SUCCESS
+	fi
+}
+
+#
+#	'main' starts here...
+#
+
+if [ $# -ne 1 ]; then
+	usage
+	exit $OCF_ERR_ARGS
+fi
+
+# These operations don't require OCF instance parameters to be set
+case "$1" in
+	meta-data)	meta_data
+		exit $OCF_SUCCESS;;
+	usage) usage
+		exit $OCF_SUCCESS;;
+	methods) iscsi_methods
+		exit $OCF_SUCCESS;;
+esac
+
+if [ x = "x$OCF_RESKEY_target" ]; then
+	ocf_exit_reason "target parameter not set"
+	exit $OCF_ERR_CONFIGURED
+fi
+
+if [ x = "x$OCF_RESKEY_portal" ]; then
+	ocf_exit_reason "portal parameter not set"
+	exit $OCF_ERR_CONFIGURED
+fi
+
+case `uname` in
+Linux) setup=open_iscsi_setup
+;;
+*) ocf_log info "platform `uname` may not be supported"
+	setup=open_iscsi_setup
+;;
+esac
+
+PORTAL="$OCF_RESKEY_portal" # updated by discovery
+LSB_STATUS_STOPPED=3
+$setup
+setup_rc=$?
+if [ $setup_rc -gt 1 ]; then
+	ocf_exit_reason "iscsi initiator utilities not installed or not setup"
+	case "$1" in
+		stop) exit $OCF_SUCCESS;;
+		monitor) exit $OCF_NOT_RUNNING;;
+		status) exit $LSB_STATUS_STOPPED;;
+		*) exit $OCF_ERR_INSTALLED;;
+	esac
+fi
+
+if [ `id -u` != 0 ]; then
+	ocf_exit_reason "$0 must be run as root"
+	exit $OCF_ERR_PERM
+fi
+
+# which method was invoked?
+case "$1" in
+	start)
+		iscsi_start
+	;;
+	stop)	iscsi_stop
+	;;
+	status)	iscsi_monitor
+		rc=$?
+		case $rc in
+		$OCF_SUCCESS)
+		  echo iscsi target $OCF_RESKEY_target running
+		;;
+		$OCF_NOT_RUNNING)
+		  echo iscsi target $OCF_RESKEY_target stopped
+		;;
+		*)
+		  echo iscsi target $OCF_RESKEY_target failed
+		;;
+		esac
+		exit $rc
+		;;
+	monitor)	iscsi_monitor
+	;;
+	validate-all)	# everything already validated
+		# just exit successfully here.
+		exit $OCF_SUCCESS;;
+	*)		iscsi_methods
+		exit $OCF_ERR_UNIMPLEMENTED;;
+esac
+
+#
+# vim:tabstop=4:shiftwidth=4:textwidth=0:wrapmargin=0
+

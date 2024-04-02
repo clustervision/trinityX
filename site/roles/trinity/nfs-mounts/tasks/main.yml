@@ -19,31 +19,95 @@
     state: present
   when: ansible_facts['os_family'] == "Debian"
 
-- name: Ensure mountpoints exist
-  file:
-    path: '{{ item.path }}'
-    owner: root
-    group: root
-    mode: '0755'
-    state: directory
-  with_items: '{{ nfs_mounts }}'
+- name: Render nfs_mounts based on solely nfs_remote_mask info
+  set_fact:
+    new_nfs_mounts: "{{ new_nfs_mounts_|d([]) + [item|combine({'path': item.name})] }}"
+  loop: "{{ nfs_remote_mask }}"
+  when: 
+    - (nfs_mounts is not defined) or nfs_mounts | length == 0
+    - nfs_remote_mask is defined
+    - nfs_remote_mask | length > 0
+    - item.type == 'nfs'
 
-- name: Setup NFS mounts
-  mount:
-    path: '{{ item.path }}'
-    src: '{{ item.remote }}'
-    fstype: 'nfs'
-    opts: '{{ item.options }},proto={{ "rdma" if nfs_enable_rdma else "tcp" }}'
-    state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
-  with_items: '{{ nfs_mounts }}'
-  when: ansible_facts['os_family'] == "RedHat"
+- block:
+  - name: Render nfs_mounts based on nfs_mounts and nfs_remote_mask info
+    set_fact:
+      nfs_mounts_: "{{ nfs_mounts_|d([]) + [item|combine({'remote': _remote|from_yaml,'options': _options|from_yaml})] }}"
+    loop: "{{ nfs_mounts }}"
+    vars:
+      _remote: |
+        {% if item.path in nfs_remote_mask | map(attribute="name") %}
+          {% for disk in nfs_remote_mask %}
+            {% if disk.name == item.path %}
+              {% if disk["type"] == "nfs" %}
+                {{ disk["remote"] }}
+              {% else %}
+                {{ item.remote }}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          {{ item.remote }}
+        {% endif %}
+      _options: |
+        {% if item.path in nfs_remote_mask | map(attribute="name") %}
+          {% for disk in nfs_remote_mask %}
+            {% if disk.name == item.path %}
+              {% if disk["type"] == "nfs" and "options" in disk %}
+                {{ disk["options"] }}
+              {% else %}
+                {{ item.options }}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          {{ item.options }}
+        {% endif %}
 
-- name: Setup NFS mounts
-  mount:
-    path: '{{ item.path }}'
-    src: '{{ item.remote }}'
-    fstype: 'nfs'
-    opts: '{{ item.options }}'
-    state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
-  with_items: '{{ nfs_mounts }}'
-  when: ansible_facts['os_family'] == "Debian"
+  - name: Overwrite nfs_mounts fact
+    set_fact:
+      new_nfs_mounts: "{{ nfs_mounts_ }}"
+  when: 
+    - nfs_remote_mask is defined
+    - nfs_remote_mask | length > 0
+    - nfs_mounts is defined
+    - nfs_mounts | length > 0
+
+- name: Overwrite nfs_mounts fact
+  set_fact:
+    new_nfs_mounts: "{{ nfs_mounts }}"
+  when: 
+    - nfs_mounts_ is not defined
+    - nfs_mounts is defined
+    - nfs_mounts | length > 0
+
+- block:
+  - name: Ensure mountpoints exist
+    file:
+      path: '{{ item.path }}'
+      owner: root
+      group: root
+      mode: '0755'
+      state: directory
+    with_items: '{{ new_nfs_mounts }}'
+
+  - name: Setup NFS mounts
+    mount:
+      path: '{{ item.path }}'
+      src: '{{ item.remote }}'
+      fstype: 'nfs'
+      opts: '{{ item.options }},proto={{ "rdma" if nfs_enable_rdma else "tcp" }}'
+      state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
+    with_items: '{{ new_nfs_mounts }}'
+    when: ansible_facts['os_family'] == "RedHat"
+
+  - name: Setup NFS mounts
+    mount:
+      path: '{{ item.path }}'
+      src: '{{ item.remote }}'
+      fstype: 'nfs'
+      opts: '{{ item.options }}'
+      state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
+    with_items: '{{ new_nfs_mounts }}'
+    when: ansible_facts['os_family'] == "Debian"
+  when: new_nfs_mounts is defined

@@ -1,0 +1,73 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=Prometheus
+After=network-online.target
+Requires=local-fs.target
+After=local-fs.target
+
+[Service]
+Type=simple
+Environment="GOMAXPROCS={{ ansible_processor_vcpus|default(ansible_processor_count) }}"
+User={{prometheus_server_system_user}}
+Group={{prometheus_server_system_group}}
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart={{ _prometheus_server_binary_install_dir }}/prometheus \
+{% if not prometheus_server_agent_mode %}
+  --storage.tsdb.path={{ prometheus_server_db_dir }} \
+  --storage.tsdb.retention.time={{ prometheus_server_storage_retention }} \
+  --storage.tsdb.retention.size={{ prometheus_server_storage_retention_size }} \
+{% else %}
+  --enable-feature=agent \
+  --storage.agent.path={{ prometheus_server_db_dir }} \
+{% endif %}
+{% if prometheus_server_tls.enabled or prometheus_server_auth.enabled %}
+  --web.config.file={{ prometheus_server_config_dir }}/prometheus.web.yml \
+{% endif %}
+  --web.console.libraries={{ prometheus_server_config_dir }}/console_libraries \
+  --web.console.templates={{ prometheus_server_config_dir }}/consoles \
+  --web.listen-address={{ prometheus_server_web_listen_host }}:{{ prometheus_server_web_listen_port }} \
+{% for flag, flag_value in prometheus_server_config_flags_extra.items() %}
+{% if not flag_value %}
+  --{{ flag }} \
+{% elif flag_value is string %}
+  --{{ flag }}={{ flag_value }} \
+{% elif flag_value is sequence %}
+{% for flag_value_item in flag_value %}
+  --{{ flag }}={{ flag_value_item }} \
+{% endfor %}
+{% endif %}
+{% endfor %}
+  --config.file={{ prometheus_server_config_dir }}/prometheus.yml
+
+CapabilityBoundingSet=CAP_SET_UID
+LimitNOFILE=65000
+LockPersonality=true
+NoNewPrivileges=true
+MemoryDenyWriteExecute=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=true
+RemoveIPC=true
+RestrictSUIDSGID=true
+#SystemCallFilter=@signal @timer
+{% if prometheus_server_log_dir is defined %}
+StandardOutput=append:{{prometheus_server_log_dir}}/prometheus_server.log
+{% endif %}
+
+{% if http_proxy is defined %}
+Environment="HTTP_PROXY={{ http_proxy }}"{% if https_proxy is defined %} "HTTPS_PROXY={{ https_proxy }}{% endif %}"
+{% endif %}
+
+{% if (ansible_facts.packages.systemd | first).version is version('231', '>=') %}
+ReadWritePaths={{ prometheus_server_db_dir }}
+ProtectSystem=strict
+{% endif %}
+
+
+SyslogIdentifier=prometheus
+Restart=always
+TimeoutStopSec={{ prometheus_server_stop_timeout }}
+
+[Install]
+WantedBy=multi-user.target

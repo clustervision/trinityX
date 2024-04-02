@@ -6,6 +6,11 @@
   #       directory.
 
   roles:
+    - role: trinity/prepare
+      tags:
+        - init
+        - always
+
     - role: trinity/init
       tags: 
         - init
@@ -28,12 +33,26 @@
       tags: packages
 
     - role: OndrejHome.pcs-modules-2
-      tags: ha
+      tags: ha,pcs,pacemaker,shared-fs
+
+    - role: trinity/sync-secrets
+      tags: ha,sync-secrets
       when: ha | default(False)
 
-    - role: trinity/ha
-      tags: ha
+    - role: trinity/pacemaker
+      fence_ipmilan_enabled: '{{ enable_ipmilan_fencing | default(True) }}'
+      tags: ha,pcs,pacemaker
       when: ha | default(False)
+
+    - role: trinity/shared-fs
+      drbd_shared_resource_stonith_enabled: '{{ enable_ipmilan_fencing | default(True) }}'
+      tags: ha,shared-fs
+      when: ha | default(False)
+
+    - role: trinity/nfs-mounts
+      nfs_remote_mask: '{{ shared_fs_disks }}'
+      nfs_mounts: []
+      tags: shared-fs,nfs-mounts
 
     - role: trinity/trix-tree
       tags: 
@@ -43,8 +62,8 @@
     - role: trinity/cv_support
       tags: cv_support
 
-    - role: trinity/sensu-client
-      tags: monitoring
+    # - role: trinity/sensu-client
+    #   tags: monitoring
 
     - role: trinity/tunables
       tags: tunables
@@ -87,6 +106,8 @@
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
         - '{{ ansible_fqdn }}'
         - '{{ trix_external_fqdn }}'
+      ssl_cert_altip: 
+        - '{{ all_ctrl_ip }}'
       ssl_cert_days: '36500'
       tags: 
         - ssl-cert
@@ -99,8 +120,8 @@
       tags: bind
 
     - role: trinity/openldap
-      openldap_server_dir_path: '{{ trix_local }}/var/lib/ldap'
-      openldap_server_conf_path: '{{ trix_local }}/etc/openldap/slapd.d'
+      openldap_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/ldap"
+      openldap_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/openldap/slapd.d"
       openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       when: enable_authentication|default(True)
       tags: 
@@ -126,7 +147,7 @@
         - authentication
 
     - role: trinity/mariadb
-      mariadb_db_path: '{{ trix_local }}/var/lib/mysql'
+      mariadb_db_path: "{{ trix_ha if ha else trix_local }}/var/lib/mysql"
       tags: mariadb
 
     - role: trinity/openhpc
@@ -137,9 +158,11 @@
     - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'
       slurm_ctrl_ip: '{{ trix_ctrl_ip }}'
-      slurm_ctrl_list: '{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }}'
+      #slurm_ctrl_list: '{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }}'
+      slurm_ctrl_list: '{{ all_ctrl_hostname | join(",") }}'
       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-      slurm_spool_path: '{{ trix_local }}/var/spool/slurm'
+      #slurm_spool_path: '{{ trix_local }}/var/spool/slurm'
+      slurm_spool_path: "{{ trix_ha if ha else trix_local }}/var/spool/slurm"
       munge_conf_path: '{{ trix_shared }}/etc/munge'
       slurmdbd_sql_user: 'slurm_accounting'
       slurmdbd_sql_db: 'slurm_accounting'
@@ -233,27 +256,119 @@
     - role: trinity/ood-vnc
       tags: ood
 
-    - role: trinity/telegraf
-      tags: monitoring
-      influxdb_server: "{{ trix_ctrl_ip }}"
+    # - role: trinity/telegraf
+    #   tags: monitoring
+    #   influxdb_server: "{{ trix_ctrl_ip }}"
 
-    - role: trinity/rabbitmq
-      tags: monitoring
+    # - role: trinity/rabbitmq
+    #   tags: monitoring
 
-    - role: trinity/sensu-server
-      tags: monitoring
+    # - role: trinity/sensu-server
+    #   tags: monitoring
 
-    - role: trinity/influxdb
-      tags: monitoring
-      influxdb_server: "{{ trix_ctrl_ip }}"
+    # - role: trinity/influxdb
+    #   tags: monitoring
+    #   influxdb_server: "{{ trix_ctrl_ip }}"
+
+    # - role: trinity/prometheus-auth
+    #   prometheus_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+    #   tags: prometheus-auth, prometheus, monitoring
+
+    - role: trinity/prometheus-server
+      # Prometheus server
+      prometheus_server_config_dir: "{{trix_etc}}/prometheus_server"
+      prometheus_server_db_dir: "{{trix_local}}/var/lib/prometheus_server"
+      prometheus_server_additional_system_groups:
+        - "{{ssl_cert_group}}"
+      prometheus_server_additional_sd:
+        - job_name: luna_nodes
+          http_sd_configs:
+          - url: "{{ luna_protocol }}://localhost:7050/export/prometheus"
+            tls_config:
+              insecure_skip_verify: true
+      prometheus_server_alertmanagers:
+        - target: "localhost:9093"
+          tls:
+            enabled: true
+            insecure_skip_verify: true
+          basic_auth:
+            enabled: true
+            credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      prometheus_server_tls:
+        enabled: true
+        cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+        key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      tags: prometheus-server, prometheus, monitoring
+
+
+    - role: trinity/prometheus-alertmanager
+      # Prometheus alertmanager
+      prometheus_alertmanager_config_dir: "{{trix_etc}}/prometheus_alertmanager"
+      prometheus_alertmanager_db_dir: "{{trix_local}}/var/lib/prometheus_alertmanager"
+      prometheus_alertmanager_mail: "{{ administrator_email }}"
+      prometheus_alertmanager_additional_system_groups:
+        - "{{ssl_cert_group}}"
+      prometheus_alertmanager_cluster:
+        listen-address: "{{ ansible_fqdn }}:6783"
+        peers:
+          - "{{ trix_ctrl_hostname }}:6783"
+      prometheus_alertmanager_auth:
+        enabled: true
+        credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      prometheus_alertmanager_tls:
+        enabled: true
+        cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+        key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      tags: prometheus-alertmanager, prometheus, monitoring
+
+    - role: trinity/prometheus-node-exporter
+      # Prometheus node exporter
+      prometheus_node_exporter_config_dir: "{{trix_etc}}/prometheus_node_exporter"
+      prometheus_node_exporter_db_dir: "{{trix_local}}/var/lib/prometheus_node_exporter"
+      prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_node_exporter.yml"
+      prometheus_node_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      tags: prometheus-node-exporter, prometheus, monitoring
+
+    - role: trinity/prometheus-slurm-exporter
+      # Prometheus slurm exporter
+      prometheus_slurm_exporter_system_user: root
+      prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_slurm_exporter.yml"
+      prometheus_slurm_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      tags: prometheus-slurm-exporter, prometheus, monitoring
+
+    - role: trinity/prometheus-ipmi-exporter
+      # Prometheus ipmi exporter
+      prometheus_ipmi_exporter_system_user: root
+      prometheus_ipmi_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_ipmi_exporter.yml"
+      prometheus_ipmi_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      tags: prometheus-ipmi-exporter, prometheus, monitoring
+
+    - role: trinity/prometheus-nvidia-exporter
+      # Prometheus ipmi exporter
+      prometheus_nvidia_exporter_system_user: root
+      prometheus_nvidia_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_nvidia_exporter.yml"
+      prometheus_nvidia_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      tags: prometheus-nvidia-exporter, prometheus, monitoring
+
+    - role: trinity/prometheus-ha-exporter
+      # Prometheus ipmi exporter
+      prometheus_ha_exporter_system_user: root
+      prometheus_ha_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_ha_exporter.yml"
+      prometheus_ha_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      tags: prometheus-ha-exporter, prometheus, monitoring, ha
+      when: ha | default(False)
 
     - role: trinity/grafana
-      tags: monitoring
       ldap_auth: "{{ enable_authentication|default(True) }}"
       enable_ssl: true
       grafana_admin_group: "{{ admin_group }}"
+      grafana_prometheus_url: "https://{{ trix_ctrl_local_ip }}:9090"
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      tags: grafana, monitoring
+
+    - role: trinity/cleanup-legacy
+      tags: cleanup-legacy
 
     - role: trinity/wrapup
       tags: wrapup

@@ -1,0 +1,57 @@
+---
+- name: Preflight
+  ansible.builtin.include_tasks:
+    file: preflight.yml
+    apply:
+      tags:
+        - prometheus-alertmanager-install
+        - prometheus-alertmanager-configure
+        - prometheus-alertmanager-selinux
+        - prometheus-alertmanager-run
+  tags:
+    - prometheus-alertmanager-install
+    - prometheus-alertmanager-configure
+    - prometheus-alertmanager-selinux
+    - prometheus-alertmanager-run
+
+- name: Install
+  ansible.builtin.include_tasks:
+    file: install.yml
+    apply:
+      become: true
+      tags:
+        - prometheus-alertmanager-install
+  tags:
+    - prometheus-alertmanager-install
+
+- name: SELinux
+  ansible.builtin.include_tasks:
+    file: selinux.yml
+    apply:
+      become: true
+      tags:
+        - prometheus-alertmanager-selinux
+  when: ansible_selinux.status == "enabled"
+  tags:
+    - prometheus-alertmanager-selinux
+
+- name: Configure
+  ansible.builtin.include_tasks:
+    file: configure.yml
+    apply:
+      become: true
+      tags:
+        - prometheus-alertmanager-configure
+  tags:
+    - prometheus-alertmanager-configure
+
+- name: Ensure prometheus-alertmanager.service is started and enabled
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: prometheus-alertmanager
+    state: started
+    enabled: true
+  tags:
+    - prometheus-alertmanager-run
+

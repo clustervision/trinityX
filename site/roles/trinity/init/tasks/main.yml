@@ -43,10 +43,38 @@
   - debug:
       msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
 
+    # we HAVE to make sure we determine who is primary, else a re-run of the playbook
+    # at a later stage WILL cause trouble if there was a failover.
+  - name: Check with pacemaker who is the primary controller
+    shell: "/usr/local/sbin/pcs resource status|(grep trinity-ip || echo 'Started not_available') | awk -F'tarted ' '{ print $2 }'"
+    register: pcs_primary
+    ignore_errors: true
+
+    # we assume that we start with controller 1 as being the first installed and primary
+    # technically controller2 could be the primary but i do not dare to judge if things
+    # would work as expected. for now we leave it as it is.
   - name: Check if this node is the primary controller
     set_fact:
-      primary: '{{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses and on_controller else False }}'
+      primary: >-
+        {{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses
+           or trix_ctrl1_hostname == ansible_hostname
+           else False }}
+    when:
+      - on_controller
+      - pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
+
+  - name: Set this node as the primary controller based on pacemaker data
+    set_fact:
+      primary: '{{ True if pcs_primary.stdout == ansible_hostname else False }}'
       on_controller: true
+    when: 
+      - pcs_primary is defined 
+      - pcs_primary.stdout != "not_available"
+
+  - name: Set primary false if we cannot confirm with confidence
+    set_fact:
+       primary: False
+    when: primary is not defined
 
   - debug:
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}"
@@ -149,22 +177,51 @@
   tags: always,ha
 
 
+  # checking nic configs and fix if it can
 - block:
   - name: Collecting controller interface information
-    include_tasks: interface.yml
+    include_tasks: find-interface.yml
     with_items: "{{ all_ctrl_ip }}"
     loop_control:
       loop_var: inner_loop_var
 
+  - block:
+    - name: Configuring interface if required
+      ansible.builtin.include_tasks:
+        file: conf-interface.yml
+
+    - name: Re-gather facts to get latest information
+      setup:
+
+    - name: Collecting controller interface information
+      include_tasks: find-interface.yml
+      with_items: "{{ all_ctrl_ip }}"
+      loop_control:
+        loop_var: inner_loop_var
+    when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
+
   - debug:
-      msg: "trix_ctrl_interface: {{ trix_ctrl_interface }}"
-    when: trix_ctrl_interface is defined
+      msg: "trix_ctrl_interface: {{ trix_ctrl_interface|default('Undefined') }}"
 
   - name: Verify internal controller interface is configured
     fail:
       msg: "Interface with config set in 'trix_ctrl1_ip' ({{ trix_ctrl1_ip }}) or 'trix_ctrlX_ip' ({{ trix_ctrl2_ip }}, ...) not found. Please make sure the interface is configured and up"
     when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
 
+    # we figure out our local ip. handy if we want local connection but through ip.
+  - set_fact:
+      trix_ctrl_local_ip: '{{ item.1 }}'
+    with_together:
+      - '{{ all_ctrl_hostname }}'
+      - '{{ all_ctrl_ip }}'
+    when: item.0 == ansible_hostname
+
+  - set_fact:
+      trix_ctrl_local_ip: '{{ trix_ctrl_ip }}'
+    when: trix_ctrl_local_ip is not defined
+
+  - debug:
+      msg: "trix_ctrl_local_ip: {{ trix_ctrl_local_ip|default('Undefined') }}"
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
@@ -187,6 +244,11 @@
   when: not enable_authentication|default(False)
   tags: always
 
+
+- name: Collect number of controllers
+  set_fact:
+    num_ctrl: "{{ all_ctrl_ip | length }}"
+  tags: always
 
 - name: Toggle selinux state
   selinux:

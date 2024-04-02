@@ -287,42 +287,32 @@
     virtualenv: /trinity/local/python/
   with_items: "{{ ood_custom_apps }}"
 
-- name: Create a directory for grafana if it does not exist
-  ansible.builtin.file:
-    path: '/var/www/ood/apps/sys/trinity_grafana'
+- name: Create custom app folders if they do not exist
+  file:
+    path: '/var/www/ood/apps/sys/{{ item | basename | regex_replace("\_manifest.yml.j2$", "") }}'
     state: directory
     mode: 0755
     owner: root
     group: "{{ ood_admin_group }}"
-  tags: branding
-
-- name: Render grafana manifest to create button in the menu
+  notify: run update_ood_portal
+  with_fileglob:
+    - '../templates/manifests/*.yml.j2'
+  tags:
+    - ood-manifests
+  
+- name: Render custom manifests to create buttons in the menu
   template:
-    src: 'manifests/grafana_manifest.yml.j2'
-    dest: '/var/www/ood/apps/sys/trinity_grafana/manifest.yml'
+    src: '{{ item }}'
+    dest: '/var/www/ood/apps/sys/{{ item | basename | regex_replace("\_manifest.yml.j2$", "") }}/manifest.yml'
     owner: root
     group: "{{ ood_admin_group }}"
     mode: 0644
-  tags: branding
-
-- name: Render ssh manifest to create button in the menu
-  template:
-    src: 'manifests/shell_manifest.yml.j2'
-    dest: '/var/www/ood/apps/sys/shell/manifest.yml'
-    owner: root
-    group: "{{ ood_admin_group }}"
-    mode: 0644
-  tags: branding
-
-- name: Render bc_desktop manifest to create button in the menu
-  template:
-    src: 'manifests/bc_desktop_manifest.yml.j2'
-    dest: '/var/www/ood/apps/sys/bc_desktop/manifest.yml'
-    owner: root
-    group: "{{ ood_admin_group }}"
-    mode: 0644
-  tags: branding
-
+  notify: run update_ood_portal
+  with_fileglob:
+    - '../templates/manifests/*.yml.j2'
+  tags:
+    - ood-manifests
+  
 - name: Symlink trinityx-ood custom apps
   file:
     src: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"

@@ -1,0 +1,193 @@
+---
+
+# --- DRBD disks
+
+- name: Build DRBD disk list
+  set_fact:
+      drbd_fs_disks:
+        '{{ drbd_fs_disks|default([]) +
+          [{ "name": item.name,
+             "disk": item.disk,
+             "fstype": item.fstype | default(""),
+             "options": item.options | default(""),
+             "device": item.device }] }}'
+  with_items: "{{ shared_fs_disks }}"
+  when: item.type == 'drbd'
+
+- block:
+  - debug:
+      msg: "{{ drbd_fs_disks }}"
+
+  - name: Gather the disks used for DRBD
+    stat:
+      path: "{{ item.disk }}"
+    with_items: "{{ drbd_fs_disks }}"
+    register: drbd_disks_stat
+
+  - name: Verify if requested disks exist
+    fail:
+      msg: "Disk {{ item.disk }} does not seem to exist. DRBD config cannot continue, but can be re-run after enabling the disk or changing the configuration."
+    with_items: "{{ drbd_disks_stat.results | rejectattr('stat.exists') | map(attribute='item') | list }}"
+    when: drbd_disks_stat is defined
+
+  - name: Configure DRBD
+    ansible.builtin.include_tasks:
+      file: drbd.yaml
+  when: 
+    - drbd_fs_disks is defined
+    - drbd_fs_disks|length > 0
+
+# --- iSCSI disks
+
+- name: Build iSCSI disk list
+  set_fact:
+      iscsi_fs_disks:
+        '{{ iscsi_fs_disks|default([]) +
+          [{ "name": item.name,
+             "portal": item.portal,
+             "target": item.target,
+             "node_auth": item.authmethod | default("None"),
+             "node_user": item.username | default(""),
+             "node_pass": item.password | default(""),
+             "fstype": item.fstype | default(""),
+             "options": item.options | default(""),
+             "device": "/dev/disk/by-path/ip-"+item.portal+":3260-iscsi-"+item.target+"-lun-0" }] }}'
+  with_items: "{{ shared_fs_disks }}"
+  when: item.type == 'iscsi'
+
+- block:
+  - debug:
+      msg: "{{ iscsi_fs_disks }}"
+
+  - name: Configure iSCSI
+    ansible.builtin.include_tasks:
+      file: iscsi.yaml
+  when: 
+    - iscsi_fs_disks is defined
+    - iscsi_fs_disks|length > 0
+
+# --- Direct like SAS
+
+- name: Build Direct disk list
+  set_fact:
+      direct_fs_disks:
+        '{{ direct_fs_disks|default([]) +
+          [{ "name": item.name,
+             "fstype": item.fstype | default(""),
+             "options": item.options | default(""),
+             "device": item.device }] }}'
+  with_items: "{{ shared_fs_disks }}"
+  when: item.type == 'direct'
+
+- block:
+  - debug:
+      msg: "{{ direct_fs_disks }}"
+
+  - name: Gather the disks used for Direct
+    stat:
+      path: "{{ item.device }}"
+    with_items: "{{ direct_fs_disks }}"
+    register: direct_disks_stat
+
+  - name: Verify if requested devices exist
+    fail:
+      msg: "Disk {{ item.device }} does not seem to exist. Direct config cannot continue, but can be re-run after enabling the device or changing the configuration."
+    with_items: "{{ direct_disks_stat.results | rejectattr('stat.exists') | map(attribute='item') | list }}"
+    when: direct_disks_stat is defined
+
+  - name: Configure Direct attached disks
+    ansible.builtin.include_tasks:
+      file: direct.yaml
+  when: 
+    - direct_fs_disks is defined
+    - direct_fs_disks|length > 0
+
+# more types can be added here
+# ....
+
+# --- partition creation based on type
+
+- name: Build LVM partition list
+  set_fact:
+      shared_fs_lvm_partitions:
+        '{{ shared_fs_lvm_partitions|default([]) +
+            item.partitions | map("combine",{"vgroup": item.name}) }}'
+  loop: "{{ shared_fs_disks }}"
+  when: 
+    - item.partitions is defined
+    - item.fstype == 'lvm'
+
+- name: Build ZFS partition list
+  set_fact:
+      shared_fs_zfs_partitions:
+        '{{ shared_fs_zfs_partitions|default([]) +
+            item.partitions | map("combine",{"zpool": item.name}) }}'
+  loop: "{{ shared_fs_disks }}"
+  when: 
+    - item.partitions is defined
+    - item.fstype == 'zfs'
+
+- name: Configure LVM Partitions
+  ansible.builtin.include_tasks:
+    file: partitions_lvm.yaml
+  when: 
+    - shared_fs_lvm_partitions is defined
+    - shared_fs_lvm_partitions | length > 0
+
+- name: Configure ZFS Partitions
+  ansible.builtin.include_tasks:
+    file: partitions_zfs.yaml
+  when: 
+    - shared_fs_zfs_partitions is defined
+    - shared_fs_zfs_partitions | length > 0
+
+
+# We had to make a lot of magic to make LVM work with drbd or das.
+# We ditch the use_devices parameter, but this _might_ clash with the initrd
+# if we don't vgscan simply ignore lvms completely and failover will not work... sigh...
+
+- block:
+  - name: Render lvm fix script
+    copy:
+      src: 'lvm-fixes.sh'
+      dest: '/tmp/lvm-fixes.sh'
+      owner: root
+      group: root
+      mode: 0750
+      force: yes
+
+  - name: Render lvm exclusion filter fact
+    set_fact:
+        shared_lvm_disks:
+          '{{ drbd_fs_disks|default([]) + iscsi_fs_disks|default([]) }}'
+
+  - name: Generate lvm filter file
+    template:
+      src: 'lvm_filter.dat.j2'
+      dest: '/tmp/lvm_filter.dat'
+
+  - name: Generate lvm volume file
+    template:
+      src: 'lvm_volumes.dat.j2'
+      dest: '/tmp/lvm_volumes.dat'
+
+  - name: Run lvm fix script
+    shell: '/tmp/lvm-fixes.sh'
+  when: 
+    - shared_fs_disks | length > 0
+
+
+# wrapping things up
+
+- block:
+  - name: Clear possible pacemaker dependency messages
+    shell: "pcs resource cleanup"
+
+  - name: Wait 10s for cleanup to take effect
+    wait_for:
+      timeout: 10
+
+  - name: Clear possible pacemaker dependency messages
+    shell: "pcs resource cleanup"
+  when: primary
+

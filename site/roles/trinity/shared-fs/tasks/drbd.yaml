@@ -1,0 +1,562 @@
+---
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  ignore_errors: true
+
+- name: Install DRBD packages
+  yum:
+    name: '{{ drbd_packages }}'
+    enablerepo: 'elrepo'
+    state: present
+  tags: install-only
+
+- name: Collect DRBD kernel module info
+  shell: 'find /lib/modules/$(uname -r)/ -name drbd.ko | wc -l'
+  register: drbd_kernel_module
+
+- name: Verify if we run correct kernel
+  fail:
+    msg: "DRBD kernel module not found in current running kernel version. Please reboot first and try again"
+  when: drbd_kernel_module.stdout|int < 1
+
+- name: Ensuring temporary mount location exists
+  file:
+    path: /mnt
+    owner: root
+    group: root
+    state: directory
+
+## --- start syncing shared secrets ---
+
+- name: Verify if drbd shared secret exists
+  stat:
+    path: /etc/drbd.d/sharedsecret
+  register: stat_drbd_shared_secret
+
+- block:
+  - block:
+    - name: Generate DRBD shared secret
+      set_fact:
+        drbd_shared_secret: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+
+    - name: Write DRBD shared secret
+      copy:
+        content: "{{ drbd_shared_secret }}"
+        dest: /etc/drbd.d/sharedsecret
+        mode: 0640
+        owner: root
+        group: root
+    when: not stat_drbd_shared_secret.stat.exists
+
+  - name: Ensure drbd sync directory exists
+    file:
+      path: '{{ trix_sync }}/drbd'
+      state: directory
+
+  - name: Copy drbd shared secret to sync
+    copy:
+      src: '/etc/drbd.d/sharedsecret'
+      dest: '{{ trix_sync }}/drbd/'
+      mode: 0640
+      owner: root
+      group: root
+  when: 
+    - primary
+
+- name: Copy DRBD shared secret from ha storage
+  copy:
+    src: '{{ trix_sync }}/drbd/sharedsecret'
+    dest: '/etc/drbd.d/'
+    mode: 0640
+    owner: root
+    group: root
+  when: 
+    - not primary
+
+- name: Reading in DRBD shared secret
+  set_fact:
+    drbd_shared_secret: "{{ lookup('file', '/etc/drbd.d/sharedsecret') }}"
+
+- debug:
+    msg: "{{ drbd_shared_secret }}"
+
+## --- end syncing shared secrets ---
+
+- name: Verify if DRBD is already configured
+  stat:
+     path: "/etc/drbd.d/trinityx.res"
+  register: drbd_res_config
+
+- block:
+  - name: Set up DRBD common settings configuration file
+    template:
+      src: global_common.conf.j2
+      dest: /etc/drbd.d/global_common.conf
+
+  - name: Set up DRBD shared resource configuration file
+    template:
+      src: 'drbd_fs_disks.res.j2'
+      dest: "/etc/drbd.d/trinityx.res"
+      mode: 0640
+      owner: root
+      group: root
+
+  - name: Initialize DRBD shared resources
+    shell: '/usr/sbin/drbdadm create-md --force {{ item.name | replace("/","_") }}'
+    loop: "{{ drbd_fs_disks }}"
+    ignore_errors: yes
+
+  when: not drbd_res_config.stat.exists
+
+- block:
+  - block:
+    - name: Populate service facts
+      service_facts:
+
+    - name: Temporarily start DRBD up
+      service:
+        name: drbd
+        state: started
+      register: drbd_started
+
+#    - name: Attach DRBD shared resources
+#      shell: '/usr/sbin/drbdadm attach {{ item.name | replace("/","_") }}'
+#      loop: "{{ drbd_fs_disks }}"
+#      ignore_errors: yes
+
+    - name: Status DRBD shared resources
+      shell: '/usr/sbin/drbdadm status {{ item.name | replace("/","_") }}'
+      loop: "{{ drbd_fs_disks }}"
+      ignore_errors: yes
+
+#    - name: Apply-al DRBD shared resources
+#      shell: '/usr/sbin/drbdadm apply-al {{ item.name | replace("/","_") }}'
+#      loop: "{{ drbd_fs_disks }}"
+#      ignore_errors: yes
+
+    - name: Check if DRBD is already mounted
+      command: '/usr/bin/findmnt -S /dev/drbd/by-res/ -T {{ item.name | replace("/","_") }}'
+      register: drbd_mounted
+      changed_when: false
+      failed_when: false
+      loop: "{{ drbd_fs_disks }}"
+
+    - name: Create a fake fstab for the next step
+      tempfile:
+        path: /tmp
+        prefix: fstab.
+        state: file
+      register: drbd_fake_fstab
+
+    - block:
+      - name: Promote shared resources
+        shell: '/usr/sbin/drbdadm primary --force {{ item.item["name"] | replace("/","_") }}'
+        loop: "{{ drbd_mounted.results }}"
+        when: item.rc != 0
+
+      - name: Creating a Physical Volume on shared resources
+        shell: 'pvcreate {{ item.item["device"] }} --force'
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'lvm'
+
+      - name: Creating a Volume Group on shared resources
+        shell: >
+             vgcreate {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
+             --addtag pacemaker --config 'activation { volume_list = [ "@pacemaker" ] }
+             devices {filter = [ "a|drbd*|", "r|.*|" ]}'
+        # note: you CANNOT use /dev/drbd/by-res/XXX as vgcreate will then barf at you...
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'lvm'
+
+      - name: Loading ZFS kernel module
+        shell: '/sbin/modprobe zfs'
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.item['fstype'] == 'zfs'
+
+      - name: Creating a ZPool on shared resources
+        shell: >
+          zpool create -f 
+          -o cachefile=/etc/ha.d/zpool-{{ item.item["name"] | replace("/","_") }}.cache
+          -o autoexpand=on
+          -o ashift=12
+          {{ item.item["name"] | replace("/","_") }} {{ item.item["device"] }}
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'zfs'
+
+      - name: Disable mount of ZPool
+        shell: 'zfs set mountpoint=none {{ item.item["name"] | replace("/","_") }}'
+        ignore_errors: no
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] == 'zfs'
+
+
+      # we create a single filesystem on top of here....
+
+      - name: Creating a file system on shared resources
+        filesystem:
+          fstype: "{{ item.item['fstype'] }}"
+          dev: '/dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}'
+          force: yes
+          opts: "{{ item.item['options'] | default('') }}"
+        ignore_errors: yes
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
+      - name: Temporarily mount DRBD disks
+        mount:
+          src: '/dev/drbd/by-res/{{ item.item.name | replace("/","_") }}'
+          path: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp'
+          fstype: "{{ item.item['fstype'] }}"
+          state: mounted
+          fstab: "{{ drbd_fake_fstab.path }}"
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
+      - name: Ensuring source location exists
+        file:
+          path: '{{ item.item["name"] }}'
+          state: directory
+        loop: "{{ drbd_mounted.results }}"
+        when:
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
+      - name: Copy contents from local drives to DRBD
+        synchronize:
+          src: '{{ item.item["name"] }}/'
+          dest: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp/'
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+
+      - name: Temporarily umount DRBD disks
+        mount:
+          path: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp'
+          state: unmounted
+        loop: "{{ drbd_mounted.results }}"
+        when: 
+          - item.rc != 0
+          - item.item['fstype'] != 'lvm'
+          - item.item['fstype'] != 'zfs'
+      when: 
+        - drbd_mounted is defined
+        - ansible_facts.services['drbd.service'] is defined
+        - ansible_facts.services['drbd.service'].state != 'started'
+
+    - name: stop DRBD
+      service:
+        name: drbd
+        state: stopped
+      when: drbd_started is defined and drbd_started.state == "started"
+
+    when: not drbd_res_config.stat.exists
+
+
+  #--------------------------------------------
+  # Pace maker items
+  #--------------------------------------------
+
+  - name: Add pacemaker resource DRBD
+    pcs_resource:
+      name: 'DRBD-{{ item.name | replace("/","_") }}'
+      resource_type: ocf:linbit:drbd
+      options: 'drbd_resource={{ item.name | replace("/","_") }} op monitor interval=59s 
+          role=Promoted monitor interval=67s 
+          role=Unpromoted promotable promoted-max=1 promoted-node-max=1 
+          clone-max={{ all_ctrl_hostname|length }} clone-node-max=1 notify=true'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+
+  #--------------------------------------------
+
+  - name: Add pacemaker resource wait-for-device
+    pcs_resource:
+      name: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Delay
+      options: 'startdelay=10 stopdelay=3 --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker resource wait-for-device
+    pcs_resource:
+      name: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Delay
+      options: 'startdelay=10 stopdelay=3 --group=Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker resource wait-for-device
+    pcs_resource:
+      name: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Delay
+      options: 'startdelay=10 stopdelay=3 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+
+#pcs resource create yournewvg LVM volgrpname=yournewvg exclusive=true --group whateveryourclusternameis  -- ocf:heartbeat:LVM-activate
+# pcs resource create newvdb-vg ocf:heartbeat:LVM-activate vgname=newvdb activation_mode=exclusive vg_access_mode=tagging tag=pacemaker --group HA-LVM --after vgalv-fs
+
+  - name: Add pacemaker LVM resource trinity-lvm
+    pcs_resource:
+      name: 'trinity-lvm-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: LVM-activate
+      options: 'vgname={{ item.name | replace("/","_") }} activation_mode=exclusive 
+          vg_access_mode=tagging tag=pacemaker
+          meta migration-threshold=3 failure-timeout=120s
+          --group Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker ZFS resource trinity-zfs
+    pcs_resource:
+      name: 'trinity-zfs-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: ZFS
+      options: 'pool={{ item.name | replace("/","_") }} --group Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+#pcs resource create yournewlv_lv Filesystem device=/dev/yournewvg/lv_yournewlv  directory=/some/path/to/lv/mount fstype=ext4  --group whateveryourclusternameis
+#pcs resource create Newlvvdb-fs ocf:heartbeat:Filesystem device=/dev/newvdb/Newlvvdb directory=/newfs fstype=xfs --group HA-LVM --after newvdb-vg
+
+  - name: Add pacemaker resource trinity-fs
+    pcs_resource:
+      name: 'trinity-fs-{{ item.name | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Filesystem
+      options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
+          directory="{{ item.name }}" fstype={{ item.fstype }} 
+          run_fsck=force force_unmount=safe op monitor interval=31s op
+          monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker resource lvm-ready
+    pcs_resource:
+      name: 'lvm-ready-{{ item.name | replace("/","_") }}'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker resource zfs-ready
+    pcs_resource:
+      name: 'zfs-ready-{{ item.name | replace("/","_") }}'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker resource fs-ready
+    pcs_resource:
+      name: 'fs-ready-{{ item.name | replace("/","_") }}'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker resource Trinity-stack
+    pcs_resource:
+      name: 'trinity-stack-ready'
+      resource_type: 'ocf:pacemaker:Dummy'
+      options: 'op monitor interval=183s --group=Trinity-stack'
+      state: present
+
+  #--------------------------------------------
+
+  - name: Add pacemaker order constraint - Trinity then Trinity-drbd
+    pcs_constraint_order:
+      resource1: Trinity
+      resource2: 'DRBD-{{ item.name | replace("/","_") }}-clone'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+
+  - name: Add pacemaker order constraint - Trinity-drbd then Trinity-lvm
+    pcs_constraint_order:
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
+      resource2: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker order constraint - Trinity-drbd then Trinity-zfs
+    pcs_constraint_order:
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
+      resource2: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker order constraint - Trinity-drbd then Trinity-fs
+    pcs_constraint_order:
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
+      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+#  - name: Add pacemaker order constraint - Trinity-lvm then Trinity-stack
+#    pcs_constraint_order:
+#      resource1: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+#      resource2: 'Trinity-stack'
+#      state: present
+#    loop: "{{ drbd_fs_disks }}"
+#    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker order constraint - Trinity-zfs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-stack'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker order constraint - Trinity-fs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      resource2: 'Trinity-stack'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker colocation constraint - Trinity-drbd with Trinity
+    pcs_constraint_colocation:
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
+      resource1_role: Master
+      resource2: Trinity
+      score: INFINITY
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    ignore_errors: yes
+
+  - name: Add pacemaker colocation constraint - Trinity-lvm with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+      resource2: Trinity
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker colocation constraint - Trinity-zfs with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      resource2: Trinity
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker colocation constraint - Trinity-fs with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      resource2: Trinity
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+#  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-lvm
+#    pcs_constraint_colocation:
+#      resource1: 'Trinity-stack'
+#      resource2: 'Trinity-lvm-{{ item.name | replace("/","_") }}'
+#      state: present
+#    loop: "{{ drbd_fs_disks }}"
+#    when: item.fstype == 'lvm'
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-zfs
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity-zfs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: item.fstype == 'zfs'
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-fs
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity-fs-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+    when: 
+      - item.fstype != 'lvm'
+      - item.fstype != 'zfs'
+
+  #--------------------------------------------
+
+  - name: Add pacemaker order constraint - promote Trinity-drbd then wait-for-device
+    pcs_constraint_order:
+      resource1: 'DRBD-{{ item.name | replace("/","_") }}-clone'
+      resource1_action: promote
+      resource2: 'wait-for-device-{{ item.name | replace("/","_") }}'
+      state: present
+    loop: "{{ drbd_fs_disks }}"
+
+  #--------------------------------------------
+
+  - name: Wait for Pacemaker to settle
+    command: /usr/sbin/crm_resource --wait
+
+  when: primary
+

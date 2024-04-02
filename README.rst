@@ -5,7 +5,7 @@ Overview
 
 Welcome to TrinityX!
 
-TrinityX is the new generation of ClusterVision's open-source HPC platform. It is designed from the ground up to provide all services required in a modern HPC system, and to allow full customization of the installation. Also it includes optional modules for specific needs, please check the controller and compute playbooks.
+TrinityX is the new generation of ClusterVision's open-source HPC, AI and cloud platform. It is designed from the ground up to provide all services required in a modern HPC, AI and cloud system, and to allow full customization of the installation. Also it includes optional modules for specific needs, please check the controller and compute playbooks.
 
 
 
@@ -17,7 +17,7 @@ In standard configuration TrinityX provides the following services to the cluste
 * Luna, our default super-efficient node provisioner
 * OpenLDAP
 * SLURM or OpenPBS
-* Telegraf, InfluxDB, Grafana and Sensu Core
+* Prometheus and Grafana
 * Infrastructure services such as NTP, DNS, DHCP
 * and more
 
@@ -27,6 +27,7 @@ It will also set up:
 * OpenHPC applications and libraries
 * environment modules
 * rsyslog
+* High Availability
 * and more
 
 .. image:: img/triX_300.png

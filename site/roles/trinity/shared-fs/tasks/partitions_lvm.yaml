@@ -1,0 +1,170 @@
+---
+
+- debug:
+    msg: "{{ shared_fs_lvm_partitions }}"
+
+- name: Check if disk is already mounted
+  shell: '/usr/bin/mount | grep " {{ item.mount }} "'
+  register: shared_fs_lvm_partitions_mounted
+  changed_when: false
+  failed_when: false
+  loop: "{{ shared_fs_lvm_partitions }}"
+
+- name: Check if lv disk already exists
+  shell: '/usr/sbin/lvs | grep "{{ item.mount | replace("/","_") }}"'
+  register: shared_fs_lvm_partitions_lvs
+  changed_when: false
+  failed_when: false
+  loop: "{{ shared_fs_lvm_partitions }}"
+
+- name: Check if lv disk already active
+  shell: '/usr/sbin/lvs | grep "{{ item.mount | replace("/","_") }}" | awk "{ print $3 }" | grep ao'
+  register: shared_fs_lvm_partitions_active
+  changed_when: false
+  failed_when: false
+  loop: "{{ shared_fs_lvm_partitions }}"
+
+- name: Ensuring temporary mount location exists
+  file:
+    path: /mnt
+    owner: root
+    group: root
+    state: directory
+
+- block:
+  - name: Create a fake fstab for the next step
+    tempfile:
+      path: /tmp
+      prefix: fstab.
+      state: file
+    register: shared_fs_lvm_partitions_fake_fstab
+
+  # ------------------------------------------
+
+# lvcreate --addtag pacemaker -l 100%FREE -n Newlvvdb newvdb --config 'activation { volume_list = [ "@pacemaker" ] } 
+
+  - name: Creating the Logical Volume
+    shell: >
+      lvcreate --addtag pacemaker -L {{ item.item['size'] }}
+      --wipesignatures y --yes --zero y
+      -n {{ item.item['mount'] | replace("/","_") }} 
+      {{ item.item['vgroup'] }} --config 'activation { volume_list = [ "@pacemaker" ] }'
+    loop: "{{ shared_fs_lvm_partitions_lvs.results }}"
+    ignore_errors: yes
+    when: 
+      - item.rc != 0
+
+  - name: Temporary activate the LV partition
+    shell: >
+      lvchange -a y {{ item.item["vgroup"] }}/{{ item.item["mount"] | replace("/","_") }} 
+      --config 'activation { volume_list = [ "@pacemaker" ] }'
+    loop: "{{ shared_fs_lvm_partitions_active.results }}"
+    when: 
+      - item.rc != 0
+
+  - name: Creating a file system on LV partition
+    filesystem:
+      fstype: "{{ item.item['fstype'] }}"
+      dev: '/dev/{{ item.item["vgroup"] }}/{{ item.item["mount"] | replace("/","_") }}'
+      force: yes
+      opts: "{{ item.item['options'] | default('') }}"
+    ignore_errors: yes
+    loop: "{{ shared_fs_lvm_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['fstype'] is defined
+
+  - name: Temporarily mount the LV disks
+    mount:
+      src: '/dev/{{ item.item["vgroup"] }}/{{ item.item["mount"] | replace("/","_") }}'
+      path: '/mnt/{{ item.item["mount"] | replace("/","_") }}-temp'
+      fstype: "{{ item.item['fstype'] }}"
+      state: mounted
+      fstab: "{{ shared_fs_lvm_partitions_fake_fstab.path }}"
+    loop: "{{ shared_fs_lvm_partitions_mounted.results }}"
+    when: 
+      - item.rc != 0
+      - item.item['fstype'] is defined
+
+  - name: Ensuring source location exists
+    file:
+      path: '{{ item.item["mount"] }}'
+      owner: root
+      group: root
+      state: directory
+    loop: "{{ shared_fs_lvm_partitions_mounted.results }}"
+    when: item.rc != 0
+
+  - name: Wait 10s for mounts to settle
+    wait_for:
+      timeout: 10
+
+  - name: Copy contents from local drives to shared resource
+    synchronize:
+      src: '{{ item.item["mount"] }}/'
+      dest: '/mnt/{{ item.item["mount"] | replace("/","_") }}-temp/'
+    loop: "{{ shared_fs_lvm_partitions_mounted.results }}"
+    when: item.rc != 0
+
+  - name: Temporarily umount the disks
+    mount:
+      path: '/mnt/{{ item.item["mount"] | replace("/","_") }}-temp'
+      state: unmounted
+    loop: "{{ shared_fs_lvm_partitions_mounted.results }}"
+    when:
+      - item.rc != 0
+
+  - name: Temporary deactivate the LV partition
+    shell: 'lvchange -a n {{ item.item["vgroup"] }}/{{ item.item["mount"] | replace("/","_") }}'
+    loop: "{{ shared_fs_lvm_partitions_active.results }}"
+    when: 
+      - item.rc != 0
+
+  # ------------------------------------------
+
+  - name: Add pacemaker resource trinity-fs
+    pcs_resource:
+      name: 'trinity-fs-{{ item.mount | replace("/","_") }}'
+      resource_class: ocf
+      resource_type: Filesystem
+#      options: 'device=/dev/drbd/by-res/{{ item.mount | replace("/","_") }}
+      options: 'device=/dev/{{ item["vgroup"] }}/{{ item["mount"] | replace("/","_") }}
+          directory="{{ item.mount }}" fstype={{ item.fstype }} 
+          run_fsck=force force_unmount=safe op monitor interval=31s op
+          monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.mount | replace("/","_") }}'
+      state: present
+    loop: "{{ shared_fs_lvm_partitions }}"
+
+  - name: Add pacemaker order constraint - Trinity-lvm then Trinity-fs
+    pcs_constraint_order:
+      resource1: 'Trinity-lvm-{{ item["vgroup"] }}'
+      resource2: 'Trinity-fs-{{ item.mount | replace("/","_") }}'
+      state: present
+    loop: "{{ shared_fs_lvm_partitions }}"
+
+  - name: Add pacemaker order constraint - Trinity-fs then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity-fs-{{ item.mount | replace("/","_") }}'
+      resource2: 'Trinity-stack'
+      state: present
+    loop: "{{ shared_fs_lvm_partitions }}"
+
+  - name: Add pacemaker colocation constraint - Trinity-fs with Trinity-lvm
+    pcs_constraint_colocation:
+      resource1: 'Trinity-fs-{{ item.mount | replace("/","_") }}'
+      resource2: 'Trinity-lvm-{{ item["vgroup"] }}'
+      state: present
+    loop: "{{ shared_fs_lvm_partitions }}"
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity-fs
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: 'Trinity-fs-{{ item.mount | replace("/","_") }}'
+      state: present
+    loop: "{{ shared_fs_lvm_partitions }}"
+
+  when: 
+    - primary | default(False)
+    - shared_fs_lvm_partitions_mounted is defined
+
+

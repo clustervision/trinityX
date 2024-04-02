@@ -300,6 +300,20 @@
       with_items:
         - slurmctld
 
+    - name: Add slurm pacemaker resources
+      pcs_resource:
+        name: '{{ item }}'
+        resource_class: 'systemd'
+        resource_type: 'systemd:{{ item }}'
+        options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+        state: present
+      when: ha|default(False)
+      with_items:
+        - munge
+        - slurmdbd
+        - slurmctld
+      tags: pcs
+
     - name: Register slurm cluster in slurmdbd
       shell: 'sacctmgr -i add cluster cluster | grep -i adding'
       register: sacctmgr_success
@@ -332,35 +346,6 @@
   ignore_errors: true
 
 - block:
-
-    - name: Requests dependency
-      yum:
-        name: python3-requests
-        state: present
-
-    - name: Create systemd targets
-      template:
-        src: "systemd/{{ item }}.j2"
-        dest: "/etc/systemd/system/{{ item }}"
-      with_items:
-        - "minute-timer.target"
-        - "slurm-stats.service"
-        - "slurm-stats.timer"
-
-    - name: Enable metricscript
-      systemd:
-        daemon_reload: "yes"
-        name: '{{ item }}'
-        enabled: "yes"
-      with_items:
-        - slurm-stats.service
-        - slurm-stats.timer
-        - minute-timer.target
-
-    - name: Activate metricscript
-      systemd:
-        name: slurm-stats.timer
-        state: started
 
     - name: Enable slurm pam controls for computations on controller
       copy:
