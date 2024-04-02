@@ -147,29 +147,19 @@
 # if we don't vgscan simply ignore lvms completely and failover will not work... sigh...
 
 - block:
-  - name: Render lvm fix script
-    copy:
-      src: 'lvm-fixes.sh'
-      dest: '/tmp/lvm-fixes.sh'
-      owner: root
-      group: root
-      mode: 0750
-      force: yes
-
   - name: Render lvm exclusion filter fact
     set_fact:
         shared_lvm_disks:
           '{{ drbd_fs_disks|default([]) + iscsi_fs_disks|default([]) }}'
 
-  - name: Generate lvm filter file
+  - name: Render lvm fix script
     template:
-      src: 'lvm_filter.dat.j2'
-      dest: '/tmp/lvm_filter.dat'
-
-  - name: Generate lvm volume file
-    template:
-      src: 'lvm_volumes.dat.j2'
-      dest: '/tmp/lvm_volumes.dat'
+      src: 'lvm-fixes.sh.j2'
+      dest: '/tmp/lvm-fixes.sh'
+      owner: root
+      group: root
+      mode: 0750
+      force: yes
 
   - name: Run lvm fix script
     shell: '/tmp/lvm-fixes.sh'
