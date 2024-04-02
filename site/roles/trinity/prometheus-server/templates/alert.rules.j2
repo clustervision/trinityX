@@ -185,7 +185,7 @@ groups:
 
 
   - alert: HighMemoryUsage
-    expr: 'node_memory_MemAvailable_bytes{job="luna_controllers"} / node_memory_MemTotal_bytes{job="luna_controllers"} < 0.25'
+    expr: '(node_memory_MemFree_bytes{job="luna_controllers"} + node_memory_Cached_bytes{job="luna_controllers"} + node_memory_Buffers_bytes{job="luna_controllers"}) / node_memory_MemTotal_bytes{job="luna_controllers"} < 0.25'
     for: 1h
     labels:
       severity: warning
@@ -193,7 +193,7 @@ groups:
       description: '{% raw %}High memory usage on server {{$labels.hostname}} for more than 1h{% endraw %}'
 
   - alert: HighMemoryUsage
-    expr: 'node_memory_MemAvailable_bytes{job="luna_controllers"} / node_memory_MemTotal_bytes{job="luna_controllers"} < 0.05'
+    expr: '(node_memory_MemFree_bytes{job="luna_controllers"} + node_memory_Cached_bytes{job="luna_controllers"} + node_memory_Buffers_bytes{job="luna_controllers"}) / node_memory_MemTotal_bytes{job="luna_controllers"} < 0.05'
     for: 1h
     labels:
       severity: danger

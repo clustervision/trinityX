@@ -21,7 +21,7 @@
 
 - name: Render nfs_mounts based on solely nfs_remote_mask info
   set_fact:
-    new_nfs_mounts: "{{ new_nfs_mounts_|d([]) + [item|combine({'path': item.name})] }}"
+    new_nfs_mounts: "{{ new_nfs_mounts|d([]) + [item|combine({'path': item.mount if item.mount is defined else item.name})] }}"
   loop: "{{ nfs_remote_mask }}"
   when: 
     - (nfs_mounts is not defined) or nfs_mounts | length == 0
@@ -36,9 +36,9 @@
     loop: "{{ nfs_mounts }}"
     vars:
       _remote: |
-        {% if item.path in nfs_remote_mask | map(attribute="name") %}
+        {% if item.path in nfs_remote_mask | map(attribute="name") or item.path in nfs_remote_mask | map(attribute="mount",default="__undefined__") %}
           {% for disk in nfs_remote_mask %}
-            {% if disk.name == item.path %}
+            {% if disk.name == item.path or (disk.mount is defined and disk.mount == item.path) %}
               {% if disk["type"] == "nfs" %}
                 {{ disk["remote"] }}
               {% else %}
@@ -50,9 +50,9 @@
           {{ item.remote }}
         {% endif %}
       _options: |
-        {% if item.path in nfs_remote_mask | map(attribute="name") %}
+        {% if item.path in nfs_remote_mask | map(attribute="name") or item.path in nfs_remote_mask | map(attribute="mount",default="__undefined__") %}
           {% for disk in nfs_remote_mask %}
-            {% if disk.name == item.path %}
+            {% if disk.name == item.path or (disk.mount is defined and disk.mount == item.path) %}
               {% if disk["type"] == "nfs" and "options" in disk %}
                 {{ disk["options"] }}
               {% else %}
