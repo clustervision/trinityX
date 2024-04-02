@@ -63,12 +63,14 @@
   template:
     src: "corosync.conf.j2"
     dest: "/etc/corosync/corosync.conf"
+  register: corosync_config
 
 - name: Restart corosync
   service:
     name: corosync
     state: restarted
     enabled: true
+  when: corosync_config.changed
 
 # TODO: better way than below
 - name: Install PCS
