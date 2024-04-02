@@ -6,7 +6,7 @@
   set_fact:
       drbd_fs_disks:
         '{{ drbd_fs_disks|default([]) +
-          [{ "name": item.name,
+          [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "disk": item.disk,
              "fstype": item.fstype | default(""),
              "options": item.options | default(""),
@@ -72,7 +72,7 @@
   set_fact:
       direct_fs_disks:
         '{{ direct_fs_disks|default([]) +
-          [{ "name": item.name,
+          [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "fstype": item.fstype | default(""),
              "options": item.options | default(""),
              "device": item.device }] }}'
