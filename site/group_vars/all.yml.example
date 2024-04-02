@@ -68,6 +68,22 @@ trix_domain: cluster
 
 
 # -----------------------------------------------------------------------
+# Internal network definitions and the DHCP range used to to PXE boot
+# the compute nodes. Also Infiniband IPoIB and bmc/ipmi networks.
+
+trix_cluster_net: 10.141.0.0
+trix_cluster_netprefix: 16
+trix_cluster_dhcp_start: 10.141.128.0
+trix_cluster_dhcp_end: 10.141.140.0
+
+trix_infiniband_net: 10.149.0.0
+trix_infiniband_netprefix: 16
+
+trix_bmc_net: 10.148.0.0
+trix_bmc_netprefix: 16
+
+
+# -----------------------------------------------------------------------
 # Default hostname and IP for the controller
 # In an H/A pair, those are the hostname and IP for the first controller.
 # Those variables are required, with or without HA.
@@ -92,15 +108,6 @@ trix_ctrl2_hostname: controller2
 
 trix_ctrl_ip: 10.141.255.252
 trix_ctrl_hostname: controller
-
-# Internal network definitions and the DHCP range used to to PXE boot
-# the compute nodes.
-
-trix_cluster_net: 10.141.0.0
-trix_cluster_netprefix: 16
-trix_cluster_dhcp_start: 10.141.128.0
-trix_cluster_dhcp_end: 10.141.140.0
-
 
 # -----------------------------------------------------------------------
 # optional hostname/fqdn to be used for services that are outward facing,
@@ -200,7 +207,8 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #       fstype: 'ext4'
 #       options: '-b 4096'
 #
-#   - name: '{{ trix_home }}'
+#   - name: 'Home directories'
+#     mount: '{{ trix_home }}'
 #     type: 'drbd'
 #     disk: '/dev/sda2'
 #     device: '/dev/drbd2'
@@ -229,6 +237,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #       options: '-b 4096'
 #
 #   - name: '{{ trix_home }}'
+#     mount: '{{ trix_home }}'
 #     type: 'nfs'
 #     remote: '192.168.0.1:/homes'
 #     options: 'nfsvers=4,rw,retrans=4,_netdev'
@@ -388,3 +397,7 @@ enable_ood_vnc: true
 
 enable_authentication: true
 
+
+
+# -----------------------------------------------------------------------
+# DO NOT REMOVE: yml check: 140101

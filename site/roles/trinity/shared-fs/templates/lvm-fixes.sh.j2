@@ -2,6 +2,28 @@
 
 LVM_CONF=/etc/lvm/lvm.conf
 
+cat << EOF > /tmp/lvm_filter.dat
+{% for disk in shared_lvm_disks %}
+{% if disk['fstype'] == 'lvm' %}
+{% if 'disk' in disk %}
+{{ disk['disk'] }}
+{% else %}
+{% if 'device' in disk %}
+!{{ disk['device'] }}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor -%}
+EOF
+
+cat << EOF > /tmp/lvm_volumes.dat
+{% for disk in shared_fs_disks %}
+{% if disk['fstype'] == 'lvm' %}
+{{ disk['name'] }}
+{% endif %}
+{% endfor -%}
+EOF
+
 LVM_DISKS=$(cat /tmp/lvm_filter.dat | grep -v '^#')
 VGROUPS=$(cat /tmp/lvm_volumes.dat | grep -v '^#' )
 if [ ! "$LVM_DISKS" ] && [ ! "$VGROUPS" ]; then
