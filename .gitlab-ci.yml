@@ -1,6 +1,9 @@
 stages:
   - test
 
+variables:
+  INSIDE_RUNNER: "true"
+
 rollout:
   stage: test
   when: manual
@@ -43,6 +46,29 @@ rollout:
   - "ansible-playbook compute-redhat.yml"
   - "ansible-playbook compute-ubuntu.yml"
   
-variables:
-  INSIDE_RUNNER: "true"
+
+
+ha-rollout:
+  stage: test
+  when: manual
+  
+  parallel:
+    matrix:
+    # - TAG: "rocky8"
+    - TAG: "rocky9"
+    # - TAG: "centos8"
+    # - TAG: "centos9"
+    # - TAG: "rhel8"
+    # - TAG: "rhel9"
+    # - TAG: "alma8"
+    # - TAG: "alma9"
+    
+  tags:
+  - $TAG
+  - "vm"
+  - "ha"
+  
+  script:
+  - echo "hello world"
+  
 
