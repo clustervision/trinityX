@@ -29,23 +29,17 @@ rollout:
   - ip link add eth000 type dummy
   - ip link set eth000 up
   - ip a a 10.141.255.254/16 dev eth000
-  - ip a a 10.149.255.254/16 dev eth000
-  - ip a a 10.148.255.254/16 dev eth000
-  - ip a a 10.141.255.252/16 dev eth000
-  
+
   - "cd site"
   - "cp hosts.example hosts"
   - "cp group_vars/all.yml.example group_vars/all.yml"
-  - "sed -i -E \"s/ens6/eth000/\" group_vars/all.yml"
-  - "sed -i -E \"s/selinux: true/selinux: false/\" group_vars/all.yml"
-  # - "sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml"
-  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml; fi"
 
+  - "sed -i -E \"s/ens6/eth000/\" group_vars/all.yml"
+  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml; fi"
 
   - "ansible-playbook controller.yml"
   - "ansible-playbook compute-redhat.yml"
   - "ansible-playbook compute-ubuntu.yml"
-  
 
 
 ha-rollout:
@@ -69,8 +63,28 @@ ha-rollout:
   - "ha"
   
   script:
+  - ./prepare.sh
+
   - echo hello from 1
   - echo $SECONDARY_VM_IP
   - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
   - ssh $SECONDARY_VM_IP echo hello from 2
+
+  - ip a a 10.141.255.254/16 dev ens224
+  - ip a a 10.146.255.254/16 dev ens224
+
+  - "cd site"
+  - "cp hosts.example hosts"
+  - "cp group_vars/all.yml.example group_vars/all.yml"
+  - "sed -i -E \"s/ens6/ens224/\" group_vars/all.yml"
+  - "sed -i -E \"s/disk: '/dev/vda'/disk: '/dev/sdb'/\" group_vars/all.yml"
+  - "sed -i -E \"s/ha: false/ha: true/\" group_vars/all.yml"
+  - "sed -i -E \"s/enable_ipmilan_fencing: true/enable_ipmilan_fencing: false/\" group_vars/all.yml"
+
+  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml; fi"
+
+
+  - "ansible-playbook controller.yml"
+  - "ansible-playbook compute-redhat.yml"
+  - "ansible-playbook compute-ubuntu.yml"
 
