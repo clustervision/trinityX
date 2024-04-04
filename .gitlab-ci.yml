@@ -63,28 +63,38 @@ ha-rollout:
   - "ha"
   
   script:
-  - ./prepare.sh
-
-  - echo hello from 1
-  - echo $SECONDARY_VM_IP
   - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
-  - ssh $SECONDARY_VM_IP echo hello from 2
 
+  # Setup Network on Primary
   - ip a a 10.141.255.254/16 dev ens224
   - ip a a 10.146.255.254/16 dev ens224
+  # Setup Network on Secondary
+  - ssh $SECONDARY_VM_IP ip a a 10.141.255.253/16 dev ens224
+  - ssh $SECONDARY_VM_IP ip a a 10.141.255.253/16 dev ens224
 
+  # Setup site/hosts and site/group_vars/all.yml on Primary
+  - "cp site/hosts.example site/hosts"
+  - "cp site/group_vars/all.yml.example site/group_vars/all.yml"
+  - "sed -i -E \"s/ens6/ens224/\" site/group_vars/all.yml"
+  - "sed -i -E \"s/disk: '\\/dev\\/vda'/disk: '\\/dev\\/sdb'/\" site/group_vars/all.yml"
+  - "sed -i -E \"s/ha: false/ha: true/\" site/group_vars/all.yml"
+  - "sed -i -E \"s/enable_ipmilan_fencing: true/enable_ipmilan_fencing: false/\" site/group_vars/all.yml"
+  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
+
+  # Setup site/hosts and site/group_vars/all.yml on Secondary
+  - "scp -r . $SECONDARY_VM_IP:"
+
+  # Run prepare on Primary
+  - ./prepare.sh
+  # Run prepare on Secondary
+  - ssh $SECONDARY_VM_IP ./prepare.sh
   - "cd site"
-  - "cp hosts.example hosts"
-  - "cp group_vars/all.yml.example group_vars/all.yml"
-  - "sed -i -E \"s/ens6/ens224/\" group_vars/all.yml"
-  - "sed -i -E \"s/disk: '\\/dev\\/vda'/disk: '\\/dev\\/sdb'/\" group_vars/all.yml"
-  - "sed -i -E \"s/ha: false/ha: true/\" group_vars/all.yml"
-  - "sed -i -E \"s/enable_ipmilan_fencing: true/enable_ipmilan_fencing: false/\" group_vars/all.yml"
 
-  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml; fi"
+  # Run controller on Primary
+  - "( cd site && ansible-playbook controller.yml )"
+  # Run controller on Secondary
+  - "ssh $SECONDARY_VM_IP ( cd site && ansible-playbook controller.yml )"
 
-
-  - "ansible-playbook controller.yml"
-  - "ansible-playbook compute-redhat.yml"
-  - "ansible-playbook compute-ubuntu.yml"
+  # Run compute on Primary
+  - "( cd site && ansible-playbook compute-redhat.yml compute-ubuntu.yml )"
 
