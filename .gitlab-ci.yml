@@ -65,14 +65,14 @@ ha-rollout:
   script:
   - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
 
-  # Setup Network on Primary
+  - echo Setup Network on Primary
   - ip a a 10.141.255.254/16 dev ens224
   - ip a a 10.146.255.254/16 dev ens224
-  # Setup Network on Secondary
+  - echo Setup Network on Secondary
   - ssh $SECONDARY_VM_IP ip a a 10.141.255.253/16 dev ens224
   - ssh $SECONDARY_VM_IP ip a a 10.146.255.253/16 dev ens224
 
-  # Setup site/hosts and site/group_vars/all.yml on Primary
+  - echo Setup site/hosts and site/group_vars/all.yml on Primary
   - "cp site/hosts.example site/hosts"
   - "cp site/group_vars/all.yml.example site/group_vars/all.yml"
   - "sed -i -E \"s/ens6/ens224/\" site/group_vars/all.yml"
@@ -81,20 +81,19 @@ ha-rollout:
   - "sed -i -E \"s/enable_ipmilan_fencing: true/enable_ipmilan_fencing: false/\" site/group_vars/all.yml"
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
 
-  # Setup site/hosts and site/group_vars/all.yml on Secondary
+  - echo Setup site/hosts and site/group_vars/all.yml on Secondary
   - "scp -r . $SECONDARY_VM_IP:"
 
-  # Run prepare on Primary
+  - echo Run prepare on Primary
   - ./prepare.sh
-  # Run prepare on Secondary
+  - echo Run prepare on Secondary
   - ssh $SECONDARY_VM_IP ./prepare.sh
-  - "cd site"
 
-  # Run controller on Primary
+  - echo Run controller on Primary
   - "( cd site && ansible-playbook controller.yml )"
-  # Run controller on Secondary
+  - echo Run controller on Secondary
   - "ssh $SECONDARY_VM_IP ( cd site && ansible-playbook controller.yml )"
 
-  # Run compute on Primary
+  - echo Run compute on Primary
   - "( cd site && ansible-playbook compute-redhat.yml compute-ubuntu.yml )"
 
