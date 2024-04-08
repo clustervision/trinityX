@@ -24,22 +24,26 @@ rollout:
   - "vm"
   
   script:
-  - ./prepare.sh
-
+  - echo Setup Network 
   - ip link add eth000 type dummy
   - ip link set eth000 up
   - ip a a 10.141.255.254/16 dev eth000
 
-  - "cd site"
-  - "cp hosts.example hosts"
-  - "cp group_vars/all.yml.example group_vars/all.yml"
+  - echo Setup site/hosts and site/group_vars/all.yml 
+  - "cp site/hosts.example site/hosts"
+  - "cp site/group_vars/all.yml.example site/group_vars/all.yml"
+  - "sed -i -E \"s/ens6/eth000/\" site/group_vars/all.yml"
+  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
 
-  - "sed -i -E \"s/ens6/eth000/\" group_vars/all.yml"
-  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml; fi"
+  - echo Run prepare
+  - ./prepare.sh
 
-  - "ansible-playbook controller.yml"
-  - "ansible-playbook compute-redhat.yml"
-  - "ansible-playbook compute-ubuntu.yml"
+  - echo Run controller
+  - "( cd site && ansible-playbook controller.yml )"
+
+  - echo Run compute
+  - "( cd site && ansible-playbook compute-redhat.yml )"
+  - "( cd site && ansible-playbook compute-ubuntu.yml )"
 
 
 ha-rollout:
@@ -48,12 +52,12 @@ ha-rollout:
   
   parallel:
     matrix:
-    # - TAG: "rocky8"
+    - TAG: "rocky8"
     - TAG: "rocky9"
-    # - TAG: "centos8"
-    # - TAG: "centos9"
-    # - TAG: "rhel8"
-    # - TAG: "rhel9"
+    - TAG: "centos8"
+    - TAG: "centos9"
+    - TAG: "rhel8"
+    - TAG: "rhel9"
     # - TAG: "alma8"
     # - TAG: "alma9"
     
