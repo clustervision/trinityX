@@ -91,12 +91,12 @@ ha-rollout:
   - echo Run prepare on Primary
   - ./prepare.sh
   - echo Run prepare on Secondary
-  - ssh $SECONDARY_VM_IP ./prepare.sh
+  - ssh $SECONDARY_VM_IP INSIDE_RUNNER=true ./prepare.sh
 
   - echo Run controller on Primary
   - "( cd site && ansible-playbook controller.yml )"
   - echo Run controller on Secondary
-  - ssh $SECONDARY_VM_IP "( cd site && ansible-playbook controller.yml )"
+  - ssh $SECONDARY_VM_IP "( cd site && INSIDE_RUNNER=true ansible-playbook controller.yml )"
 
   - echo Run compute on Primary
   - "( cd site && ansible-playbook compute-redhat.yml compute-ubuntu.yml )"
