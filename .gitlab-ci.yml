@@ -1,6 +1,9 @@
 stages:
   - test
 
+variables:
+  INSIDE_RUNNER: "true"
+
 rollout:
   stage: test
   when: manual
@@ -21,28 +24,96 @@ rollout:
   - "vm"
   
   script:
-  - ./prepare.sh
-
+  - echo Setup Network 
   - ip link add eth000 type dummy
   - ip link set eth000 up
   - ip a a 10.141.255.254/16 dev eth000
-  - ip a a 10.149.255.254/16 dev eth000
-  - ip a a 10.148.255.254/16 dev eth000
-  - ip a a 10.141.255.252/16 dev eth000
-  
-  - "cd site"
-  - "cp hosts.example hosts"
-  - "cp group_vars/all.yml.example group_vars/all.yml"
-  - "sed -i -E \"s/ens6/eth000/\" group_vars/all.yml"
-  - "sed -i -E \"s/selinux: true/selinux: false/\" group_vars/all.yml"
-  # - "sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml"
-  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" group_vars/all.yml; fi"
+
+  - echo Setup site/hosts and site/group_vars/all.yml 
+  - "cp site/hosts.example site/hosts"
+  - "cp site/group_vars/all.yml.example site/group_vars/all.yml"
+  - "sed -i -E \"s/ens6/eth000/\" site/group_vars/all.yml"
+  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
+
+  - echo Run prepare
+  - ./prepare.sh
+
+  - echo Run controller
+  - "( cd site && ansible-playbook controller.yml )"
+
+  - echo Run compute
+  - "( cd site && ansible-playbook compute-redhat.yml )"
+  - "( cd site && ansible-playbook compute-ubuntu.yml )"
 
 
-  - "ansible-playbook controller.yml"
-  - "ansible-playbook compute-redhat.yml"
-  - "ansible-playbook compute-ubuntu.yml"
+ha-rollout:
+  stage: test
+  when: manual
   
-variables:
-  INSIDE_RUNNER: "true"
+  parallel:
+    matrix:
+    - TAG: "rocky8"
+    - TAG: "rocky9"
+    - TAG: "centos8"
+    - TAG: "centos9"
+    - TAG: "rhel8"
+    - TAG: "rhel9"
+    # - TAG: "alma8"
+    # - TAG: "alma9"
+    
+  tags:
+  - $TAG
+  - "vm"
+  - "ha"
+  
+  script:
+  - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
+  
+  - hostnamectl set-hostname controller1
+  - ssh $SECONDARY_VM_IP hostnamectl set-hostname controller2
+  
+  - echo Setup Network on Primary
+  - nmcli con add connection.interface-name ens224 type ethernet
+  - nmcli con add connection.interface-name ens256 type ethernet
+  - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
+  - nmcli con mod ethernet-ens256 ipv4.addresses 10.146.255.254/16
+  - nmcli con mod ethernet-ens224 ipv4.method manual
+  - nmcli con mod ethernet-ens256 ipv4.method manual
+  - nmcli con up id ethernet-ens224
+  - nmcli con up id ethernet-ens256
+
+  - echo Setup Network on Secondary
+  - ssh $SECONDARY_VM_IP nmcli con add connection.interface-name ens224 type ethernet
+  - ssh $SECONDARY_VM_IP nmcli con add connection.interface-name ens256 type ethernet
+  - ssh $SECONDARY_VM_IP nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.253/16
+  - ssh $SECONDARY_VM_IP nmcli con mod ethernet-ens256 ipv4.addresses 10.146.255.253/16
+  - ssh $SECONDARY_VM_IP nmcli con mod ethernet-ens224 ipv4.method manual
+  - ssh $SECONDARY_VM_IP nmcli con mod ethernet-ens256 ipv4.method manual
+  - ssh $SECONDARY_VM_IP nmcli con up id ethernet-ens224
+  - ssh $SECONDARY_VM_IP nmcli con up id ethernet-ens256
+
+  - echo Setup site/hosts and site/group_vars/all.yml on Primary
+  - "cp site/hosts.example site/hosts"
+  - "cp site/group_vars/all.yml.example site/group_vars/all.yml"
+  - "sed -i -E \"s/ens6/ens224/\" site/group_vars/all.yml"
+  - "sed -i -E \"s/disk: '\\/dev\\/vda'/disk: '\\/dev\\/sdb'/\" site/group_vars/all.yml"
+  - "sed -i -E \"s/ha: false/ha: true/\" site/group_vars/all.yml"
+  - "sed -i -E \"s/enable_ipmilan_fencing: true/enable_ipmilan_fencing: false/\" site/group_vars/all.yml"
+  - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
+
+  - echo Setup site/hosts and site/group_vars/all.yml on Secondary
+  - "scp -r $PWD/* $SECONDARY_VM_IP:"
+
+  - echo Run prepare on Primary
+  - ./prepare.sh
+  - echo Run prepare on Secondary
+  - ssh $SECONDARY_VM_IP INSIDE_RUNNER=true ./prepare.sh
+
+  - echo Run controller on Primary
+  - "( cd site && ansible-playbook controller.yml )"
+  - echo Run controller on Secondary
+  - ssh $SECONDARY_VM_IP "( cd site && INSIDE_RUNNER=true ansible-playbook controller.yml )"
+
+  - echo Run compute on Primary
+  - "( cd site && ansible-playbook compute-redhat.yml compute-ubuntu.yml )"
 
