@@ -68,7 +68,10 @@ ha-rollout:
   
   script:
   - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
-
+  
+  - hostnamectl set-hostname controller1
+  - ssh $SECONDARY_VM_IP hostnamectl set-hostname controller2
+  
   - echo Setup Network on Primary
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con add connection.interface-name ens256 type ethernet
