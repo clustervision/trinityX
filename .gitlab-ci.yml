@@ -70,12 +70,11 @@ ha-rollout:
   - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
 
   - echo Setup Network on Primary
-  - ip a a 10.141.255.254/16 dev ens224
-  - ip a a 10.146.255.254/16 dev ens224
-  - ip a
+  - nmcli con mod ens224 ipv4.addresses 10.141.255.254/16
+  - nmcli con mod ens256 ipv4.addresses 10.146.255.254/16
   - echo Setup Network on Secondary
-  - ssh $SECONDARY_VM_IP ip a a 10.141.255.253/16 dev ens224
-  - ssh $SECONDARY_VM_IP ip a a 10.146.255.253/16 dev ens224
+  - ssh $SECONDARY_VM_IP nmcli con mod ens224 ipv4.addresses 10.141.255.253/16
+  - ssh $SECONDARY_VM_IP nmcli con mod ens256 ipv4.addresses 10.146.255.253/16
 
   - echo Setup site/hosts and site/group_vars/all.yml on Primary
   - "cp site/hosts.example site/hosts"
@@ -94,7 +93,6 @@ ha-rollout:
   - echo Run prepare on Secondary
   - ssh $SECONDARY_VM_IP INSIDE_RUNNER=true ./prepare.sh
 
-  - ip a
   - echo Run controller on Primary
   - "( cd site && ansible-playbook controller.yml )"
   - echo Run controller on Secondary
