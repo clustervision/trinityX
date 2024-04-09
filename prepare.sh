@@ -66,7 +66,11 @@ else
   setenforce 0
   sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
 
-  yum update -y
+  if [ "$INSIDE_RUNNER" ]; then
+      yum update -y --exclude=kernel*
+  else
+      yum update -y
+  fi
   yum install curl tar git -y
 
   REDHAT_RELEASE=''
