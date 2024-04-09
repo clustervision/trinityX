@@ -66,6 +66,7 @@ else
   setenforce 0
   sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
 
+  # inside a runner (test mode) we do not update the kernel.
   if [ "$INSIDE_RUNNER" ]; then
       yum update -y --exclude=kernel*
   else
