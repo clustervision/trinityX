@@ -13,7 +13,6 @@
   when: init_packages is defined
 
 - block:
-
   - debug:
       msg: "Using stream {{ trix_stream }}"
 
@@ -50,6 +49,18 @@
     register: pcs_primary
     ignore_errors: true
 
+    # we also support a file to override the primary. Useful during recovery of the
+    # the original primary controller.
+  - name: Verify if primary override exists
+    stat:
+      path: /etc/trinityx/primary
+    register: stat_primary_file
+
+  - name: Using override to set who is primary
+    set_fact:
+      primary: "{{ lookup('file', '/etc/trinityx/primary') | trim }}"
+    when: stat_primary_file.stat.exists
+
     # we assume that we start with controller 1 as being the first installed and primary
     # technically controller2 could be the primary but i do not dare to judge if things
     # would work as expected. for now we leave it as it is.
@@ -62,6 +73,7 @@
     when:
       - on_controller
       - pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
+      - not stat_primary_file.stat.exists
 
   - name: Set this node as the primary controller based on pacemaker data
     set_fact:
@@ -86,7 +98,6 @@
 
   - debug:
       msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
-
   tags: always
 
 
@@ -117,7 +128,6 @@
       set_fact:
         luna_secret_key: "{{ luna_secret_key_b64['content'] | b64decode }}"
     when: stat_secret_key.stat.exists
-
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
