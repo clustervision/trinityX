@@ -61,11 +61,11 @@
       primary_controller: "{{ lookup('file', '/etc/trinity/primary') | trim }}"
     when: stat_primary_file.stat.exists
 
+    # although we call it override, ultimately pcs/pacemaker is leading as it will
+    # absolutely destroy the setup if someone makes a mistake here.
   - name: Check if this node is the primary controller based on override
     set_fact:
-      primary: >-
-        {{ True if primary_controller == ansible_hostname
-           else False }}
+      primary: '{{ True if primary_controller == ansible_hostname else False }}'
     when:
       - on_controller
       - primary_controller is defined
@@ -84,6 +84,7 @@
       - pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
       - primary_controller is not defined
 
+    # leading. as this is 100% true if it's available.
   - name: Check if this node is the primary controller based on pacemaker data
     set_fact:
       primary: '{{ True if pcs_primary.stdout == ansible_hostname else False }}'
