@@ -24,6 +24,10 @@ rollout:
   - "vm"
   
   script:
+
+  - echo Setup Hostname
+  - hostnamectl set-hostname $(hostname)
+
   - echo Setup Network on Primary
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
@@ -70,8 +74,11 @@ ha-rollout:
   script:
   - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
   
-  - hostnamectl set-hostname controller1
-  - ssh $SECONDARY_VM_IP hostnamectl set-hostname controller2
+  - echo Setup Hostname on Primary
+  - hostnamectl set-hostname $(hostname)
+
+  - echo Setup Hostname on Secondary
+  - ssh $SECONDARY_VM_IP hostnamectl set-hostname $(hostname)
   
   - echo Setup Network on Primary
   - nmcli con add connection.interface-name ens224 type ethernet
