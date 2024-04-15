@@ -58,13 +58,22 @@
 
   - name: Using override to set who is primary
     set_fact:
-      primary: "{{ lookup('file', '/etc/trinityx/primary') | trim }}"
+      primary_controller: "{{ lookup('file', '/etc/trinityx/primary') | trim }}"
     when: stat_primary_file.stat.exists
+
+  - name: Check if this node is the primary controller based on override
+    set_fact:
+      primary: >-
+        {{ True if primary_controller == ansible_hostname
+           else False }}
+    when:
+      - on_controller
+      - primary_controller is defined
 
     # we assume that we start with controller 1 as being the first installed and primary
     # technically controller2 could be the primary but i do not dare to judge if things
     # would work as expected. for now we leave it as it is.
-  - name: Check if this node is the primary controller
+  - name: Check if this node is the primary controller based on ip or hostname
     set_fact:
       primary: >-
         {{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses
@@ -73,9 +82,9 @@
     when:
       - on_controller
       - pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
-      - not stat_primary_file.stat.exists
+      - primary_controller is not defined
 
-  - name: Set this node as the primary controller based on pacemaker data
+  - name: Check if this node is the primary controller based on pacemaker data
     set_fact:
       primary: '{{ True if pcs_primary.stdout == ansible_hostname else False }}'
       on_controller: true

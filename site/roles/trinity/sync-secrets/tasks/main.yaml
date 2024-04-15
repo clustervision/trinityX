@@ -21,8 +21,29 @@
       path: /mnt/sync
       state: directory
 
+  - block:
+    - name: Resolve sync controller
+      set_fact:
+        sync_remote: '{{ item.1 }}'
+      with_together:
+        - '{{ all_ctrl_hostname }}'
+        - '{{ all_ctrl_ip }}'
+      when:
+        - item.0 == sync_controller
+        - sync_controller != ansible_hostname
+
+    - name: Use second controller as sync controller
+      set_fact:
+        sync_remote: '{{ trix_ctrl2_ip }}'
+      when: sync_controller == ansible_hostname
+    when:
+      - sync_controller is defined
+
+  - debug:
+      msg: 'Using {{ sync_remote }} ip for syncing'
+
   - name: Temporarily mount sync from controller1
-    shell: "mount {{ trix_ctrl1_ip }}:{{ trix_sync }} /mnt/sync"
+    shell: "mount {{ sync_remote }}:{{ trix_sync }} /mnt/sync"
 
   - name: Copy all secrets
     copy:
