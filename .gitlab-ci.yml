@@ -24,10 +24,11 @@ rollout:
   - "vm"
   
   script:
-  - echo Setup Network 
-  - ip link add eth000 type dummy
-  - ip link set eth000 up
-  - ip a a 10.141.255.254/16 dev eth000
+  - echo Setup Network on Primary
+  - nmcli con add connection.interface-name ens224 type ethernet
+  - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
+  - nmcli con mod ethernet-ens224 ipv4.method manual
+  - nmcli con up id ethernet-ens224
 
   - echo Setup site/hosts and site/group_vars/all.yml 
   - "cp site/hosts.example site/hosts"
