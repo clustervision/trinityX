@@ -13,7 +13,6 @@
   when: init_packages is defined
 
 - block:
-
   - debug:
       msg: "Using stream {{ trix_stream }}"
 
@@ -50,10 +49,31 @@
     register: pcs_primary
     ignore_errors: true
 
+    # we also support a file to override the primary. Useful during recovery of the
+    # the original primary controller.
+  - name: Verify if primary override exists
+    stat:
+      path: /etc/trinity/primary
+    register: stat_primary_file
+
+  - name: Using override to set who is primary
+    set_fact:
+      primary_controller: "{{ lookup('file', '/etc/trinity/primary') | trim }}"
+    when: stat_primary_file.stat.exists
+
+    # although we call it override, ultimately pcs/pacemaker is leading as it will
+    # absolutely destroy the setup if someone makes a mistake here.
+  - name: Check if this node is the primary controller based on override
+    set_fact:
+      primary: '{{ True if primary_controller == ansible_hostname else False }}'
+    when:
+      - on_controller
+      - primary_controller is defined
+
     # we assume that we start with controller 1 as being the first installed and primary
     # technically controller2 could be the primary but i do not dare to judge if things
     # would work as expected. for now we leave it as it is.
-  - name: Check if this node is the primary controller
+  - name: Check if this node is the primary controller based on ip or hostname
     set_fact:
       primary: >-
         {{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses
@@ -62,8 +82,10 @@
     when:
       - on_controller
       - pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
+      - primary_controller is not defined
 
-  - name: Set this node as the primary controller based on pacemaker data
+    # leading. as this is 100% true if it's available.
+  - name: Check if this node is the primary controller based on pacemaker data
     set_fact:
       primary: '{{ True if pcs_primary.stdout == ansible_hostname else False }}'
       on_controller: true
@@ -86,7 +108,6 @@
 
   - debug:
       msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
-
   tags: always
 
 
@@ -117,7 +138,6 @@
       set_fact:
         luna_secret_key: "{{ luna_secret_key_b64['content'] | b64decode }}"
     when: stat_secret_key.stat.exists
-
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
