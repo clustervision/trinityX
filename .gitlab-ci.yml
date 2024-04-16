@@ -35,7 +35,9 @@ rollout:
   - "cp site/hosts.example site/hosts"
   - "cp site/group_vars/all.yml.example site/group_vars/all.yml"
   - "sed -i -E \"s/ens6/ens224/\" site/group_vars/all.yml"
+  - "ctrl_hostname=$(hostname) && sed -i -E \"s/controller([12])/${ctrl_hostname:0:-1}\\1/\"  site/group_vars/all.yml"
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
+  - cat "site/group_vars/all.yml"
 
   - echo Run prepare
   - ./prepare.sh
@@ -102,7 +104,6 @@ ha-rollout:
   - "ctrl_hostname=$(hostname) && sed -i -E \"s/controller([12])/${ctrl_hostname:0:-1}\\1/\"  site/group_vars/all.yml"
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
   - cat "site/group_vars/all.yml"
-  - exit 0
 
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
   - "scp -r $PWD/* $SECONDARY_VM_IP:"
