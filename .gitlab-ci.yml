@@ -25,6 +25,7 @@ rollout:
   
   script:
   - echo Setup Network on Primary
+  - systemctl restart NetworkManager
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
   - nmcli con mod ethernet-ens224 ipv4.method manual
@@ -33,7 +34,7 @@ rollout:
   - echo Setup site/hosts and site/group_vars/all.yml 
   - "cp site/hosts.example site/hosts"
   - "cp site/group_vars/all.yml.example site/group_vars/all.yml"
-  - "sed -i -E \"s/ens6/eth000/\" site/group_vars/all.yml"
+  - "sed -i -E \"s/ens6/ens224/\" site/group_vars/all.yml"
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
 
   - echo Run prepare
@@ -71,6 +72,7 @@ ha-rollout:
   - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
   
   - echo Setup Network on Primary
+  - systemctl restart NetworkManager
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con add connection.interface-name ens256 type ethernet
   - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
