@@ -25,6 +25,7 @@ rollout:
   
   script:
   - echo Setup Network on Primary
+  - systemctl restart NetworkManager
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
   - nmcli con mod ethernet-ens224 ipv4.method manual
@@ -33,8 +34,10 @@ rollout:
   - echo Setup site/hosts and site/group_vars/all.yml 
   - "cp site/hosts.example site/hosts"
   - "cp site/group_vars/all.yml.example site/group_vars/all.yml"
-  - "sed -i -E \"s/ens6/eth000/\" site/group_vars/all.yml"
+  - "sed -i -E \"s/ens6/ens224/\" site/group_vars/all.yml"
+  - "ctrl_hostname=$(hostname) && sed -i -E \"s/controller([12])/${ctrl_hostname:0:-1}\\1/\"  site/group_vars/all.yml"
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
+  - cat "site/group_vars/all.yml"
 
   - echo Run prepare
   - ./prepare.sh
@@ -70,10 +73,8 @@ ha-rollout:
   script:
   - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
   
-  - hostnamectl set-hostname controller1
-  - ssh $SECONDARY_VM_IP hostnamectl set-hostname controller2
-  
   - echo Setup Network on Primary
+  - systemctl restart NetworkManager
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con add connection.interface-name ens256 type ethernet
   - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
@@ -100,7 +101,9 @@ ha-rollout:
   - "sed -i -E \"s/disk: '\\/dev\\/vda'/disk: '\\/dev\\/sdb'/\" site/group_vars/all.yml"
   - "sed -i -E \"s/ha: false/ha: true/\" site/group_vars/all.yml"
   - "sed -i -E \"s/enable_ipmilan_fencing: true/enable_ipmilan_fencing: false/\" site/group_vars/all.yml"
+  - "ctrl_hostname=$(hostname) && sed -i -E \"s/controller([12])/${ctrl_hostname:0:-1}\\1/\"  site/group_vars/all.yml"
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
+  - cat "site/group_vars/all.yml"
 
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
   - "scp -r $PWD/* $SECONDARY_VM_IP:"
