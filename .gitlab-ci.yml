@@ -26,6 +26,7 @@ rollout:
   script:
   - echo Setup Network on Primary
   - systemctl restart NetworkManager
+  - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
   - nmcli con mod ethernet-ens224 ipv4.method manual
@@ -49,6 +50,18 @@ rollout:
   - "( cd site && ansible-playbook compute-redhat.yml )"
   - "( cd site && ansible-playbook compute-ubuntu.yml )"
 
+  - systemctl restart NetworkManager
+  - /tmp/fix-firewalld-zones.sh || true
+  - sed -i -E "s/RealMemory=100/RealMemory=4000/" /etc/slurm/slurm-nodes.conf
+  - systemctl restart slurmctld
+  - luna node change node001 --interface BOOTIF --macaddress $TST_NODE001_MAC
+  - 'for i in {60..0}; do if [ -z "$(sinfo --Node | grep -e "node001 .* defq\*\? idle")" ]; then echo "Waiting for SLURM node to become available. Countdown: $(( $i * 5))" && sleep 5; else break; fi; done'
+
+  - obol user add test -p test -g admins
+  - sudo -H -u test bash -c 'printf "#!/bin/bash\\necho Hello World\\n" > ~/test-job.sh'
+  - script_path="$(sudo -H -u test bash -c 'echo ~/test-job.sh')" && sudo -H -u test chmod +x $script_path
+  - sudo -H -u test bash -c 'cd && srun ./test-job.sh'
+
 
 ha-rollout:
   stage: test
@@ -71,10 +84,11 @@ ha-rollout:
   - "ha"
   
   script:
-  - ssh-keygen -F $SECONDARY_VM_IP || ssh-keyscan $SECONDARY_VM_IP >> ~/.ssh/known_hosts
+  - ssh-keygen -F $TST_CTRL002_IP || ssh-keyscan $TST_CTRL002_IP >> ~/.ssh/known_hosts
   
   - echo Setup Network on Primary
   - systemctl restart NetworkManager
+  - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con add connection.interface-name ens256 type ethernet
   - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
@@ -85,14 +99,14 @@ ha-rollout:
   - nmcli con up id ethernet-ens256
 
   - echo Setup Network on Secondary
-  - ssh $SECONDARY_VM_IP nmcli con add connection.interface-name ens224 type ethernet
-  - ssh $SECONDARY_VM_IP nmcli con add connection.interface-name ens256 type ethernet
-  - ssh $SECONDARY_VM_IP nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.253/16
-  - ssh $SECONDARY_VM_IP nmcli con mod ethernet-ens256 ipv4.addresses 10.146.255.253/16
-  - ssh $SECONDARY_VM_IP nmcli con mod ethernet-ens224 ipv4.method manual
-  - ssh $SECONDARY_VM_IP nmcli con mod ethernet-ens256 ipv4.method manual
-  - ssh $SECONDARY_VM_IP nmcli con up id ethernet-ens224
-  - ssh $SECONDARY_VM_IP nmcli con up id ethernet-ens256
+  - ssh $TST_CTRL002_IP nmcli con add connection.interface-name ens224 type ethernet
+  - ssh $TST_CTRL002_IP nmcli con add connection.interface-name ens256 type ethernet
+  - ssh $TST_CTRL002_IP nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.253/16
+  - ssh $TST_CTRL002_IP nmcli con mod ethernet-ens256 ipv4.addresses 10.146.255.253/16
+  - ssh $TST_CTRL002_IP nmcli con mod ethernet-ens224 ipv4.method manual
+  - ssh $TST_CTRL002_IP nmcli con mod ethernet-ens256 ipv4.method manual
+  - ssh $TST_CTRL002_IP nmcli con up id ethernet-ens224
+  - ssh $TST_CTRL002_IP nmcli con up id ethernet-ens256
 
   - echo Setup site/hosts and site/group_vars/all.yml on Primary
   - "cp site/hosts.example site/hosts"
@@ -106,18 +120,29 @@ ha-rollout:
   - cat "site/group_vars/all.yml"
 
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
-  - "scp -r $PWD/* $SECONDARY_VM_IP:"
+  - "scp -r $PWD/* $TST_CTRL002_IP:"
 
   - echo Run prepare on Primary
   - ./prepare.sh
   - echo Run prepare on Secondary
-  - ssh $SECONDARY_VM_IP INSIDE_RUNNER=true ./prepare.sh
+  - ssh $TST_CTRL002_IP INSIDE_RUNNER=true ./prepare.sh
 
   - echo Run controller on Primary
   - "( cd site && ansible-playbook controller.yml )"
   - echo Run controller on Secondary
-  - ssh $SECONDARY_VM_IP "( cd site && INSIDE_RUNNER=true ansible-playbook controller.yml )"
+  - ssh $TST_CTRL002_IP "( cd site && INSIDE_RUNNER=true ansible-playbook controller.yml )"
 
   - echo Run compute on Primary
   - "( cd site && ansible-playbook compute-redhat.yml compute-ubuntu.yml )"
 
+  - systemctl restart NetworkManager
+  - /tmp/fix-firewalld-zones.sh || true
+  - sed -i -E "s/RealMemory=100/RealMemory=4000/" /etc/slurm/slurm-nodes.conf
+  - systemctl restart slurmctld
+  - luna node change node001 --interface BOOTIF --macaddress $TST_NODE001_MAC
+  - 'for i in {60..0}; do if [ -z "$(sinfo --Node | grep -e "node001 .* defq\*\? idle")" ]; then echo "Waiting for SLURM node to become available. Countdown: $(( $i * 5))" && sleep 5; else break; fi; done'
+
+  - obol user add test -p test -g admins
+  - sudo -H -u test bash -c 'printf "#!/bin/bash\\necho Hello World\\n" > ~/test-job.sh'
+  - script_path="$(sudo -H -u test bash -c 'echo ~/test-job.sh')" && sudo -H -u test chmod +x $script_path
+  - sudo -H -u test bash -c 'cd && srun ./test-job.sh'
