@@ -52,7 +52,7 @@ rollout:
   - sed -i -E "s/RealMemory=100/RealMemory=4000/" /etc/slurm/slurm-nodes.conf
   - systemctl restart slurmctld
   - luna node change node001 --interface BOOTIF --macaddress $TST_NODE001_MAC
-  - while [ -z "$(sinfo --Node | grep -e "node00[1-4] .* defq\*\? idle")" ]; do echo waiting slurm node to become available && sleep 5 ; done 
+  - for i in {60..0}; do if [ -z "$(sinfo --Node | grep -e "node001 .* defq\*\? idle")" ]; then echo "Waiting for SLURM node to become available. Countdown: $(( $i * 5))" && sleep 5; else break; fi; done
 
   - obol user add test -p test -g admins
   - sudo -H -u test bash -c 'printf "#!/bin/bash\\necho Hello World\\n" > ~/test-job.sh'
@@ -131,17 +131,10 @@ ha-rollout:
   - echo Run compute on Primary
   - "( cd site && ansible-playbook compute-redhat.yml compute-ubuntu.yml )"
 
-  # - sed -i -E "s/RealMemory=100/RealMemory=4000/" /etc/slurm/slurm-nodes.conf
-  - systemctl restart slurmctld
-  - obol user add test -p test -g admins
-  - sudo -H -u test bash -c 'printf "#!/bin/bash\\necho Hello World\\n" > ~/test-job.sh'
-  - script_path="$(sudo -H -u test bash -c 'echo ~/test-job.sh')" && sudo -H -u test chmod +x $script_path
-  - sudo -H -u test bash -c 'cd && srun ./test-job.sh'
-
   - sed -i -E "s/RealMemory=100/RealMemory=4000/" /etc/slurm/slurm-nodes.conf
   - systemctl restart slurmctld
   - luna node change node001 --interface BOOTIF --macaddress $TST_NODE001_MAC
-  - while [ -z "$(sinfo --Node | grep -e "node00[1-4] .* defq\*\? idle")" ]; do echo waiting slurm node to become available && sleep 5 ; done 
+  - for i in {60..0}; do if [ -z "$(sinfo --Node | grep -e "node001 .* defq\*\? idle")" ]; then echo "Waiting for SLURM node to become available. Countdown: $(( $i * 5))" && sleep 5; else break; fi; done
 
   - obol user add test -p test -g admins
   - sudo -H -u test bash -c 'printf "#!/bin/bash\\necho Hello World\\n" > ~/test-job.sh'
