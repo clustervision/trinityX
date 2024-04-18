@@ -52,7 +52,7 @@ rollout:
   - sed -i -E "s/RealMemory=100/RealMemory=4000/" /etc/slurm/slurm-nodes.conf
   - systemctl restart slurmctld
   - luna node change node001 --interface BOOTIF --macaddress $TST_NODE001_MAC
-  - for i in {60..0}; do if [ -z "$(sinfo --Node | grep -e "node001 .* defq\*\? idle")" ]; then echo "Waiting for SLURM node to become available. Countdown: $(( $i * 5))" && sleep 5; else break; fi; done
+  - 'for i in {60..0}; do if [ -z "$(sinfo --Node | grep -e "node001 .* defq\*\? idle")" ]; then echo "Waiting for SLURM node to become available. Countdown: $(( $i * 5))" && sleep 5; else break; fi; done'
 
   - obol user add test -p test -g admins
   - sudo -H -u test bash -c 'printf "#!/bin/bash\\necho Hello World\\n" > ~/test-job.sh'
@@ -134,7 +134,7 @@ ha-rollout:
   - sed -i -E "s/RealMemory=100/RealMemory=4000/" /etc/slurm/slurm-nodes.conf
   - systemctl restart slurmctld
   - luna node change node001 --interface BOOTIF --macaddress $TST_NODE001_MAC
-  - for i in {60..0}; do if [ -z "$(sinfo --Node | grep -e "node001 .* defq\*\? idle")" ]; then echo "Waiting for SLURM node to become available. Countdown: $(( $i * 5))" && sleep 5; else break; fi; done
+  - 'for i in {60..0}; do if [ -z "$(sinfo --Node | grep -e "node001 .* defq\*\? idle")" ]; then echo "Waiting for SLURM node to become available. Countdown: $(( $i * 5))" && sleep 5; else break; fi; done'
 
   - obol user add test -p test -g admins
   - sudo -H -u test bash -c 'printf "#!/bin/bash\\necho Hello World\\n" > ~/test-job.sh'
