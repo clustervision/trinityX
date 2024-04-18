@@ -160,8 +160,8 @@
     - slurmdbd
     - slurmctld
 
-- block:
 
+- block:
     - name: Enable slurm compute services
       systemd:
         name: '{{ item }}'
@@ -169,6 +169,19 @@
       with_items:
         - slurmd
         - munge
+
+    - name: Disable default After dependency for slurmd service
+      ansible.builtin.replace:
+        path: /usr/lib/systemd/system/slurmd.service
+        before: '[Service]'
+        regexp: '^(After=munge.+)$'
+        replace: '# \1'
+
+    - name: Ensure slurmd service starts after all other services are up
+      ansible.builtin.lineinfile:
+        path: /usr/lib/systemd/system/slurmd.service
+        insertafter: '^# After='
+        line: 'After=multi-user.target'
 
     - name: Update PAM configuration to enable slurm pam controls
       copy:
@@ -181,8 +194,8 @@
         - ['pam-sshd', 'pam-slurm']
         - ['sshd', 'slurm']
       when: enable_slurm_pam
-
   when: ansible_connection in 'chroot' or compute|default(False)
+
 
 - name: Start slurm compute services
   service:
@@ -193,6 +206,7 @@
     - munge
     - slurmd
   when: compute|default(False)
+
 
 - block:
     - name: Create shared spool dir
@@ -326,6 +340,7 @@
         and ansible_connection not in 'chroot'
         and not compute|default(False)
 
+
 - name: Enable munge service on passive slurm nodes (portal services etc)
   systemd:
     name: '{{ item }}'
@@ -345,8 +360,8 @@
     - munge
   ignore_errors: true
 
-- block:
 
+- block:
     - name: Enable slurm pam controls for computations on controller
       copy:
         src: pam-slurm
@@ -359,3 +374,4 @@
   when: primary|default(True)
         and ansible_connection not in 'chroot'
         and not compute|default(False)
+
