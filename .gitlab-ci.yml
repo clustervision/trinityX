@@ -26,6 +26,7 @@ rollout:
   script:
   - echo Setup Network on Primary
   - systemctl restart NetworkManager
+  - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
   - nmcli con mod ethernet-ens224 ipv4.method manual
@@ -49,6 +50,8 @@ rollout:
   - "( cd site && ansible-playbook compute-redhat.yml )"
   - "( cd site && ansible-playbook compute-ubuntu.yml )"
 
+  - systemctl restart NetworkManager
+  - /tmp/fix-firewalld-zones.sh || true
   - sed -i -E "s/RealMemory=100/RealMemory=4000/" /etc/slurm/slurm-nodes.conf
   - systemctl restart slurmctld
   - luna node change node001 --interface BOOTIF --macaddress $TST_NODE001_MAC
@@ -85,6 +88,7 @@ ha-rollout:
   
   - echo Setup Network on Primary
   - systemctl restart NetworkManager
+  - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con add connection.interface-name ens256 type ethernet
   - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
@@ -131,6 +135,8 @@ ha-rollout:
   - echo Run compute on Primary
   - "( cd site && ansible-playbook compute-redhat.yml compute-ubuntu.yml )"
 
+  - systemctl restart NetworkManager
+  - /tmp/fix-firewalld-zones.sh || true
   - sed -i -E "s/RealMemory=100/RealMemory=4000/" /etc/slurm/slurm-nodes.conf
   - systemctl restart slurmctld
   - luna node change node001 --interface BOOTIF --macaddress $TST_NODE001_MAC
