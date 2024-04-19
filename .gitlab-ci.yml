@@ -28,8 +28,7 @@ rollout:
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
-  - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
-  - nmcli con mod ethernet-ens224 ipv4.method manual
+  - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16  ipv4.method manual  ipv4.dns 127.0.0.1 ipv4.dns-search cluster
   - nmcli con up id ethernet-ens224
 
   - echo Setup site/hosts and site/group_vars/all.yml 
@@ -91,10 +90,8 @@ ha-rollout:
   - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
   - nmcli con add connection.interface-name ens256 type ethernet
-  - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16
-  - nmcli con mod ethernet-ens256 ipv4.addresses 10.146.255.254/16
-  - nmcli con mod ethernet-ens224 ipv4.method manual
-  - nmcli con mod ethernet-ens256 ipv4.method manual
+  - nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.254/16 ipv4.method manual  ipv4.dns 127.0.0.1 ipv4.dns-search cluster
+  - nmcli con mod ethernet-ens256 ipv4.addresses 10.146.255.254/16 ipv4.method manual  ipv4.dns 127.0.0.1 ipv4.dns-search cluster
   - nmcli con up id ethernet-ens224
   - nmcli con up id ethernet-ens256
 
