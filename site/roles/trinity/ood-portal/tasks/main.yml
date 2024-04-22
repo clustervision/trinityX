@@ -11,14 +11,6 @@
     - "{{ ssl_certificate_key }}"
   when: enable_ssl == true
 
-#- name: Check if powerools repo exists
-#  shell: "yum -v repolist powertools|grep Repo-filename|cut -f2 -d':'"
-#  register: powertools_repo_file
-#
-#- name: Enable powertools repository
-#  shell: "yum config-manager --set-enabled powertools"
-#  when: powertools_repo_file.stdout_lines
-
 - name: Enable default ruby module
   copy:
     dest: /etc/dnf/modules.d/ruby.module
@@ -73,17 +65,6 @@
     - '/etc/ood/config/apps'
     - '/etc/ood/config/apps/bc_desktop'
 
-# - name: Remove default apache pages
-#   file:
-#     path: '{{ item }}'
-#     state: absent
-#   with_items:
-#     - /etc/httpd/conf.d/welcome.conf
-#     - /etc/httpd/conf.d/userdir.conf
-#     - /etc/httpd/conf.d/ssl.conf
-#     - /etc/httpd/conf.d/autoindex.conf
-
-
 - name: Render OOD ood_portal.yml config file
   template:
     src: 'ood_portal.yml.j2'
@@ -103,7 +84,6 @@
     group: root
   notify: run update_ood_portal
   tags: branding
-
 
 - name: Render OOD cluster config file
   template:
@@ -186,15 +166,6 @@
   when: ood_portal_brand == "TrinityX"
   tags: branding
 
-# - name: Apply TrinityX pun_custom_env branding if appropriate
-#   blockinfile:
-#     path: '/etc/ood/config/nginx_stage.yml'
-#     block: '{{ ood_pun_custom_env_branding.trinityx }}'
-#     marker: "# {mark} ANSIBLE MANAGED BLOCK for pun_custom_env"
-#     backup: "yes"
-#   when: '"cloudcontroller" not in group_names'
-#   notify: run update_ood_portal
-
 - name: Create trinityx-ood directory
   file:
     path: "{{ trix_ood }}/{{ ood_version }}"
@@ -263,22 +234,6 @@
     group: "{{ ood_admin_group }}"
     mode: 0640
 
-# - name: Render trinityx-ood luna app osusers.toml
-#   template:
-#     src: 'osusers.toml.j2'
-#     dest: '{{ trix_ood }}/{{ ood_version }}/config/osusers.toml'
-#     owner: root
-#     group: "{{ ood_admin_group }}"
-#     mode: 0640
-
-# - name: Render trinityx-ood luna app sensu.toml
-#   template:
-#     src: 'sensu.toml.j2'
-#     dest: '{{ trix_ood }}/{{ ood_version }}/config/sensu.toml'
-#     owner: root
-#     group: "{{ ood_admin_group }}"
-#     mode: 0644
-
 - name: Install trinityx-ood custom apps python requirements
   ansible.builtin.pip:
     requirements: "{{ trix_ood }}/{{ ood_version }}/{{ item }}/requirements.txt"
@@ -322,42 +277,7 @@
   with_items: "{{ ood_custom_apps }}"
   notify: run update_ood_portal
 
-# - name: Create a directory for static files if it does not exist
-#   ansible.builtin.file:
-#     path: '{{ trix_ood }}/{{ ood_version }}/{{item}}/static'
-#     state: directory
-#     mode: 0755
-#     owner: root
-#     group: root
-#   with_items:
-#     - sensu
-#     - users
 
-# - name: Symlink shared templates
-#   file:
-#     src: "{{ trix_ood }}/{{ ood_version }}/_base/templates"
-#     dest: "/var/www/ood/apps/sys/trinity_{{ item }}/templates/base"
-#     state: link
-#     mode: 0755
-#     owner: root
-#     group: root
-#   with_items:
-#     - sensu
-#     - users
-#   notify: run update_ood_portal
-
-# - name: Symlink shared static assets
-#   file:
-#     src: "{{ trix_ood }}/{{ ood_version }}/_base/static"
-#     dest: "/var/www/ood/apps/sys/trinity_{{ item }}/static/base"
-#     state: link
-#     mode: 0755
-#     owner: root
-#     group: root
-#   with_items:
-#     - sensu
-#     - users
-#   notify: run update_ood_portal
 
   # ----------------------------------------------------------------------
   # ensuring ood app root dir is open
