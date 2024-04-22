@@ -25,6 +25,7 @@ rnode_uri: '/rnode'
 {% endif %}
 dex_uri: /dex
 
+{% if ood_portal_auth_provider == 'dex' %}
 dex:
   connectors:
     - type: ldap
@@ -47,3 +48,11 @@ dex:
             - userAttr: DN
               groupAttr: member
           nameAttr: cn
+{% elif ood_portal_auth_provider == 'pam' %}
+auth:
+  - 'AuthType Basic'
+  - 'AuthName "Open OnDemand"'
+  - 'AuthBasicProvider PAM'
+  - 'AuthPAMService ood'
+  - 'Require valid-user'
+{% endif %}

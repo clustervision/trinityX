@@ -57,10 +57,8 @@
     name:
       - 'epel-release'
       - 'ondemand'
-      - 'ondemand-dex'
     state: latest
     enablerepo: powertools
-
 
 - name: Ensure OOD config paths exist
   file:
@@ -408,16 +406,14 @@
     group: "{{ ood_admin_group }}"
   ignore_errors: true
 
+- name: Include auth task
+  include_tasks: dex-auth.yml
+
+- name: Include auth task
+  include_tasks: pam-auth.yml
 
 - name: Enable OOD webserver on startup
   service:
     name: httpd
     enabled: "yes"
     state: started
-
-- name: Enable ondemand-dex service on startup
-  service:
-    name: ondemand-dex
-    enabled: "yes"
-    state: started
-

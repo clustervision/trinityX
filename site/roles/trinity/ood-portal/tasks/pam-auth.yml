@@ -1,0 +1,37 @@
+- name: Install ondemand-pam required packages
+  package:
+    name: "{{ item }}"
+    state: "present"
+  loop: "{{ ood_portal_pam_packages }}"
+
+- name: Add authnz_pam_module
+  copy:
+    content: |
+      LoadModule authnz_pam_module modules/mod_authnz_pam.so
+    dest: /etc/httpd/conf.modules.d/55-authnz_pam.conf
+
+- name: Add pam.conf
+  copy:
+    content: |
+      #%PAM-1.0
+      # This tool only uses the password stack.
+      password   substack     system-auth
+      -password   optional    pam_gnome_keyring.so use_authtok
+      password   substack     postlogin
+    dest: /etc/pam.d/ood
+
+- name: Set permissions on /etc/pam.d/ood
+  file:
+    path: /etc/pam.d/ood
+    owner: root
+    group: apache
+    mode: '0644'
+    state: file
+
+- name: Set permissions on /etc/shadow
+  file:
+    path: /etc/shadow
+    owner: root
+    group: apache
+    mode: '0640'
+    state: file
