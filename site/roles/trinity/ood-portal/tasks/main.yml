@@ -7,17 +7,9 @@
     path: '{{ item }}'
     state: file
   with_items:
-    - "{{ ssl_certificate }}"
-    - "{{ ssl_certificate_key }}"
-  when: enable_ssl == true
-
-#- name: Check if powerools repo exists
-#  shell: "yum -v repolist powertools|grep Repo-filename|cut -f2 -d':'"
-#  register: powertools_repo_file
-#
-#- name: Enable powertools repository
-#  shell: "yum config-manager --set-enabled powertools"
-#  when: powertools_repo_file.stdout_lines
+    - "{{ ood_portal_ssl_certificate }}"
+    - "{{ ood_portal_ssl_certificate_key }}"
+  when: ood_portal_enable_ssl == true
 
 - name: Enable default ruby module
   copy:
@@ -41,7 +33,7 @@
 
 - name: Install ood packages
   yum:
-    name: '{{ ood_packages }}'
+    name: '{{ ood_portal_packages }}'
     state: latest
     enablerepo: luna2
 
@@ -50,17 +42,15 @@
     name: "{{ item.name }}"
     state: latest
     disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
-  with_items: "{{ ood_web_repository_rpms }}"
+  with_items: "{{ ood_portal_repository_rpms }}"
 
 - name: Install required packages
   yum:
     name:
       - 'epel-release'
       - 'ondemand'
-      - 'ondemand-dex'
     state: latest
     enablerepo: powertools
-
 
 - name: Ensure OOD config paths exist
   file:
@@ -74,17 +64,6 @@
     - '/etc/ood/config/clusters.d'
     - '/etc/ood/config/apps'
     - '/etc/ood/config/apps/bc_desktop'
-
-# - name: Remove default apache pages
-#   file:
-#     path: '{{ item }}'
-#     state: absent
-#   with_items:
-#     - /etc/httpd/conf.d/welcome.conf
-#     - /etc/httpd/conf.d/userdir.conf
-#     - /etc/httpd/conf.d/ssl.conf
-#     - /etc/httpd/conf.d/autoindex.conf
-
 
 - name: Render OOD ood_portal.yml config file
   template:
@@ -106,11 +85,10 @@
   notify: run update_ood_portal
   tags: branding
 
-
 - name: Render OOD cluster config file
   template:
     src: 'cluster_definition.yml.j2'
-    dest: '{{ ood_portal_cfg_path }}/clusters.d/{{ cluster_name }}.yml'
+    dest: '{{ ood_portal_cfg_path }}/clusters.d/{{ ood_portal_cluster_name }}.yml'
     mode: 0644
     owner: root
     group: root
@@ -119,7 +97,7 @@
 - name: Render OOD remote_desktop config file
   template:
     src: 'bc_desktop_definition.yml.j2'
-    dest: '{{ ood_portal_cfg_path }}/apps/bc_desktop/{{ cluster_name }}.yml'
+    dest: '{{ ood_portal_cfg_path }}/apps/bc_desktop/{{ ood_portal_cluster_name }}.yml'
     mode: 0644
     owner: root
     group: root
@@ -129,7 +107,7 @@
 
 - name: Remove OOD remote_desktop if vnc not enabled
   file:
-    path: '{{ ood_portal_cfg_path }}/apps/bc_desktop/{{ cluster_name }}.yml'
+    path: '{{ ood_portal_cfg_path }}/apps/bc_desktop/{{ ood_portal_cluster_name }}.yml'
     state: absent
   when: enable_ood_vnc != true
   notify: run update_ood_portal
@@ -188,104 +166,79 @@
   when: ood_portal_brand == "TrinityX"
   tags: branding
 
-# - name: Apply TrinityX pun_custom_env branding if appropriate
-#   blockinfile:
-#     path: '/etc/ood/config/nginx_stage.yml'
-#     block: '{{ ood_pun_custom_env_branding.trinityx }}'
-#     marker: "# {mark} ANSIBLE MANAGED BLOCK for pun_custom_env"
-#     backup: "yes"
-#   when: '"cloudcontroller" not in group_names'
-#   notify: run update_ood_portal
-
 - name: Create trinityx-ood directory
   file:
-    path: "{{ trix_ood }}/{{ ood_version }}"
+    path: "{{ trix_ood }}/{{ ood_portal_version }}"
     state: directory
 
 - name: Clone trinityx-ood custom apps repo
   ansible.builtin.git:
     repo: "{{ ood_gitrepo_url }}"
-    dest: "{{ trix_ood }}/{{ ood_version }}"
+    dest: "{{ trix_ood }}/{{ ood_portal_version }}"
   environment:
     GIT_TERMINAL_PROMPT: 0
-  when: ood_download_url is not defined
+  when: ood_portal_download_url is not defined
 
 - block:
   - name: Download trinityx-ood custom apps
     get_url:
-      url: "{{ ood_download_url }}"
+      url: "{{ ood_portal_download_url }}"
       dest: "/tmp/"
 
   - name: Verify leading path in download
-    shell: "tar -tf /tmp/{{ ood_download_url|split('/')|last }} | head -n1 | cut -f1 -d '/' | grep trinityx-ood"
+    shell: "tar -tf /tmp/{{ ood_portal_download_url|split('/')|last }} | head -n1 | cut -f1 -d '/' | grep trinityx-ood"
     register: ood_download_lead_path
 
   - block:
     - name: Unpack download
       ansible.builtin.unarchive:
-        src: "/tmp/{{ ood_download_url.split('/') | last }}"
-        dest: "{{ trix_ood }}/{{ ood_version }}"
+        src: "/tmp/{{ ood_portal_download_url.split('/') | last }}"
+        dest: "{{ trix_ood }}/{{ ood_portal_version }}"
     when: ood_download_lead_path.rc != 0
 
   - block:
     - name: Unpack download
       ansible.builtin.unarchive:
-        src: "/tmp/{{ ood_download_url.split('/') | last }}"
+        src: "/tmp/{{ ood_portal_download_url.split('/') | last }}"
         dest: "{{ trix_ood }}"
 
     - name: Remove current build directory if it exists
       file:
         state: absent
-        path: "{{ trix_ood }}/{{ ood_version }}"
+        path: "{{ trix_ood }}/{{ ood_portal_version }}"
 
     - name: Symlink to current build
       file:
         state: link
         src: "{{ trix_ood }}/{{ ood_download_lead_path.stdout }}"
-        dest: "{{ trix_ood }}/{{ ood_version }}"
+        dest: "{{ trix_ood }}/{{ ood_portal_version }}"
 
     - name: Reset luna app directory permissions
-      shell: "find {{ trix_ood }}/{{ ood_version }}/ -type d -exec chmod 755 {} \\;"
+      shell: "find {{ trix_ood }}/{{ ood_portal_version }}/ -type d -exec chmod 755 {} \\;"
 
     - name: Reset luna app file permissions
-      shell: "find {{ trix_ood }}/{{ ood_version }}/ -type f -exec chmod 644 {} \\;"
+      shell: "find {{ trix_ood }}/{{ ood_portal_version }}/ -type f -exec chmod 644 {} \\;"
     when: ood_download_lead_path.rc == 0
-  when: ood_download_url is defined
+  when: ood_portal_download_url is defined
 
 - name: Create trinityx-ood luna2 app config directory
   file:
-    path: '{{ trix_ood }}/{{ ood_version }}/config/'
+    path: '{{ trix_ood }}/{{ ood_portal_version }}/config/'
     state: directory
 
 - name: Render trinityx-ood luna app luna.ini
   template:
     src: 'luna2.ini.j2'
-    dest: '{{ trix_ood }}/{{ ood_version }}/config/luna.ini'
+    dest: '{{ trix_ood }}/{{ ood_portal_version }}/config/luna.ini'
     owner: root
-    group: "{{ ood_admin_group }}"
+    group: "{{ ood_portal_admin_group }}"
     mode: 0640
-
-# - name: Render trinityx-ood luna app osusers.toml
-#   template:
-#     src: 'osusers.toml.j2'
-#     dest: '{{ trix_ood }}/{{ ood_version }}/config/osusers.toml'
-#     owner: root
-#     group: "{{ ood_admin_group }}"
-#     mode: 0640
-
-# - name: Render trinityx-ood luna app sensu.toml
-#   template:
-#     src: 'sensu.toml.j2'
-#     dest: '{{ trix_ood }}/{{ ood_version }}/config/sensu.toml'
-#     owner: root
-#     group: "{{ ood_admin_group }}"
-#     mode: 0644
 
 - name: Install trinityx-ood custom apps python requirements
   ansible.builtin.pip:
-    requirements: "{{ trix_ood }}/{{ ood_version }}/{{ item }}/requirements.txt"
+    requirements: "{{ trix_ood }}/{{ ood_portal_version }}/{{ item }}/requirements.txt"
     virtualenv: /trinity/local/python/
-  with_items: "{{ ood_custom_apps }}"
+  with_items: "{{ ood_portal_custom_apps }}"
 
 - name: Create custom app folders if they do not exist
   file:
@@ -293,7 +246,7 @@
     state: directory
     mode: 0755
     owner: root
-    group: "{{ ood_admin_group }}"
+    group: "{{ ood_portal_admin_group }}"
   notify: run update_ood_portal
   with_fileglob:
     - '../templates/manifests/*.yml.j2'
@@ -305,7 +258,7 @@
     src: '{{ item }}'
     dest: '/var/www/ood/apps/sys/{{ item | basename | regex_replace("\_manifest.yml.j2$", "") }}/manifest.yml'
     owner: root
-    group: "{{ ood_admin_group }}"
+    group: "{{ ood_portal_admin_group }}"
     mode: 0644
   notify: run update_ood_portal
   with_fileglob:
@@ -315,86 +268,50 @@
   
 - name: Symlink trinityx-ood custom apps
   file:
-    src: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
+    src: "{{ trix_ood }}/{{ ood_portal_version }}/{{ item }}"
     dest: "/var/www/ood/apps/sys/trinity_{{ item }}"
     state: link
     mode: 0755
     owner: root
     group: root
-  with_items: "{{ ood_custom_apps }}"
+  with_items: "{{ ood_portal_custom_apps }}"
   notify: run update_ood_portal
 
-# - name: Create a directory for static files if it does not exist
-#   ansible.builtin.file:
-#     path: '{{ trix_ood }}/{{ ood_version }}/{{item}}/static'
-#     state: directory
-#     mode: 0755
-#     owner: root
-#     group: root
-#   with_items:
-#     - sensu
-#     - users
-
-# - name: Symlink shared templates
-#   file:
-#     src: "{{ trix_ood }}/{{ ood_version }}/_base/templates"
-#     dest: "/var/www/ood/apps/sys/trinity_{{ item }}/templates/base"
-#     state: link
-#     mode: 0755
-#     owner: root
-#     group: root
-#   with_items:
-#     - sensu
-#     - users
-#   notify: run update_ood_portal
-
-# - name: Symlink shared static assets
-#   file:
-#     src: "{{ trix_ood }}/{{ ood_version }}/_base/static"
-#     dest: "/var/www/ood/apps/sys/trinity_{{ item }}/static/base"
-#     state: link
-#     mode: 0755
-#     owner: root
-#     group: root
-#   with_items:
-#     - sensu
-#     - users
-#   notify: run update_ood_portal
 
   # ----------------------------------------------------------------------
   # ensuring ood app root dir is open
 - name: Set permissions for all ood apps root directory
   file:
-    path: "{{ trix_ood }}/{{ ood_version }}"
+    path: "{{ trix_ood }}/{{ ood_portal_version }}"
     mode: 0755
     owner: root
-    group: "{{ ood_admin_group }}"
+    group: "{{ ood_portal_admin_group }}"
 
 
 - name: Set permissions for admin ood apps
   # ----------------------------------------------------------------------
   # master block for apps that require special access. NOT for common users.
   file:
-    path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
+    path: "{{ trix_ood }}/{{ ood_portal_version }}/{{ item }}"
     mode: 0750
     owner: root
-    group: "{{ ood_admin_group }}"
-  with_items: "{{ ood_admin_apps }}"
+    group: "{{ ood_portal_admin_group }}"
+  with_items: "{{ ood_portal_admin_apps }}"
 
 - name: Set permissions for apps that can be accessed by users
   # ----------------------------------------------------------------------
   # permission to allow access to apps for everyone
   file:
-    path: "{{ trix_ood }}/{{ ood_version }}/{{ item }}"
+    path: "{{ trix_ood }}/{{ ood_portal_version }}/{{ item }}"
     mode: 0755
     owner: root
-    group: "{{ ood_admin_group }}"
-  with_items: "{{ ood_user_apps }}"
+    group: "{{ ood_portal_admin_group }}"
+  with_items: "{{ ood_portal_user_apps }}"
 
 - name: Configure firewalld
   firewalld:
     state: enabled
-    port: "{{ ood_port }}/tcp"
+    port: "{{ ood_portal_port }}/tcp"
     permanent: "yes"
     immediate: "yes"
   when: ansible_virtualization_type != 'docker'
@@ -405,19 +322,17 @@
     path: "/dev/infiniband/umad0"
     mode: 0660
     owner: root
-    group: "{{ ood_admin_group }}"
+    group: "{{ ood_portal_admin_group }}"
   ignore_errors: true
 
+- name: Include auth task
+  include_tasks: dex-auth.yml
+
+- name: Include auth task
+  include_tasks: pam-auth.yml
 
 - name: Enable OOD webserver on startup
   service:
     name: httpd
     enabled: "yes"
     state: started
-
-- name: Enable ondemand-dex service on startup
-  service:
-    name: ondemand-dex
-    enabled: "yes"
-    state: started
-

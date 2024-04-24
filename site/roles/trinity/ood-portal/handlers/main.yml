@@ -1,6 +1,6 @@
 ---
 - name: run update_ood_portal
-  command: '/opt/ood/ood-portal-generator/sbin/update_ood_portal -f'
+  command: '/opt/ood/ood-portal-generator/sbin/update_ood_portal -f && /opt/ood/nginx_stage/sbin/nginx_stage nginx_clean -f'
   register: command_result
   failed_when: "'Completed successfully!' not in command_result.stdout"
   notify:
@@ -11,7 +11,7 @@
 - name: restart ondemand-dex
   systemd:
     name: ondemand-dex
-    state: restarted
+    state: "{{ 'restarted' if ood_portal_auth_provider == 'dex' else 'stopped' }}"
 
 - name: restart httpd
   systemd:
