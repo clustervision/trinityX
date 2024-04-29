@@ -30,16 +30,6 @@
     state: directory
     mode: 0755
 
-- name: Download prometheus-ha-exporter binary to local folder
-  get_url:
-    url: "{{ prometheus_ha_exporter_binary_url }}"
-    dest: "{{prometheus_ha_exporter_binary_install_dir}}/prometheus-ha-exporter"
-    mode: 0755
-  register: _download_archive
-  until: _download_archive is succeeded
-  retries: 5
-  delay: 2
-
 - name: Create log dir if prometheus_ha_exporter_log_dir is defined
   ansible.builtin.file:
     path: "{{ prometheus_ha_exporter_log_dir }}"
@@ -47,3 +37,13 @@
     mode: 0755
   when:
     - prometheus_ha_exporter_log_dir is defined
+
+- name: "Download prometheus-ha-exporter binary from {{prometheus_ha_exporter_binary_url}} to local folder"
+  get_url:
+    url: "{{ prometheus_ha_exporter_binary_url }}"
+    dest: "{{prometheus_ha_exporter_binary_install_dir}}/prometheus-ha-exporter"
+    mode: 0755
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 6
+  delay: 20
