@@ -24,34 +24,6 @@
     state: directory
     mode: 0755
 
-- name: Create the nvidia tmp directory {{_prometheus_nvidia_exporter_tmp_dir}} if not exists
-  file:
-    path: "{{_prometheus_nvidia_exporter_tmp_dir}}"
-    state: directory
-    mode: 0755
-
-
-- name: Download prometheus-nvidia-exporter binary to {{_prometheus_nvidia_exporter_tmp_dir}} folder
-  get_url:
-    url: "{{ prometheus_nvidia_exporter_binary_url }}"
-    dest: "{{_prometheus_nvidia_exporter_tmp_dir}}"
-    mode: 0755
-  register: _download_archive
-  until: _download_archive is succeeded
-  retries: 5
-  delay: 2
-
-- name: Unpack the archive
-  ansible.builtin.unarchive:
-    src: "{{_prometheus_nvidia_exporter_tmp_dir}}/nvidia_gpu_exporter_{{ prometheus_nvidia_exporter_version }}_linux_{{ go_arch }}.tar.gz"
-    dest: "{{_prometheus_nvidia_exporter_tmp_dir}}"
-
-- name: move prometheus binary from  "{{_prometheus_nvidia_exporter_tmp_dir}}/nvidia_gpu_exporter" to {{prometheus_nvidia_exporter_binary_install_dir}}/prometheus-nvidia-exporter
-  copy:
-    src: "{{_prometheus_nvidia_exporter_tmp_dir}}/nvidia_gpu_exporter"
-    dest: "{{prometheus_nvidia_exporter_binary_install_dir}}/prometheus-nvidia-exporter"
-    mode: 0755
-
 - name: Create log dir if prometheus_nvidia_exporter_log_dir is defined
   ansible.builtin.file:
     path: "{{ prometheus_nvidia_exporter_log_dir }}"
@@ -59,3 +31,13 @@
     mode: 0755
   when:
     - prometheus_nvidia_exporter_log_dir is defined
+
+- name: "Download prometheus-nvidia-exporter binary from {{prometheus_nvidia_exporter_binary_url}} to local folder"
+  get_url:
+    url: "{{ prometheus_nvidia_exporter_binary_url }}"
+    dest: "{{prometheus_nvidia_exporter_binary_install_dir}}/prometheus-nvidia-exporter"
+    mode: 0755
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 6
+  delay: 20
