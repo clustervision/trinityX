@@ -1,0 +1,69 @@
+---
+# tasks file for ood-interactive_apps
+
+# - name: Load facts
+#     set_fact:
+#       data: "{{ slurp_output['content'] | b64decode }}"
+
+- name: Create Python Module under {{ trix_modulefiles }}
+  template:
+    src: 'ood-python-module.j2'
+    dest: '{{ trix_shared }}/modulefiles/python'
+    mode: '0644'
+    owner: root
+    group: root
+  tags: jupyter
+  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+
+- name: Git Clone Jupyter
+  git:
+    repo: https://github.com/OSC/bc_example_jupyter.git
+    dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
+    force: true
+  tags: jupyter
+  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+
+- name: Set The Cluster Name
+  lineinfile:
+    dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/form.yml"
+    regexp: '^.*cluster: (.*)$'
+    line: 'cluster: "{{ ood_portal_cluster_name }}"'
+  tags: jupyter
+  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+
+- name: Set host in Submit File
+  template:
+    src: 'submit.yml.erb'
+    dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
+  tags: jupyter
+  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+
+- name: Update OnDemand Yaml
+  template:
+    src: 'submit.yml.erb'
+    dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
+  tags: jupyter
+  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+
+
+- name: Add Reverse Proxy in ood-portal
+  lineinfile:
+    line: '<LocationMatch "^/node/(?<host>[\w.-]+\.cluster)/(?<port>\d+)">AuthType openid-connect\nHeader edit Location "^[^/]+//[^/]+" ""\nHeader edit* Set-Cookie ";\s*(?i)Domain[^;]*" ""\nHeader edit* Set-Cookie ";\s*(?i)Path[^;]*" ""\nHeader edit  Set-Cookie "^([^;]+)" "$1; Path=/node/%{MATCH_HOST}e/%{MATCH_PORT}e"\nLuaHookFixups node_proxy.lua node_proxy_handler\n</LocationMatch>'
+    dest: "/etc/httpd/conf.d/ood-portal.conf"
+    insertbefore: '^\s</VirtualHost>'
+  tags: jupyter
+  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+
+# - name: Add Reverse Proxy in ood-portal
+#   template:
+#     src: 'ood-portal.conf'
+#     dest: "/etc/httpd/conf.d/ood-portal.conf"
+#     insertbefore: '^\s</VirtualHost>'
+#   tags: jupyter
+#   when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+
+# - name: Debug And Print   /etc/ood/config/ondemand.d/ondemand.yml          /etc/httpd/conf.d/ood-portal.conf
+#   debug:
+#     msg: "{{ item }}"
+#   with_items: "{{ trix_ood_interactive_apps }}"
+#   tags: jupyter
