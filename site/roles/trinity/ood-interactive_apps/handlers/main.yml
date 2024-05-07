@@ -1,2 +1,24 @@
 ---
-# handlers file for ood-vnc
+- name: run update_ood_portal
+  command: '/opt/ood/ood-portal-generator/sbin/update_ood_portal -f && /opt/ood/nginx_stage/sbin/nginx_stage nginx_clean -f'
+  register: command_result
+  failed_when: "'Completed successfully!' not in command_result.stdout"
+  notify:
+    - restart httpd
+    - restart htcacheclean
+    - restart ondemand-dex
+
+- name: restart ondemand-dex
+  systemd:
+    name: ondemand-dex
+    state: "{{ 'restarted' if ood_portal_auth_provider == 'dex' else 'stopped' }}"
+
+- name: restart httpd
+  systemd:
+    name: httpd
+    state: restarted
+
+- name: restart htcacheclean
+  systemd:
+    name: htcacheclean
+    state: restarted

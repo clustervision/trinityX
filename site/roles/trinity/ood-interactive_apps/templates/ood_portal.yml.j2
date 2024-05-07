@@ -1,0 +1,77 @@
+--- 
+
+{% if ood_portal_enable_ssl == true %}
+ssl:
+  - 'SSLCertificateFile "{{ ood_portal_ssl_certificate }}"'
+  - 'SSLCertificateKeyFile "{{ ood_portal_ssl_certificate_key }}"'
+{% endif %}
+
+
+port: {{ ood_portal_port }}
+listen_addr_port: {{ ood_portal_port }}
+servername: {{ ood_portal_login_host }}
+
+use_rewrites: true
+use_maintenance: true
+maintenance_ip_allowlist:
+- 10.*
+
+pun_stage_cmd: 'sudo /opt/ood/nginx_stage/sbin/nginx_stage'
+
+{% if enable_ood_vnc == true %}
+host_regex: '[\w.-]+'
+node_url: '/node'
+rnode_uri: '/rnode'
+{% endif %}
+dex_uri: /dex
+
+custom_vhost_directives:
+  - |
+    <LocationMatch "^/node/(?<host>[\w.-]+\.cluster)/(?<port>\d+)">
+          AuthType openid-connect
+          Require valid-user
+
+          # ProxyPassReverse implementation
+          Header edit Location "^[^/]+//[^/]+" ""
+
+          # ProxyPassReverseCookieDomain implemenation
+          Header edit* Set-Cookie ";\s*(?i)Domain[^;]*" ""
+
+          # ProxyPassReverseCookiePath implementation
+          Header edit* Set-Cookie ";\s*(?i)Path[^;]*" ""
+          Header edit  Set-Cookie "^([^;]+)" "$1; Path=/node/%{MATCH_HOST}e/%{MATCH_PORT}e"
+
+          LuaHookFixups node_proxy.lua node_proxy_handler
+      </LocationMatch>
+
+{% if ood_portal_auth_provider == 'dex' %}
+dex:
+  connectors:
+    - type: ldap
+      id: ldap
+      name: LDAP
+      config:
+        host: "{{ ood_portal_ldap_host }}:636"
+        insecureSkipVerify: true
+        userSearch:
+          baseDN: ou=People,dc=local
+          filter: "(objectClass=posixAccount)"
+          username: uid
+          emailAttr: uid
+          idAttr: uid
+          preferredUsernameAttr: uid
+        groupSearch:
+          baseDN: ou=Groups,dc=local
+          filter: "(objectClass=posixGroup)"
+          userMatchers:
+            - userAttr: DN
+              groupAttr: member
+          nameAttr: cn
+{% elif ood_portal_auth_provider == 'pam' %}
+auth:
+  - 'AuthType Basic'
+  - 'AuthName "Open OnDemand"'
+  - 'AuthBasicProvider PAM'
+  - 'AuthPAMService ood'
+  - 'Require valid-user'
+{% endif %}

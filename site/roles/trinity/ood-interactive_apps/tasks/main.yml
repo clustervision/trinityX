@@ -41,39 +41,6 @@
   tags: jupyter
   when: '"Jupyter Notebook" in trix_ood_interactive_apps'
 
-- name: Check if Reverse Proxy is already present in the file
-  lineinfile:
-    name: /etc/httpd/conf.d/ood-portal.conf
-    line: '<LocationMatch "^/node/(?<host>[\w.-]+\.cluster)/(?<port>\d+)">'
-    state: present
-  check_mode: yes
-  register: proxy_check
-
-- name: Add Reverse Proxy in ood-portal
-  lineinfile:
-    path: /etc/httpd/conf.d/ood-portal.conf
-    insertbefore: '</VirtualHost>'
-    line: |
-      <LocationMatch "^/node/(?<host>[\w.-]+\.cluster)/(?<port>\d+)">
-          AuthType openid-connect
-          Require valid-user
-
-          # ProxyPassReverse implementation
-          Header edit Location "^[^/]+//[^/]+" ""
-
-          # ProxyPassReverseCookieDomain implemenation
-          Header edit* Set-Cookie ";\s*(?i)Domain[^;]*" ""
-
-          # ProxyPassReverseCookiePath implementation
-          Header edit* Set-Cookie ";\s*(?i)Path[^;]*" ""
-          Header edit  Set-Cookie "^([^;]+)" "$1; Path=/node/%{MATCH_HOST}e/%{MATCH_PORT}e"
-
-          LuaHookFixups node_proxy.lua node_proxy_handler
-      </LocationMatch>
-    state: present
-  tags: jupyter
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
-
 - name: Creating Symlink for Jupyter Notebook
   file:
     src: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
@@ -82,23 +49,14 @@
     mode: 0755
     owner: root
     group: root
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
 
-- name: restart ondemand-dex
-  systemd:
-    name: ondemand-dex
-    state: "{{ 'restarted' if ood_portal_auth_provider == 'dex' else 'stopped' }}"
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
-
-- name: restart httpd
-  systemd:
-    name: httpd
-    state: restarted
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
-
-- name: restart htcacheclean
-  systemd:
-    name: htcacheclean
-    state: restarted
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
-
+- name: Render OOD ood_portal.yml config file
+  template:
+    src: 'ood_portal.yml.j2'
+    dest: '{{ ood_portal_cfg_path }}/ood_portal.yml'
+    mode: 0644
+    owner: root
+    group: root
+  notify: run update_ood_portal
+  tags: branding
