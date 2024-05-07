@@ -157,6 +157,19 @@
     state: present
     installroot: "{{ image_path }}"
 
+- name: Install Jupyter Notebook Dependency
+  dnf:
+    disable_gpg_check: true
+    name: "python3-pip"
+    state: present
+    installroot: "{{ image_path }}"
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+
+- name: Install Jupyter Notebook
+  shell: "chroot {{ image_path }} pip3 install notebook"
+  ignore_errors: true
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+
 - name: Install missing elfutils-libs on RedHat
   dnf:
     disable_gpg_check: true

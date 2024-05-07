@@ -62,6 +62,19 @@
   shell: "chroot {{ image_path }} apt-get -y install {{ item }}"
   with_items: "{{ image_core_packages }}"
 
+- name: Install Jupyter Notebook Dependency
+  dnf:
+    disable_gpg_check: true
+    name: "python3-pip"
+    state: present
+    installroot: "{{ image_path }}"
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+
+- name: Install Jupyter Notebook
+  shell: "chroot {{ image_path }} pip3 install notebook"
+  ignore_errors: true
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+
 - name: Download luna2-client package
   get_url:
     url: "{{ luna2_client_package }}"
