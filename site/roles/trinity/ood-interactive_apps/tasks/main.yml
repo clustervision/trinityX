@@ -9,7 +9,7 @@
     owner: root
     group: root
   tags: jupyter
-  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
 
 - name: Git Clone Jupyter
   git:
@@ -17,7 +17,7 @@
     dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
     force: true
   tags: jupyter
-  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
 
 - name: Set The Cluster Name
   lineinfile:
@@ -25,21 +25,21 @@
     regexp: '^.*cluster: (.*)$'
     line: 'cluster: "{{ ood_portal_cluster_name }}"'
   tags: jupyter
-  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
 
 - name: Set host in Submit File
   template:
     src: 'submit.yml.erb'
     dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
   tags: jupyter
-  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
 
 - name: Update OnDemand Yaml
   template:
     src: 'submit.yml.erb'
     dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
   tags: jupyter
-  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
 
 - name: Check if Reverse Proxy is already present in the file
   lineinfile:
@@ -72,6 +72,33 @@
       </LocationMatch>
     state: present
   tags: jupyter
-  when:  '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
 
+- name: Creating Symlink for Jupyter Notebook
+  file:
+    src: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
+    dest: "/var/www/ood/apps/sys/trinity_jupyter"
+    state: link
+    mode: 0755
+    owner: root
+    group: root
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
+
+- name: restart ondemand-dex
+  systemd:
+    name: ondemand-dex
+    state: "{{ 'restarted' if ood_portal_auth_provider == 'dex' else 'stopped' }}"
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
+
+- name: restart httpd
+  systemd:
+    name: httpd
+    state: restarted
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
+
+- name: restart htcacheclean
+  systemd:
+    name: htcacheclean
+    state: restarted
+  when: '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
 
