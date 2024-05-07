@@ -1,10 +1,6 @@
 ---
 # tasks file for ood-interactive_apps
 
-# - name: Load facts
-#     set_fact:
-#       data: "{{ slurp_output['content'] | b64decode }}"
-
 - name: Create Python Module under {{ trix_modulefiles }}
   template:
     src: 'ood-python-module.j2'
@@ -45,25 +41,37 @@
   tags: jupyter
   when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
 
+- name: Check if Reverse Proxy is already present in the file
+  lineinfile:
+    name: /etc/httpd/conf.d/ood-portal.conf
+    line: '<LocationMatch "^/node/(?<host>[\w.-]+\.cluster)/(?<port>\d+)">'
+    state: present
+  check_mode: yes
+  register: proxy_check
 
 - name: Add Reverse Proxy in ood-portal
   lineinfile:
-    line: '<LocationMatch "^/node/(?<host>[\w.-]+\.cluster)/(?<port>\d+)">AuthType openid-connect\nHeader edit Location "^[^/]+//[^/]+" ""\nHeader edit* Set-Cookie ";\s*(?i)Domain[^;]*" ""\nHeader edit* Set-Cookie ";\s*(?i)Path[^;]*" ""\nHeader edit  Set-Cookie "^([^;]+)" "$1; Path=/node/%{MATCH_HOST}e/%{MATCH_PORT}e"\nLuaHookFixups node_proxy.lua node_proxy_handler\n</LocationMatch>'
-    dest: "/etc/httpd/conf.d/ood-portal.conf"
-    insertbefore: '^\s</VirtualHost>'
+    path: /etc/httpd/conf.d/ood-portal.conf
+    insertbefore: '</VirtualHost>'
+    line: |
+      <LocationMatch "^/node/(?<host>[\w.-]+\.cluster)/(?<port>\d+)">
+          AuthType openid-connect
+          Require valid-user
+
+          # ProxyPassReverse implementation
+          Header edit Location "^[^/]+//[^/]+" ""
+
+          # ProxyPassReverseCookieDomain implemenation
+          Header edit* Set-Cookie ";\s*(?i)Domain[^;]*" ""
+
+          # ProxyPassReverseCookiePath implementation
+          Header edit* Set-Cookie ";\s*(?i)Path[^;]*" ""
+          Header edit  Set-Cookie "^([^;]+)" "$1; Path=/node/%{MATCH_HOST}e/%{MATCH_PORT}e"
+
+          LuaHookFixups node_proxy.lua node_proxy_handler
+      </LocationMatch>
+    state: present
   tags: jupyter
-  when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when:  '"Jupyter Notebook" in trix_ood_interactive_apps and proxy_check is changed'
 
-# - name: Add Reverse Proxy in ood-portal
-#   template:
-#     src: 'ood-portal.conf'
-#     dest: "/etc/httpd/conf.d/ood-portal.conf"
-#     insertbefore: '^\s</VirtualHost>'
-#   tags: jupyter
-#   when:  '"Jupyter Notebook" in trix_ood_interactive_apps'
 
-# - name: Debug And Print   /etc/ood/config/ondemand.d/ondemand.yml          /etc/httpd/conf.d/ood-portal.conf
-#   debug:
-#     msg: "{{ item }}"
-#   with_items: "{{ trix_ood_interactive_apps }}"
-#   tags: jupyter
