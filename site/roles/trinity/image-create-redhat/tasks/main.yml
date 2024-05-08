@@ -163,17 +163,22 @@
     name: "python3-pip"
     state: present
     installroot: "{{ image_path }}"
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in ood_interactive_apps'
 
 - name: Upgrade Python3-pip Version to support Jupyter Notebook Installation
   shell: "chroot {{ image_path }} pip3 install --upgrade pip"
   ignore_errors: true
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in ood_interactive_apps'
 
 - name: Install Jupyter Notebook
   shell: "chroot {{ image_path }} pip3 install notebook"
   ignore_errors: true
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in ood_interactive_apps'
+
+- name: Install Jupyter Notebook
+  shell: "chroot {{ image_path }} pip3 install ipyparallel"
+  ignore_errors: true
+  when: '"Jupyter Notebook" in ood_interactive_apps'
 
 - name: Install missing elfutils-libs on RedHat
   dnf:

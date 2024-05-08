@@ -9,7 +9,7 @@
     owner: root
     group: root
   tags: jupyter
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in ood_interactive_apps'
 
 - name: Git Clone Jupyter
   git:
@@ -17,7 +17,7 @@
     dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
     force: true
   tags: jupyter
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in ood_interactive_apps'
 
 - name: Set The Cluster Name
   lineinfile:
@@ -25,21 +25,21 @@
     regexp: '^.*cluster: (.*)$'
     line: 'cluster: "{{ ood_portal_cluster_name }}"'
   tags: jupyter
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in ood_interactive_apps'
 
 - name: Set host in Submit File
   template:
     src: 'submit.yml.erb'
     dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
   tags: jupyter
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in ood_interactive_apps'
 
 - name: Update OnDemand Yaml
   template:
     src: 'submit.yml.erb'
     dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
   tags: jupyter
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in ood_interactive_apps'
 
 - name: Creating Symlink for Jupyter Notebook
   file:
@@ -49,7 +49,7 @@
     mode: 0755
     owner: root
     group: root
-  when: '"Jupyter Notebook" in trix_ood_interactive_apps'
+  when: '"Jupyter Notebook" in ood_interactive_apps'
 
 - name: Render OOD ood_portal.yml config file
   template:
