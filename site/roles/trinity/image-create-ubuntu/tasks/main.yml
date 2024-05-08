@@ -15,10 +15,19 @@
 
 - name: Build basic Ubuntu image
   shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ image_path }} {{ ubuntu_distribution_source }} | tee /tmp/debootstrap.log"
-  ignore_errors: true
+  retries: 3
+  delay: 15
+  register: ubuntu_base_image_result
+  until: ubuntu_base_image_result.rc == 0
+
+- name: Verify logs
+  shell: "grep 'E:' /tmp/debootstrap.log | grep -v 'Tried to extract package' > /dev/null && echo fail || true"
+  register: ubuntu_base_image_verify
 
 - name: Verify build
-  shell: "grep 'E:' /tmp/debootstrap.log || true"
+  fail:
+    msg: "Ubuntu basic image build failed. please rerun playbook or look at /tmp/debootstrap.log"
+  when: ubuntu_base_image_verify.stdout == 'fail'
 
 - name: Create {{ image_path }}/dev
   file:
