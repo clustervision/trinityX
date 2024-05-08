@@ -1,62 +1,8 @@
 ---
 # tasks file for ood-interactive_apps
 
-- name: Create Python Module under {{ trix_modulefiles }}
-  template:
-    src: 'ood-python-module.j2'
-    dest: '{{ trix_shared }}/modulefiles/python'
-    mode: '0644'
-    owner: root
-    group: root
+- name: Install Jupyter Notebook
+  ansible.builtin.include_tasks:
+    file: jupyter.yaml
+  when: '"Jupyter Notebook" in ood_interactive_apps'
   tags: jupyter
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
-- name: Git Clone Jupyter
-  git:
-    repo: https://github.com/OSC/bc_example_jupyter.git
-    dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
-    force: true
-  tags: jupyter
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
-- name: Set The Cluster Name
-  lineinfile:
-    dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/form.yml"
-    regexp: '^.*cluster: (.*)$'
-    line: 'cluster: "{{ ood_portal_cluster_name }}"'
-  tags: jupyter
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
-- name: Set host in Submit File
-  template:
-    src: 'submit.yml.erb'
-    dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
-  tags: jupyter
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
-- name: Update OnDemand Yaml
-  template:
-    src: 'submit.yml.erb'
-    dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
-  tags: jupyter
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
-- name: Creating Symlink for Jupyter Notebook
-  file:
-    src: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
-    dest: "/var/www/ood/apps/sys/trinity_jupyter"
-    state: link
-    mode: 0755
-    owner: root
-    group: root
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
-- name: Render OOD ood_portal.yml config file
-  template:
-    src: 'ood_portal.yml.j2'
-    dest: '{{ ood_portal_cfg_path }}/ood_portal.yml'
-    mode: 0644
-    owner: root
-    group: root
-  notify: run update_ood_portal
-  tags: branding

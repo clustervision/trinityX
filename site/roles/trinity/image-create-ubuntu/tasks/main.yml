@@ -62,25 +62,6 @@
   shell: "chroot {{ image_path }} apt-get -y install {{ item }}"
   with_items: "{{ image_core_packages }}"
 
-- name: Install Jupyter Notebook Dependency
-  shell: "chroot {{ image_path }} apt-get -y install python3-pip"
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
-- name: Upgrade Python3-pip Version to support Jupyter Notebook Installation
-  shell: "chroot {{ image_path }} pip3 install --upgrade pip"
-  ignore_errors: true
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
-- name: Install Jupyter Notebook
-  shell: "chroot {{ image_path }} pip3 install notebook"
-  ignore_errors: true
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
-- name: Install Jupyter Notebook IpyParallel
-  shell: "chroot {{ image_path }} pip3 install ipyparallel"
-  ignore_errors: true
-  when: '"Jupyter Notebook" in ood_interactive_apps'
-
 - name: Download luna2-client package
   get_url:
     url: "{{ luna2_client_package }}"
