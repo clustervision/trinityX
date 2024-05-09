@@ -59,6 +59,13 @@
     shell: "pip3 install --upgrade pip"
     ignore_errors: true
 
+  - name: Uninstall clashing python packages
+    dnf:
+      name: '{{ item }}'
+      state: removed
+    with_items:
+      - python3-packaging
+
   - name: Install Jupyter Notebook
     shell: "pip3 install {{ item }}"
     with_items:
