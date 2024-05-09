@@ -59,6 +59,15 @@
     shell: "pip3 install --upgrade pip"
     ignore_errors: true
 
+  - name: Uninstall clashing python packages
+    dnf:
+      name: '{{ item }}'
+      state: removed
+    with_items:
+      - python3-packaging
+      - python3-requests
+    when: ansible_facts['os_family'] == "RedHat"
+
   - name: Install Jupyter Notebook
     shell: "pip3 install {{ item }}"
     with_items:
