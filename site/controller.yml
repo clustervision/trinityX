@@ -238,9 +238,6 @@
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
       tags: rsyslog
 
-    - role: trinity/logrotate
-      tags: logrotate
-
     #  ----------
     # - role: trinity/docker-registry
     #   when: enable_docker
@@ -262,7 +259,7 @@
       ood_portal_login_host: "{{ trix_external_fqdn }}"
       ood_portal_ldap_host: "{{ trix_ctrl_ip }}"
       ood_portal_admin_group: "{{ admin_group }}"
-      tags: ood, ood-portal
+      tags: ood, ood-portal, interactive-apps, ood-interactive-apps
 
     - role: trinity/ood-vnc
       tags: ood, ood-vnc
@@ -366,6 +363,9 @@
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       tags: grafana, monitoring
+
+    - role: trinity/logrotate
+      tags: logrotate
 
     - role: trinity/cleanup-legacy
       tags: cleanup-legacy
