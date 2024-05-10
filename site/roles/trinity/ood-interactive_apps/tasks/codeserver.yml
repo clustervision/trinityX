@@ -1,0 +1,52 @@
+---
+
+- block:
+
+  - name: Git Clone Code Server
+    git:
+      repo: https://github.com/OSC/bc_osc_codeserver.git
+      dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_codeserver"
+      force: true
+
+  - name: Set The Cluster Name
+    lineinfile:
+      dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_codeserver/form.yml.erb"
+      regexp: '^.*cluster: (.*)$'
+      line: 'cluster: "{{ ood_portal_cluster_name }}"'
+
+  - name: Creating Symlink for Code Server
+    file:
+      src: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_codeserver"
+      dest: "/var/www/ood/apps/sys/trinity_codeserver"
+      state: link
+      mode: 0755
+      owner: root
+      group: root
+
+  when: 
+    - on_controller|default(False)
+    - ansible_connection not in 'chroot'
+
+- block:
+  - name: Fetch Code Server RPM 4.89.0
+    shell: "wget -P /opt/ https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-amd64.rpm"
+    when: ansible_facts['os_family'] == "RedHat"
+  
+  - name: Fetch Code Server Deb 4.89.0
+    shell: "wget -P /opt/ https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_amd64.deb"
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+    
+  - name: Install Code Server RPM 4.89.0
+    shell: "rpm -i /opt/code-server-4.89.0-amd64.rpm"
+    when: ansible_facts['os_family'] == "RedHat"
+  
+  - name: Install Code Server DEB 4.89.0
+    shell: "dpkg -i /opt/code-server-4.89.0-amd64.rpm"
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: Install Code Server DEB 4.89.0 Dependencies
+    shell: "apt-get install -yf"
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  when: ansible_connection in 'chroot'
+
