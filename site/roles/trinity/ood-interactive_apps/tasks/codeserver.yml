@@ -28,24 +28,33 @@
     - ansible_connection not in 'chroot'
 
 - block:
-  - name: Fetch Code Server RPM 4.89.0
-    shell: "wget -P /opt/ https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-amd64.rpm"
-    when: ansible_facts['os_family'] == "RedHat"
-  
-  - name: Fetch Code Server Deb 4.89.0
-    shell: "wget -P /opt/ https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_amd64.deb"
-    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-    
-  - name: Install Code Server RPM 4.89.0
-    shell: "rpm -i /opt/code-server-4.89.0-amd64.rpm"
-    when: ansible_facts['os_family'] == "RedHat"
-  
-  - name: Install Code Server DEB 4.89.0
-    shell: "dpkg -i /opt/code-server-4.89.0-amd64.rpm"
-    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  - block:
+    - name: Install Code Server 4.89.0
+      dnf:
+        name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-amd64.rpm"
+        state: present
 
-  - name: Install Code Server DEB 4.89.0 Dependencies
-    shell: "apt-get install -yf"
+#    - name: Fetch Code Server RPM 4.89.0
+#      shell: "wget -P /opt/ https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-amd64.rpm"
+#  
+#    - name: Install Code Server RPM 4.89.0
+#      shell: "rpm -i /opt/code-server-4.89.0-amd64.rpm"
+    when: ansible_facts['os_family'] == "RedHat"
+  
+  - block:
+#    - name: Fetch Code Server Deb 4.89.0
+#      shell: "wget -P /opt/ https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_amd64.deb"
+#    
+#    - name: Install Code Server DEB 4.89.0
+#      shell: "dpkg -i /opt/code-server-4.89.0-amd64.rpm"
+
+    - name: Install Code Server 4.89.0
+      apt:
+        name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_amd64.deb"
+        state: present
+
+    - name: Install Code Server DEB 4.89.0 Dependencies
+      shell: "apt-get install -yf"
     when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
   when: ansible_connection in 'chroot'
