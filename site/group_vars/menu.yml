@@ -1,0 +1,170 @@
+## ----------- Instructions -------------
+## Types(additional entries): [text(limit), ip(check_network, limit[TBA]), network(limit[TBA]), dropdown(choices), bool, list(limit), int(limit), subnet]
+## General additional entries:
+## (ha) can be an additional entry for all entries: If all.yml HA is false and elem[HA] is true, then it won't show. and vice versa
+## (pseudo) can be an additional entry for all entries: Displays a pseudonym that might be more descriptive
+## (seperator) can be an additional entry for all entries: Adds a "------" dashed seperator between this field and the one that follows
+## (description) can be an additional entry for all entries: Adds a description text before each field
+## Restrictions: 
+## 1- One element (and one element only) has to be a network. The network must be present. Has to be of type Network
+## 2- The element trix_cluster_netprefix has to be present as well. Has to be of type subnet
+## 3- Do not attempt to add el8_openhpc_repositories
+## 4- The "High Availability" menu has to remain being called "High Availability".
+## Note:
+## The SharedFSDisk will only show up if the "High Availability" menu is there
+---
+Cluster config:
+  trix_domain:
+    type: text
+    big_seperator: true
+    description: "The domain used cluster nodes and controllers internally"
+  trix_cluster_net:
+    type: network
+    description: "Cluster's internal network"
+  trix_cluster_netprefix:
+    type: subnet
+    seperator: true
+  trix_cluster_dhcp_start:
+    type: ip
+    check_network: true
+  trix_cluster_dhcp_end:
+    type: ip
+    check_network: true
+    big_seperator: true
+
+  trix_ctrl1_ip:
+    description: (First) controller
+    type: ip
+    check_network: true
+  trix_ctrl1_hostname:
+    type: text
+    seperator: true
+  trix_ctrl2_ip:
+    description: Second controller
+    type: ip
+    ha: true
+    check_network: true
+  trix_ctrl2_hostname:
+    type: text
+    ha: true
+    seperator: true
+  trix_ctrl_ip:
+    description: Controller's floating or shared IP used with H/A
+    type: ip
+    check_network: true
+    ha: true
+  trix_ctrl_hostname:
+    type: text
+    ha: true
+  
+High Availability:
+  enable_ipmilan_fencing:
+    type: bool
+  trix_ctrl1_bmcip:
+    type: ip
+    enable_ipmilan_fencing: true
+  trix_ctrl2_bmcip:
+    type: ip
+    enable_ipmilan_fencing: true
+  fence_ipmilan_login:
+    type: text
+  fence_ipmilan_passwd:
+    type: text
+    seperator: true
+  enable_heartbeat_link:
+    type: bool
+  trix_ctrl1_heartbeat_ip:
+    type: ip
+    enable_heartbeat_link: true
+  trix_ctrl2_heartbeat_ip:
+    type: ip
+    enable_heartbeat_link: true
+
+Additional Networks:
+  trix_infiniband_net:
+    type: ip
+  trix_infiniband_netprefix:
+    type: text
+    seperator: true
+  trix_bmc_net:
+    type: ip
+  trix_bmc_netprefix:
+    type: text
+
+Network general config:
+  trix_external_fqdn:
+    description: Hostname of the controller as its being known by from outside the cluster. If undefined, it will use the controller's fqdn.
+    type: text
+  trix_dns_forwarders:
+    type: list
+    seperator: true
+  resolv_search_domains:
+    type: text
+    seperator: true
+  firewalld_public_interfaces:
+    type: list
+  firewalld_trusted_interfaces:
+    type: list
+  firewalld_public_tcp_ports:
+    type: list
+  firewalld_public_udp_ports:
+    type: list
+    seperator: true
+
+Authentication config:
+  enable_authentication:
+    type: bool
+    seperator: true
+  admin_group:
+    type: text
+    seperator: true
+
+SSL config:
+  ssl_cert_path:
+    type: text
+  ssl_ca_cert:
+    type: text
+  ssl_cert_group:
+    type: text
+    seperator: true
+
+Luna config:
+  luna_username:
+    type: text
+  luna_password:
+    type: text
+    seperator: true
+  luna_protocol:
+    type: dropdown
+    choices: ["https", "http"]
+  luna_verify_certificate:
+    type: bool
+
+Workload Manager:
+  workload_manager:
+    type: dropdown
+    choices: ["slurm", "pbspro"]
+  enable_slurm_pam:
+    type: bool
+
+Open Ondemand:
+  enable_ood_vnc:
+    type: bool
+  ood_authentication_provider:
+    type: dropdown
+    choices: ["dex", "pam"]
+  ood_interactive_apps:
+    type: list
+
+Misc:
+  image_default_target:
+    type: dropdown
+    choices: ["multi-user", "graphical"]
+  additional_env_modules:
+    type: list
+  enable_openhpc:
+    type: bool
+  enable_selinux:
+    type: bool
+  enable_docker:
+    type: bool
