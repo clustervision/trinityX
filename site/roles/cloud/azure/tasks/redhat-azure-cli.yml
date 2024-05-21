@@ -1,0 +1,33 @@
+---
+# Enable the Azure CLI Support for the TrinityX Installation.
+
+- name: Check if azure-cli is already Installed
+  shell: "az -h"
+  register: azure_cli_check
+  ignore_errors: true
+
+- name: Import the Microsoft repository key
+  shell: "rpm --import https://packages.microsoft.com/keys/microsoft.asc"
+  when: azure_cli_check.stderr
+
+- name: Add packages-microsoft-com-prod repository for RHEL 9
+  yum:
+    disable_gpg_check: true
+    name: "https://packages.microsoft.com/config/rhel/9.0/packages-microsoft-prod.rpm"
+    state: present
+  when: azure_cli_check.stderr and ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int == 9
+
+- name: Add packages-microsoft-com-prod repository for RHEL 8
+  yum:
+    disable_gpg_check: true
+    name: "https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm"
+    state: present
+  when: azure_cli_check.stderr and ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int == 8
+
+- name: Install Microsoft Azure CLI
+  yum:
+    disable_gpg_check: true
+    name: "azure-cli"
+    state: present
+  when: azure_cli_check.stderr
+

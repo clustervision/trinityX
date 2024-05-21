@@ -1,0 +1,67 @@
+---
+# Main file to enable the Azure Support for the TrinityX Installation.
+
+- name: Include Cloud provider specific variables.
+  include_vars: "group_vars/azure.yml"
+
+- block:
+  - name: Install HashiCorp Terraform on Redhat
+    include_tasks: "{{ role_path }}/tasks/redhat-terraform.yml"
+    when:
+      - ansible_facts['os_family'] == "RedHat"
+
+  - name: Install HashiCorp Terraform on Debian
+    include_tasks: "{{ role_path }}/tasks/debian-terraform.yml"
+    when:
+      - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  when:
+    - vars.azure_installer == 'terraform'
+
+- block:
+  - name: Install Microsoft Azure CLI on Redhat
+    include_tasks: "{{ role_path }}/tasks/redhat-azure-cli.yml"
+    when:
+      - ansible_facts['os_family'] == "RedHat"
+
+  - name: Install Microsoft Azure CLI on Debian
+    include_tasks: "{{ role_path }}/tasks/debian-azure-cli.yml"
+    when:
+      - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  when:
+    - vars.azure_installer == 'azure-cli'
+
+
+- block:
+  - name: Clone TrinityX Terraform Repository
+    debug:
+      msg: "Clone TrinityX Terraform Repository"
+
+  - name: Create tfvars file depending on the variable supplied
+    debug:
+      msg: "Create tfvars file depending on the variable supplied"
+  
+  - name: Do Terraform init
+    debug:
+      msg: "Do Terraform init"
+  
+  - name: Do Terraform validate
+    debug:
+      msg: "Do Terraform validate"
+  
+  - name: Do Terraform plan
+    debug:
+      msg: "Do Terraform plan"
+  
+  - name: Do Terraform apply
+    debug:
+      msg: "Do Terraform apply"
+  
+  - name: Do Terraform destroy
+    debug:
+      msg: "Do Terraform destroy"
+  when:
+    - vars.azure_installer == 'terraform'
+
+
+
+

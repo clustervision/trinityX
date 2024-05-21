@@ -1,0 +1,28 @@
+---
+# Enable the AWS CLI Support for the TrinityX Installation.
+
+- name: Check if azure-cli is already Installed
+  shell: "aws help | grep AWS"
+  register: aws_check
+  ignore_errors: true
+
+- name: Remove the previous Installation
+  shell: "{{ item }}"
+  with_items:
+    - "rm -rf /usr/local/bin/aws"
+    - "rm -rf /usr/local/bin/aws_completer"
+    - "rm -rf /usr/local/aws-cli"
+    - "rm -rf ~/.aws/"
+  when: aws_check.stdout
+
+- name: Download the AWS installation file
+  shell: "curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o '/tmp/awscliv2.zip'"
+
+- name: Unzip the installer
+  shell: "unzip /tmp/awscliv2.zip -d /tmp/"
+
+- name: Installing AWS CLI
+  shell: "sh /tmp/aws/install"
+
+- name: Clean up
+  shell: "rm -rf /tmp/aws"

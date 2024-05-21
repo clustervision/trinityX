@@ -1,0 +1,36 @@
+---
+# Enable the AWS Cloud Support with Terraform for the TrinityX Installation.
+
+- name: Check if Terraform is already Installed
+  shell: "terraform -h"
+  register: terraform_check
+
+- name: Install Terraform Dependency
+  apt:
+    name: "gnupg software-properties-common"
+    state: present
+  when: terraform_check.stdout
+
+- name: Install the HashiCorp GPG key
+  shell: "wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null"
+  when: terraform_check.stdout
+
+# - name: Verify Terraform Signature
+#   shell: "gpg --no-default-keyring --keyring /usr/share/keyrings/hashicorp-archive-keyring.gpg --fingerprint"
+#   when: terraform_check.stdout
+
+- name: Add HashiCorp Repository
+  shell: "echo 'deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main' | sudo tee /etc/apt/sources.list.d/hashicorp.list"
+  when: terraform_check.stdout
+
+- name: Update package indexes
+  apt:
+    update_cache: yes
+  when: terraform_check.stdout
+
+- name: Install Terraform
+  apt:
+    name: "terraform"
+    state: present
+  when: terraform_check.stdout
+  

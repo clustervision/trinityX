@@ -1,0 +1,102 @@
+---
+# Main file to build the iPXE.efi file for the grub booting.
+
+- name: Do something if Ansible Core version is >= 2.15
+  debug:
+    msg: "Proceeding with next task"
+
+
+- name: Set package manager variable
+  set_fact:
+    package_manager: "{{ ansible_facts['pkg_mgr'] }}"
+
+- name: Package Manager
+  debug:
+    msg: "This Linux Installation with {{ ansible_facts['distribution'] }} have available Package Manager is {{ package_manager  }}"
+
+- name: Install required packages for RPM-based systems
+  package:
+    name:
+      - make
+      - gcc
+      - binutils
+      - perl
+      - mtools
+      - genisoimage
+      - syslinux
+      - xz-devel
+      - libtool
+      - m4
+      - git
+    state: present
+  when: package_manager in ['dnf', 'yum']
+
+- name: Install required packages for Debian-based systems
+  package:
+    name:
+      - make
+      - gcc
+      - binutils
+      - perl
+      - mtools
+      - mkisofs
+      - syslinux
+      - liblzma-dev
+      - isolinux
+    state: present
+  when: package_manager == 'apt'
+  
+- name: Check if the folder /tmp/ipxe exists
+  stat:
+    path: /tmp/ipxe
+  register: ipxe_folder
+
+- name: Remove the folder /tmp/ipxe if it exists
+  file:
+    path: /tmp/ipxe
+    state: absent
+  when: ipxe_folder.stat.exists
+  
+- name: Clone iPXE
+  git:
+    repo: git://git.ipxe.org/ipxe.git
+    dest: /tmp/ipxe
+
+- name: Create File to embed Next Server IP with iPXE
+  copy:
+    content: |
+      #!ipxe
+      dhcp && goto netboot || goto dhcperror
+
+      :dhcperror
+      prompt --key s --timeout 10000 DHCP failed, hit 's' for the iPXE shell; reboot in 10 seconds && shell || reboot
+
+      :netboot
+      chain http://10.141.255.254:7051/boot ||
+
+      prompt --key s --timeout 10000 Chainloading failed, hit 's' for the iPXE shell; reboot in 10 seconds && shell || reboot
+
+    dest: /tmp/ipxe/src/embed.ipxe
+
+- name: Enable NTFS support
+  lineinfile:
+    path: /tmp/ipxe/src/config/general.h
+    regexp: '^#undef\s+DOWNLOAD_PROTO_NFS'
+    line: '#define DOWNLOAD_PROTO_NFS'
+
+- name: Enable PING support
+  replace:
+    path: /tmp/ipxe/src/config/general.h
+    regexp: '^\/\/#define\ (PING_CMD|IPSTAT_CMD|REBOOT_CMD|POWEROFF)'
+    replace: '#define \1'
+
+- name: Build iPXE
+  command: make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe
+  args:
+    chdir: /tmp/ipxe/src
+
+
+
+
+
+

@@ -1,44 +1,43 @@
 ---
-- hosts:
-    - cloud-controller
+- name: Check Ansible Core Version
+  hosts: controllers
+  gather_facts: false
+  tasks:
+    - name: Get Ansible Core Version
+      shell: ansible --version | head -n1 | cut -d ']' -f1 | awk '{print $3}'
+      register: ansible_version_output
+      changed_when: false
 
-  roles:
-  - role: cloud/filesystem
-    tags: filesystem
+    - name: Check if Ansible Core version is less than 2.15
+      set_fact:
+        ansible_version_lt_215: "{{ ansible_version_output.stdout.split('.') | map('int') | list < [2, 15] }}"
 
-- import_playbook: controller.yml
-  vars:
-    firewalld_trusted_interfaces: ['{{ ansible_default_ipv4.interface }}']
-    envmodules_default_list: []
+    - name: Fail if Ansible Core version is less than 2.15
+      assert:
+        that:
+          - ansible_version_lt_215 == false
+        fail_msg: "Your Ansible Core version is {{ ansible_version_output.stdout }}. Please upgrade to at least version 2.15."
+        success_msg: "Ansible Core version is adequate ({{ ansible_version_output.stdout }})."
 
-- hosts:
-    - controller
+- name: Install TrinityX By Importing the controller.yml
+  import_playbook: controller.yml
 
-  roles:
-  - role: cloud/slurm-cloud
-    slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-    tags: slurm-cloud
-
-  - role: cloud/wireguard
-    wg_server: false
-    when: '"cloud-controller" not in groups'
-    tags: wireguard
-
-  - role: trinity/firewalld
-    firewalld_trusted_interfaces:
-      - wg0
-    firewalld_update_ifcfg_files: false
-    when: '"cloud-controller" not in groups'
-    tags: firewalld
-
-  - role: trinity/nfs-mounts
-    nfs_enable_rdma: false
-    nfs_mounts:
-    - path: '{{ aws.sharedfs_mountpoint }}'
-      remote: '{{ aws.sharedfs_ip}}:/'
-      options: 'nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
-    tags: nfs-mounts
-
-  - role: cloud/userspace
-    when: '"cloud-controller" in groups'
-    tags: userspace
+- name: Cloud Support
+  hosts: controllers
+  gather_facts: true
+  tasks:
+    - name: Include Cloud Role and Install IAC approach.
+      include_role:
+        name: "cloud/{{ item }}"
+      loop: "{{ vars.cloud_support }}"
+      when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+    
+    - name: Set cloud_condition fact
+      set_fact:
+        cloud_condition: >-
+          {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
+    
+    - name: Build iPXE uEFI file for the GRUB Booting.
+      include_role:
+        name: "cloud/ipxe"
+      when: cloud_condition
