@@ -77,17 +77,13 @@ install_git_and_clone_repo() {
         mv trinityX "trinityX-$(date +"%Y%m%d%H%M%S")"
     fi
 
-    # Check if the trinityX-combined directory exists
-    if [ -d "trinityx-combined" ]; then
-        echo "TrinityX-Combined directory already exists. Renaming..."
-        mv trinityx-combined "trinityx-combined-$(date +"%Y%m%d%H%M%S")"
-    fi
-
     # Clone the repository
     echo "Cloning TrinityX repository..."
-    # GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone git@github.com:clustervision/trinityX.git
-    GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone -c http.sslVerify=false git@gitlab.taurusgroup.one:clustervision/trinityx-combined.git
+    # GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone git@github.com:clustervision/trinityX.git trinityX
+    GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone -c http.sslVerify=false git@gitlab.taurusgroup.one:clustervision/trinityx-combined.git trinityX
 
+    cd trinityX/
+    sh prepare.sh
     echo
     echo "TrinityX-Cloud is downloaded, Kindly Follow the installation procedure..."
     echo
