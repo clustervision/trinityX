@@ -2,37 +2,176 @@
 # Creating the Azure VHD for GRUB Booting.
 
 - block:
+  - name: Get VHD path
+    set_fact:
+      vhd_path: "{{ trix_images }}/{{ vhd_name }}"
+
   - name: Install Dependency qemu-img
     dnf:
       disable_gpg_check: true
       name: "qemu-img"
       state: present
   
+  - name: Create directories for VHD
+    file:
+      name: "{{ item }}"
+      state: directory
+    with_items:
+      - "{{ vhd_path }}"
+      - "{{ vhd_path }}/etc"
+      - "{{ vhd_path }}/etc/sysconfig"
+      - "{{ vhd_path }}/etc/dnf"
   
+  - name: Create Empty Config files
+    file:
+      path: "{{ item }}"
+      state: touch
+    with_items:
+      - "{{ vhd_path }}/etc/sysconfig/network"
+      - "{{ vhd_path }}/etc/resolv.conf"
+  
+  - name: Copy local DNF Configuration and Variables
+    copy:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+    with_items:
+      - { src: "/etc/dnf/dnf.conf", dest: "{{ vhd_path }}/etc/dnf/" }
+      - { src: "/etc/dnf/vars", dest: "{{ vhd_path }}/etc/dnf/" }
+
+  - name: Create basic /dev files
+    command: "/usr/bin/mknod {{ vhd_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates={{ vhd_path }}/dev/{{ item.dev }}"
+    args:
+      creates: "{{ vhd_path }}/dev/{{ item.dev }}"
+    with_items:
+      - { dev: "null",    mo: "666", t: 'c', ma: 1, mi: 3 }  # device, mode, type, major, minor
+      - { dev: "zero",    mo: "666", t: 'c', ma: 1, mi: 5 }
+      - { dev: "random",  mo: "666", t: 'c', ma: 1, mi: 8 }
+      - { dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9 }
+      - { dev: "console", mo: "600", t: 'c', ma: 5, mi: 1 }
+      - { dev: "ptmx",    mo: "666", t: 'c', ma: 5, mi: 2 }
+      - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
+
+  - name: Check OS release on controller
+    command: rpm -qf /etc/os-release --queryformat '%{VERSION}'
+    register: releasever
+    changed_when: false
+
   - name: Install core packages - @core, kernel and grub2
     dnf:
       disable_gpg_check: true
       name: "{{ vhd_core_packages }}"
       state: present
-      installroot: "{{ image_path }}"
+      installroot: "{{ vhd_path }}"
+      releasever: releasever.stdout
+  
+  - name: Copy Grub iPXE File
+    copy:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+    with_items:
+      - { src: "/trinity/images/ipxe/src/bin-x86_64-efi/ipxe.efi", dest: "{{ vhd_path }}/boot/efi/EFI/rocky/ipxe.efi" }
+      - { src: "/usr/share/grub/unicode.pf2", dest: "{{ vhd_path }}/boot/efi/EFI/rocky/fonts/" }
+  
+  - name: Mount dev, sys and Proc
+    mount:
+      src: "{{ item.src }}"
+      path: "{{ item.path }}"
+      opts: bind
+      fstype: none
+      state: mounted
+    with_items:
+    -  { src: "/dev/", path: "{{ vhd_path }}/dev/" }
+    -  { src: "/sys/", path: "{{ vhd_path }}/sys/" }
+    -  { src: "/proc/", path: "{{ vhd_path }}/proc/" }
+  
+  - name: Install Grub Entry
+    shell: "chroot {{ vhd_path }} grub2-mkconfig -o /boot/efi/EFI/rocky/grub.cfg"
+  
+  - name: Copy GRUB Menu Entry
+    template:
+      src: 'grub.cfg'
+      dest: "/boot/efi/EFI/rocky/grub.cfg"
+  
+  - name: Update Grub
+    shell: "chroot {{ vhd_path }} grub2-set-default 'Trinity iPXE'"
 
-  - name: Install Terraform Dependency
-    yum:
-      disable_gpg_check: true
-      name: "yum-utils"
-      state: present
-    when: terraform_check.stderr
+  - name: Unmount dev, sys and Proc
+    mount:
+      src: "{{ item.src }}"
+      path: "{{ item.path }}"
+      opts: bind
+      fstype: none
+      state: unmounted
+    with_items:
+    -  { src: "/dev/", path: "{{ vhd_path }}/dev/" }
+    -  { src: "/sys/", path: "{{ vhd_path }}/sys/" }
+    -  { src: "/proc/", path: "{{ vhd_path }}/proc/" }
 
-  - name: Add Terraform Repository
-    shell: "yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo"
-    when: terraform_check.stderr
+  - name: Create Empty Linux disk
+    shell: "qemu-img create -f raw {{ trix_images }}/azure.img 4G"
+  
+  - name: Get the Loop Device
+    shell: "losetup -Pf --show azure.img"
+    register: loop_device
+    changed_when: false
 
-  - name: Install Terraform
-    yum:
-      disable_gpg_check: true
-      name: "terraform"
-      state: present
-    when: terraform_check.stderr
+  - name: Create Partitions
+    shell: "parted {{ loop_device.stdout }} -s {{ item }}"
+    with_items:
+    - 'mklabel gpt'
+    - 'mkpart efi fat32 1MiB 100MiB'
+    - 'mkpart boot ext4 100MiB 600MiB'
+    - 'mkpart swap linux-swap 600MiB 1600MiB'
+    - 'mkpart root ext4 1600MiB 100%'
+    - 'set 2 boot on'
+    - 'set 1 esp on'
+    - 'name 1"EFI System Partition"'
+    - 'name 2"Boot Partition"'
+    - 'name 3"Swap"'
+    - 'name 4"Root Filesystem"'
+  
+  - name: Create uEFI Partition And Add Data
+    shell: "{{ item }}"
+    with_items:
+    - 'mkfs.fat -F 16 {{ loop_device.stdout }}p1'
+    - 'mkdir -p /mnt/{{ vhd_name }}/efi'
+    - 'mount {{ loop_device.stdout }}p1 /mnt/{{ vhd_name }}/efi'
+    - 'cp -r {{ vhd_path }}/boot/efi/. /mnt/{{ vhd_name }}/efi/'
+    - 'umount /mnt/{{ vhd_name }}/efi'
+  
+  - name: Create BOOT Partition And Add Data
+    shell: "{{ item }}"
+    with_items:
+    - 'mkfs.ext4 {{ loop_device.stdout }}p2'
+    - 'mkdir -p /mnt/{{ vhd_name }}/boot'
+    - 'mount {{ loop_device.stdout }}p2 /mnt/{{ vhd_name }}/boot'
+    - 'cp -r {{ vhd_path }}/boot/. /mnt/{{ vhd_name }}/boot/'
+    - 'umount /mnt/{{ vhd_name }}/boot'
+  
+  - name: Create SWAP Partition
+    shell: "{{ item }}"
+    with_items:
+    - 'mkswap {{ loop_device.stdout }}p3'
+    - 'swaplabel -L swappart {{ loop_device.stdout }}p3'
+
+  - name: Create ROOT Partition And Add Data
+    shell: "{{ item }}"
+    with_items:
+    - 'mkfs.ext4 {{ loop_device.stdout }}p4'
+    - 'mkdir -p /mnt/{{ vhd_name }}/root'
+    - 'mount {{ loop_device.stdout }}p4 /mnt/{{ vhd_name }}/root'
+    - 'cp -r {{ vhd_path }}/. /mnt/{{ vhd_name }}/root/'
+    - 'rm -rf /mnt/{{ vhd_name }}/root/boot/'
+    - 'umount /mnt/{{ vhd_name }}/root'
+
+  - name: Clean up the Mount and Loop Device
+    shell: "{{ item }}"
+    with_items:
+    - 'rm -rf /mnt/{{ vhd_name }}'
+    - 'losetup -d {{ loop_device.stdout }}'
+
+  - name: Convert LINUX Image to VHD
+    shell: "qemu-img convert -f raw -o subformat=fixed,force_size -O vpc {{ trix_images }}/azure.img {{ trix_images }}/{{ vhd_name }}.vhd"
   when: vars.azure_vhd_type == 'RedHat'
 
 - block:
