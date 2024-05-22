@@ -26,18 +26,43 @@
   hosts: controllers
   gather_facts: true
   tasks:
-    - name: Include Cloud Role and Install IAC approach.
-      include_role:
-        name: "cloud/{{ item }}"
-      loop: "{{ vars.cloud_support }}"
-      when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
-    
     - name: Set cloud_condition fact
       set_fact:
         cloud_condition: >-
           {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
     
-    - name: Build iPXE uEFI file for the GRUB Booting.
-      include_role:
-        name: "cloud/ipxe"
+    - block:
+      - name: Include Cloud variables
+        include_vars: "group_vars/{{ item }}.yml"
+        loop: "{{ vars.cloud_support }}"
+        when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      
+      - name: Set IAC fact
+        set_fact:
+          installers: "{{ vars | dict2items | selectattr('key', 'search', '_installer') | map(attribute='value') | list }}"
+      
+      - name: Build iPXE uEFI file for the GRUB Booting.
+        include_role:
+          name: "cloud/ipxe"
+      
+      - name: Include Cloud Role and Install IAC approach.
+        include_role:
+          name: "cloud/{{ item }}"
+        loop: "{{ vars.cloud_support }}"
+        when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      
+      - name: Check if any installer is terraform
+        include_role:
+          name: "cloud/terraform"
+        when: "{{ 'terraform' in installers }}"
+      
       when: cloud_condition
+    
+    
+    
+
+    
+      
+    
+    
+    

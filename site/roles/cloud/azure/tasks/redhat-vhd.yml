@@ -1,0 +1,42 @@
+---
+# Creating the Azure VHD for GRUB Booting.
+
+- block:
+  - name: Install Dependency qemu-img
+    dnf:
+      disable_gpg_check: true
+      name: "qemu-img"
+      state: present
+  
+  
+  - name: Install core packages - @core, kernel and grub2
+    dnf:
+      disable_gpg_check: true
+      name: "{{ vhd_core_packages }}"
+      state: present
+      installroot: "{{ image_path }}"
+
+  - name: Install Terraform Dependency
+    yum:
+      disable_gpg_check: true
+      name: "yum-utils"
+      state: present
+    when: terraform_check.stderr
+
+  - name: Add Terraform Repository
+    shell: "yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo"
+    when: terraform_check.stderr
+
+  - name: Install Terraform
+    yum:
+      disable_gpg_check: true
+      name: "terraform"
+      state: present
+    when: terraform_check.stderr
+  when: vars.azure_vhd_type == 'RedHat'
+
+- block:
+  - name: Create Debian VHD
+    debug:
+      msg: "This Feature Will be Available In upcoming releases."
+  when: vars.azure_vhd_type == 'Debian'
