@@ -35,7 +35,7 @@ installation_procedure() {
     echo "|   4: gcp.yml (Google Cloud Platform Support)               |"
     echo "|                                                            |"
     echo "| After Setting the YAML files, execute:                     |"
-    echo "| ansible-playbook cloud-controller.yml                      |"
+    echo "| ansible-playbook cloud.yml                                 |"
     echo "|                                                            |"
     echo "+------------------------------------------------------------+"
     echo
