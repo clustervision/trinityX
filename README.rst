@@ -135,7 +135,10 @@ You can also choose which components to exclude from the installation by modifyi
 HA or High Availability
 ======================
 
-To make HA work properly, services need to understand the HA concept. Many services do, however not all. To still support HA for these services, a shared disk is required, where the active controllers has access to this disk and start those services. The disk can be DRBD (default), but also iSCSI, a DAS or NAS, or combinations of. The configuration or combinations of need to provide at least the following volumes:
+Shared disk
+-----------
+
+To make HA work properly, services need to understand the HA concept. Many services do, however not all. To still support HA for these services, a shared disk is required, where the active controller has access to this disk and start those services. The disk can be DRBD (default), but also iSCSI, a DAS or NAS, or combinations of. The configuration or combinations of need to provide at least the following volumes:
 
 * {{ trix_ha }}
 * {{ trix_home }}
@@ -143,6 +146,11 @@ To make HA work properly, services need to understand the HA concept. Many servi
 * {{ trix_ohpc }} (if OpenHPC is enabled)
 
 LVM and ZFS are supported, where partitions can be made on top of the shared disk. On top of these partitions all regular filesystems, like xfs and ext4 are supported.
+
+Fencing
+-------
+
+Fencing is supported by enforcing stonith. The BMC-s of each controller need to be configured to match the settings for ip address, name and password in the HA section. A mismatch will result in a non proper working HA setup. Alternatively, fencing can be disabled but is not recommended.
 
 OpenHPC Support
 ===============
