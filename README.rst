@@ -55,13 +55,13 @@ Steps to install TrinityX
 
 4. Step by step manual configuration and installation
 
-1: Clone TrinityX repository into your working directory. Then run ``prepare.sh`` to install all the prerequisites::
+4.1. Clone TrinityX repository into your working directory. Then run ``prepare.sh`` to install all the prerequisites::
 
        # git clone http://github.com/clustervision/trinityX
        # cd trinityX
        # bash prepare.sh
 
-2: Copy the all file which will contain the controller and cluster configuration. Please view the contents of the file on the directives that may need modification(s)::
+4.2. Copy the all file which will contain the controller and cluster configuration. Please view the contents of the file on the directives that may need modification(s)::
 
        # cd site 
        # cp group_vars/all.yml.example group_vars/all.yml
