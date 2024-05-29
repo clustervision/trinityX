@@ -21,7 +21,7 @@ add_message "Welcome to TrinityX"
 add_message "The system will now be prepared first..."
 show_message
 echo
-sleep 5
+sleep 10
 bash prepare.sh
 cd site
 ./tui_configurator
