@@ -7,11 +7,10 @@ fi
 # --------------------------------------------------------------------------------------
 
 function add_message() {
-  echo -e "$1\n" | fold -w70 -s >> /tmp/mesg.$$.dat
+  echo -e "$1" | fold -w70 -s >> /tmp/mesg.$$.dat
 }
 
 function show_message() {
-  #echo $1 | fold -w70 -s > /tmp/warn.$$.dat
   echo "****************************************************************************"
   echo "*                                                                          *"
   while read -r LINE
