@@ -12,6 +12,7 @@ cd site
 if [ ! "$(grep 'yml check' group_vars/all.yml)" ]; then
     grep 'yml check' group_vars/all.yml.example >> group_vars/all.yml
 fi
+cp hosts.example hosts
 echo
 echo "+------------------------------------------------------------+"
 echo "|  Ansible Playbooks will now run                            |"
