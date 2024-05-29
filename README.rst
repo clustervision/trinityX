@@ -52,7 +52,7 @@ Steps to install TrinityX
        # bash INSTALL.sh
 
 
--- **OR** --
+ -- **OR** --
 
 4. Step by step manual configuration and installation
 
