@@ -48,7 +48,9 @@ Steps to install TrinityX
 4. Clone TrinityX repository into your working directory. Then run ``INSTALL.sh`` to install and be guided through the steps:
 
        # git clone http://github.com/clustervision/trinityX
+
        # cd trinityX
+
        # bash INSTALL.sh
 
 
