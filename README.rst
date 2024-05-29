@@ -119,7 +119,7 @@ Now you have your controller(s) installed and the default OS image(s) created!
 
 
 Customizing your installation
------------------------------
+=============================
 
 Now, if you want to tailor TrinityX to your needs, you can modify the ansible playbooks and variable files.
 
