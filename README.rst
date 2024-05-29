@@ -135,6 +135,7 @@ You can also choose which components to exclude from the installation by modifyi
 HA or High Availability
 =======================
 
+
 Shared disk
 -----------
 
@@ -146,6 +147,7 @@ To make HA work properly, services need to understand the HA concept. Many servi
 * {{ trix_ohpc }} (if OpenHPC is enabled)
 
 LVM and ZFS are supported, where partitions can be made on top of the shared disk. On top of these partitions all regular filesystems, like xfs and ext4 are supported.
+
 
 Fencing
 -------
