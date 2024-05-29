@@ -18,7 +18,7 @@ function show_message() {
 
 function count_down() {
   tel=$1
-  while [ "$tel" -gt "0" ]; then
+  while [ "$tel" -gt "0" ]; do
     echo -n "[$tel]  "
     sleep 1
     printf "\r"
@@ -31,7 +31,6 @@ echo
 add_message "Welcome to TrinityX"
 add_message "The system will now be prepared first..."
 show_message
-echo
 count_down 10
 bash prepare.sh
 cd site
