@@ -51,6 +51,7 @@ Steps to install TrinityX
        # cd trinityX
        # bash INSTALL.sh
 
+
 -- **OR** --
 
 4. Step by step manual configuration and installation
@@ -78,7 +79,7 @@ Steps to install TrinityX
 
    If applicable, configure the dns forwarders in trix_dns_forwarders when the defaults, 8.8.8.8 and 8.8.4.4 are unreachable.
 
-3: Configure ``hosts`` file to allow ansible to address controllers.
+4.3. Configure ``hosts`` file to allow ansible to address controllers.
 
        # cp hosts.example hosts
 
@@ -97,7 +98,7 @@ Steps to install TrinityX
    In this case, no SSH keys need to be exchanged between the controllers and the ``hosts`` file does not require any change.
    It's important though to have the primary controller finish the controller.yml playbook first before running on the other controllers.
 
-4: Start TrinityX installation::
+4.4. Start TrinityX installation::
 
      # ansible-playbook controller.yml
 
@@ -105,11 +106,11 @@ Steps to install TrinityX
 
     **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
 
-5: Create a default RedHat/Rocky OS image::
+4.5. Create a default RedHat/Rocky OS image::
 
     # ansible-playbook compute-redhat.yml
 
-6: Optionally Create a default Ubuntu OS image::
+4.6. Optionally Create a default Ubuntu OS image::
 
     # ansible-playbook compute-ubuntu.yml
 
