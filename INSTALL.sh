@@ -16,12 +16,23 @@ function show_message() {
   truncate -s0 /tmp/mesg.$$.dat
 }
 
+function count_down() {
+  tel=$1
+  while [ "$tel" -gt "0" ]; then
+    echo -n "[$tel]  "
+    sleep 1
+    printf "\r"
+    tel=$[tel-1]
+  done
+  echo
+}
+
 echo
 add_message "Welcome to TrinityX"
 add_message "The system will now be prepared first..."
 show_message
 echo
-sleep 10
+count_down 10
 bash prepare.sh
 cd site
 ./tui_configurator
@@ -32,5 +43,5 @@ cp hosts.example hosts
 echo
 add_message "Ansible Playbooks will now run"
 show_message
-sleep 5
+count_down 5
 ansible-playbook controller.yml compute*.yml
