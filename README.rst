@@ -45,23 +45,23 @@ Steps to install TrinityX
 
 3. Configure passwordless authentication to the controller itself or/and for both controllers in the HA case.
 
-4. Clone TrinityX repository into your working directory. Then run ```INSTALL.sh``` to install and be guided through the steps:
+4. Clone TrinityX repository into your working directory. Then run ``INSTALL.sh`` to install and be guided through the steps:
 
-      # git clone http://github.com/clustervision/trinityX
-      # cd trinityX
-      # bash INSTALL.sh
+       # git clone http://github.com/clustervision/trinityX
+       # cd trinityX
+       # bash INSTALL.sh
 
 -- **OR** --
 
 4. Step by step manual configuration and installation
 
- 1: Clone TrinityX repository into your working directory. Then run ```prepare.sh``` to install all the prerequisites::
+1: Clone TrinityX repository into your working directory. Then run ``prepare.sh`` to install all the prerequisites::
 
        # git clone http://github.com/clustervision/trinityX
        # cd trinityX
        # bash prepare.sh
 
- 2: Copy the all file which will contain the controller and cluster configuration. Please view the contents of the file on the directives that may need modification(s)::
+2: Copy the all file which will contain the controller and cluster configuration. Please view the contents of the file on the directives that may need modification(s)::
 
        # cd site 
        # cp group_vars/all.yml.example group_vars/all.yml
@@ -78,7 +78,7 @@ Steps to install TrinityX
 
    If applicable, configure the dns forwarders in trix_dns_forwarders when the defaults, 8.8.8.8 and 8.8.4.4 are unreachable.
 
- 3: Configure ``hosts`` file to allow ansible to address controllers.
+3: Configure ``hosts`` file to allow ansible to address controllers.
 
        # cp hosts.example hosts
 
@@ -94,10 +94,10 @@ Steps to install TrinityX
        controller2 ansible_host=10.141.255.253
 
    Alternatively for HA setup, the group_vars/all.yml file can be copied to the other controllers and run sequentially.
-   In this case, no SSH keys need to be exchanged between the controllers and the ```hosts``` file does not require any change.
+   In this case, no SSH keys need to be exchanged between the controllers and the ``hosts`` file does not require any change.
    It's important though to have the primary controller finish the controller.yml playbook first before running on the other controllers.
 
- 4: Start TrinityX installation::
+4: Start TrinityX installation::
 
      # ansible-playbook controller.yml
 
@@ -105,11 +105,11 @@ Steps to install TrinityX
 
     **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
 
- 5: Create a default RedHat/Rocky OS image::
+5: Create a default RedHat/Rocky OS image::
 
     # ansible-playbook compute-redhat.yml
 
- 6: Optionally Create a default Ubuntu OS image::
+6: Optionally Create a default Ubuntu OS image::
 
     # ansible-playbook compute-ubuntu.yml
 
