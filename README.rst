@@ -133,7 +133,7 @@ Descriptions to configuration options are given inside ``controller.yml`` and ``
 You can also choose which components to exclude from the installation by modifying the ``controller.yml`` playbook.
 
 HA or High Availability
-======================
+=======================
 
 Shared disk
 -----------
