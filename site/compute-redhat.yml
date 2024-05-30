@@ -1,14 +1,16 @@
 ---
-- hosts: controllers
+- hosts: localhost
   pre_tasks:
+  #
   # the image name can be set in the below fact.
+  #
   - name: Set image name
     set_fact:
       image_name: "compute"
 
 - import_playbook: trinity-redhat-image-create.yml
   vars:
-    image_name: "{{ image_name }}"
+    image_name: "{{ hostvars['localhost']['image_name'] }}"
     # The password to set up for the root user in the image.
     # If empty, it will be generated at random.
     #
@@ -19,10 +21,10 @@
 
 - import_playbook: trinity-redhat-image-setup.yml
   vars:
-    hostlist: "{{ image_name }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
 
 - hosts:
-    - "{{ image_name }}.osimages.luna"
+    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
   roles:
     - role: trinity/wrapup-images
       tags: wrapup-images
@@ -33,5 +35,5 @@
     - role: trinity/pack-images
       vars:
          params:
-            image_name: "{{ image_name|default('compute') }}"
+            image_name: "{{ hostvars['localhost']['image_name'] }}"
       tags: pack-images
