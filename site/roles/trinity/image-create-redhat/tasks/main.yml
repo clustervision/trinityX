@@ -14,14 +14,15 @@
     name: "{{ image_path }}"
     state: directory
 
-- name: Create Base
+- name: Creating base image
   ansible.builtin.include_tasks:
-    file: base.yaml
-  when: not base-plus-only
+    file: base.yml
+  when: image_create_minimal|default(True)
 
-- name: Create Base-Plus
+- name: Extending base image
   ansible.builtin.include_tasks:
-    file: base-plus.yaml
+    file: base-plus.yml
+  when: image_create_full|default(True)
 
 - name: Refresh the list of hosts in the inventory
   meta: refresh_inventory

@@ -4,23 +4,29 @@
   set_fact:
     image_path: "{{ trix_images }}/{{ image_name }}"
 
-- name: Create temporary dir for downloading base image
-  file:
-    name: "{{ trix_root }}/downloads"
-    state: directory
+- name: Verifying if dir for compute image exists
+  stat:
+    path: "{{ image_path }}"
+  register: image_dir_check
 
-- name: Downloading base image
-  get_url:
-    url: "{{ base_image_repo }}/base-image-{{ base_image_distribution }}.tgz"
-    dest: "{{ trix_root }}/downloads/base-image-{{ base_image_distribution }}.tgz"
+- block:
+  - name: Create temporary dir for downloading base image
+    file:
+      name: "{{ trix_root }}/downloads"
+      state: directory
 
-- name: Create dir for compute image
-  file:
-    name: "{{ image_path }}"
-    state: directory
+  - name: Downloading base image
+    get_url:
+      url: "{{ base_image_repo }}/base-image-{{ base_image_distribution }}.tgz"
+      dest: "{{ trix_root }}/downloads/base-image-{{ base_image_distribution }}.tgz"
 
-- name: Extracting base image
-  unarchive:
-    src: "{{ trix_root }}/downloads/base-image-{{ base_image_distribution }}.tgz"
-    dest: "{{ image_path }}"
+  - name: Create dir for compute image
+    file:
+      name: "{{ image_path }}"
+      state: directory
 
+  - name: Extracting base image
+    unarchive:
+      src: "{{ trix_root }}/downloads/base-image-{{ base_image_distribution }}.tgz"
+      dest: "{{ image_path }}"
+  when: not image_dir_check.stat.exists
