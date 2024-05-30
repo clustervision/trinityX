@@ -4,10 +4,15 @@
   set_fact:
     image_path: "{{ trix_images }}/{{ image_name }}"
 
+- name: Create temporary dir for downloading base image
+  file:
+    name: "{{ trix_root }}/downloads"
+    state: directory
+
 - name: Downloading base image
   get_url:
     url: "{{ base_image_repo }}/base-image-{{ base_image_distribution }}.tgz"
-    dest: "/trinity/extra/base-image-{{ base_image_distribution }}.tgz"
+    dest: "{{ trix_root }}/downloads/base-image-{{ base_image_distribution }}.tgz"
 
 - name: Create dir for compute image
   file:
@@ -16,6 +21,6 @@
 
 - name: Extracting base image
   unarchive:
-    src: "/trinity/extra/base-image-{{ base_image_distribution }}.tgz"
+    src: "{{ trix_root }}/downloads/base-image-{{ base_image_distribution }}.tgz"
     dest: "{{ image_path }}"
 
