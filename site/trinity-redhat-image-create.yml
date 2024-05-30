@@ -11,25 +11,31 @@
       msg: "Image name {{ image_name }} is not compliant. Supported is a-z A-Z 0-9 'space' '-' '_' '.'"
     when: regex_image_name != image_name
 
+  - name: Verifying Distribution
+    set_fact:
+      controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
+
   - name: Determining if we need to create or download the base image
     set_fact:
       download_base_image: true
     when: 
       - alternative_distribution is defined
-      - alternative_distribution != ansible_distribution+'-'+ansible_distribution_major_version
+      - alternative_distribution != controller_distribution
 
   roles:
   - role: trinity/init
     tags: init
 
-  - block:
-    - role: trinity/image-create-redhat
-      tags: image-create
-      when: download_base_image is not defined
+  - role: trinity/image-download
+    base_image_distribution: "{{ alternative_distribution }}"
+    tags: image-create
+    when:
+      - primary
+      - download_base_image is defined
 
-    - role: trinity/image-download-redhat
-      tags: image-create
-      when: download_base_image is defined
+  - role: trinity/image-create-redhat-base
+    base-plus-only: download_base_image|default(False)
+    tags: image-create
     when: primary
 
   environment:
