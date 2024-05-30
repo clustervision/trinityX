@@ -1,7 +1,14 @@
 ---
+- hosts: controllers
+  pre_tasks: 
+  # the image name can be set in the below fact. 
+  - name: Set image name 
+    set_fact:
+      image_name: "ubuntu"
+
 - import_playbook: trinity-ubuntu-image-create.yml
   vars:
-    image_name: ubuntu
+    image_name: "{{ image_name }}"
     # The password to set up for the root user in the image.
     # If empty, it will be generated at random.
     #
@@ -13,7 +20,7 @@
 
 - import_playbook: trinity-ubuntu-image-setup.yml
   vars:
-    hostlist: "{{ image_name|default('ubuntu') }}.osimages.luna"
+    hostlist: "{{ image_name }}.osimages.luna"
 
 - hosts:
     - "{{ image_name|default('ubuntu') }}.osimages.luna"
@@ -27,5 +34,5 @@
     - role: trinity/pack-images
       vars:
          params:
-            image_name: "{{ image_name|default('ubuntu') }}"
+            image_name: "{{ image_name }}"
       tags: pack-images
