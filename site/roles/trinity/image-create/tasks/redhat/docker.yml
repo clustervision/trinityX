@@ -1,11 +1,34 @@
 ---
 
-- name: Install core packages - @core, kernel and grub2
+- name: Install Luna2 noarch repository
   dnf:
+    name: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/noarch/rpms
     disable_gpg_check: true
-    name: "{{ image_core_packages }}"
     state: present
     installroot: "{{ image_path }}"
+
+- name: Install core packages - @core, kernel and grub2
+  shell: "chroot {{ image_path }} dnf -y install {{ item }}"
+  ignore_errors: true
+  with_items:
+  - "epel-release"
+  - "kernel"
+  - "grub2"
+  - "grub2-tools"
+  - "grub2-efi-x64"
+  - "grub2-efi-x64-modules"
+  - "tzdata"
+  - "bind-utils"
+  - "shim-x64"
+  - "efibootmgr"
+  - "dosfstools"
+  - "lvm2"
+  - "mdadm"
+  - "lbzip2"
+  - "aria2"
+  - "tpm2-tools"
+  - "dmidecode"
+  - "luna2-client"
 
 - name: Install missing elfutils-libs on RedHat
   dnf:
