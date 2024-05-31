@@ -1,0 +1,60 @@
+---
+
+- name: Get image path
+  set_fact:
+    image_path: "{{ trix_images }}/{{ image_name }}"
+
+- name: Verifying if dir for compute image exists
+  stat:
+    path: "{{ image_path }}"
+  register: image_dir_check
+
+- name: Create temporary dir for downloading base image
+  file:
+    name: "{{ trix_root }}/downloads"
+    state: directory
+
+- name: Create dir for compute image
+  file:
+    name: "{{ image_path }}"
+    state: directory
+  when: not image_dir_check.stat.exists
+
+- block:
+  - name: Downloading base image
+    get_url:
+      url: "{{ image_download_repo }}/base-image-{{ image_download_distribution }}.tgz"
+      dest: "{{ trix_root }}/downloads/base-image-{{ image_download_distribution }}.tgz"
+
+  - name: Extracting base image
+    unarchive:
+      src: "{{ trix_root }}/downloads/base-image-{{ image_download_distribution }}.tgz"
+      dest: "{{ image_path }}"
+  when:
+    - image_download_source == 'base'
+    - not image_dir_check.stat.exists
+
+- block:
+  - name: Installing docker
+    dnf:
+      name: 'docker'
+      state: present
+
+  - name: Pulling docker image
+    shell: "docker pull {{ image_download_distribution }}"
+
+  - name: Creating placeholder container
+    shell: "docker create {{ image_download_distribution }}"
+    register: docker_container_id
+
+  - name: Creating docker image tarball
+    shell: "docker export {{ docker_container_id.stdout }} > {{ trix_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
+
+  - name: Extracting docker image
+    unarchive:
+      src: "{{ trix_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
+      dest: "{{ image_path }}"
+  when:
+    - image_download_source == 'docker'
+    - not image_dir_check.stat.exists
+
