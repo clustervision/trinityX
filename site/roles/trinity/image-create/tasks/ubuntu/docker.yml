@@ -1,2 +1,22 @@
 ---
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ image_create_distribution }}-docker.yml"
+  ignore_errors: true
+
+- name: Updating Apt
+  shell: "chroot {{ image_path }} apt-get update"
+  ignore_errors: true
+
+- name: Install core packages - @core, kernel and grub2
+  shell: "chroot {{ image_path }} apt-get -y install {{ item }}"
+  with_items: "{{ image_core_packages }}"
+
+- name: Download luna2-client package
+  get_url:
+    url: "{{ luna2_client_package }}"
+    dest: "{{ image_path }}/tmp/{{ luna2_client_package|split('/')|last }}"
+#    validate_certs: false
+
+- name: install luna2-client package
+  shell: "chroot {{ image_path }} dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
 
