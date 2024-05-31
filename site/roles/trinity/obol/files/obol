@@ -37,16 +37,18 @@ import argparse
 import configparser
 import secrets
 import logging
+import inspect
 from getpass import getpass
 from typing import List, Dict, Union
 
 import ldap
 
+def print_info(msg, name="Info"):
+    print(f"[{name}] {msg}", file=sys.stdout)
 
 def print_warning(msg, name="Warning"):
     """Print a warning message to stderr"""
     print(f"[{name}] {msg}", file=sys.stderr)
-
 
 def print_error(msg, name="Error"):
     """Print an error message to stderr"""
@@ -55,16 +57,18 @@ def print_error(msg, name="Error"):
 
 def print_table(item: Union[List, Dict]):
     """Print a list of dicts as a table, dict as a transposed table"""
+    list_fields = ["uid", "cn", "uidNumber", "gidNumber", "member", "memberOf"]
+
     if isinstance(item, list):
         if len(item) == 0:
             print("No results")
             return
-        keys = item[0].keys()
+        keys = [ k for k in item[0].keys() if k in list_fields]
         widths = [len(key) for key in keys]
 
         for row in item:
             for i, key in enumerate(keys):
-                widths[i] = max(widths[i], len(str(row[key])))
+                widths[i] = max(widths[i], len(str(row.get(key, ""))))
 
         print(" | ".join([key.ljust(widths[i]) for i, key in enumerate(keys)]))
         print("-+-".join(["-" * widths[i] for i, key in enumerate(keys)]))
@@ -72,7 +76,7 @@ def print_table(item: Union[List, Dict]):
         for row in item:
             print(
                 " | ".join(
-                    [str(row[key]).ljust(widths[i]) for i, key in enumerate(keys)]
+                    [str(row.get(key, "")).ljust(widths[i]) for i, key in enumerate(keys)]
                 )
             )
 
@@ -90,8 +94,12 @@ def show_output(func):
 
     def inner(obol, *args, **kwargs):
         output = func(obol, *args, **kwargs)
-
-        output_type = kwargs.pop("output_type", None)
+        # get default output type for function
+        
+        default_output_type = inspect.signature(func).parameters.get("output_type", None)
+        if default_output_type:
+            default_output_type = default_output_type.default
+        output_type = default_output_type or kwargs.pop("output_type", None)
 
         if output_type == "json":
             print(json.dumps(output, indent=2))
@@ -122,11 +130,51 @@ class Obol:
         "givenName",
         "mail",
         "telephoneNumber",
+        "memberOf"
     ]
-    group_fields = ["cn", "gid", "gidNumber", "member"]
+    group_fields = [
+        "cn",
+        "gid",
+        "gidNumber",
+        "member"
+    ]
+
+    def default_parser(self, values):
+        """Default parser for LDAP fields"""
+        return values[0].decode("utf-8")
+
+    def member_parser(self, values):
+        """Parser for LDAP member fields"""
+        parsed_values = [v.decode("utf-8").split(",")[0].split("=")[1] for v in values]
+        return parsed_values
+
+    def member_of_parser(self, values):
+        """Parser for LDAP memberOf fields"""
+        parsed_values = [v.decode("utf-8").split(",")[0].split("=")[1] for v in values]
+        return parsed_values
+
+    def default_serializer(self, value):
+        """Default serializer for LDAP fields"""
+        return [value.encode("utf-8")]
+
+    def member_serializer(self, values):
+        """Serializer for LDAP member fields"""
+        serialized_values = [f"uid={v},ou=People,{self.base_dn}".encode("utf-8") for v in values]
+        return serialized_values
+
+    def member_of_serializer(self, values):
+        """Serializer for LDAP memberOf fields"""
+        serialized_values = [f"cn={v},ou=Group,{self.base_dn}".encode("utf-8") for v in values]
+        return serialized_values
+
 
     def __init__(self, config_path, overrides=None):
         self.config = configparser.ConfigParser()
+        self.parsers = {
+            "memberOf": self.member_of_parser,
+            "member": self.member_parser	
+        }
+
 
         # try to open and read configuration from config_path
         with open(config_path, "r", encoding="utf-8") as config_file:
@@ -199,7 +247,7 @@ class Obol:
         """Show system user details"""
         users = _users or self.user_list()
         for user in users:
-            if user["uidNumber"] == uid:
+            if user["uidNumber"] == str(uid):
                 return user
         return None
 
@@ -207,7 +255,7 @@ class Obol:
         """Show system group details"""
         groups = _groups or self.group_list()
         for group in groups:
-            if group["gidNumber"] == gid:
+            if group["gidNumber"] == str(gid):
                 return group
         return None
 
@@ -247,7 +295,7 @@ class Obol:
         """Check if a uid exists"""
         users = _users or self.user_list()
         for user in users:
-            if user["uidNumber"] == uid:
+            if user["uidNumber"] == str(uid):
                 return True
         return False
 
@@ -255,7 +303,7 @@ class Obol:
         """Check if a gid exists"""
         groups = _groups or self.group_list()
         for group in groups:
-            if group["gidNumber"] == gid:
+            if group["gidNumber"] == str(gid):
                 return True
         return False
 
@@ -266,16 +314,14 @@ class Obol:
 
         # Retrieve users from LDAP
         users = []
-        fields = ["uid", "uidNumber", "gidNumber"]
         filter_dn = "(objectclass=posixAccount)"
         for _, attrs in self.conn.search_s(
-            self.users_dn, ldap.SCOPE_SUBTREE, filter_dn, fields
+            self.users_dn, ldap.SCOPE_SUBTREE, filter_dn, self.user_fields
         ):
             # Decode bytes to utf8 and parse data
             user = {
-                k: [vi.decode("utf8") for vi in v][0]
+                k: self.parsers.get(k, self.default_parser)(v)
                 for k, v in attrs.items()
-                if k in fields
             }
             users.append(user)
 
@@ -287,19 +333,14 @@ class Obol:
 
         # Retrieve groups from LDAP
         groups = []
-        fields = [
-            "cn",
-            "gidNumber",
-        ]
         filter_dn = "(objectclass=posixGroup)"
         for _, attrs in self.conn.search_s(
-            self.groups_dn, ldap.SCOPE_SUBTREE, filter_dn, fields
+            self.groups_dn, ldap.SCOPE_SUBTREE, filter_dn, self.group_fields
         ):
             # Decode bytes to utf8 and parse data
             group = {
-                k: [vi.decode("utf8") for vi in v][0]
+                k: self.parsers.get(k, self.default_parser)(v)
                 for k, v in attrs.items()
-                if k in fields
             }
             groups.append(group)
 
@@ -317,25 +358,13 @@ class Obol:
         ):
             # Decode bytes to utf8 and parse data
             user = {
-                k: [vi.decode("utf8") for vi in v][0]
+                k: self.parsers.get(k, self.default_parser)(v)
                 for k, v in attrs.items()
-                if k in self.user_fields
             }
             break
         else:
             # Raise error if no user found
             raise LookupError(f"User '{username}' does not exist")
-
-        # Retrieve user's groups from LDAP
-        user["groups"] = []
-        filter_dn = "(objectclass=groupOfMembers)"
-        for _, attrs in self.conn.search_s(
-            self.groups_dn, ldap.SCOPE_SUBTREE, filter_dn
-        ):
-            # Decode bytes to utf8 and parse data
-            for member in attrs.get("member", []):
-                if member.decode("utf8").startswith(f"uid={username},"):
-                    user["groups"].append(attrs["cn"][0].decode("utf8"))
 
         return user
 
@@ -352,13 +381,9 @@ class Obol:
         ):
             # Decode bytes to utf8 and parse data
             group = {
-                k: [vi.decode("utf8") for vi in v]
+                k: self.parsers.get(k, self.default_parser)(v)
                 for k, v in attrs.items()
-                if k in self.group_fields
             }
-            group = {k: v[0] if not (k == "member") else v for k, v in group.items()}
-            members = group.pop("member") if "member" in group else []
-            group["users"] = [m.split(",")[0].split("=")[1] for m in members]
             break
         else:
             # Raise error if no group found
@@ -464,8 +489,8 @@ class Obol:
             ("cn", [cn.encode("utf-8")]),
             ("sn", [sn.encode("utf-8")]),
             ("loginShell", [shell.encode("utf-8")]),
-            ("uidNumber", [uid.encode("utf-8")]),
-            ("gidNumber", [gid.encode("utf-8")]),
+            ("uidNumber", [str(uid).encode("utf-8")]),
+            ("gidNumber", [str(gid).encode("utf-8")]),
             ("homeDirectory", [home.encode("utf-8")]),
             ("shadowMin", [b"0"]),
             ("shadowMax", [b"99999"]),
@@ -546,7 +571,7 @@ class Obol:
         group_record = [
             ("objectclass", [b"top", b"groupOfMembers", b"posixGroup"]),
             ("cn", [groupname.encode("utf-8")]),
-            ("gidNumber", [gid.encode("utf-8")]),
+            ("gidNumber", [str(gid).encode("utf-8")]),
         ]
         self.conn.add_s(group_dn, group_record)
 
@@ -570,7 +595,7 @@ class Obol:
         # Delete the default group if it exists and has no other members
         try:
             group = self.group_show(username)
-            if len(group["users"]) == 0:
+            if len(group.get("member", [])) == 0:
                 group_dn = f"cn={group['cn']},ou=Group,{self.base_dn}"
                 self.conn.delete_s(group_dn)
         except LookupError:
@@ -586,7 +611,7 @@ class Obol:
 
         # Ensure group has no members
         group = self.group_show(groupname)
-        if len(group["users"]) > 0:
+        if len(group.get("member", [])) > 0:
             raise ValueError(f"Group '{groupname}' has members")
         # Delete the group
         group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
@@ -708,10 +733,10 @@ class Obol:
                 if g["gidNumber"] == existing_user["gidNumber"]
             ][0]
 
-            groups_to_add = [g for g in groups if g not in existing_user["groups"]]
+            groups_to_add = [g for g in groups if g not in existing_user.get("memberOf", [])]
             groups_to_del = [
                 g
-                for g in existing_user["groups"]
+                for g in existing_user.get("memberOf", [])
                 if (g not in groups) and (g != primary_group)
             ]
 
@@ -744,7 +769,7 @@ class Obol:
             # Not implemented yet
             raise NotImplementedError("changing GID of existing group is not supported")
 
-        if users:
+        if users is not None:
             # Ensure users exist
             existing_users = self.user_list()
             existing_usernames = [u["uid"] for u in existing_users]
@@ -754,7 +779,7 @@ class Obol:
                     f"Users '{', '.join(incorrect_usernames)}' do not exist"
                 )
 
-            existing_group_usernames = existing_group["users"]
+            existing_group_usernames = existing_group.get("member", [])
             existing_primary_group_usernames = [
                 u["uid"]
                 for u in existing_users
@@ -763,9 +788,8 @@ class Obol:
             users_to_add = [u for u in users if u not in existing_group_usernames]
             users_to_del = [
                 u
-                for u in existing_group["users"]
-                if (u not in existing_group_usernames)
-                and (u not in existing_primary_group_usernames)
+                for u in existing_group.get("member", [])
+                if (u not in existing_primary_group_usernames)
             ]
 
         # Modify the group
@@ -801,7 +825,7 @@ class Obol:
 
         # Ensure group exists
         existing_group = self.group_show(groupname)
-        if all(u in existing_group["users"] for u in usernames):
+        if all(u in existing_group.get("member", []) for u in usernames):
             return
 
         # Ensure users exist
@@ -855,7 +879,70 @@ class Obol:
         group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
         self.conn.modify_s(group_dn, mod_attrs)
 
+    @show_output
+    def export_(self, output_type='json', **kwargs):
+        
+        users = self.user_list()
+        groups = self.group_list()
 
+        data = {
+            "users": users,
+            "groups": groups
+        }
+        
+        return data
+        
+        
+    def import_(self, data=None, **kwargs):
+        if not data:
+            print_info("Enter the data to import: ")
+            raw_data = sys.stdin.read()
+            data = json.loads(raw_data)
+        
+        users = data.get("users", [])
+        groups = data.get("groups", [])
+
+        for group in groups:
+            try: 
+                self.group_add(groupname=group["cn"], gid=group["gidNumber"])
+                print_info(f"Group {group['cn']} added")
+            except ValueError as exc:
+                print_warning(f"Group '{group['cn']}' already exists")
+            except Exception as exc:
+                print_error(f"Failed adding group {group['cn']}: {exc}")
+                
+        for user in users:
+            try:
+                self.user_add(
+                    username=user["uid"],
+                    cn=user.get("cn"),
+                    sn=user.get("sn"),
+                    given_name=user.get("givenName"),
+                    password=user.get("userPassword"),
+                    uid=user.get("uidNumber"),
+                    gid=user.get("gidNumber"),
+                    mail=user.get("mail"),
+                    phone=user.get("telephoneNumber"),
+                    shell=user.get("loginShell"),
+                    groups=user.get("memberOf"),
+                    home=user.get("homeDirectory"),
+                    expire=user.get("shadowExpire"),
+                )
+                print_info(f"User {user['uid']} added")
+            except ValueError as exc:
+                print_warning(f"User '{user['uid']}' already exists")
+        
+    def erase_(self, **kwargs):
+        """Erase all users and groups"""
+        users = self.user_list()
+        for user in users:
+            self.user_delete(user["uid"])
+        groups = self.group_list()
+        for group in groups:
+            self.group_delete(group["cn"])
+        
+        
+        
 def run():
     """
     Runs the CLI
@@ -881,154 +968,157 @@ def run():
         help="Output in JSON format",
     )
 
-    # Subparsers and commands
-    subparsers = parser.add_subparsers(help="commands", dest="target")
+    # Subparsers and subcommands
+    subparsers = parser.add_subparsers(help="subcommands", dest="command")
     user_parser = subparsers.add_parser(
         "user",
-        help="User commands",
+        help="User subcommands",
     )
-    group_parser = subparsers.add_parser("group", help="Group commands")
-    user_commands = user_parser.add_subparsers(dest="command")
-    group_commands = group_parser.add_subparsers(dest="command")
+    group_parser = subparsers.add_parser("group", help="Group subcommands")
+    user_subcommands = user_parser.add_subparsers(dest="subcommand")
+    group_subcommands = group_parser.add_subparsers(dest="subcommand")
+    _ = subparsers.add_parser("import", help="Import all users and groups")
+    _ = subparsers.add_parser("export", help="Export all users and groups")
+    # _ = subparsers.add_parser("erase", help="Erase all users and groups")
 
     # User add command
-    user_add_command = user_commands.add_parser("add", help="Add a user")
-    user_add_command.add_argument("username")
-    user_add_command_password_group = user_add_command.add_mutually_exclusive_group()
-    user_add_command_password_group.add_argument("--password", "-p")
-    user_add_command_password_group.add_argument(
+    user_addsubcommand = user_subcommands.add_parser("add", help="Add a user")
+    user_addsubcommand.add_argument("username")
+    user_addsubcommand_password_group = user_addsubcommand.add_mutually_exclusive_group()
+    user_addsubcommand_password_group.add_argument("--password", "-p")
+    user_addsubcommand_password_group.add_argument(
         "--prompt-password", "-P", action="store_true"
     )
-    user_add_command_password_group.add_argument(
+    user_addsubcommand_password_group.add_argument(
         "--autogen-password", "--autogen", action="store_true"
     )
-    user_add_command.add_argument("--cn", metavar="COMMON NAME")
-    user_add_command.add_argument("--sn", metavar="SURNAME")
-    user_add_command.add_argument("--givenName", dest="given_name")
-    user_add_command.add_argument(
+    user_addsubcommand.add_argument("--cn", metavar="COMMON NAME")
+    user_addsubcommand.add_argument("--sn", metavar="SURNAME")
+    user_addsubcommand.add_argument("--givenName", dest="given_name")
+    user_addsubcommand.add_argument(
         "--group", "-g", metavar="PRIMARY GROUP", dest="groupname"
     )
-    user_add_command.add_argument("--uid", metavar="USER ID")
-    user_add_command.add_argument("--gid", metavar="GROUP ID")
-    user_add_command.add_argument("--mail", metavar="EMAIL ADDRESS")
-    user_add_command.add_argument("--phone", metavar="PHONE NUMBER")
-    user_add_command.add_argument("--shell")
-    user_add_command.add_argument(
+    user_addsubcommand.add_argument("--uid", metavar="USER ID")
+    user_addsubcommand.add_argument("--gid", metavar="GROUP ID")
+    user_addsubcommand.add_argument("--mail", metavar="EMAIL ADDRESS")
+    user_addsubcommand.add_argument("--phone", metavar="PHONE NUMBER")
+    user_addsubcommand.add_argument("--shell")
+    user_addsubcommand.add_argument(
         "--groups",
-        type=lambda s: s.split(","),
+        type=lambda s: [i for i in s.split(",") if s ],
         help="A comma separated list of group names",
     )
-    user_add_command.add_argument(
+    user_addsubcommand.add_argument(
         "--expire",
         metavar="DAYS",
         help=(
             "Number of days after which the account expires. " "Set to -1 to disable"
         ),
     )
-    user_add_command.add_argument("--home", metavar="HOME")
+    user_addsubcommand.add_argument("--home", metavar="HOME")
 
     # User modify command
-    user_modify_command = user_commands.add_parser(
+    user_modifysubcommand = user_subcommands.add_parser(
         "modify", help="Modify a user attribute"
     )
-    user_modify_command.add_argument("username")
-    user_modify_command_password_group = (
-        user_modify_command.add_mutually_exclusive_group()
+    user_modifysubcommand.add_argument("username")
+    user_modifysubcommand_password_group = (
+        user_modifysubcommand.add_mutually_exclusive_group()
     )
-    user_modify_command_password_group.add_argument("--password", "-p")
-    user_modify_command_password_group.add_argument(
+    user_modifysubcommand_password_group.add_argument("--password", "-p")
+    user_modifysubcommand_password_group.add_argument(
         "--prompt-password", "-P", action="store_true"
     )
-    user_modify_command_password_group.add_argument(
+    user_modifysubcommand_password_group.add_argument(
         "--autogen-password", "--autogen", action="store_true"
     )
-    user_modify_command.add_argument("--cn", metavar="COMMON NAME")
-    user_modify_command.add_argument("--sn", metavar="SURNAME")
-    user_modify_command.add_argument("--givenName", dest="given_name")
-    user_modify_command.add_argument(
+    user_modifysubcommand.add_argument("--cn", metavar="COMMON NAME")
+    user_modifysubcommand.add_argument("--sn", metavar="SURNAME")
+    user_modifysubcommand.add_argument("--givenName", dest="given_name")
+    user_modifysubcommand.add_argument(
         "--group", "-g", metavar="PRIMARY GROUP", dest="groupname"
     )
-    user_modify_command.add_argument("--uid", metavar="USER ID")
-    user_modify_command.add_argument("--gid", metavar="GROUP ID")
-    user_modify_command.add_argument("--shell")
-    user_modify_command.add_argument("--mail", metavar="EMAIL ADDRESS")
-    user_modify_command.add_argument("--phone", metavar="PHONE NUMBER")
-    user_modify_command.add_argument(
+    user_modifysubcommand.add_argument("--uid", metavar="USER ID")
+    user_modifysubcommand.add_argument("--gid", metavar="GROUP ID")
+    user_modifysubcommand.add_argument("--shell")
+    user_modifysubcommand.add_argument("--mail", metavar="EMAIL ADDRESS")
+    user_modifysubcommand.add_argument("--phone", metavar="PHONE NUMBER")
+    user_modifysubcommand.add_argument(
         "--groups",
-        type=lambda s: s.split(","),
+        type=lambda s: [i for i in s.split(",") if s ],
         help="A comma separated list of group names",
     )
-    user_modify_command.add_argument(
+    user_modifysubcommand.add_argument(
         "--expire",
         metavar="DAYS",
         help=(
             "Number of days after which the account expires. " "Set to -1 to disable"
         ),
     )
-    user_modify_command.add_argument("--home", metavar="HOME")
+    user_modifysubcommand.add_argument("--home", metavar="HOME")
 
     # User show command
-    user_show_command = user_commands.add_parser("show", help="Show user details")
-    user_show_command.add_argument("username")
+    user_showsubcommand = user_subcommands.add_parser("show", help="Show user details")
+    user_showsubcommand.add_argument("username")
 
     # User delete command
-    user_delete_command = user_commands.add_parser("delete", help="Delete a user")
-    user_delete_command.add_argument("username")
+    user_deletesubcommand = user_subcommands.add_parser("delete", help="Delete a user")
+    user_deletesubcommand.add_argument("username")
 
     # User list command
-    _ = user_commands.add_parser("list", help="List users")
+    _ = user_subcommands.add_parser("list", help="List users")
 
     # Group add command
-    group_add_command = group_commands.add_parser("add", help="Add a group")
-    group_add_command.add_argument("groupname")
-    group_add_command.add_argument("--gid", metavar="GROUP ID")
-    group_add_command.add_argument(
+    group_addsubcommand = group_subcommands.add_parser("add", help="Add a group")
+    group_addsubcommand.add_argument("groupname")
+    group_addsubcommand.add_argument("--gid", metavar="GROUP ID")
+    group_addsubcommand.add_argument(
         "--users",
-        type=lambda s: s.split(","),
+        type=lambda s: [i for i in s.split(",") if s ],
         help="A comma separated list of usernames",
     )
 
     # Group modify command
-    group_modify_command = group_commands.add_parser("modify", help="Modify a group")
-    group_modify_command.add_argument("groupname")
-    group_modify_command.add_argument("--gid", metavar="GROUP ID")
-    group_modify_command.add_argument(
+    group_modifysubcommand = group_subcommands.add_parser("modify", help="Modify a group")
+    group_modifysubcommand.add_argument("groupname")
+    group_modifysubcommand.add_argument("--gid", metavar="GROUP ID")
+    group_modifysubcommand.add_argument(
         "--users",
-        type=lambda s: s.split(","),
+        type=lambda s: [i for i in s.split(",") if s ],
         help="A comma separated list of usernames",
     )
 
     # Group rename command
-    group_addusers_command = group_commands.add_parser(
+    group_adduserssubcommand = group_subcommands.add_parser(
         "rename", help="Rename group but keep its GID and users"
     )
-    group_addusers_command.add_argument("groupname")
-    group_addusers_command.add_argument("new_groupname")
+    group_adduserssubcommand.add_argument("groupname")
+    group_adduserssubcommand.add_argument("new_groupname")
 
     # Group addusers command
-    group_addusers_command = group_commands.add_parser(
+    group_adduserssubcommand = group_subcommands.add_parser(
         "addusers", help="Add users to a group"
     )
-    group_addusers_command.add_argument("groupname")
-    group_addusers_command.add_argument("usernames", nargs="+")
+    group_adduserssubcommand.add_argument("groupname")
+    group_adduserssubcommand.add_argument("usernames", nargs="+")
 
     # Group delusers command
-    group_delusers_command = group_commands.add_parser(
+    group_deluserssubcommand = group_subcommands.add_parser(
         "delusers", help="Delete users from a group"
     )
-    group_delusers_command.add_argument("groupname")
-    group_delusers_command.add_argument("usernames", nargs="+")
+    group_deluserssubcommand.add_argument("groupname")
+    group_deluserssubcommand.add_argument("usernames", nargs="+")
 
     # Group show command
-    group_show_command = group_commands.add_parser("show", help="Show group details")
-    group_show_command.add_argument("groupname")
+    group_showsubcommand = group_subcommands.add_parser("show", help="Show group details")
+    group_showsubcommand.add_argument("groupname")
 
     # Group delete command
-    group_delete_commands = group_commands.add_parser("delete", help="Delete a group")
-    group_delete_commands.add_argument("groupname")
+    group_deletesubcommands = group_subcommands.add_parser("delete", help="Delete a group")
+    group_deletesubcommands.add_argument("groupname")
 
     # Group list command
-    _ = group_commands.add_parser("list", help="List groups")
+    _ = group_subcommands.add_parser("list", help="List groups")
 
     # Run command
     try:
@@ -1053,24 +1143,29 @@ def run():
 
         args = vars(parser.parse_args())
         obol = Obol("/etc/obol.conf", overrides=args)
-        if args["target"] is None or args["command"] is None:
-            if args["target"] == "user":
+
+        method_name = f"{args['command']}_{ args.get('subcommand', '')}"
+        function = getattr(obol, method_name, None)
+        
+        if function is not None:
+            function(**args, warn=True)
+            logging.info(f"Command '{logged_cmd}' succeeded")
+        else:
+            if args["command"] == "user":
                 user_parser.print_help()
-            elif args["target"] == "group":
+            elif args["command"] == "group":
                 group_parser.print_help()
             else:
                 parser.print_help()
             sys.exit(1)
-        method_name = f"{args['target']}_{ args['command']}"
-        function = getattr(obol, method_name, None)
-        function(**args, warn=True)
-        logging.info(f"Command '{logged_cmd}' succeeded")
+
     except Exception as exc:
         logging.error(f"Command '{logged_cmd}' failed: {exc}")
         print_error(
             exc,
             name=type(exc).__name__,
         )
+        # raise exc
         sys.exit(1)
 
 
