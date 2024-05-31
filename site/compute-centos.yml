@@ -1,0 +1,40 @@
+---
+- hosts: localhost
+  pre_tasks:
+  #
+  # the image name can be set in the below fact.
+  #
+  - name: Set image name
+    set_fact:
+      image_name: "centos"
+
+- import_playbook: imports/trinity-redhat-image-create.yml
+  vars:
+    image_name: "{{ hostvars['localhost']['image_name'] }}"
+    # The password to set up for the root user in the image.
+    # If empty, it will be generated at random.
+    #
+    image_password:
+    #
+    alternative_distribution: centos:latest
+    alternative_image_source: 'docker'
+    alternative_image_distr: 'centos'
+
+- import_playbook: imports/trinity-redhat-image-setup.yml
+  vars:
+    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+
+- hosts:
+    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+  roles:
+    - role: trinity/wrapup-images
+      tags: wrapup-images
+
+
+- hosts: controllers
+  roles:
+    - role: trinity/pack-images
+      vars:
+         params:
+            image_name: "{{ hostvars['localhost']['image_name'] }}"
+      tags: pack-images
