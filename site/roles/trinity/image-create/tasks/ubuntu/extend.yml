@@ -48,8 +48,13 @@
   register: ubuntu_image_in_luna
   ignore_errors: true
 
+- name: Fetching the distribution version from the image
+  shell: "grep DISTRIB_RELEASE {{ image_path }}/etc/lsb-release | awk -F'=' '{ print $2 }' | awk -F '.' '{ print $1 }' | grep '^.\\+$' || echo '22'"
+  ignore_errors: true
+  register: image_major_version
+
 - name: Creating image in luna
-  shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu {{ image_name }} -qo \"net.ifnames=0 biosdevname=0\""
+  shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu -R {{ image_major_version.stdout }} -qo \"net.ifnames=0 biosdevname=0\" {{ image_name }}"
   when: ubuntu_image_in_luna is defined and ubuntu_image_in_luna.rc|int != 0
 
 - name: Create node config directory

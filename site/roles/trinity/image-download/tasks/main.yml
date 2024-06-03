@@ -54,6 +54,9 @@
     unarchive:
       src: "{{ trix_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
       dest: "{{ image_path }}"
+
+  - name: Deleting placeholder container
+    shell: "docker rm {{ docker_container_id.stdout }}"
   when:
     - image_download_source == 'docker'
     - not image_dir_check.stat.exists

@@ -67,12 +67,17 @@
   register: redhat_image_in_luna
   ignore_errors: true
 
+- name: Fetching the distribution version from the image
+  shell: "cat {{ image_path }}/etc/redhat-release | awk -F 'release ' '{ print $2 }' | awk -F '.' '{ print $1 }' | grep '^.\\+$' || echo {{ ansible_distribution_major_version }}"
+  ignore_errors: true
+  register: image_major_version
+
 - name: Creating image in luna
-  shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D {{ ansible_os_family|lower }} -R {{ ansible_distribution_major_version }} {{ image_name }}"
+  shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D {{ ansible_os_family|lower }} -R {{ image_major_version.stdout }} -qo \"net.ifnames=0 biosdevname=0\" {{ image_name }}"
   when: redhat_image_in_luna is defined and redhat_image_in_luna.rc|int != 0
 
 - name: Setting release for image
-  shell: "luna osimage change -D {{ ansible_os_family|lower }} -R {{ ansible_distribution_major_version|lower }} {{ image_name }}"
+  shell: "luna osimage change -D {{ ansible_os_family|lower }} -R {{ image_major_version.stdout }} {{ image_name }}"
   when: redhat_image_in_luna is defined and redhat_image_in_luna.rc|int == 0
 
 - name: Kernel version in image
