@@ -34,7 +34,16 @@ show_message
 count_down 10
 bash prepare.sh
 cd site
+TRIX_VER=$(grep 'trix_version' group_vars/all.yml.example 2> /dev/null | grep -oE '[0-9\.]+' || echo '14.1')
+wget https://updates.clustervision.com/revproxy/updates/trinityx/${TRIX_VER}/install/tui_configurator
 ./tui_configurator
+TUI_RET=$?
+if [ "$TUI_RET" != "0" ]; then
+    add_message "The TUI configurator exited because of a problem."
+    add_message "Please correct the problem and try again."
+    show_message
+    exit
+fi
 if [ ! "$(grep 'yml check' group_vars/all.yml)" ]; then
     grep 'yml check' group_vars/all.yml.example >> group_vars/all.yml
 fi
