@@ -36,6 +36,7 @@ bash prepare.sh
 cd site
 TRIX_VER=$(grep 'trix_version' group_vars/all.yml.example 2> /dev/null | grep -oE '[0-9\.]+' || echo '14.1')
 wget https://updates.clustervision.com/trinityx/${TRIX_VER}/install/tui_configurator
+chmod 755 tui_configurator
 ./tui_configurator
 TUI_RET=$?
 if [ "$TUI_RET" != "0" ]; then
