@@ -34,12 +34,12 @@ show_message
 count_down 10
 bash prepare.sh
 cd site
-if [ -f tui_configurator ]; then
-    rm -f tui_configurator
+if [ ! -f tui_configurator ]; then
+    add_message "Could not launch the TUI configurator as it does not exist!"
+    add_message "This is peculiar... could you try to re-run $0 again?"
+    show_message
+    exit
 fi
-TRIX_VER=$(grep 'trix_version' group_vars/all.yml.example 2> /dev/null | grep -oE '[0-9\.]+' || echo '14.1')
-wget https://updates.clustervision.com/trinityx/${TRIX_VER}/install/tui_configurator
-chmod 755 tui_configurator
 ./tui_configurator
 TUI_RET=$?
 if [ "$TUI_RET" != "0" ]; then
