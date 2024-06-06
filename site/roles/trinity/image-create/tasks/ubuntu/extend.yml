@@ -43,6 +43,11 @@
     path: "{{ image_path }}/root/.ssh/authorized_keys"
   when: ha | default(False)
 
+- name: Verify if ubuntu group already exists in luna
+  shell: "luna group show {{ image_name }}"
+  register: ubuntu_group_in_luna
+  ignore_errors: true
+
 - name: Verify if image already exists in luna
   shell: "luna osimage show {{ image_name }}"
   register: ubuntu_image_in_luna
@@ -56,6 +61,19 @@
 - name: Creating image in luna
   shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu -R {{ image_major_version.stdout }} -qo \"net.ifnames=0 biosdevname=0\" {{ image_name }}"
   when: ubuntu_image_in_luna is defined and ubuntu_image_in_luna.rc|int != 0
+
+- block:
+  - name: preparing part/post script
+    copy:
+      src: "ubuntu/{{ item }}"
+      dest: "/tmp/{{ item }}"
+    with_items:
+      - part.rd
+      - post.rd
+
+  - name: Creating group in luna
+    shell: "luna group add -o {{ image_name }} -qpart /tmp/part.rd -qpost /tmp/post.rd {{ image_name }}"
+  when: ubuntu_group_in_luna is defined and ubuntu_group_in_luna.rc|int != 0
 
 - name: Create node config directory
   file:
