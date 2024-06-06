@@ -39,9 +39,6 @@
   - role: trinity/init
     tags: init
 
-  - role: ansible/write_facts
-    tags: init
-
   - role: trinity/image-download
     image_download_distribution: "{{ alternative_distribution }}"
     image_download_source: "{{ alternative_image_source|default('base') }}"
@@ -49,6 +46,9 @@
     when:
       - primary
       - download_base_image is defined
+
+  - role: ansible/write_facts
+    tags: init
 
   - role: trinity/image-create
     image_create_distribution: 'ubuntu'
