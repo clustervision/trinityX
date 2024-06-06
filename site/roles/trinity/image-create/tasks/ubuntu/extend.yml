@@ -43,6 +43,19 @@
     path: "{{ image_path }}/root/.ssh/authorized_keys"
   when: ha | default(False)
 
+- name: Create node config directory
+  file:
+    path: '{{ image_path }}/{{ trix_luna }}/node/config/'
+    state: directory
+
+- name: Render node luna.ini
+  template:
+    src: 'luna2.ini.j2'
+    dest: '{{ image_path }}/{{ trix_luna }}/node/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
+
 - name: Verify if ubuntu group already exists in luna
   shell: "luna group show {{ image_name }}"
   register: ubuntu_group_in_luna
@@ -75,29 +88,11 @@
     shell: "luna group add -o {{ image_name }} -qpart /tmp/part.rd -qpost /tmp/post.rd {{ image_name }}"
   when: ubuntu_group_in_luna is defined and ubuntu_group_in_luna.rc|int != 0
 
-- name: Create node config directory
-  file:
-    path: '{{ image_path }}/{{ trix_luna }}/node/config/'
-    state: directory
-
-- name: Render node luna.ini
-  template:
-    src: 'luna2.ini.j2'
-    dest: '{{ image_path }}/{{ trix_luna }}/node/config/luna.ini'
-    owner: root
-    group: root
-    mode: 0640
-
 - name: Kernel version in image
   shell: "ls {{ image_path }}/lib/modules|sort|tail -n1"
   register: kernel_version
   changed_when: false
 
 - name: Set the kernel version for image
-  ansible.builtin.shell:
-    cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
+  shell: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
 
-# needs to be done after image setup - Antoine
-# - name: Pack the image
-#  ansible.builtin.shell:
-#    cmd: "luna osimage pack {{ image_name }}"
