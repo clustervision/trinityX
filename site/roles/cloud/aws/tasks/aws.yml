@@ -7,12 +7,14 @@
   ignore_errors: true
 
 - name: Remove the previous Installation
-  shell: "{{ item }}"
+  shell: "{{ pre_install }}"
   with_items:
     - "rm -rf /usr/local/bin/aws"
     - "rm -rf /usr/local/bin/aws_completer"
     - "rm -rf /usr/local/aws-cli"
     - "rm -rf ~/.aws/"
+  loop_control:
+    loop_var: pre_install
   when: aws_check.stdout
 
 - name: Download the AWS installation file

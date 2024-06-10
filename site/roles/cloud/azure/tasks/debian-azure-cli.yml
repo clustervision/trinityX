@@ -12,11 +12,13 @@
   when: azure_cli_check.stdout
 
 - name: Download and install the Microsoft signing key
-  shell: "{{ item }}"
+  shell: "{{ microsoft_sig }}"
   with_items: 
     - "mkdir -p /etc/apt/keyrings"
     - "curl -sLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg"
     - "chmod go+r /etc/apt/keyrings/microsoft.gpg"
+  loop_control:
+    loop_var: microsoft_sig
   when: azure_cli_check.stdout
 
 - name: Add the Azure CLI software repository
