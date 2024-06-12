@@ -25,6 +25,7 @@ rollout:
   
   script:
   - echo Setup Network on Primary
+  - hostnamectl set-hostname ctrl001.testing 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
@@ -88,6 +89,7 @@ ha-rollout:
   - ssh-keygen -F $TST_CTRL002_IP || ssh-keyscan $TST_CTRL002_IP >> ~/.ssh/known_hosts
   
   - echo Setup Network on Primary
+  - hostnamectl set-hostname ctrl001.testing
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
@@ -98,6 +100,7 @@ ha-rollout:
   - nmcli con up id ethernet-ens256
 
   - echo Setup Network on Secondary
+  - hostnamectl set-hostname ctrl002.testing
   - ssh $TST_CTRL002_IP nmcli con add connection.interface-name ens224 type ethernet
   - ssh $TST_CTRL002_IP nmcli con add connection.interface-name ens256 type ethernet
   - ssh $TST_CTRL002_IP nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.253/16
