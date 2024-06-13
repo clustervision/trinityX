@@ -69,6 +69,9 @@ else
     if [ -f site/tui_configurator ]; then
         rm -f site/tui_configurator
     fi
+    if [ ! "$(which wget)" ]; then
+        dnf -y install wget
+    fi
     TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml.example 2> /dev/null | grep -oE '[0-9\.]+' || echo '14.1')
     wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/tui_configurator
     chmod 755 site/tui_configurator
