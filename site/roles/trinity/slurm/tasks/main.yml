@@ -286,10 +286,12 @@
         src: '{{ item.0 }}.j2'
         dest: '{{ slurm_conf_path }}/{{ item.0 }}'
         mode: '{{ item.1 }}'
-        force: "no"
+        owner: '{{ item.2 }}'
+        force: false
       with_together:
         - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'slurm-partitions.conf', 'slurm-user.conf']
         - ['0644', '0600', '0644', '0644', '0644']
+        - ['root', 'slurm', 'root', 'root', 'root']
       notify: restart slurm
 
     - name: Set UsePAM to 1 in slurm-user.conf
@@ -298,23 +300,23 @@
         line: 'UsePAM=1'
       when: enable_slurm_pam
 
-    - name: Fetch slurmdbd service file location
-      shell: "systemctl show -P FragmentPath slurmdbd.service || echo /usr/lib/systemd/system/slurmdbd.service"
-      register: slurm_slurmdbd_service_file
+#    - name: Fetch slurmdbd service file location
+#      shell: "systemctl show -P FragmentPath slurmdbd.service || echo /usr/lib/systemd/system/slurmdbd.service"
+#      register: slurm_slurmdbd_service_file
 
     # slurmdbd has a major problem where the /etc/slurm/slurmdbd.conf has to be:
     # - owned by root:root
     # - must be 0600 mode
     # - readable by the user it runs as. default == slurm
     # This combination will _never_ work. -Antoine
-    - name: Disable starting slurmdbd as user slurm
-      ansible.builtin.replace:
-        path: '{{ slurm_slurmdbd_service_file.stdout }}'
-        regexp: '^(User|Group)(=.*)$'
-        replace: '#\1\2'
-      when: 
-        - slurm_slurmdbd_service_file.stdout is defined
-        - slurm_slurmdbd_service_file.stdout | length > 0
+#    - name: Disable starting slurmdbd as user slurm
+#      ansible.builtin.replace:
+#        path: '{{ slurm_slurmdbd_service_file.stdout }}'
+#        regexp: '^(User|Group)(=.*)$'
+#        replace: '#\1\2'
+#      when: 
+#        - slurm_slurmdbd_service_file.stdout is defined
+#        - slurm_slurmdbd_service_file.stdout | length > 0
 
     - name: Start munge and slurmdbd services
       service:
