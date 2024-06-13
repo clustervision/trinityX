@@ -300,24 +300,6 @@
         line: 'UsePAM=1'
       when: enable_slurm_pam
 
-#    - name: Fetch slurmdbd service file location
-#      shell: "systemctl show -P FragmentPath slurmdbd.service || echo /usr/lib/systemd/system/slurmdbd.service"
-#      register: slurm_slurmdbd_service_file
-
-    # slurmdbd has a major problem where the /etc/slurm/slurmdbd.conf has to be:
-    # - owned by root:root
-    # - must be 0600 mode
-    # - readable by the user it runs as. default == slurm
-    # This combination will _never_ work. -Antoine
-#    - name: Disable starting slurmdbd as user slurm
-#      ansible.builtin.replace:
-#        path: '{{ slurm_slurmdbd_service_file.stdout }}'
-#        regexp: '^(User|Group)(=.*)$'
-#        replace: '#\1\2'
-#      when: 
-#        - slurm_slurmdbd_service_file.stdout is defined
-#        - slurm_slurmdbd_service_file.stdout | length > 0
-
     - name: Start munge and slurmdbd services
       service:
         daemon_reload: true
