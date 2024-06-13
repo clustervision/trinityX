@@ -39,9 +39,13 @@ rollout:
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
   - cat "site/group_vars/all.yml"
 
+  - echo Fix repositories if needed
+  - "if [ \"$TAG\" == \"centos8\" ]; then echo "...change for [$TAG]"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *.conf; sed -i 's/^mirror/#mirror/g' *.conf; sed -i 's/mirror\.centos/vault.centos/g' *.conf; fi"
+
   - echo Run prepare
   - ./prepare.sh
 
+  - echo Use our own repositories if needed
   - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
 
   - echo Run controller
@@ -76,8 +80,8 @@ ha-rollout:
     - TAG: "centos9"
     - TAG: "rhel8"
     - TAG: "rhel9"
-    # - TAG: "alma8"
-    # - TAG: "alma9"
+    - TAG: "alma8"
+    - TAG: "alma9"
     
   tags:
   - $TAG
