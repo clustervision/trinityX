@@ -12,12 +12,12 @@ rollout:
     matrix:
     - TAG: "rocky8"
     - TAG: "rocky9"
-    - TAG: "centos8"
+#    - TAG: "centos8"
     - TAG: "centos9"
     - TAG: "rhel8"
     - TAG: "rhel9"
-    # - TAG: "alma8"
-    # - TAG: "alma9"
+    - TAG: "alma8"
+    - TAG: "alma9"
     
   tags:
   - $TAG
@@ -39,17 +39,19 @@ rollout:
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
   - cat "site/group_vars/all.yml"
 
+  - echo Fix repositories if needed
+  - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
+  - "if [ \"$TAG\" == \"centos8\" ]; then echo \"...change for [$TAG]\"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *; sed -i 's/^mirror/#mirror/g' *; sed -i 's/mirror\\.centos/vault.centos/g' *; cd -; fi"
+
   - echo Run prepare
   - ./prepare.sh
 
-  - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
-
   - echo Run controller
-  - "( cd site && ansible-playbook controller.yml )"
+  - "( cd site && (ansible-playbook controller.yml || ansible-playbook controller.yml) )"
 
   - echo Run compute
-  - "( cd site && ansible-playbook compute-redhat.yml )"
-  - "( cd site && ansible-playbook compute-ubuntu.yml )"
+  - "( cd site && (ansible-playbook compute-redhat.yml || ansible-playbook compute-redhat.yml) )"
+  - "( cd site && (ansible-playbook compute-ubuntu.yml || ansible-playbook compute-ubuntu.yml) )"
 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
@@ -72,12 +74,12 @@ ha-rollout:
     matrix:
     - TAG: "rocky8"
     - TAG: "rocky9"
-    - TAG: "centos8"
+#    - TAG: "centos8"
     - TAG: "centos9"
     - TAG: "rhel8"
     - TAG: "rhel9"
-    # - TAG: "alma8"
-    # - TAG: "alma9"
+    - TAG: "alma8"
+    - TAG: "alma9"
     
   tags:
   - $TAG
@@ -121,9 +123,11 @@ ha-rollout:
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
   - "scp -r $PWD/* $TST_CTRL002_IP:"
 
+  - echo Fix repositories if needed
   - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
   - ssh $TST_CTRL002_IP find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
-
+  - "if [ \"$TAG\" == \"centos8\" ]; then echo \"...change for [$TAG]\"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *; sed -i 's/^mirror/#mirror/g' *; sed -i 's/mirror\\.centos/vault.centos/g' *; cd -; fi"
+  - "ssh $TST_CTRL002_IP \"if [ \\\"$TAG\\\" == \\\"centos8\\\" ]; then echo \\\"...change for [$TAG]\\\"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *; sed -i 's/^mirror/#mirror/g' *; sed -i 's/mirror\\\\.centos/vault.centos/g' *; cd -; fi\""
 
   - echo Run prepare on Primary
   - ./prepare.sh
@@ -131,12 +135,12 @@ ha-rollout:
   - ssh $TST_CTRL002_IP INSIDE_RUNNER=true ./prepare.sh
 
   - echo Run controller on Primary
-  - "( cd site && ansible-playbook controller.yml )"
+  - "( cd site && (ansible-playbook controller.yml || ansible-playbook controller.yml) )"
   - echo Run controller on Secondary
-  - ssh $TST_CTRL002_IP "( cd site && INSIDE_RUNNER=true ansible-playbook controller.yml )"
+  - ssh $TST_CTRL002_IP "( cd site && (INSIDE_RUNNER=true ansible-playbook controller.yml || INSIDE_RUNNER=true ansible-playbook controller.yml) )"
 
   - echo Run compute on Primary
-  - "( cd site && ansible-playbook compute-redhat.yml compute-ubuntu.yml )"
+  - "( cd site && (ansible-playbook compute-redhat.yml compute-ubuntu.yml || ansible-playbook compute-redhat.yml compute-ubuntu.yml) )"
 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true

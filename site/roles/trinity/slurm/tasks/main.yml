@@ -214,9 +214,15 @@
       file:
         name: "{{ slurm_spool_path }}"
         state: directory
-        owner: root
-        group: root
+        owner: slurm
+        group: slurm
         mode: 0750
+
+    - name: Set parent spool directory permissions
+      file:
+        name: "{{ slurm_spool_path }}/.."
+        state: directory
+        mode: 0751
 
     - name: Create shared munge dir
       file:
@@ -280,10 +286,12 @@
         src: '{{ item.0 }}.j2'
         dest: '{{ slurm_conf_path }}/{{ item.0 }}'
         mode: '{{ item.1 }}'
-        force: "no"
+        owner: '{{ item.2 }}'
+        force: false
       with_together:
         - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'slurm-partitions.conf', 'slurm-user.conf']
         - ['0644', '0600', '0644', '0644', '0644']
+        - ['root', 'slurm', 'root', 'root', 'root']
       notify: restart slurm
 
     - name: Set UsePAM to 1 in slurm-user.conf
@@ -294,7 +302,7 @@
 
     - name: Start munge and slurmdbd services
       service:
-        daemon_reload: "yes"
+        daemon_reload: true
         name: '{{ item }}'
         state: started
         enabled: "{{ not ha|default(True) }}"
