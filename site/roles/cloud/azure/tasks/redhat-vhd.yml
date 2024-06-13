@@ -103,7 +103,7 @@
       -  { src: "/proc/", path: "{{ vhd_path }}/proc/" }
     loop_control:
       loop_var: mount_dir
-  
+
   - name: Create script to set environment variable and generate GRUB config
     copy:
       dest: "{{ vhd_path }}/tmp/grub-config.sh"
@@ -120,26 +120,46 @@
       path: "{{ vhd_path }}/tmp/grub-config.sh"
       state: absent
 
-  # - name: Append Trinity block to GRUB configuration
-  #   blockinfile:
-  #     path: "{{ vhd_path }}/boot/efi/EFI/rocky/grub.cfg"
-  #     marker: "# {mark} ANSIBLE MANAGED BLOCK"
-  #     block: |
-  #       menuentry "Trinity iPXE" {
-  #               chainloader (hd0,gpt1)/efi/rocky/ipxe.efi rootdelay=300 console=ttyS0 earlyprintk=ttyS0 no_timer_check net.ifnames=0 biosdevname=0 crashkernel=auto boot_success=0
-  #       }
-        
-  # - name: Install Grub Entry
-  #   shell: "chroot {{ vhd_path }} grub2-mkconfig -o /boot/efi/EFI/rocky/grub.cfg"
+  - name: Set root user password
+    shell: "echo 'root:TrinityX@24' | chroot {{ vhd_path }} /bin/bash -c 'chpasswd'"
   
-  - name: Copy GRUB Menu Entry
-    template:
-      src: 'grub.cfg'
-      dest: "{{ vhd_path }}/boot/efi/EFI/rocky/grub.cfg"
+  - name: Update the Shadow
+    shell: "chroot {{ vhd_path }} chmod 640 /etc/shadow"
   
+  - name: Find the Rescue vmlinuz file in /boot
+    shell: "ls -1t {{ vhd_path }}/boot/vmlinuz-* | head -n 1"
+    register: rescue_vmlinuz
+
+  - name: Extract Rescue kernel version from vmlinuz file
+    set_fact:
+      rescue_kernel_version: "{{ rescue_vmlinuz.stdout | basename }}"
+
+  - name: Find the corresponding Rescue initramfs file in /boot
+    shell: "ls -1 {{ vhd_path }}/boot/initramfs-{{ rescue_kernel_version | regex_replace('vmlinuz-', '') }}*.img | head -n 1"
+    register: rescue_initramfs
+
+  - name: Set Rescue initramfs version
+    set_fact:
+      rescue_initrd_version: "{{ rescue_initramfs.stdout | basename }}"
+
+  - name: Find the vmlinuz file in /boot
+    shell: "ls -1t {{ vhd_path }}/boot/vmlinuz-* | tail -n 1"
+    register: latest_vmlinuz
+
+  - name: Extract kernel version from vmlinuz file
+    set_fact:
+      kernel_version: "{{ latest_vmlinuz.stdout | basename }}"
+
+  - name: Find the corresponding initramfs file in /boot
+    shell: "ls -1 {{ vhd_path }}/boot/initramfs-{{ kernel_version | regex_replace('vmlinuz-', '') }}*.img | tail -n 1"
+    register: latest_initramfs
+
+  - name: Set initramfs version
+    set_fact:
+      initrd_version: "{{ latest_initramfs.stdout | basename }}"
+
   - name: Update Grub
-    # shell: "chroot {{ vhd_path }} grub2-set-default 'Trinity iPXE'"
-    shell: "chroot {{ vhd_path }} grub2-set-default 2"
+    shell: "chroot {{ vhd_path }} grub2-set-default 'Trinity iPXE'"
 
   - name: Unmount dev, sys and Proc
     mount:
@@ -187,7 +207,6 @@
       - 'mkdir -p /mnt/{{ vhd_name }}/efi'
       - 'mount {{ loop_device.stdout }}p1 /mnt/{{ vhd_name }}/efi'
       - 'cp -r {{ vhd_path }}/boot/efi/. /mnt/{{ vhd_name }}/efi/'
-      - 'umount /mnt/{{ vhd_name }}/efi'
     loop_control:
       loop_var: efi_partition
   
@@ -198,7 +217,6 @@
       - 'mkdir -p /mnt/{{ vhd_name }}/boot'
       - 'mount {{ loop_device.stdout }}p2 /mnt/{{ vhd_name }}/boot'
       - 'cp -r {{ vhd_path }}/boot/. /mnt/{{ vhd_name }}/boot/'
-      - 'umount /mnt/{{ vhd_name }}/boot'
     loop_control:
       loop_var: boot_partition
   
@@ -217,14 +235,53 @@
       - 'mkdir -p /mnt/{{ vhd_name }}/root'
       - 'mount {{ loop_device.stdout }}p4 /mnt/{{ vhd_name }}/root'
       - 'cp -r {{ vhd_path }}/. /mnt/{{ vhd_name }}/root/'
-      - 'rm -rf /mnt/{{ vhd_name }}/root/boot/'
-      - 'umount /mnt/{{ vhd_name }}/root'
     loop_control:
       loop_var: root_partition
+
+  - name: Find UUIDs for partitions
+    shell: "blkid -s UUID -o value {{ loop_device.stdout }}p{{ partition_num }}"
+    register: uuid_result
+    loop: [1, 2, 3, 4]
+    loop_control:
+      loop_var: partition_num
+
+  - name: Set facts for partition UUIDs
+    set_fact:
+      root_uuid: "{{ uuid_result.results | selectattr('partition_num', 'equalto', 4) | map(attribute='stdout') | first }}"
+      efi_uuid: "{{ uuid_result.results | selectattr('partition_num', 'equalto', 1) | map(attribute='stdout') | first }}"
+      boot_uuid: "{{ uuid_result.results | selectattr('partition_num', 'equalto', 2) | map(attribute='stdout') | first }}"
+      swap_uuid: "{{ uuid_result.results | selectattr('partition_num', 'equalto', 3) | map(attribute='stdout') | first }}"
+
+  - name: Create GRUB configuration with correct kernel version
+    template:
+      src: "grub.cfg.j2"
+      dest: "{{ grub_dest }}"
+    with_items:
+      - "{{ vhd_path }}/boot/efi/EFI/rocky/grub.cfg"
+      - "/mnt/{{ vhd_name }}/efi/EFI/rocky/grub.cfg"
+    loop_control:
+      loop_var: grub_dest
+  
+  - name: Ensure /etc/fstab is correct
+    copy:
+      content: |
+        UUID={{ root_uuid }}  /         ext4 defaults   0   1
+        UUID={{ boot_uuid }} /boot      ext4 defaults   0   2
+        UUID={{ efi_uuid }} /boot/efi   vfat umask=0077,shortname=winnt 0 2
+        UUID={{ swap_uuid }} swap       swap defaults   0   0
+      dest: "{{ fstab_dest }}"
+    with_items:
+      - "{{ vhd_path }}/etc/fstab"
+      - "/mnt/{{ vhd_name }}/root/etc/fstab"
+    loop_control:
+      loop_var: fstab_dest
 
   - name: Clean up the Mount and Loop Device
     shell: "{{ clean_up }}"
     with_items:
+      - 'umount /mnt/{{ vhd_name }}/efi'
+      - 'umount /mnt/{{ vhd_name }}/boot'
+      - 'umount /mnt/{{ vhd_name }}/root'
       - 'rm -rf /mnt/{{ vhd_name }}'
       - 'losetup -d {{ loop_device.stdout }}'
     loop_control:

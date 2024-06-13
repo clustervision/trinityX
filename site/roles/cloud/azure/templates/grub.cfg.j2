@@ -1,0 +1,33 @@
+
+# TrinityX GRUB Configuration
+set default=0
+set timeout=5
+set menu_color_normal=white/black
+set menu_color_highlight=black/light-gray
+
+menuentry 'Trinity iPXE' {
+    insmod chain
+    insmod efi_gop
+    insmod efi_uga
+    insmod fat
+    set root='hd0,gpt1'
+    chainloader /efi/rocky/ipxe.efi rootdelay=300 console=ttyS0 earlyprintk=ttyS0 no_timer_check net.ifnames=0 biosdevname=0 crashkernel=auto boot_success=0
+}
+
+menuentry 'Rocky Linux 8 (Default)' {
+    insmod efi_gop
+    insmod efi_uga
+    insmod ext2
+    set root='hd0,gpt2'
+    linux /{{ kernel_version }} root=UUID={{ root_uuid }} ro 
+    initrd /{{ initrd_version }}
+}
+
+menuentry 'Rocky Linux 8 (Rescue)' {
+    insmod efi_gop
+    insmod efi_uga
+    insmod ext2
+    set root='hd0,gpt2'
+    linux /{{ rescue_kernel_version }} root=UUID={{ root_uuid }} ro rescue
+    initrd /{{ rescue_initrd_version }}
+}
