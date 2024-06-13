@@ -214,9 +214,15 @@
       file:
         name: "{{ slurm_spool_path }}"
         state: directory
-        owner: root
-        group: root
+        owner: slurm
+        group: slurm
         mode: 0750
+
+    - name: Set parent spool directory permissions
+      file:
+        name: "{{ slurm_spool_path }}/.."
+        state: directory
+        mode: 0751
 
     - name: Create shared munge dir
       file:
@@ -291,6 +297,20 @@
         path: '{{ slurm_conf_path }}/slurm-user.conf'
         line: 'UsePAM=1'
       when: enable_slurm_pam
+
+    - name: Fetch slurmdbd service file location
+      shell: systemctl show -P FragmentPath slurmdbd
+      register: slurm_slurmdbd_service_file
+
+    - name: Disable starting slurmdbd as user slurm
+      lineinfile:
+        path: '{{ slurm_slurmdbd_service_file.stdout }}'
+        regexp: '^(User|Group)(=.*)$'
+        line: '#<1><2>'
+        backrefs: yes
+      when: 
+        - slurm_slurmdbd_service_file.stdout is defined
+        - slurm_slurmdbd_service_file.stdout | length > 0
 
     - name: Start munge and slurmdbd services
       service:
