@@ -1,31 +1,32 @@
 ---
-- name: Check Ansible Core Version
-  hosts: controllers
-  gather_facts: false
-  tasks:
-    - name: Get Ansible Core Version
-      shell: ansible --version | head -n1 | cut -d ']' -f1 | awk '{print $3}'
-      register: ansible_version_output
-      changed_when: false
-
-    - name: Check if Ansible Core version is less than 2.15
-      set_fact:
-        ansible_version_lt_215: "{{ ansible_version_output.stdout.split('.') | map('int') | list < [2, 15] }}"
-
-    - name: Fail if Ansible Core version is less than 2.15
-      assert:
-        that:
-          - ansible_version_lt_215 == false
-        fail_msg: "Your Ansible Core version is {{ ansible_version_output.stdout }}. Please upgrade to at least version 2.15."
-        success_msg: "Ansible Core version is adequate ({{ ansible_version_output.stdout }})."
-
-- name: Install TrinityX By Importing the controller.yml
-  import_playbook: controller.yml
+#- name: Check Ansible Core Version
+#  hosts: controllers
+#  gather_facts: false
+#  tasks:
+#    - name: Get Ansible Core Version
+#      shell: ansible --version | head -n1 | cut -d ']' -f1 | awk '{print $3}'
+#      register: ansible_version_output
+#      changed_when: false
+#
+#    - name: Check if Ansible Core version is less than 2.15
+#      set_fact:
+#        ansible_version_lt_215: "{{ ansible_version_output.stdout.split('.') | map('int') | list < [2, 15] }}"
+#
+#    - name: Fail if Ansible Core version is less than 2.15
+#      assert:
+#        that:
+#          - ansible_version_lt_215 == false
+#        fail_msg: "Your Ansible Core version is {{ ansible_version_output.stdout }}. Please upgrade to at least version 2.15."
+#        success_msg: "Ansible Core version is adequate ({{ ansible_version_output.stdout }})."
 
 - name: Cloud Support
   hosts: controllers
   gather_facts: true
   tasks:
+    - name: Verify if controller playbook ran to completion
+      include_role: trinity/prepare
+        stage: "controller"
+
     - name: Set cloud_condition fact
       set_fact:
         cloud_condition: >-

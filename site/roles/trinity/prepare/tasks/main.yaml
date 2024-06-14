@@ -1,13 +1,20 @@
 ---
 
-# simple method to verify if the prepare.sh script did run.
+# simple method to verify if a stage has passed.
 
 - name: Get prepare
   stat:
-    path: '/etc/trinity/prepare.done'
-  register: prepare_done
+    path: '/etc/trinity/{{ stage }}.done'
+  register: stage_done
 
-- name: Verify if prepare was run prior to playbook
-  fail:
-    msg: "prepare.sh did not run or did not complete. Please run prepare.sh till completion first"
-  when: not prepare_done.stat.exists
+- block:
+  - name: Verify if prepare was run prior to playbook
+    fail:
+      msg: "prepare.sh did not run or did not complete. Please run prepare.sh till completion first"
+    when: stage == "prepare"
+
+  - name: Verify if controller playbook was run prior to playbook
+    fail:
+      msg: "ansible-playbook controller.yml was not run or did not complete. Please run the controller playbook till completion first"
+    when: stage == "controller"
+  when: not stage_done.stat.exists
