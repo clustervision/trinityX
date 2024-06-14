@@ -1,4 +1,15 @@
 ---
+- hosts: controllers
+
+  # List of roles to apply to the controllers, in the order in which they will run.
+  # NOTE: These and their default configurations can be found in the "roles/"
+  #       directory.
+
+  roles:
+    - role: trinity/prepare
+      stage: "controller"
+      tags: always
+
 #- name: Check Ansible Core Version
 #  hosts: controllers
 #  gather_facts: false
@@ -19,14 +30,12 @@
 #        fail_msg: "Your Ansible Core version is {{ ansible_version_output.stdout }}. Please upgrade to at least version 2.15."
 #        success_msg: "Ansible Core version is adequate ({{ ansible_version_output.stdout }})."
 
+
+
 - name: Cloud Support
   hosts: controllers
   gather_facts: true
   tasks:
-    - name: Verify if controller playbook ran to completion
-      include_role: trinity/prepare
-        stage: "controller"
-
     - name: Set cloud_condition fact
       set_fact:
         cloud_condition: >-
