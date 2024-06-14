@@ -7,11 +7,10 @@ fi
 # --------------------------------------------------------------------------------------
 
 function add_message() {
-  echo -e "$1\n" | fold -w70 -s >> /tmp/mesg.$$.dat
+  echo -e "$1" | fold -w70 -s >> /tmp/mesg.$$.dat
 }
 
 function show_message() {
-  #echo $1 | fold -w70 -s > /tmp/warn.$$.dat
   echo "****************************************************************************"
   echo "*                                                                          *"
   while read -r LINE
@@ -65,6 +64,18 @@ else
   # To disable SElinux on the controller node
   setenforce 0
   sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
+
+  if [ ! "$INSIDE_RUNNER" ]; then
+    if [ -f site/tui_configurator ]; then
+        rm -f site/tui_configurator
+    fi
+    if [ ! "$(which wget)" ]; then
+        dnf -y install wget
+    fi
+    TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml.example 2> /dev/null | grep -oE '[0-9\.]+' || echo '14.1')
+    wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/tui_configurator
+    chmod 755 site/tui_configurator
+  fi
 
   # inside a runner (test mode) we do not update the kernel.
   if [ "$INSIDE_RUNNER" ]; then

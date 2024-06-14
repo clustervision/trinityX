@@ -1,0 +1,60 @@
+---
+- hosts: controllers
+
+  pre_tasks:
+  - name: Filter image name
+    set_fact:
+      regex_image_name: "{{ image_name | regex_search('^[a-zA-Z0-9\\ \\-\\_\\.]+$') }}"
+
+  - name: Verify image name compliancy
+    fail:
+      msg: "Image name {{ image_name }} is not compliant. Supported is a-z A-Z 0-9 'space' '-' '_' '.'"
+    when: regex_image_name != image_name
+
+  - name: Determining controller Distribution
+    set_fact:
+      controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
+
+  - name: Determining if we need to create or download the base image
+    set_fact:
+      download_base_image: true
+      image_create_minimal: false
+    when: 
+      - alternative_distribution is defined
+      - alternative_distribution != controller_distribution
+
+  - name: Ensuring to extend the docker image
+    set_fact:
+      image_extend_docker: true
+    when: 
+      - alternative_image_source is defined
+      - alternative_image_source == 'docker'
+
+  - name:
+    debug:
+      msg: "Downloading for {{ alternative_distribution }} using {{ alternative_image_source|default('base') }}"
+    when: download_base_image is defined
+
+  roles:
+  - role: trinity/init
+    tags: init
+
+  - role: trinity/image-download
+    image_download_distribution: "{{ alternative_distribution }}"
+    image_download_source: "{{ alternative_image_source|default('base') }}"
+    tags: image-create
+    when:
+      - primary
+      - download_base_image is defined
+
+  - role: ansible/write_facts
+    tags: init
+
+  - role: trinity/image-create
+    image_create_distribution: 'ubuntu'
+    tags: image-create
+    when: primary
+
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"

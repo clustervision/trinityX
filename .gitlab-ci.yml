@@ -12,12 +12,12 @@ rollout:
     matrix:
     - TAG: "rocky8"
     - TAG: "rocky9"
-    - TAG: "centos8"
+#    - TAG: "centos8"
     - TAG: "centos9"
     - TAG: "rhel8"
     - TAG: "rhel9"
-    # - TAG: "alma8"
-    # - TAG: "alma9"
+    - TAG: "alma8"
+    - TAG: "alma9"
     
   tags:
   - $TAG
@@ -25,6 +25,7 @@ rollout:
   
   script:
   - echo Setup Network on Primary
+  - hostnamectl set-hostname controller1 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
@@ -35,21 +36,22 @@ rollout:
   - "cp site/hosts.example site/hosts"
   - "cp site/group_vars/all.yml.example site/group_vars/all.yml"
   - "sed -i -E \"s/ens6/ens224/\" site/group_vars/all.yml"
-  - "ctrl_hostname=$(hostname) && sed -i -E \"s/controller([12])/${ctrl_hostname:0:-1}\\1/\"  site/group_vars/all.yml"
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
   - cat "site/group_vars/all.yml"
+
+  - echo Fix repositories if needed
+  - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
+  - "if [ \"$TAG\" == \"centos8\" ]; then echo \"...change for [$TAG]\"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *; sed -i 's/^mirror/#mirror/g' *; sed -i 's/mirror\\.centos/vault.centos/g' *; cd -; fi"
 
   - echo Run prepare
   - ./prepare.sh
 
-  - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
-
   - echo Run controller
-  - "( cd site && ansible-playbook controller.yml )"
+  - "( cd site && (ansible-playbook controller.yml || ansible-playbook controller.yml) )"
 
   - echo Run compute
-  - "( cd site && ansible-playbook compute-redhat.yml )"
-  - "( cd site && ansible-playbook compute-ubuntu.yml )"
+  - "( cd site && (ansible-playbook compute-redhat.yml || ansible-playbook compute-redhat.yml) )"
+  - "( cd site && (ansible-playbook compute-ubuntu.yml || ansible-playbook compute-ubuntu.yml) )"
 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
@@ -72,12 +74,12 @@ ha-rollout:
     matrix:
     - TAG: "rocky8"
     - TAG: "rocky9"
-    - TAG: "centos8"
+#    - TAG: "centos8"
     - TAG: "centos9"
     - TAG: "rhel8"
     - TAG: "rhel9"
-    # - TAG: "alma8"
-    # - TAG: "alma9"
+    - TAG: "alma8"
+    - TAG: "alma9"
     
   tags:
   - $TAG
@@ -88,6 +90,7 @@ ha-rollout:
   - ssh-keygen -F $TST_CTRL002_IP || ssh-keyscan $TST_CTRL002_IP >> ~/.ssh/known_hosts
   
   - echo Setup Network on Primary
+  - hostnamectl set-hostname controller1 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
   - nmcli con add connection.interface-name ens224 type ethernet
@@ -98,6 +101,7 @@ ha-rollout:
   - nmcli con up id ethernet-ens256
 
   - echo Setup Network on Secondary
+  - ssh $TST_CTRL002_IP hostnamectl set-hostname controller2
   - ssh $TST_CTRL002_IP nmcli con add connection.interface-name ens224 type ethernet
   - ssh $TST_CTRL002_IP nmcli con add connection.interface-name ens256 type ethernet
   - ssh $TST_CTRL002_IP nmcli con mod ethernet-ens224 ipv4.addresses 10.141.255.253/16
@@ -114,16 +118,17 @@ ha-rollout:
   - "sed -i -E \"s/disk: '\\/dev\\/vda'/disk: '\\/dev\\/sdb'/\" site/group_vars/all.yml"
   - "sed -i -E \"s/ha: false/ha: true/\" site/group_vars/all.yml"
   - "sed -i -E \"s/enable_ipmilan_fencing: true/enable_ipmilan_fencing: false/\" site/group_vars/all.yml"
-  - "ctrl_hostname=$(hostname) && sed -i -E \"s/controller([12])/${ctrl_hostname:0:-1}\\1/\"  site/group_vars/all.yml"
   - "if [ \"$CI_COMMIT_REF_NAME\" != \"master\" ] && [ \"$CI_COMMIT_REF_NAME\" != \"main\" ]; then sed -i -E \"s/trix_stream: '[a-z]+'/trix_stream: 'testing'/\" site/group_vars/all.yml; fi"
   - cat "site/group_vars/all.yml"
 
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
   - "scp -r $PWD/* $TST_CTRL002_IP:"
 
+  - echo Fix repositories if needed
   - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
   - ssh $TST_CTRL002_IP find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
-
+  - "if [ \"$TAG\" == \"centos8\" ]; then echo \"...change for [$TAG]\"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *; sed -i 's/^mirror/#mirror/g' *; sed -i 's/mirror\\.centos/vault.centos/g' *; cd -; fi"
+  - "ssh $TST_CTRL002_IP \"if [ \\\"$TAG\\\" == \\\"centos8\\\" ]; then echo \\\"...change for [$TAG]\\\"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *; sed -i 's/^mirror/#mirror/g' *; sed -i 's/mirror\\\\.centos/vault.centos/g' *; cd -; fi\""
 
   - echo Run prepare on Primary
   - ./prepare.sh
@@ -131,12 +136,12 @@ ha-rollout:
   - ssh $TST_CTRL002_IP INSIDE_RUNNER=true ./prepare.sh
 
   - echo Run controller on Primary
-  - "( cd site && ansible-playbook controller.yml )"
+  - "( cd site && (ansible-playbook controller.yml || ansible-playbook controller.yml) )"
   - echo Run controller on Secondary
-  - ssh $TST_CTRL002_IP "( cd site && INSIDE_RUNNER=true ansible-playbook controller.yml )"
+  - ssh $TST_CTRL002_IP "( cd site && (INSIDE_RUNNER=true ansible-playbook controller.yml || INSIDE_RUNNER=true ansible-playbook controller.yml) )"
 
   - echo Run compute on Primary
-  - "( cd site && ansible-playbook compute-redhat.yml compute-ubuntu.yml )"
+  - "( cd site && (ansible-playbook compute-redhat.yml compute-ubuntu.yml || ansible-playbook compute-redhat.yml compute-ubuntu.yml) )"
 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true

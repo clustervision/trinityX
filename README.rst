@@ -45,13 +45,24 @@ Steps to install TrinityX
 
 3. Configure passwordless authentication to the controller itself or/and for both controllers in the HA case.
 
-4. Clone TrinityX repository into your working directory. Then run ```prepare.sh``` to install all the prerequisites::
+4. Clone TrinityX repository into your working directory. Then run ``INSTALL.sh`` to install and be guided through the steps::
+
+       # git clone http://github.com/clustervision/trinityX
+       # cd trinityX
+       # bash INSTALL.sh
+
+
+--- **OR** ---
+
+4. Step by step manual configuration and installation
+
+4.1. Clone TrinityX repository into your working directory. Then run ``prepare.sh`` to install all the prerequisites::
 
        # git clone http://github.com/clustervision/trinityX
        # cd trinityX
        # bash prepare.sh
 
-5. Copy the all file which will contain the controller and cluster configuration. Please view the contents of the file on the directives that may need modification(s)::
+4.2. Copy the all file which will contain the controller and cluster configuration. Please view the contents of the file on the directives that may need modification(s)::
 
        # cd site 
        # cp group_vars/all.yml.example group_vars/all.yml
@@ -68,7 +79,7 @@ Steps to install TrinityX
 
    If applicable, configure the dns forwarders in trix_dns_forwarders when the defaults, 8.8.8.8 and 8.8.4.4 are unreachable.
 
-6. Configure ``hosts`` file to allow ansible to address controllers.
+4.3. Configure ``hosts`` file to allow ansible to address controllers.
 
        # cp hosts.example hosts
 
@@ -77,14 +88,17 @@ Steps to install TrinityX
        [controllers]
        controller ansible_host=10.141.255.254
 
-   Example for HA setup::
+   Example for HA setup with shared SSH key, a.k.a. passwordless access to the other controller(s)::
 
        [controllers]
        controller1 ansible_host=10.141.255.254
        controller2 ansible_host=10.141.255.253
 
+   Alternatively for HA setup, the group_vars/all.yml file can be copied to the other controllers and run sequentially.
+   In this case, no SSH keys need to be exchanged between the controllers and the ``hosts`` file does not require any change.
+   It's important though to have the primary controller finish the controller.yml playbook first before running on the other controllers.
 
-7. Start TrinityX installation::
+4.4. Start TrinityX installation::
 
      # ansible-playbook controller.yml
 
@@ -92,19 +106,20 @@ Steps to install TrinityX
 
     **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
 
-8. Create a default RedHat/Rocky OS image::
+4.5. Create a default RedHat/Rocky OS image::
 
     # ansible-playbook compute-redhat.yml
 
-9. Optionally Create a default Ubuntu OS image::
+4.6. Optionally Create a default Ubuntu OS image::
 
     # ansible-playbook compute-ubuntu.yml
+
 
 Now you have your controller(s) installed and the default OS image(s) created!
 
 
 Customizing your installation
------------------------------
+=============================
 
 Now, if you want to tailor TrinityX to your needs, you can modify the ansible playbooks and variable files.
 
@@ -117,6 +132,20 @@ Descriptions to configuration options are given inside ``controller.yml`` and ``
 
 You can also choose which components to exclude from the installation by modifying the ``controller.yml`` playbook.
 
+HA or High Availability
+=======================
+
+To make HA work properly, services need to understand the HA concept. Many services do, however not all. To still support HA for these services, a shared disk is required, where the active controller has access to this disk and start those services. The disk can be DRBD (default), but also iSCSI, a DAS or NAS, or combinations of. The configuration or combinations of need to provide at least the following volumes:
+
+* {{ trix_ha }}
+* {{ trix_home }}
+* {{ trix_shared }}
+* {{ trix_ohpc }} (if OpenHPC is enabled)
+
+LVM and ZFS are supported, where partitions can be made on top of the shared disk. On top of these partitions all regular filesystems, like xfs and ext4 are supported.
+
+Fencing is supported by enforcing stonith. The BMC-s of each controller need to be configured to match the settings for ip address, name and password in the HA section. A mismatch will result in a non proper working HA setup. Alternatively, fencing can be disabled but is not recommended.
+
 OpenHPC Support
 ===============
 
@@ -124,8 +153,9 @@ The OpenHPC project provides a framework for building, managing and maintain HPC
 
 Documentation
 =============
-A pre-built PDF is provided in the main directory. A URL with the Luna REST API documentation will follow.
-
+A pre-built PDF is provided in the main directory.
+Please visit https://docs.clustervision.com for more documentation on the TrinityX project.
+An URL with the Luna REST API documentation will follow.
 
 Contributing
 ============

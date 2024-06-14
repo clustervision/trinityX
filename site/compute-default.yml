@@ -6,9 +6,9 @@
   #
   - name: Set image name
     set_fact:
-      image_name: "ubuntu"
+      image_name: "compute"
 
-- import_playbook: imports/trinity-ubuntu-image-create.yml
+- import_playbook: imports/trinity-redhat-image-create.yml
   vars:
     image_name: "{{ hostvars['localhost']['image_name'] }}"
     # The password to set up for the root user in the image.
@@ -16,15 +16,14 @@
     #
     image_password:
     #
-    # Alternative distribution build. Supported are Ubuntu, version 20, 22 and 24
-    # or any docker image, e.g. ubuntu:rolling
-    #alternative_distribution: Ubuntu-22
+    # Alternative distribution build. Supported are Rocky + Centos, version 8, 9, 8.9, 9.3
+    # or any docker image, e.g. rockylinux:8
+    #alternative_distribution: Rocky-9.3
     # 
     # The alternative source can be 'base' or 'docker'
     #alternative_image_source: 'base'
 
-
-- import_playbook: imports/trinity-ubuntu-image-setup.yml
+- import_playbook: imports/trinity-redhat-image-setup.yml
   vars:
     hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
 
