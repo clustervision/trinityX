@@ -20,6 +20,18 @@
     set_fact:
       on_controller: '{{ True if "controllers" in group_names else False }}'
 
+  - name: Check if i am on real hardware or inside cloud
+    shell: dmidecode -s system-manufacturer | grep -iE "microsoft|google|amazon" || true
+    register: init_dmidecode
+
+  - name: Set cloud fact
+    set_fact:
+      in_cloud: '{{ True if init_dmidecode.stdout_lines | length > 1 else False }}'
+
+  - name:
+    debug:
+      msg: 'Set to run if {{ True if ha or in_cloud else False }}'
+
   - block:
     - name: Update the trix_ctrl_* variables in case of non-HA setup
       set_fact:
