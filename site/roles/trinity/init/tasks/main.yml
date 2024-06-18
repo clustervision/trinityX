@@ -26,11 +26,7 @@
 
   - name: Set cloud fact
     set_fact:
-      in_cloud: '{{ True if init_dmidecode.stdout_lines | length > 1 else False }}'
-
-  - name:
-    debug:
-      msg: 'Set to run if {{ True if ha or in_cloud else False }}'
+      in_cloud: '{{ True if init_dmidecode.stdout_lines | length > 0 else False }}'
 
   - block:
     - name: Update the trix_ctrl_* variables in case of non-HA setup
@@ -111,7 +107,7 @@
     when: primary is not defined
 
   - debug:
-      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}"
+      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}"
 
   - name: Setting trix_external_fqdn
     set_fact:
