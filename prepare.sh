@@ -143,7 +143,7 @@ else
     add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
     add_message "after reboot, please re-run prepare.sh to make sure all requirements are met."
     show_message
-    CONFIRM = $(get_confirmation n "Do you want to proceed with current kernel")
+    CONFIRM=$(get_confirmation n "Do you want to proceed with current kernel")
     if [ "$CONFIRM" != "yes" ]; then
       exit 1
     fi
@@ -153,7 +153,7 @@ else
     add_message "Would you prefer to include ZFS?" 
     add_message "ZFS is supported in the shared_fs_disk/HA role. If you prefer to use ZFS there, please confirm below."
     show_message
-    WITH_ZFS = $(get_confirmation y "Do you want to install ZFS")
+    WITH_ZFS=$(get_confirmation y "Do you want to install ZFS")
   fi
   store_config 'WITH_ZFS' $WITH_ZFS
 
