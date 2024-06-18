@@ -25,14 +25,14 @@ function show_message() {
 function get_confirmation() {
   local DEFAULT=$1
   local MESG=$1
-  local CONFIRM=''
+  local CONFIRM=""
   while [ ! "$CONFIRM" ]; do
     case $DEFAULT in
       [Yy]|yes|Yes)
-        echo -n "$1? (<y>|n): "
+        echo -n "$1? (<y>|n): " >&2
         ;;
       *)
-        echo -n "$1? (y|<n>): "
+        echo -n "$1? (y|<n>): " >&2
         ;;
     esac
     read -t 600 CONFIRM
@@ -46,6 +46,9 @@ function get_confirmation() {
          ;;
       [Nn]|no|No)
          echo no
+         ;;
+      *)
+         CONFIRM=""
          ;;
     esac
   done
