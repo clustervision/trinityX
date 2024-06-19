@@ -60,19 +60,6 @@
 - name: Create File to embed Next Server IP with iPXE
   template:
     src: embed.ipxe.j2
-#  copy:
-#    content: |
-#      #!ipxe
-#      dhcp && goto netboot || goto dhcperror
-#
-#      :dhcperror
-#      prompt --key s --timeout 10000 DHCP failed, hit 's' for the iPXE shell; reboot in 10 seconds && shell || reboot
-#
-#      :netboot
-#      chain http://10.141.255.254:7051/boot ||
-#
-#      prompt --key s --timeout 10000 Chainloading failed, hit 's' for the iPXE shell; reboot in 10 seconds && shell || reboot
-#
     dest: /trinity/images/ipxe/src/embed.ipxe
 
 - name: Enable NTFS support
@@ -91,9 +78,4 @@
   command: make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe
   args:
     chdir: /trinity/images/ipxe/src
-
-
-
-
-
 
