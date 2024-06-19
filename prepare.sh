@@ -22,6 +22,38 @@ function show_message() {
   truncate -s0 /tmp/mesg.$$.dat
 }
 
+function get_confirmation() {
+  local DEFAULT=$1
+  local MESG=$2
+  local CONFIRM=""
+  while [ ! "$CONFIRM" ]; do
+    case $DEFAULT in
+      [Yy]|yes|Yes|YES)
+        echo -n "$MESG? (<y>|n): " >&2
+        ;;
+      *)
+        echo -n "$MESG? (y|<n>): " >&2
+        ;;
+    esac
+    read -t 600 CONFIRM
+    RET=$?
+    if [ "$RET" == "142" ] || [ ! "$CONFIRM" ]; then
+      CONFIRM=$DEFAULT
+    fi
+    case $CONFIRM in
+      [Yy]|yes|Yes|YES)
+         echo yes
+         ;;
+      [Nn]|no|No|NO)
+         echo no
+         ;;
+      *)
+         CONFIRM=""
+         ;;
+    esac
+  done
+}
+
 function store_config() {
   key=$1
   value=$2
@@ -107,17 +139,12 @@ else
   CURRENT_KERNEL=$(uname -r)
   LATEST_KERNEL=$(ls -tr /lib/modules/|tail -n1)
 
-  if [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ] && [ ! "$INSIDE_RUNNER" ]; then
+  if [ ! "$REBOOT_NEW_KERNEL" ] && [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ] && [ ! "$INSIDE_RUNNER" ]; then
     add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
-    add_message "after reboot, please re-run prepare.sh to make sure all requirements are met."
+    add_message "After reboot, please re-run prepare.sh to make sure all requirements are met."
     show_message
-    echo -n "Do you want to proceed with current kernel? (y|<n>): "
-    read -t 600 CONFIRM
-    RET=$?
-    if [ "$RET" == "142" ]; then
-      CONFIRM='y'
-    fi
-    if [ "$CONFIRM" != "y" ]; then
+    REBOOT_NEW_KERNEL=$(get_confirmation n "Do you want to proceed with current kernel")
+    if [ "$REBOOT_NEW_KERNEL" == "no" ]; then
       exit 1
     fi
   fi
@@ -126,17 +153,7 @@ else
     add_message "Would you prefer to include ZFS?" 
     add_message "ZFS is supported in the shared_fs_disk/HA role. If you prefer to use ZFS there, please confirm below."
     show_message
-    echo -n "Do you want to install ZFS? (<y>|n): "
-    read -t 600 WITH_ZFS
-    RET=$?
-    if [ "$RET" == "142" ]; then
-      WITH_ZFS=yes
-    fi
-    if [ "$WITH_ZFS" != "n" ]; then
-      WITH_ZFS="yes"
-    else
-      WITH_ZFS="no"
-    fi
+    WITH_ZFS=$(get_confirmation y "Do you want to install ZFS")
   fi
   store_config 'WITH_ZFS' $WITH_ZFS
 
