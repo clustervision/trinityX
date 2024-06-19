@@ -33,12 +33,12 @@
 # ------------------------------------------------------------------------------
 
 # Azure Cloud Modules
-azure_network     = _AZURE_NETWORK_BOOL_
-azure_vpn         = _AZURE_VPN_BOOL_
-azure_storage     = _AZURE_STORAGE_BOOL_
-azure_images      = _AZURE_IMAGE_BOOL_
-azure_controller  = _AZURE_CONTROLLER_BOOL_
-azure_node        = _ZURE_NODE_BOOL_
+azure_network     = true
+azure_vpn         = "{{ true if primary and on_controller and not in_cloud else false }}"
+azure_storage     = true
+azure_images      = true
+azure_controller  = "{{ true if (on_controller and in_cloud) or azure_controller else false }}"
+azure_node        = "{{ azure_node }}"
 
 # Azure Credentials
 azure_subscription_id = "{{ azure_subscription_id }}"
@@ -180,12 +180,15 @@ azure_virtual_network_tags           = {
 }
 azure_virtual_network_encryption     = "AllowUnencrypted"
 azure_virtual_network_address_space  =  [
+{% if on_premises_controller %}
+  "{{ azure_local_net }}/{{ azure_local_netprefix }}",
+{% endif %}
   "{{ trix_cluster_net }}/{{ trix_cluster_netprefix }}",
   "{{ trix_bmc_net }}/{{ trix_bmc_netprefix }}",
   "{{ trix_infiniband_net }}/{{ trix_infiniband_netprefix }}"
 ]
-azure_virtual_network_subnets        = [
 #{ % if primary and on_controller and not in_cloud % }
+azure_virtual_network_subnets        = [
 {% if on_premises_controller %}
   {"name": "localconn", "address_prefix": "{{ azure_local_net }}/{{ azure_local_netprefix }}", "security_group": "TrinityX-NSG"},
 {% endif %}
