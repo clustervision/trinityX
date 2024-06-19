@@ -139,12 +139,12 @@ else
   CURRENT_KERNEL=$(uname -r)
   LATEST_KERNEL=$(ls -tr /lib/modules/|tail -n1)
 
-  if [ ! "$REBOOT_NEW_KERNEL" ] && [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ] && [ ! "$INSIDE_RUNNER" ]; then
+  if [ ! "$USE_CURRENT_KERNEL" ] && [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ] && [ ! "$INSIDE_RUNNER" ]; then
     add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
     add_message "After reboot, please re-run prepare.sh to make sure all requirements are met."
     show_message
-    REBOOT_NEW_KERNEL=$(get_confirmation n "Do you want to proceed with current kernel")
-    if [ "$REBOOT_NEW_KERNEL" == "no" ]; then
+    USE_CURRENT_KERNEL=$(get_confirmation n "Do you want to proceed with current kernel")
+    if [ "$USE_CURRENT_KERNEL" == "no" ]; then
       exit 1
     fi
   fi
