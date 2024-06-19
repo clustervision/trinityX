@@ -28,7 +28,7 @@ function get_confirmation() {
   local CONFIRM=""
   while [ ! "$CONFIRM" ]; do
     case $DEFAULT in
-      [Yy]|yes|Yes)
+      [Yy]|yes|Yes|YES)
         echo -n "$MESG? (<y>|n): " >&2
         ;;
       *)
@@ -37,14 +37,14 @@ function get_confirmation() {
     esac
     read -t 600 CONFIRM
     RET=$?
-    if [ "$RET" == "142" ]; then
+    if [ "$RET" == "142" ] || [ ! "$CONFIRM" ]; then
       CONFIRM=$DEFAULT
     fi
     case $CONFIRM in
-      [Yy]|yes|Yes)
+      [Yy]|yes|Yes|YES)
          echo yes
          ;;
-      [Nn]|no|No)
+      [Nn]|no|No|NO)
          echo no
          ;;
       *)
