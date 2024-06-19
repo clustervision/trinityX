@@ -11,6 +11,11 @@
     include_tasks: "{{ role_path }}/tasks/debian-terraform.yml"
     when:
       - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: Generate terraform.tfvars file
+    template:
+      src: terraform.tfvars.j2
+      dest: /tmp/terraform-azure.tfvars
   when:
     - vars.azure_installer == 'terraform'
 
