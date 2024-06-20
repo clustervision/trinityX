@@ -59,17 +59,18 @@
       {{trix_ctrl_ip}}    {{trix_ctrl_hostname}}.{{trix_domain}} {{trix_ctrl_hostname}}
   when: not ha|default(False)
 
-- name: Verify if i can resolve trix_external_fqdn
-  set_fact:
-    trix_external_fqdn_resolvable: "{{ query('community.general.dig', trix_external_fqdn, '@'+trix_dns_forwarders|first) }}"
-
-- name: trix_external_fqdn warning
-  fail:
-    msg: "{{ trix_external_fqdn }} is not resolvable! Please add an entry for {{ trix_external_fqdn }} to /etc/hosts"
-  ignore_errors: true
-  when:
-    - trix_external_fqdn_resolvable is iterable
-    - '"NXDOMAIN" is in trix_external_fqdn_resolvable'
+# Needs dnspython module. Available in RL,Alma,RH,C9, but not in 8. commented out for now. -Antoine
+#- name: Verify if i can resolve trix_external_fqdn
+#  set_fact:
+#    trix_external_fqdn_resolvable: "{{ query('community.general.dig', trix_external_fqdn, '@'+trix_dns_forwarders|first) }}"
+#
+#- name: trix_external_fqdn warning
+#  fail:
+#    msg: "{{ trix_external_fqdn }} is not resolvable! Please add an entry for {{ trix_external_fqdn }} to /etc/hosts"
+#  ignore_errors: true
+#  when:
+#    - trix_external_fqdn_resolvable is iterable
+#    - '"NXDOMAIN" is in trix_external_fqdn_resolvable'
 
 - name: Re-gather facts
   action: setup
