@@ -19,7 +19,16 @@
     # https://hub.docker.com/_/almalinux/tags
     alternative_distribution: almalinux:latest
     alternative_image_source: 'docker'
-    alternative_image_distr: 'alma'
+    alternative_image_distr: 'almalinux'
+
+- hosts:
+    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+  pre_tasks:
+  - name: umount /proc and /sys
+    shell: "umount /sys; umount /proc"
+    ignore_errors: true
+  - name: mount /proc and sys
+    shell: "mount -t proc proc /proc; mount -t sysfs sys /sys"
 
 - import_playbook: imports/trinity-redhat-image-setup.yml
   vars:
@@ -31,6 +40,11 @@
     - role: trinity/wrapup-images
       tags: wrapup-images
 
+- hosts:
+    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+  pre_tasks:
+  - name: umount /proc and /sys
+    shell: "umount /sys; umount /proc"
 
 - hosts: controllers
   roles:
