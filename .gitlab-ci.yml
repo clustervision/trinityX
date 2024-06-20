@@ -122,7 +122,10 @@ ha-rollout:
   - cat "site/group_vars/all.yml"
 
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
-  - "scp -r $PWD/* $TST_CTRL002_IP:"
+#  - "scp -r $PWD/* $TST_CTRL002_IP:"
+  - "dnf -y install rsync || true"
+  - "ssh $TST_CTRL002_IP 'mkdir -p '$PWD"
+  - "rsync -aH $PWD/* $TST_CTRL002_IP:$PWD/"
 
   - echo Fix repositories if needed
   - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
