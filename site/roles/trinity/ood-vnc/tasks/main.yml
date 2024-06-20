@@ -15,24 +15,15 @@
         disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       with_items: "{{ ood_compute_repository_rpms }}"
     
-    - name: Enable Rocky & Centos CRB repo
-      community.general.ini_file:
-        path: "/etc/yum.repos.d/{{ ansible_distribution | lower}}.repo"
-        section: crb
-        option: enabled
-        value: 1
-        create: false
-      when: ansible_distribution in ["Rocky", "CentOS"] and ansible_facts['distribution_major_version']|int > 8
-
     - name: Install required yum packages
       dnf:
+        enablerepo: crb
         name:
           - "@{{ood_vnc_desktop_package}}"  # -> groupinstall xfce
           - turbovnc
           - python3-websockify
           - dbus-x11
         state: present
-
   when: enable_ood_vnc == true and ansible_connection in 'chroot'
 
 # This should be done by controller because /trinity/shared is not mounted on compute node
