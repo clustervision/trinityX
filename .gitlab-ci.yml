@@ -136,12 +136,12 @@ ha-rollout:
   - echo Run prepare on Primary
   - ./prepare.sh
   - echo Run prepare on Secondary
-  - ssh $TST_CTRL002_IP INSIDE_RUNNER=true ./prepare.sh
+  - ssh $TST_CTRL002_IP 'cd '$PWD'; INSIDE_RUNNER=true ./prepare.sh'
 
   - echo Run controller on Primary
   - "( cd site && (ansible-playbook controller.yml || ansible-playbook controller.yml) )"
   - echo Run controller on Secondary
-  - ssh $TST_CTRL002_IP "( cd site && (INSIDE_RUNNER=true ansible-playbook controller.yml || INSIDE_RUNNER=true ansible-playbook controller.yml) )"
+  - ssh $TST_CTRL002_IP "( cd $PWD/site && (INSIDE_RUNNER=true ansible-playbook controller.yml || INSIDE_RUNNER=true ansible-playbook controller.yml) )"
 
   - echo Run compute on Primary
   - "( cd site && (ansible-playbook compute-default.yml compute-ubuntu.yml || ansible-playbook compute-default.yml compute-ubuntu.yml) )"
