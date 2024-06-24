@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3.10
+#!/trinity/local/python/bin/python3
 
 import os
 import sys

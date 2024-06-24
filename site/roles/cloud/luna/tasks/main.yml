@@ -8,11 +8,11 @@
 
 - block:
   - name: Parse the raw host list
-    exec: "/usr/local/bin/rawhostlist.py {{ params.hostlist }}
+    shell: "/usr/local/bin/rawhostlist.py {{ params.hostlist }}"
     register: luna_parsed_hostlist
 
   - name: Create nodes
-    exec: "echo {{ item }}"
+    shell: "echo {{ item }}"
     with_items: luna_parsed_hostlist.stdout_lines
     when:
       - luna_parsed_hostlist.rc | int == 0 
