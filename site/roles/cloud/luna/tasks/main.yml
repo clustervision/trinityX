@@ -22,7 +22,7 @@
       ignore_errors: true
 
     - name: Create cloud
-      shell: "luna cloud add -t {{ cloudtype }} {{ cloudname }}
+      shell: "luna cloud add -t {{ cloudtype }} {{ cloudname }}"
       when: luna_cloudname_exists.rc | int != 0
 
     - name: Verify if cloud group exists
@@ -36,11 +36,11 @@
           src: "{{ item }}"
           dest: "/tmp/{{ item }}"
         with_items:
-          - part.sh
-          - post.sh
+          - part.rd
+          - post.rd
 
       - name: Create cloud group
-        shell: "luna group add -o compute -qpart /tmp/part.sh -qpost /tmp/post.sh compute_{{ cloudname }}"
+        shell: "luna group add -o compute -qpart /tmp/part.rd -qpost /tmp/post.rd compute_{{ cloudname }}"
       when: luna_cloudgroup_exists.rc | int != 0
 
     - name: Create nodes
