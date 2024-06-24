@@ -39,16 +39,17 @@
       #   when: "{{ 'terraform' in installers }}"
       
       - name: Include Luna node creation role
-        include_role: 
+        include_role:
           name: "cloud/luna"
         vars:
-          params:
-            hostlist: "{{ vars[item + '_nodes'] }}"
+          rawhostlist: "{{ vars[cloud_item + '_nodes'] }}"
         loop: "{{ vars.cloud_support }}"
-        when: 
-          - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
-          - vars[item + '_node'] is defined and vars[item + '_node'] is true
-          - vars[item + '_nodes']
+        loop_control:
+          loop_var: cloud_item
+        when:
+          - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+          - vars[cloud_item + '_node'] is defined and vars[cloud_item + '_node'] is true
+          - vars[cloud_item + '_nodes']
       
       when: cloud_condition
     

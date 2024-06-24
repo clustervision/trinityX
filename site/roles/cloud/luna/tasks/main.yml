@@ -8,14 +8,19 @@
 
 - block:
   - name: Parse the raw host list
-    shell: "/usr/local/bin/rawhostlist.py {{ params.hostlist }}"
+    shell: "/usr/local/bin/rawhostlist.py {{ hostlist }}"
     register: luna_parsed_hostlist
 
-  - name: Create nodes
-    shell: "echo {{ item }}"
-    with_items: luna_parsed_hostlist.stdout_lines
+  - block:
+    - name: Create nodes
+      debug: 
+        msg: "{{ luna_parsed_hostlist.stdout_lines }}"
+
+    - name: Create nodes
+      shell: "echo {{ item }}"
+      with_items: luna_parsed_hostlist.stdout_lines
     when:
       - luna_parsed_hostlist.rc | int == 0 
       - luna_parsed_hostlist.stdout_lines | length > 0
 
-  when: params.hostlist
+  when: hostlist
