@@ -50,7 +50,7 @@ rollout:
   - "( cd site && (ansible-playbook controller.yml || ansible-playbook controller.yml) )"
 
   - echo Run compute
-  - "( cd site && (ansible-playbook compute-redhat.yml || ansible-playbook compute-redhat.yml) )"
+  - "( cd site && (ansible-playbook compute-default.yml || ansible-playbook compute-default.yml) )"
   - "( cd site && (ansible-playbook compute-ubuntu.yml || ansible-playbook compute-ubuntu.yml) )"
 
   - systemctl restart NetworkManager
@@ -122,7 +122,10 @@ ha-rollout:
   - cat "site/group_vars/all.yml"
 
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
-  - "scp -r $PWD/* $TST_CTRL002_IP:"
+#  - "scp -r $PWD/* $TST_CTRL002_IP:"
+  - "dnf -y install rsync || true"
+  - "ssh $TST_CTRL002_IP 'mkdir -p '$PWD'; dnf -y install rsync' || true"
+  - "rsync -aH $PWD/* $TST_CTRL002_IP:$PWD/"
 
   - echo Fix repositories if needed
   - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
@@ -133,15 +136,15 @@ ha-rollout:
   - echo Run prepare on Primary
   - ./prepare.sh
   - echo Run prepare on Secondary
-  - ssh $TST_CTRL002_IP INSIDE_RUNNER=true ./prepare.sh
+  - ssh $TST_CTRL002_IP 'cd '$PWD'; INSIDE_RUNNER=true ./prepare.sh'
 
   - echo Run controller on Primary
   - "( cd site && (ansible-playbook controller.yml || ansible-playbook controller.yml) )"
   - echo Run controller on Secondary
-  - ssh $TST_CTRL002_IP "( cd site && (INSIDE_RUNNER=true ansible-playbook controller.yml || INSIDE_RUNNER=true ansible-playbook controller.yml) )"
+  - ssh $TST_CTRL002_IP "( cd $PWD/site && (INSIDE_RUNNER=true ansible-playbook controller.yml || INSIDE_RUNNER=true ansible-playbook controller.yml) )"
 
   - echo Run compute on Primary
-  - "( cd site && (ansible-playbook compute-redhat.yml compute-ubuntu.yml || ansible-playbook compute-redhat.yml compute-ubuntu.yml) )"
+  - "( cd site && (ansible-playbook compute-default.yml compute-ubuntu.yml || ansible-playbook compute-default.yml compute-ubuntu.yml) )"
 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true

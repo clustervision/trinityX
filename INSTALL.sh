@@ -56,4 +56,4 @@ echo
 add_message "Ansible Playbooks will now run"
 show_message
 count_down 5
-ansible-playbook controller.yml compute*.yml
+ansible-playbook controller.yml compute-default.yml compute-ubuntu.yml

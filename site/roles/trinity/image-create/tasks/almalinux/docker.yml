@@ -1,0 +1,30 @@
+---
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "docker-{{ image_create_distribution }}.yaml"
+
+- name: Install Luna2 noarch repository
+  ansible.builtin.yum_repository:
+    name: luna2-noarch
+    description: luna2-noarch
+    baseurl: "{{ luna2_noarch_repo_package }}"
+    gpgcheck: false
+    reposdir: "{{ image_path }}/etc/yum.repos.d/"
+
+- name: Rebuild RPM DB
+  shell: "chroot {{ image_path }} rpm --rebuilddb"
+  ignore_errors: true
+
+- name: Install core packages - @core, kernel and grub2
+  shell: "chroot {{ image_path }} dnf -y install {{ item }}"
+  ignore_errors: true
+  with_items: "{{ image_core_packages }}"
+
+- name: Reinstall packages
+  shell: "chroot {{ image_path }} dnf -y reinstall {{ item }}"
+  ignore_errors: true
+  with_items: "{{ image_reinstall_packages }}"
+
+- name: Remove clashing packages
+  shell: "chroot {{ image_path }} rpm -e --nodeps {{ item }}"
+  ignore_errors: true
+  with_items: "{{ image_remove_packages }}"

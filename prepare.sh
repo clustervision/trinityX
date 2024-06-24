@@ -55,12 +55,12 @@ function get_confirmation() {
 }
 
 function store_config() {
-  key=$1
-  value=$2
-  if [ -f /etc/trinity/prepare.conf ] && [ "$(grep '^'$key'=' /etc/trinity/prepare.conf)" ]; then
-    sed -i 's/^'$key'=.*$/'$key'='$value'/' /etc/trinity/prepare.conf
+  local KEY=$1
+  local VALUE=$2
+  if [ -f /etc/trinity/prepare.conf ] && [ "$(grep '^'$KEY'=' /etc/trinity/prepare.conf)" ]; then
+    sed -i 's/^'$KEY'=.*$/'$KEY'='$VALUE'/' /etc/trinity/prepare.conf
   else
-    echo "$key=$value" >> /etc/trinity/prepare.conf
+    echo "$KEY=$VALUE" >> /etc/trinity/prepare.conf
   fi
 }
 
