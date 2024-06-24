@@ -16,11 +16,42 @@
       debug: 
         msg: "{{ luna_parsed_hostlist.stdout_lines }}"
 
+    - name: Verify if cloudname/type exists
+      shell: "luna cloud show {{ cloudname }}"
+      register: luna_cloudname_exists
+      ignore_errors: true
+
+    - name: Create cloud
+      shell: "luna cloud add -t {{ cloudtype }} {{ cloudname }}
+      when: luna_cloudname_exists.rc | int != 0
+
+    - name: Verify if cloud group exists
+      shell: "luna group show compute_{{ cloudname }}"
+      register: luna_cloudgroup_exists
+      ignore_errors: true
+
+    - block:
+      - name: generate part/post scripts
+        copy:
+          src: "{{ item }}"
+          dest: "/tmp/{{ item }}"
+        with_items:
+          - part.sh
+          - post.sh
+
+      - name: Create cloud group
+        shell: "luna group add -o compute -qpart /tmp/part.sh -qpost /tmp/post.sh compute_{{ cloudname }}"
+      when: luna_cloudgroup_exists.rc | int != 0
+
     - name: Create nodes
-      shell: "echo {{ item }}"
+      shell: "luna node add -g compute_{{ cloudname }} -cl {{ cloudname }} {{ item }}"
       with_items: luna_parsed_hostlist.stdout_lines
+      ignore_errors: true
     when:
       - luna_parsed_hostlist.rc | int == 0 
       - luna_parsed_hostlist.stdout_lines | length > 0
 
-  when: rawhostlist
+  when:
+    - cloudname
+    - cloudtype
+    - rawhostlist
