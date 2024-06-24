@@ -38,6 +38,17 @@
       #     name: "cloud/terraform"
       #   when: "{{ 'terraform' in installers }}"
       
+      - name: Include Luna node creation role
+        include_role: cloud/luna"
+        vars:
+          params:
+            hostlist: vars[item + '_nodes']
+        loop: "{{ vars.cloud_support }}"
+        when: 
+          - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+          - vars[item + '_node'] is defined and vars[item + '_node'] is true
+          - vars[item + '_nodes']
+      
       when: cloud_condition
     
   environment:

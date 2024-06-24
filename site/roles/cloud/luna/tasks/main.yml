@@ -1,0 +1,21 @@
+---
+
+- name: Generate raw host list parser
+  copy:
+   src: 'rawhostlist.py'
+   dest: '/usr/local/bin/rawhostlist.py'
+   mode: 0755
+
+- block:
+  - name: Parse the raw host list
+    exec: "/usr/local/bin/rawhostlist.py {{ params.hostlist }}
+    register: luna_parsed_hostlist
+
+  - name: Create nodes
+    exec: "echo {{ item }}"
+    with_items: luna_parsed_hostlist.stdout_lines
+    when:
+      - luna_parsed_hostlist.rc | int == 0 
+      - luna_parsed_hostlist.stdout_lines | length > 0
+
+  when: params.hostlist
