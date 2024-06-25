@@ -253,6 +253,35 @@
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
+- block:
+  - block:
+    - name: Trying to figure out external interface
+      shell: "ip route | grep default | grep -oP 'dev \\K\\S+' | grep '^.\\+$'"
+      ignore_errors: true
+      register: init_ctrl_external_nic
+
+    - name: Set trix_ctrl_external_nic
+      set_fact:
+        trix_ctrl_external_nic: "{{ init_ctrl_external_nic.stdout }}"
+      when: init_ctrl_external_nic.rc | int == 0
+
+    - block:
+      - name: Debugging extern nic
+        debug:
+          msg: "{{ trix_ctrl_external_nic }}"
+
+      - name: Trying to figure out external interface ip address
+        set_fact:
+           trix_ctrl_external_ip: "{{ hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv4']['address'] }}"
+        when: hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv4'] is defined
+      when: trix_ctrl_external_nic is defined
+    when: trix_ctrl_external_ip is not defined or trix_ctrl_external_nic is not defined
+
+  - debug:
+      msg: "trix_ctrl_external_ip: {{ trix_ctrl_external_ip }}"
+    when: trix_ctrl_external_ip is defined
+  tags: always
+  when: ansible_connection not in 'chroot' and on_controller
 
 - block:
   - name: Resolve admin group
