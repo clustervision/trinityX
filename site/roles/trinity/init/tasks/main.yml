@@ -24,6 +24,10 @@
     shell: dmidecode -s system-manufacturer | grep -iE "microsoft|google|amazon" || true
     register: init_dmidecode
 
+  - name: Setting supported clouds
+    set_fact:
+      cloud_support: "{{ cloud_support }}"
+
   - name: Set cloud fact
     set_fact:
       in_cloud: '{{ True if init_dmidecode.stdout_lines | length > 0 else False }}'
