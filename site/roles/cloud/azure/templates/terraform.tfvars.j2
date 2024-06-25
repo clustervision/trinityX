@@ -37,7 +37,7 @@ azure_network     = true
 azure_vpn         = {{ 'true' if primary and on_controller and not in_cloud else 'false' }}
 azure_storage     = true
 azure_images      = true
-azure_controller  = {{ 'true' if (on_controller and in_cloud) or azure_controller else 'false' }}
+azure_controller  = {{ 'true' if azure_ctrl_hostname is defined else 'false' }}
 azure_node        = {{ 'true' if azure_node else 'false' }}
 
 # Azure Credentials
@@ -180,21 +180,17 @@ azure_virtual_network_tags           = {
 }
 azure_virtual_network_encryption     = "AllowUnencrypted"
 azure_virtual_network_address_space  =  [
-{% if on_premises_controller %}
   "{{ azure_local_net }}/{{ azure_local_netprefix }}",
-{% endif %}
-  "{{ trix_cluster_net }}/{{ trix_cluster_netprefix }}",
-  "{{ trix_bmc_net }}/{{ trix_bmc_netprefix }}",
-  "{{ trix_infiniband_net }}/{{ trix_infiniband_netprefix }}"
+#  "{{ trix_cluster_net }}/{{ trix_cluster_netprefix }}",
+#  "{{ trix_bmc_net }}/{{ trix_bmc_netprefix }}",
+#  "{{ trix_infiniband_net }}/{{ trix_infiniband_netprefix }}"
 ]
 #{ % if primary and on_controller and not in_cloud % }
 azure_virtual_network_subnets        = [
-{% if on_premises_controller %}
-  {"name": "localconn", "address_prefix": "{{ azure_local_net }}/{{ azure_local_netprefix }}", "security_group": "TrinityX-NSG"},
-{% endif %}
-  {"name": "cluster",   "address_prefix": "{{ trix_cluster_net }}/{{ trix_cluster_netprefix }}", "security_group": "TrinityX-NSG"},
-  {"name": "ib",        "address_prefix": "{{ trix_infiniband_net }}/{{ trix_infiniband_netprefix }}", "security_group": "TrinityX-NSG"},
-  {"name": "ipmi",      "address_prefix": "{{ trix_bmc_net }}/{{ trix_bmc_netprefix }}", "security_group": "TrinityX-NSG"},
+  {"name": "cluster",   "address_prefix": "{{ azure_local_net }}/{{ azure_local_netprefix }}", "security_group": "TrinityX-NSG"},
+#  {"name": "cluster",   "address_prefix": "{{ trix_cluster_net }}/{{ trix_cluster_netprefix }}", "security_group": "TrinityX-NSG"},
+#  {"name": "ib",        "address_prefix": "{{ trix_infiniband_net }}/{{ trix_infiniband_netprefix }}", "security_group": "TrinityX-NSG"},
+#  {"name": "ipmi",      "address_prefix": "{{ trix_bmc_net }}/{{ trix_bmc_netprefix }}", "security_group": "TrinityX-NSG"},
 ]
 
 # Azure Virtual Network, Address Space, Subnets
@@ -359,10 +355,10 @@ azure_controller_network_interface_tags         = {
 }
 azure_vm_network_ip_name                = "internal"
 azure_controller_network_private_ip_allocation  = "Static"
-azure_controller_private_ip_address             = "{{ trix_ctrl_ip }}"
+azure_controller_private_ip_address             = "{{ azure_ctrl_ip }}"
 azure_controller_private_ip_address_version     = "IPv4"
 
-azure_controller_name                         = "trinityx-controller"
+azure_controller_name                         = "{{ azure_ctrl_hostname }}"
 azure_controller_size                         = "Standard_D2s_v3"
 azure_controller_delete_os_disk               = true
 azure_controller_delete_data_disk             = true

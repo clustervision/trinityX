@@ -379,6 +379,9 @@
     NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
 
 - import_playbook: imports/cloud.yml
-  when: cloud_install | default(False)
+  when: 
+    - cloud_install | default(False)
+    - not in_cloud | default(False)
+    - primary
   tags: cloud
 

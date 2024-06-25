@@ -111,11 +111,11 @@ else
 
   # inside a runner (test mode) we do not update the kernel.
   if [ "$INSIDE_RUNNER" ]; then
-      yum update -y --exclude=kernel*
+      dnf update -y --exclude=kernel*
   else
-      yum update -y
+      dnf update -y
   fi
-  yum install curl tar git -y
+  dnf install curl tar git -y
 
   REDHAT_RELEASE=''
   if  [[ `grep -i "Red Hat Enterprise Linux 8" /etc/os-release` ]]; then
@@ -125,12 +125,12 @@ else
   fi
   if [ "$REDHAT_RELEASE" ]; then
     subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-x86_64-rpms
-    yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
-    yum install ansible-core -y
-    yum install ansible -y
+    dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
+    dnf install ansible-core -y
+    dnf install ansible -y
   else
-    yum install epel-release -y
-    yum install ansible -y
+    dnf install epel-release -y
+    dnf install ansible -y
   fi
 
   ansible-galaxy install OndrejHome.pcs-modules-2
