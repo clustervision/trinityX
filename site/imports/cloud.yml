@@ -23,6 +23,23 @@
         set_fact:
           installers: "{{ vars | dict2items | selectattr('key', 'search', '_installer') | map(attribute='value') | list }}"
       
+      - block:
+        - name: Resolving AS external IP address
+          uri:
+            url: "https://ipinfo.io/json"
+          register: cloud_local_external_as_ip_info
+
+        - name: Setting external AS IP address
+          set_fact:
+            cloud_local_external_as_ip: "{{ cloud_local_external_as_ip_info.json.ip }}"
+          when:
+            - cloud_local_external_as_ip_info.status is defined
+            - cloud_local_external_as_ip_info.status | int == 200
+        when: cloud_local_external_as_ip is not defined
+
+      - debug:
+          msg: "cloud_local_external_as_ip: {{ cloud_local_external_as_ip }}"
+
       - name: Build iPXE uEFI file for the GRUB Booting.
         include_role:
           name: "cloud/ipxe"
