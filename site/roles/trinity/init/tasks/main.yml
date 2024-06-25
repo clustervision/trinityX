@@ -160,53 +160,27 @@
 
 
 - block:
-  - name: Standard controller host list
+  - name: Setting up how many controllers we support here
     set_fact:
-       all_ctrl_hostname:
-         - '{{ trix_ctrl1_hostname }}'
-         - '{{ trix_ctrl2_hostname }}'
+      init_controller_array: "{{ ['1','2','3','4'] }}"
 
-  - name: Adding controller 3 host
+  - name: All controller hostnames
     set_fact:
-      all_ctrl_hostname: '{{ all_ctrl_hostname + [ trix_ctrl3_hostname ] }}'
-    when: trix_ctrl3_hostname is defined
+      all_ctrl_hostname: "{{ all_ctrl_hostname | default([]) + [ lookup('vars', 'trix_ctrl' + item + '_hostname') ] }}"
+    loop: "{{ init_controller_array }}"
+    when: vars['trix_ctrl' + item + '_hostname'] is defined
 
-  - name: Adding controller 4 host
+  - name: All controller ips
     set_fact:
-      all_ctrl_hostname: '{{ all_ctrl_hostname + [ trix_ctrl4_hostname ] }}'
-    when: trix_ctrl4_hostname is defined
+      all_ctrl_ip: "{{ all_ctrl_ip | default([]) + [ lookup('vars', 'trix_ctrl' + item + '_ip') ] }}"
+    loop: "{{ init_controller_array }}"
+    when: vars['trix_ctrl' + item + '_ip'] is defined
 
-  - name: Standard controller ip list
+  - name: All controller bmc
     set_fact:
-      all_ctrl_ip:
-        - '{{ trix_ctrl1_ip }}'
-        - '{{ trix_ctrl2_ip }}'
-
-  - name: Adding controller 3 ip
-    set_fact:
-      all_ctrl_ip: '{{ all_ctrl_ip + [ trix_ctrl3_ip ] }}'
-    when: trix_ctrl3_ip is defined
-
-  - name: Adding controller 4 ip
-    set_fact:
-      all_ctrl_ip: '{{ all_ctrl_ip + [ trix_ctrl4_ip ] }}'
-    when: trix_ctrl4_ip is defined
-
-  - name: Standard controller bmc list
-    set_fact:
-      all_ctrl_bmc:
-        - '{{ trix_ctrl1_bmcip }}'
-        - '{{ trix_ctrl2_bmcip }}'
-
-  - name: Adding controller 3 bmc
-    set_fact:
-      all_ctrl_bmc: '{{ all_ctrl_bmc + [ trix_ctrl3_bmcip ] }}'
-    when: trix_ctrl3_bmcip is defined
-
-  - name: Adding controller 4 bmc
-    set_fact:
-      all_ctrl_bmc: '{{ all_ctrl_bmc + [ trix_ctrl4_bmcip ] }}'
-    when: trix_ctrl4_bmcip is defined
+      all_ctrl_bmc: "{{ all_ctrl_bmc | default([]) + [ lookup('vars', 'trix_ctrl' + item + '_bmc') ] }}"
+    loop: "{{ init_controller_array }}"
+    when: vars['trix_ctrl' + item + '_bmc'] is defined
 
   - debug:
       msg: 'all_ctrl_hostname: {{ all_ctrl_hostname }}'
@@ -216,7 +190,7 @@
 - block:
   - name: Adding cloud controllers
     set_fact:
-      cloud_ctrl_hostname: "{{ cloud_ctrl_hostname | default([]) + vars[item + '_ctrl_hostname'] }}"
+      cloud_ctrl_hostname: "{{ cloud_ctrl_hostname | default([]) + [ lookup('vars', item + '_ctrl_hostname') ] }}"
     loop: "{{ vars.cloud_support }}"
     when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
 
