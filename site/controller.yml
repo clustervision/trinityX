@@ -191,7 +191,7 @@
         cluster:
           domain_search: '{{ resolv_search_domains }}'
           dns_forwarders: '{{ trix_dns_forwarders }}'
-        ha: '{{ True if ha or in_cloud else False }}'
+        ha: '{{ True if ha or cloud_controller else False }}'
         frontend_address: '{{ trix_ctrl_ip }}'
         frontend_hostname: '{{ trix_ctrl_hostname }}'
         controllers: 
@@ -379,5 +379,6 @@
     NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
 
 - import_playbook: imports/cloud.yml
+  when: cloud_install | default(False)
   tags: cloud
 

@@ -28,6 +28,17 @@
     set_fact:
       in_cloud: '{{ True if init_dmidecode.stdout_lines | length > 0 else False }}'
 
+  - name: Set cloud install fact
+    set_fact:
+      cloud_install: >-
+        {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
+    
+  - name: Set cloud controller fact
+    set_fact:
+      cloud_controller: >-
+        {{ cloud_support | map('regex_replace', '^(.*)$', '\1_controller') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
+    when: cloud_install | default(False)    
+
   - block:
     - name: Update the trix_ctrl_* variables in case of non-HA setup
       set_fact:
@@ -45,7 +56,9 @@
       set_fact:
         all_ctrl_ip:
           - '{{ trix_ctrl1_ip }}'
-    when: not ha|default(False)
+    when: 
+      - not ha | default(False)
+      - not cloud_controller | default(False)
 
   - debug:
       msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
@@ -201,8 +214,8 @@
 
   - debug:
       msg: 'all_ctrl_hostname: {{ all_ctrl_hostname }}'
-  when: ha
-  tags: always,ha
+  when: (ha | default(False)) or (cloud_controller | default(False))
+  tags: always,ha,cloud
 
 
   # checking nic configs and fix if it can
