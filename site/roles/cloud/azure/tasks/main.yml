@@ -2,24 +2,6 @@
 # Main file to enable the Azure Support for the TrinityX Installation.
 
 - block:
-  - name: Install HashiCorp Terraform on Redhat
-    include_tasks: "{{ role_path }}/tasks/redhat-terraform.yml"
-    when:
-      - ansible_facts['os_family'] == "RedHat"
-
-  - name: Install HashiCorp Terraform on Debian
-    include_tasks: "{{ role_path }}/tasks/debian-terraform.yml"
-    when:
-      - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-
-  - name: Generate terraform.tfvars file
-    template:
-      src: terraform.tfvars.j2
-      dest: /tmp/terraform-azure.tfvars
-  when:
-    - vars.azure_installer == 'terraform'
-
-- block:
   - name: Install Microsoft Azure CLI on Redhat
     include_tasks: "{{ role_path }}/tasks/redhat-azure-cli.yml"
     when:
@@ -43,3 +25,15 @@
     when:
       - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
+- block:
+  - name: Verifying terraform files directory exists
+    file:
+      path: "{{ terraform_files }}"
+      state: directory
+
+  - name: Generate terraform.tfvars file
+    template:
+      src: terraform.tfvars.j2
+      dest: "{{ terraform_files }}/terraform.tfvars"
+  when:
+    - vars.azure_installer == 'terraform'
