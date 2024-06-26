@@ -37,6 +37,13 @@
       cloud_install: >-
         {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
     
+  - name: Include Cloud variables
+    include_vars: "group_vars/{{ item }}.yml"
+    loop: "{{ vars.cloud_support }}"
+    when:
+      - cloud_install 
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      
   - block:
     - name: Update the trix_ctrl_* variables in case of non-HA setup
       set_fact:
