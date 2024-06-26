@@ -20,6 +20,7 @@
     dest: "{{ trix_local }}/gitrepos/trinityx-terraform"
     clone: false
     update: true
+    force: true
   environment:
     - GIT_SSL_NO_VERIFY: "true"
   when: terraform_cloned_repo_dir.stat.exists
@@ -29,31 +30,38 @@
     msg: "azure_installer {{ azure_installer }}"
 
 - block:
-  - name: Copy Terraform tfvars into correct place
-    copy:
-      src: "{{ terraform_files }}/terraform.tfvars"
-      dest: "{{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }}"
+  - name: Verifying if we have a terraform.tfvars file...
+    stat:
+      path: "{{ terraform_files }}/terraform.tfvars"
+    register: terraform_tfvars_file
+
+  - block:
+    - name: Copy Terraform tfvars into correct place
+      copy:
+        src: "{{ terraform_files }}/terraform.tfvars"
+        dest: "{{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }}"
  
-  - name: Do Terraform runs
-    shell: "cd {{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }} && terraform {{ item }}"
-    with_items:
-      - init
-      - validate
-      - "plan -out {{ cloudname }}-tfplan"
-      - "apply {{ cloudname }}-tfplan"
-#      - destroy
+    - name: Do Terraform runs
+      shell: "cd {{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }} && terraform {{ item }}"
+      with_items:
+        - init
+        - validate
+        - "plan -out {{ cloudname }}-tfplan"
+        - "apply {{ cloudname }}-tfplan"
+#        - destroy
 
-  - name: Collect all output variables
-    shell: "cd {{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }} && terraform output"
-    register: terraform_output
+    - name: Collect all output variables
+      shell: "cd {{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }} && terraform output"
+      register: terraform_output
 
-  - name: Storing all output variables
-    copy:
-      content: "{{ terraform_output.stdout }}"
-      dest: "{{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }}/variables.dat"
-    when:
-      - terraform_output is defined
-      - terraform_output.rc | int == 0
+    - name: Storing all output variables
+      copy:
+        content: "{{ terraform_output.stdout }}"
+        dest: "{{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }}/variables.dat"
+      when:
+        - terraform_output is defined
+        - terraform_output.rc | int == 0
+    when: terraform_tfvars_file.stat.exists
   when:
     - cloudname
     - terraform_files
