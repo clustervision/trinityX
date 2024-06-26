@@ -10,6 +10,8 @@
   git:
     repo: "{{ cloud_terraform_repository }}"
     dest: "{{ trix_local }}/gitrepos/trinityx-terraform"
+  environment:
+    - GIT_SSL_NO_VERIFY: "true"
   when: not terraform_cloned_repo_dir.stat.exists
 
 - name: Update TerraForm repository
@@ -18,6 +20,8 @@
     dest: "{{ trix_local }}/gitrepos/trinityx-terraform"
     clone: false
     update: true
+  environment:
+    - GIT_SSL_NO_VERIFY: "true"
   when: terraform_cloned_repo_dir.stat.exists
 
 - name: print azure_installer

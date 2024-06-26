@@ -86,7 +86,7 @@
           name: "cloud/{{ item }}"
         vars:
           vpn_psk_secret: "{{ cloud_psk_secret }}"
-          terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
+          terraform_files: "{{ trix_local }}/terraform/{{ item }}"
         loop: "{{ vars.cloud_support }}"
         when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
 
@@ -94,12 +94,12 @@
         include_role:
           name: "cloud/terraform"
         vars:
-          cloudname: "{{ cloud_item }}"
-          terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
+          cloudname: "{{ item }}"
+          terraform_files: "{{ trix_local }}/terraform/{{ item }}"
         loop: "{{ vars.cloud_support }}"
-        loop_control:
-          loop_var: cloud_item
-        when: "{{ 'terraform' in installers }}"
+        when: 
+          - "{{ 'terraform' in installers }}"
+          - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
 
       - name: Calling VPN role
         include_role:
