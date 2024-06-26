@@ -26,7 +26,7 @@
       
       - name: Set IAC fact
         set_fact:
-          installers: "{{ vars | dict2items | selectattr('key', 'search', '_installer') | map(attribute='value') | list }}"
+          terraform_installer: "{{ vars | dict2items | selectattr('key', 'search', '_installer') | map(attribute='value') | select('equalto', 'terraform') | list | length > 0 }}"
       
       - block:
         - name: Resolving AS external IP address
@@ -99,7 +99,8 @@
         loop: "{{ vars.cloud_support }}"
         loop_control:
           loop_var: cloud_item
-        when: 
+        when:
+          - terraform_installer
           - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
 
       - name: Calling VPN role
