@@ -94,12 +94,14 @@
         include_role:
           name: "cloud/terraform"
         vars:
-          cloudname: "{{ item }}"
-          terraform_files: "{{ trix_local }}/terraform/{{ item }}"
+          cloudname: "{{ cloud_item }}"
+          terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
         loop: "{{ vars.cloud_support }}"
+        loop_control:
+          loop_var: cloud_item
         when: 
           - "{{ 'terraform' in installers }}"
-          - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+          - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
 
       - name: Calling VPN role
         include_role:
