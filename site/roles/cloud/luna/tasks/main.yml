@@ -22,13 +22,13 @@
 
   - block:
     - name: Add cloud network with dhcp range
-      shell: "luna network add -N {{ network }} -dhcp y -ds {{ dhcprange.split('-')[0] }} -de {{ dhcprange.split('-')[1] }} -t ethernet -z internal cluster_{{ cloudname }}"
+      shell: "luna network add -N {{ network }} -dhcp y -ds {{ dhcprange.split('-')[0] }} -de {{ dhcprange.split('-')[1] }} -t ethernet -z internal cluster-{{ cloudname }}"
       when:
         - dhcprange | length > 14
         - dhcprange.split('-') | length == 2
 
     - name: Add cloud network without dhcp range
-      shell: "luna network add -N {{ network }} -dhcp y -ds {{ dhcprange.split('-')[0] }} -de {{ dhcprange.split('-')[1] }} -t ethernet -z internal cluster_{{ cloudname }}"
+      shell: "luna network add -N {{ network }} -dhcp y -ds {{ dhcprange.split('-')[0] }} -de {{ dhcprange.split('-')[1] }} -t ethernet -z internal cluster-{{ cloudname }}"
       when:
         - dhcprange | length < 15
         - dhcprange.split('-') | length != 2
@@ -58,7 +58,7 @@
         - post.rd
 
     - name: Create cloud group
-      shell: "luna group add -o compute -qpart /tmp/part.rd -qpost /tmp/post.rd -if BOOTIF -N cluster_{{ cloudname }} compute_{{ cloudname }}"
+      shell: "luna group add -o compute -qpart /tmp/part.rd -qpost /tmp/post.rd -if BOOTIF -N cluster-{{ cloudname }} compute-{{ cloudname }}"
     when: luna_cloudgroup_exists.rc | int != 0
 
   - block:
@@ -66,7 +66,7 @@
         msg: "luna_parsed_hostlist: {{ luna_parsed_hostlist.stdout_lines }}"
 
     - name: Create nodes
-      shell: "luna node add -g compute_{{ cloudname }} -cl {{ cloudname }} {{ item }}"
+      shell: "luna node add -g compute-{{ cloudname }} -cl {{ cloudname }} {{ item }}"
       with_items: "{{ luna_parsed_hostlist.stdout_lines }}"
       ignore_errors: true
     when:
