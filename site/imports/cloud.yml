@@ -49,8 +49,31 @@
         include_role:
           name: "cloud/ipxe"
       
-      # load or generate PSK
-      # cloud_psk_secret
+      - name: Verify if psk secret exists
+        stat:
+          path: /etc/trinity/passwords/psk/vpn.txt
+        register: cloud_psk_secret_file
+
+      - block:
+        - name: Ensure secure pask directory exists
+          file:
+            path: '/etc/trinity/passwords/psk'
+            state: directory
+          
+        - name: Create psk secret
+          command: "head -c 24 /dev/urandom | base64 > /etc/trinity/passwords/psk/vpn.txt"
+          args:
+            creates: '/etc/trinity/passwords/psk/vpn.txt'
+
+        - name: securing the psk secret file
+          file:
+            path: '/etc/trinity/passwords/psk/vpn.txt'
+            mode: 0600
+        when: not cloud_psk_secret_file.stat.exists
+
+      - name: Reading in psk secret
+        set_fact:
+          cloud_psk_secret: "{{ lookup('file', '/etc/trinity/passwords/psk/vpn.txt') }}"
 
       - name: Include Cloud Role and Install IAC approach.
         include_role:
