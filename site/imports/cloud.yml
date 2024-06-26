@@ -57,18 +57,24 @@
       - block:
         - name: Ensure secure pask directory exists
           file:
-            path: '/etc/trinity/passwords/psk'
+            path: /etc/trinity/passwords/psk
             state: directory
           
         - name: Create psk secret
-          command: "head -c 24 /dev/urandom | base64 > /etc/trinity/passwords/psk/vpn.txt"
-          args:
-            creates: '/etc/trinity/passwords/psk/vpn.txt'
+          shell: "head -c 32 /dev/urandom | base64"
+          #shell: "openssl rand -base64 32"
+          register: cloud_base64_psk_data
 
-        - name: securing the psk secret file
-          file:
-            path: '/etc/trinity/passwords/psk/vpn.txt'
-            mode: 0600
+        - name: Storing psk secret
+          copy:
+            content: "{{ cloud_base64_psk_data.stdout }}"
+            dest: /etc/trinity/passwords/psk/vpn.txt
+            mode: 0640
+            owner: root
+            group: root
+          when: 
+            - cloud_base64_psk_data is defined
+            - cloud_base64_psk_data.rc | int == 0
         when: not cloud_psk_secret_file.stat.exists
 
       - name: Reading in psk secret
