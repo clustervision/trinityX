@@ -49,9 +49,14 @@
         include_role:
           name: "cloud/ipxe"
       
+      # load or generate PSK
+      # cloud_psk_secret
+
       - name: Include Cloud Role and Install IAC approach.
         include_role:
           name: "cloud/{{ item }}"
+        vars:
+          cloud_psk_secret: "{{ cloud_psk_secret }}"
         loop: "{{ vars.cloud_support }}"
         when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
       
@@ -59,7 +64,21 @@
       #   include_role:
       #     name: "cloud/terraform"
       #   when: "{{ 'terraform' in installers }}"
-     
+
+      - name: Calling VPN role
+        include_role:
+          name: "vpn/strongswan"
+        vars:
+          vpn_connection_name: "{{ vars[cloud_item + '_vpn_connection_name'] }}"
+          vpn_remote_public_ip: "{{ vars[cloud_item + '_obtained_remote_ip'] }}"
+          vpn_local_external_ip: "{{ trix_ctrl_external_ip }}"
+          vpn_local_private_subnet: "{{ trix_cluster_net +'/'+ trix_cluster_netprefix }}"
+          vpn_remote_private_subnet: "{{ vars[cloud_item + '_virtual_net'] +'/'+ vars[cloud_item + '_virtual_netprefix'] }}"
+          vpn_psk_secret: "{{ cloud_psk_secret }}"
+        loop: "{{ vars.cloud_support }}"
+        loop_control:
+          loop_var: cloud_item
+
       - name: Include Luna cluster cloud configuration
         include_role:
           name: "cloud/luna"

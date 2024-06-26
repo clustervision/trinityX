@@ -1,0 +1,44 @@
+---
+# Install the VPN on Redhat Controller on premises
+
+- name: Install strongSwan packages
+  dnf:
+    name:
+      - strongswan
+      - strongswan-libipsec
+      - strongswan-sqlite
+    state: present
+
+- name: Deploy swanctl.conf from template
+  template:
+    src: redhat-swanctl.conf.j2
+    dest: "/etc/strongswan/swanctl/conf.d/{{ vpn_connection_name }}.conf"
+
+- name: Restart strongswan service
+  systemd:
+    name: strongswan.service
+    state: restarted
+
+- name: Load all swanctl configurations
+  command: swanctl --load-all
+  register: load_all_output
+
+- name: Verify load-all output
+  debug:
+    msg: "{{ load_all_output.stdout }}"
+  failed_when: not ("successfully loaded 1 connections" in load_all_output.stdout and "loaded connection '{{ vpn_connection_name }}'" in load_all_output.stdout)
+
+- name: List swanctl connections
+  command: swanctl --list-conns
+  register: list_conns_output
+
+#- name: Verify listed connections
+#  debug:
+#    msg: "{{ list_conns_output.stdout }}"
+#  failed_when: not (("192.168.164.20" in list_conns_output.stdout) and
+#                    ("20.160.98.251" in list_conns_output.stdout) and
+#                    ("10.141.0.0/16" in list_conns_output.stdout) and
+#                    ("10.1.0.0/16" in list_conns_output.stdout))
+
+
+
