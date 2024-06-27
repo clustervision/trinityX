@@ -136,6 +136,16 @@
         loop_control:
           loop_var: cloud_item
         when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+
+      - name: Include cloud controller installer
+        include_role:
+          name: "cloud/controller"
+        vars:
+          controller: "{{ vars[cloud_item + '_conntroller_ip'] }}"
+        loop: "{{ vars.cloud_support }}"
+        loop_control:
+          loop_var: cloud_item
+        when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
       when: cloud_condition
     
   environment:

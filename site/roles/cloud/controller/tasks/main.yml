@@ -1,0 +1,40 @@
+---
+
+- block:
+  - name: Verifying if we have an existing temporary working directory
+    stat:
+      path: /tmp/remote_controller
+    register: controller_temporary_working_directory
+
+  - name: Removing existing temporary working directory
+    file:
+      path: /tmp/remote_controller
+      state: absent
+    when: controller_temporary_working_directory.stat.exists
+
+  - name: prepare temporary working directory
+    file:
+      path: /tmp/remote_controller
+      state: directory
+
+  - name: Preparing all.yml
+    template:
+      src: all.yml.j2
+      dest: /tmp/remote_controller/all.yml
+
+  - name: preparing TrinityX repo for remote controller
+    shell: "tar -C {{ playbook_dir }}/.. --exclude group_vars/*.yml -zcvf /tmp/remote_controller/trinityx.tgz ."
+
+  - name: Transferring file to remote controller
+    shell: "scp /tmp/remote_controller/{{ item }} {{ controller }}:"
+    with_items:
+      - all.yml
+      - trinityx.tgz
+
+  - name: Preparing remote controller installation
+    shell: "ssh {{ controller }} \"mkdir install && cd install && tar -zxvf ../trinityx.tgz\" && cp ../all.yml site/group_vars/\""
+
+  - name: Running playbook on remote controller
+    shell: "ssh {{ controller }} \"cd install && bash WITH_ZFS=no USE_CURRENT_KERNEL=yes prepare.sh && cd site/imports && ansible-playbook cloud-controller.yml\""
+
+  when: controller
