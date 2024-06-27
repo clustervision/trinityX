@@ -81,12 +81,17 @@
         set_fact:
           cloud_psk_secret: "{{ lookup('file', '/etc/trinity/passwords/psk/vpn.txt') }}"
 
+      - name: Reading in ssh public key
+        set_fact:
+          cloud_ssh_public_key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+
       - name: Include Cloud Role and Install IAC approach.
         include_role:
           name: "cloud/{{ item }}"
         vars:
           vpn_psk_secret: "{{ cloud_psk_secret }}"
           terraform_files: "{{ trix_local }}/terraform/{{ item }}"
+          ssh_public_key_access: "{{ cloud_ssh_public_key }}"
         loop: "{{ vars.cloud_support }}"
         when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
 

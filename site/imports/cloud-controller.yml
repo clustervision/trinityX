@@ -1,0 +1,158 @@
+---
+- hosts: controllers
+
+  # List of roles to apply to the controllers, in the order in which they will run.
+  # NOTE: These and their default configurations can be found in the "roles/"
+  #       directory.
+
+  roles:
+    - role: trinity/prepare
+      tags: always
+
+    - role: trinity/yml-check
+      tags: always
+
+    - role: trinity/init
+      tags: 
+        - init
+        - authentication
+
+    - role: trinity/hostname
+      tags: hostname
+
+    - role: trinity/no_proxy
+      no_proxy:
+        - ".{{ trix_domain }}"
+        - "{{ trix_ctrl_ip }}"
+        - "{{ trix_external_fqdn }}"
+        - "{{ trix_ctrl_hostname }}"
+        - "{{ trix_ctrl1_hostname }}"
+        - "{{ trix_ctrl2_hostname }}"
+        - "{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }}"
+        - "{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+      tags: noproxy
+
+    - role: trinity/repos
+      tags: repos
+
+    - role: trinity/packages
+      tags: packages
+
+    - role: trinity/trix-tree
+      tags: 
+        - trix-tree
+        - authentication
+
+    - role: trinity/cv_support
+      tags: cv_support
+
+    - role: trinity/tunables
+      tags: tunables
+
+    - role: trinity/firewalld
+      tags: firewalld
+
+    - role: trinity/chrony
+      tags: chrony
+
+    - role: trinity/ssh
+      tags: ssh
+
+    # -----
+    # - role: trinity/fail2ban
+    #   tags: fail2ban
+    # -----
+
+    - role: trinity/ssl-cert
+      ssl_cert_country: 'NL'
+      ssl_cert_locality: 'Amsterdam'
+      ssl_cert_organization: 'ClusterVision Solutions B.V.'
+      ssl_cert_state: 'Noord Holland'
+      ssl_cert_altname: 
+        - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+        - '{{ ansible_fqdn }}'
+        - '{{ trix_external_fqdn }}'
+      ssl_cert_altip: 
+        - '{{ all_ctrl_ip }}'
+      ssl_cert_days: '36500'
+      tags: 
+        - ssl-cert
+        - authentication  
+
+    - role: trinity/bind
+      bind_db_path: '{{ trix_local }}/var/lib/named'
+      bind_dnssec_enable: "no"
+      bind_dns_forwarders: '{{ trix_dns_forwarders }}'
+      tags: bind
+
+    - role: trinity/luna2
+      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      luna2_cluster:
+        cluster:
+          domain_search: '{{ resolv_search_domains }}'
+          dns_forwarders: '{{ trix_dns_forwarders }}'
+        ha: '{{ True if ha or cloud_controller else False }}'
+        frontend_address: '{{ trix_ctrl_ip }}'
+        frontend_hostname: '{{ trix_ctrl_hostname }}'
+        controllers: 
+          hostnames: '{{ all_ctrl_hostname }}'
+          ip_addresses: '{{ all_ctrl_ip }}'
+        networks:
+        - name: '{{ trix_domain }}'
+          function: 'default'
+          ip: '{{ trix_cluster_net }}'
+          prefix: '{{ trix_cluster_netprefix }}'
+          start_ip: '{{ trix_cluster_dhcp_start }}'
+          end_ip: '{{ trix_cluster_dhcp_end }}'
+          type: 'ethernet'
+        - name: 'ipmi'
+          function: 'bmc'
+          ip: '{{ trix_bmc_net }}'
+          prefix: '{{ trix_bmc_netprefix }}'
+          type: 'ethernet'
+        - name: 'ib'
+          function: 'low-latency'
+          ip: '{{ trix_infiniband_net }}'
+          prefix: '{{ trix_infiniband_netprefix }}'
+          type: 'infiniband'
+      tags: luna
+
+    - role: trinity/resolv
+      bind_dns_forwarders: '{{ trix_dns_forwarders }}'
+      resolv_server: '{{ trix_ctrl_ip }}'
+      tags: resolv
+
+    - role: trinity/rsyslog
+      syslog_listeners:
+        - name: default
+          proto: tcp
+          port: 514
+        - name: default
+          proto: udp
+          port: 514
+      syslog_file_template_rules:
+        - name: controllers
+          type: string
+          content: '/var/log/cluster-messages/%HOSTNAME%.messages'
+          field: '$fromhost-ip'
+          criteria: startswith
+          rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
+      tags: rsyslog
+
+    - role: trinity/aria2c
+      tags: aria2c
+
+    - role: trinity/logrotate
+      tags: logrotate
+
+    - role: trinity/cleanup-legacy
+      tags: cleanup-legacy
+
+    - role: trinity/wrapup
+      tags: wrapup
+
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+

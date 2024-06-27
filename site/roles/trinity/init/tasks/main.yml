@@ -195,15 +195,26 @@
   tags: always,ha
 
 - block:
-  - name: Adding cloud controllers
+  - name: Adding cloud controllers hostnames
     set_fact:
       cloud_ctrl_hostname: "{{ cloud_ctrl_hostname | default([]) + [ lookup('vars', item + '_ctrl_hostname') ] }}"
     loop: "{{ vars.cloud_support }}"
-    when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+    when: 
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      - vars[item + '_ctrl_hostname'] is defined
+
+  - name: Adding cloud controllers ips
+    set_fact:
+      cloud_ctrl_ip: "{{ cloud_ctrl_ip | default([]) + [ lookup('vars', item + '_ctrl_ip') ] }}"
+    loop: "{{ vars.cloud_support }}"
+    when: 
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      - vars[item + '_ctrl_ip'] is defined
 
   - debug:
-      msg: "cloud_ctrl_hostname: {{ cloud_ctrl_hostname }}"
+      msg: "cloud_ctrl_hostname: {{ cloud_ctrl_hostname|default('None') }}"
   when: cloud_install    
+
 
   # checking nic configs and fix if it can
 - block:
