@@ -45,9 +45,20 @@
       - debug:
           msg: "cloud_local_external_as_ip: {{ cloud_local_external_as_ip }}"
 
+      - name: Verifying if iPXE uEFI image has already been build
+        stat:
+          path: /etc/trinity/cloud-image.done
+        register: cloud_uefi_image_done
+
       - name: Build iPXE uEFI file for GRUB Booting
         include_role:
           name: "cloud/ipxe"
+        when: not cloud_uefi_image_done.stat.exists
+
+      - name: Signing iPXE uEFI image creation off
+        copy:
+          content: ""
+          dest: /etc/trinity/cloud-image.done
       
       - name: Verify if psk secret exists
         stat:
@@ -89,16 +100,18 @@
         include_role:
           name: "cloud/{{ item }}"
         vars:
+          stages: true
           vpn_psk_secret: "{{ cloud_psk_secret }}"
           terraform_files: "{{ trix_local }}/terraform/{{ item }}"
           ssh_public_key_access: "{{ cloud_ssh_public_key }}"
         loop: "{{ vars.cloud_support }}"
         when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
 
-      - name: Run Terraform playbook
+      - name: Run Terraform playbook Stage one
         include_role:
           name: "cloud/terraform"
         vars:
+          stage: init
           cloudname: "{{ cloud_item }}"
           terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
         loop: "{{ vars.cloud_support }}"
@@ -146,6 +159,20 @@
         loop_control:
           loop_var: cloud_item
         when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+
+      - name: Run Terraform playbook Stage two
+        include_role:
+          name: "cloud/terraform"
+        vars:
+          stage: nodes
+          cloudname: "{{ cloud_item }}"
+          terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
+        loop: "{{ vars.cloud_support }}"
+        loop_control:
+          loop_var: cloud_item
+        when:
+          - terraform_installer
+          - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
       when: cloud_condition
     
   environment:

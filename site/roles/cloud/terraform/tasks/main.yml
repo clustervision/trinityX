@@ -40,7 +40,31 @@
       copy:
         src: "{{ terraform_files }}/terraform.tfvars"
         dest: "{{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }}"
- 
+
+    - block:
+      - name: Prepare for stage network, controller and vpn
+        replace:
+          path: "{{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }}"
+          regexp: "^{{ cloudname }}_{{ item }}\s*=\s*true"
+          replace: "{{ cloudname }}_{{ item }} = false"
+        with_items:
+          - node
+        when: stage == 'init'
+
+      - name: Prepare for stage nodes
+        replace:
+          path: "{{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }}"
+          regexp: "^{{ cloudname }}_{{ item }}\s*=\s*true"
+          replace: "{{ cloudname }}_{{ item }} = false"
+        with_items:
+         - network
+         - vpn
+         - storage
+         - images
+         - controller
+        when: stage == 'nodes'
+      when: stage is defined
+
     - name: Do Terraform runs
       shell: "cd {{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }} && terraform {{ item }}"
       with_items:
