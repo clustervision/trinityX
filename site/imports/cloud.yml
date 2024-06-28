@@ -121,8 +121,10 @@
           - terraform_installer
           - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
 
+# ------------ NOW WORKING PART--------------------
       - name: Obtaining VPN remote ip address
         shell: "grep '^vng_ip =' {{ trix_local }}/terraform/{{ cloud_item }}/variables.dat | grep -oE '[0-9\\.]+'"
+
         register: {"{{ cloud_item }} + '_obtained_remote_ip'"}
         loop: "{{ vars.cloud_support }}"
         loop_control:
@@ -130,6 +132,7 @@
         when:
           - terraform_installer
           - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+# ------------- END OF THAT PART --------------------
 
       - name: Calling VPN role
         include_role:
