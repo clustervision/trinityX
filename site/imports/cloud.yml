@@ -12,25 +12,21 @@
       include_role:
         name: "trinity/init"
       when: cloud_support is not defined
-      tags: terraform
 
     - name: Set cloud_condition fact
       set_fact:
         cloud_condition: >-
           {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
-      tags: terraform
     
     - block:
       - name: Include Cloud variables
         include_vars: "group_vars/{{ item }}.yml"
         loop: "{{ vars.cloud_support }}"
         when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
-        tags: terraform
       
       - name: Set IAC fact
         set_fact:
           terraform_installer: "{{ vars | dict2items | selectattr('key', 'search', '_installer') | map(attribute='value') | select('equalto', 'terraform') | list | length > 0 }}"
-        tags: terraform
       
       - block:
         - name: Resolving AS external IP address
@@ -124,7 +120,6 @@
         when:
           - terraform_installer
           - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
-        tags: terraform
 
       - name: Calling VPN role
         include_role:
@@ -139,7 +134,6 @@
         loop: "{{ vars.cloud_support }}"
         loop_control:
           loop_var: cloud_item
-        tags: terraform
 
       - name: Include Luna cluster cloud configuration
         include_role:
@@ -155,7 +149,6 @@
         loop_control:
           loop_var: cloud_item
         when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
-        tags: terraform
 
       - name: Include cloud controller installer
         include_role:
@@ -166,7 +159,6 @@
         loop_control:
           loop_var: cloud_item
         when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
-        tags: terraform
 
       - name: Run Terraform playbook Stage two
         include_role:
@@ -181,7 +173,6 @@
         when:
           - terraform_installer
           - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
-        tags: terraform
       when: cloud_condition
     
   environment:
