@@ -120,6 +120,7 @@
         when:
           - terraform_installer
           - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+        tags: terraform
 
       - name: Calling VPN role
         include_role:
@@ -134,6 +135,7 @@
         loop: "{{ vars.cloud_support }}"
         loop_control:
           loop_var: cloud_item
+        tags: terraform
 
       - name: Include Luna cluster cloud configuration
         include_role:
@@ -149,6 +151,7 @@
         loop_control:
           loop_var: cloud_item
         when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+        tags: terraform
 
       - name: Include cloud controller installer
         include_role:
@@ -159,6 +162,7 @@
         loop_control:
           loop_var: cloud_item
         when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+        tags: terraform
 
       - name: Run Terraform playbook Stage two
         include_role:
@@ -173,6 +177,7 @@
         when:
           - terraform_installer
           - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+        tags: terraform
       when: cloud_condition
     
   environment:
