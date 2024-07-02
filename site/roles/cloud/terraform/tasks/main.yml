@@ -78,13 +78,13 @@
         - name: Add required parameters
           lineinfile:
             path: "{{ terraform_path }}/terraform.tfvars"
-            line: "{{ item }} = \"{{ vars[cloudname + '_' + item] }}\"
+            line: "{{ item }} = \"{{ vars[cloudname + '_' + item] }}\""
             state: present
 
-        - name: Do Terraform run
+        - name: Do Terraform runs
           shell: "cd {{ terraform_path }} && terraform {{ item }}"
           with_items:
-            - "terraform import azurerm_resource_group.rg /subscriptions/{{ subscription_id }}/resourceGroups/{{ resource_group_name }}"
+            - "import azurerm_resource_group.rg /subscriptions/{{ subscription_id }}/resourceGroups/{{ resource_group_name }}"
             - "plan -out {{ cloudname }}-node-tfplan"
             - "apply {{ cloudname }}-node-tfplan"
         when: 
