@@ -57,7 +57,9 @@
             - node
 
         - name: Do Terraform runs
-          shell: "cd {{ terraform_path }} && terraform {{ item }}"
+          shell: "terraform {{ item }}"
+          args:
+            chdir: "{{ terraform_path }}"
           with_items:
             - init
             - validate
@@ -80,7 +82,9 @@
             - network
 
         - name: Do Terraform runs
-          shell: "cd {{ terraform_path }} && terraform {{ item }}"
+          shell: "terraform {{ item }}"
+          args:
+            chdir: "{{ terraform_path }}"
           with_items:
             - "import azurerm_resource_group.rg /subscriptions/{{ subscription_id }}/resourceGroups/{{ resource_group_name }}"
             - "plan -out {{ cloudname }}-storage-tfplan"
@@ -120,7 +124,9 @@
             state: present
 
         - name: Do Terraform runs
-          shell: "cd {{ terraform_path }} && terraform {{ item }}"
+          shell: "terraform {{ item }}"
+          args:
+            chdir: "{{ terraform_path }}"
           with_items:
             - "import azurerm_resource_group.rg /subscriptions/{{ subscription_id }}/resourceGroups/{{ resource_group_name }}"
             - "plan -out {{ cloudname }}-node-tfplan"
@@ -132,7 +138,9 @@
 
       # ----------------------- after run parts -------------------------
       - name: Collect all output variables
-        shell: "cd {{ terraform_path }} && terraform output"
+        shell: "terraform output"
+        args:
+          chdir: "{{ terraform_path }}"
         register: terraform_output
 
       - name: Storing all output variables
@@ -157,7 +165,9 @@
     # ----------------------- straight forward run -------------------------
     - block:
       - name: Do Terraform runs
-        shell: "cd {{ terraform_path }} && terraform {{ item }}"
+        shell: "terraform {{ item }}"
+        args:
+          chdir: "{{ terraform_path }}"
         with_items:
           - init
           - validate
@@ -167,7 +177,9 @@
 
       # ----------------------- after run parts -------------------------
       - name: Collect all output variables
-        shell: "cd {{ terraform_path }} && terraform output"
+        shell: "terraform output"
+        args:
+          chdir: "{{ terraform_path }}"
         register: terraform_output
 
       - name: Storing all output variables
