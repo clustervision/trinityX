@@ -66,6 +66,29 @@
         when: stage == 'init'
 
       - block:
+        - name: Prepare for stage storage
+          replace:
+            path: "{{ terraform_path }}/terraform.tfvars"
+            regexp: "^{{ cloudname }}_{{ item }}\\s*=\\s*true"
+            replace: "{{ cloudname }}_{{ item }} = false"
+          with_items:
+            - node
+            - controller
+            - vpn
+            - network
+
+        - name: Do Terraform runs
+          shell: "cd {{ terraform_path }} && terraform {{ item }}"
+          with_items:
+            - "import azurerm_resource_group.rg /subscriptions/{{ subscription_id }}/resourceGroups/{{ resource_group_name }}"
+            - "plan -out {{ cloudname }}-storage-tfplan"
+            - "apply {{ cloudname }}-storage-tfplan"
+        when: 
+          - stage == 'storage'
+          - subscription_id is defined
+          - resource_group_name is defined
+
+      - block:
         - name: Obtaining required variables
           set_fact:
             "{{ cloudname + '_' + item }}": "{{ lookup('file', terraform_files+'/variables.dat').splitlines() | regex_findall( '^'+item+' = \"[a-zA-Z0-9\\.\\-\\\/\\:]+\"') | first | regex_findall('[a-zA-Z0-9\\.\\-\\\/\\:]+') | first }}"
@@ -74,6 +97,18 @@
             - image_id
             - storage_name
           ignore_errors: true
+
+        - name: Prepare for stage nodes
+          replace:
+            path: "{{ terraform_path }}/terraform.tfvars"
+            regexp: "^{{ cloudname }}_{{ item }}\\s*=\\s*true"
+            replace: "{{ cloudname }}_{{ item }} = false"
+          with_items:
+            - controller
+            - vpn
+            - network
+            - images
+            - storage
 
         - name: Add required parameters
           lineinfile:
@@ -94,12 +129,12 @@
 
       - name: Backup current state file
         copy:
-          src: "{{ terraform_path }}/terraform.tfstate }}"
+          src: "{{ terraform_path }}/terraform.tfstate"
           dest: "{{ terraform_files }}/terraform-{{ stage }}.tfstate"
          
       - name: Removing current state file
         file:
-          path: "{{ terraform_path }}/terraform.tfstate }}"
+          path: "{{ terraform_path }}/terraform.tfstate"
           state: absent 
       when: stage is defined
 
