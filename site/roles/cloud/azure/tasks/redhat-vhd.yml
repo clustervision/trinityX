@@ -2,6 +2,30 @@
 # Creating the Azure VHD for GRUB Booting.
 
 - block:
+  - block:
+    - name: Create File to embed Next Server IP with iPXE
+      template:
+        src: embed.ipxe.j2
+        dest: /trinity/images/ipxe/src/embed.ipxe
+
+    - name: Enable NTFS support
+      lineinfile:
+        path: /trinity/images/ipxe/src/config/general.h
+        regexp: '^#undef\s+DOWNLOAD_PROTO_NFS'
+        line: '#define DOWNLOAD_PROTO_NFS'
+
+    - name: Enable PING support
+      replace:
+        path: /trinity/images/ipxe/src/config/general.h
+        regexp: '^\/\/#define\ (PING_CMD|IPSTAT_CMD|REBOOT_CMD|POWEROFF)'
+        replace: '#define \1'
+
+    - name: Build iPXE
+      command: make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe
+      args:
+        chdir: /trinity/images/ipxe/src
+    when: include_ipxe_efi_build is defined and include_ipxe_efi_build
+
   - name: Get VHD path
     set_fact:
       vhd_path: "{{ trix_images }}/{{ vhd_name }}"

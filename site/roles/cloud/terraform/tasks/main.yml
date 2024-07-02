@@ -46,6 +46,7 @@
         dest: "{{ terraform_path }}/"
 
     - block:
+      # ----------------------- init run -------------------------
       - block:
         - name: Prepare for stage network, controller and vpn
           replace:
@@ -65,6 +66,7 @@
 #            - destroy
         when: stage == 'init'
 
+      # ----------------------- storage run -------------------------
       - block:
         - name: Prepare for stage storage
           replace:
@@ -88,6 +90,7 @@
           - subscription_id is defined
           - resource_group_name is defined
 
+      # ----------------------- nodes run -------------------------
       - block:
         - name: Obtaining required variables
           set_fact:
@@ -127,6 +130,19 @@
           - subscription_id is defined
           - resource_group_name is defined
 
+      # ----------------------- after run parts -------------------------
+      - name: Collect all output variables
+        shell: "cd {{ terraform_path }} && terraform output"
+        register: terraform_output
+
+      - name: Storing all output variables
+        copy:
+          content: "{{ terraform_output.stdout }}"
+          dest: "{{ terraform_files }}/variables.dat"
+        when:
+          - terraform_output is defined
+          - terraform_output.rc | int == 0
+
       - name: Backup current state file
         copy:
           src: "{{ terraform_path }}/terraform.tfstate"
@@ -138,27 +154,27 @@
           state: absent 
       when: stage is defined
 
-    - name: Do Terraform runs
-      shell: "cd {{ terraform_path }} && terraform {{ item }}"
-      with_items:
-        - init
-        - validate
-        - "plan -out {{ cloudname }}-tfplan"
-        - "apply {{ cloudname }}-tfplan"
-#        - destroy
+    # ----------------------- straight forward run -------------------------
+    - block:
+      - name: Do Terraform runs
+        shell: "cd {{ terraform_path }} && terraform {{ item }}"
+        with_items:
+          - init
+          - validate
+          - "plan -out {{ cloudname }}-tfplan"
+          - "apply {{ cloudname }}-tfplan"
+#          - destroy
+
+      # ----------------------- after run parts -------------------------
+      - name: Collect all output variables
+        shell: "cd {{ terraform_path }} && terraform output"
+        register: terraform_output
+
+      - name: Storing all output variables
+        copy:
+          content: "{{ terraform_output.stdout }}"
+          dest: "{{ terraform_files }}/variables.dat"
       when: stage is not defined
-
-    - name: Collect all output variables
-      shell: "cd {{ terraform_path }} && terraform output"
-      register: terraform_output
-
-    - name: Storing all output variables
-      copy:
-        content: "{{ terraform_output.stdout }}"
-        dest: "{{ terraform_files }}/variables.dat"
-      when:
-        - terraform_output is defined
-        - terraform_output.rc | int == 0
     when: terraform_tfvars_file.stat.exists
   when:
     - cloudname

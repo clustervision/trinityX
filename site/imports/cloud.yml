@@ -53,6 +53,8 @@
       - name: Build iPXE uEFI file for GRUB Booting
         include_role:
           name: "cloud/ipxe"
+        vars:
+          skip_ipxe_efi_build: true
         when: not cloud_uefi_image_done.stat.exists
 
       - name: Signing iPXE uEFI image creation off
@@ -103,6 +105,8 @@
           vpn_psk_secret: "{{ cloud_psk_secret }}"
           terraform_files: "{{ trix_local }}/terraform/{{ item }}"
           ssh_public_key_access: "{{ cloud_ssh_public_key }}"
+          on_premise_controller_ip: "{{ trix_ctrl_ip }}"
+          include_ipxe_efi_build: true
         loop: "{{ vars.cloud_support }}"
         when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
 

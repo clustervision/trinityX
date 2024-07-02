@@ -5,6 +5,7 @@ dhcp && goto netboot || goto dhcperror
 prompt --key s --timeout 10000 DHCP failed, hit 's' for the iPXE shell; reboot in 10 seconds && shell || reboot
 
 :netboot
-chain http://{{ trix_ctrl_ip }}:7051/boot ||
+chain http://{{ controller_ip }}:7051/boot || goto chainerror
 
+:chainerror
 prompt --key s --timeout 10000 Chainloading failed, hit 's' for the iPXE shell; reboot in 10 seconds && shell || reboot

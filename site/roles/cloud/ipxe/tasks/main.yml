@@ -57,25 +57,27 @@
     repo: git://git.ipxe.org/ipxe.git
     dest: /trinity/images/ipxe
 
-- name: Create File to embed Next Server IP with iPXE
-  template:
-    src: embed.ipxe.j2
-    dest: /trinity/images/ipxe/src/embed.ipxe
+- block:
+  - name: Create File to embed Next Server IP with iPXE
+    template:
+      src: embed.ipxe.j2
+      dest: /trinity/images/ipxe/src/embed.ipxe
 
-- name: Enable NTFS support
-  lineinfile:
-    path: /trinity/images/ipxe/src/config/general.h
-    regexp: '^#undef\s+DOWNLOAD_PROTO_NFS'
-    line: '#define DOWNLOAD_PROTO_NFS'
+  - name: Enable NTFS support
+    lineinfile:
+      path: /trinity/images/ipxe/src/config/general.h
+      regexp: '^#undef\s+DOWNLOAD_PROTO_NFS'
+      line: '#define DOWNLOAD_PROTO_NFS'
 
-- name: Enable PING support
-  replace:
-    path: /trinity/images/ipxe/src/config/general.h
-    regexp: '^\/\/#define\ (PING_CMD|IPSTAT_CMD|REBOOT_CMD|POWEROFF)'
-    replace: '#define \1'
+  - name: Enable PING support
+    replace:
+      path: /trinity/images/ipxe/src/config/general.h
+      regexp: '^\/\/#define\ (PING_CMD|IPSTAT_CMD|REBOOT_CMD|POWEROFF)'
+      replace: '#define \1'
 
-- name: Build iPXE
-  command: make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe
-  args:
-    chdir: /trinity/images/ipxe/src
+  - name: Build iPXE
+    command: make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe
+    args:
+      chdir: /trinity/images/ipxe/src
+  when: skip_ipxe_efi_build is defined and skip_ipxe_efi_build
 
