@@ -36,13 +36,7 @@
     set_fact:
       cloud_install: >-
         {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
-    when: not in_cloud
 
-  - name: Set cloud install fact
-    set_fact:
-      cloud_install: false
-    when: cloud_install is not defined
-    
   - name: Include Cloud variables
     include_vars: "group_vars/{{ item }}.yml"
     loop: "{{ vars.cloud_support }}"
