@@ -50,17 +50,18 @@
           path: /etc/trinity/cloud-image.done
         register: cloud_uefi_image_done
 
-      - name: Build iPXE uEFI file for GRUB Booting
-        include_role:
-          name: "cloud/ipxe"
-        vars:
-          skip_ipxe_efi_build: true
-        when: not cloud_uefi_image_done.stat.exists
+      - block:
+        - name: Build iPXE uEFI file for GRUB Booting
+          include_role:
+            name: "cloud/ipxe"
+          vars:
+            skip_ipxe_efi_build: true
 
-      - name: Signing iPXE uEFI image creation off
-        copy:
-          content: ""
-          dest: /etc/trinity/cloud-image.done
+        - name: Signing iPXE uEFI image creation off
+          copy:
+            content: ""
+            dest: /etc/trinity/cloud-image.done
+        when: not cloud_uefi_image_done.stat.exists
       
       - name: Verifying if cloud phase one already done
         stat:
@@ -152,12 +153,12 @@
           loop_control:
             loop_var: cloud_item
           when: vars[cloud_item + '_obtained_remote_ip'] is defined
-        when: not cloud_phaseone_done.stat.exists
 
-      - name: Signing cloud phase one off
-        copy:
-          content: ""
-          dest: /etc/trinity/cloud-phaseone.done
+        - name: Signing cloud phase one off
+          copy:
+            content: ""
+            dest: /etc/trinity/cloud-phaseone.done
+        when: not cloud_phaseone_done.stat.exists
       
       - name: Verifying if cloud phase two already done
         stat:
@@ -207,12 +208,12 @@
             - terraform_installer
             - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
             - vars[cloud_item + '_node'] is defined and vars[cloud_item + '_node'] is true
-        when: not cloud_phaseone_done.stat.exists
 
-      - name: Signing cloud phase two off
-        copy:
-          content: ""
-          dest: /etc/trinity/cloud-phasetwo.done
+        - name: Signing cloud phase two off
+          copy:
+            content: ""
+            dest: /etc/trinity/cloud-phasetwo.done
+        when: not cloud_phasetwo_done.stat.exists
       when: cloud_condition
     
   environment:
