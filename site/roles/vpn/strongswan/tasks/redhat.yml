@@ -1,6 +1,36 @@
 ---
 # Install the VPN on Redhat Controller on premises
 
+- name: Add ipsec0 to the trusted zone
+  firewalld:
+    zone: trusted
+    interface: 'ipsec0'
+    state: enabled
+    permanent: true
+    immediate: true
+
+- name: Open firewalld protocols for strongSwan
+  firewalld:
+    rich_rule: "rule protocol value={{ item }} accept"
+    state: enabled
+    permanent: true
+    immediate: true
+  with_items:
+    - ah
+    - esp
+
+# these ports might actually noy be needed... -Antoine
+#- name: Add Strongswan ports to firewalld
+#  firewalld:
+#    zone: public
+#    port: '{{ item }}/udp'
+#    state: enabled
+#    permanent: true
+#    immediate: true
+#  with_items:
+#    - 500
+#    - 4500
+
 - name: Install strongSwan packages
   dnf:
     name:
