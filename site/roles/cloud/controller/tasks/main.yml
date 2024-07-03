@@ -32,9 +32,9 @@
       - trinityx.tgz
 
   - name: Preparing remote controller installation
-    shell: "ssh {{ controller }} \"mkdir install; cd install && tar -zxvf ../trinityx.tgz && cp ../all.yml site/group_vars/ && touch site/group_vars/{{ cloudname }}.yml\""
+    shell: "ssh {{ controller }} \"mkdir install; cd install && tar -zxvf ../trinityx.tgz && cp ../all.yml site/group_vars/ && touch site/group_vars/{{ cloudname }}.yml\" | tee /tmp/cloud-controller-pre.out"
 
   - name: Running playbook on remote controller
-    shell: "ssh {{ controller }} \"cd install && WITH_ZFS=no USE_CURRENT_KERNEL=yes bash prepare.sh && cd site && ansible-playbook imports/cloud-controller.yml\""
+    shell: "ssh {{ controller }} \"cd install && WITH_ZFS=no USE_CURRENT_KERNEL=yes bash prepare.sh && cd site && ansible-playbook imports/cloud-controller.yml\" | tee /tmp/cloud-controller-run.out"
 
   when: controller
