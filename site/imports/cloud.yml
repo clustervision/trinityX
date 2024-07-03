@@ -62,133 +62,157 @@
           content: ""
           dest: /etc/trinity/cloud-image.done
       
-      - name: Verify if psk secret exists
+      - name: Verifying if cloud phase one already done
         stat:
-          path: /etc/trinity/passwords/psk/vpn.txt
-        register: cloud_psk_secret_file
+          path: /etc/trinity/cloud-phaseone.done
+        register: cloud_phaseone_done
 
       - block:
-        - name: Ensure secure pask directory exists
-          file:
-            path: /etc/trinity/passwords/psk
-            state: directory
+        - name: Verify if psk secret exists
+          stat:
+            path: /etc/trinity/passwords/psk/vpn.txt
+          register: cloud_psk_secret_file
+
+        - block:
+          - name: Ensure secure pask directory exists
+            file:
+              path: /etc/trinity/passwords/psk
+              state: directory
           
-        - name: Create psk secret
-          shell: "head -c 32 /dev/urandom | base64"
-          #shell: "openssl rand -base64 32"
-          register: cloud_base64_psk_data
+          - name: Create psk secret
+            shell: "head -c 32 /dev/urandom | base64"
+            #shell: "openssl rand -base64 32"
+            register: cloud_base64_psk_data
 
-        - name: Storing psk secret
-          copy:
-            content: "{{ cloud_base64_psk_data.stdout }}"
-            dest: /etc/trinity/passwords/psk/vpn.txt
-            mode: 0640
-            owner: root
-            group: root
-          when: 
-            - cloud_base64_psk_data is defined
-            - cloud_base64_psk_data.rc | int == 0
-        when: not cloud_psk_secret_file.stat.exists
+          - name: Storing psk secret
+            copy:
+              content: "{{ cloud_base64_psk_data.stdout }}"
+              dest: /etc/trinity/passwords/psk/vpn.txt
+              mode: 0640
+              owner: root
+              group: root
+            when: 
+              - cloud_base64_psk_data is defined
+              - cloud_base64_psk_data.rc | int == 0
+          when: not cloud_psk_secret_file.stat.exists
 
-      - name: Reading in psk secret
-        set_fact:
-          cloud_psk_secret: "{{ lookup('file', '/etc/trinity/passwords/psk/vpn.txt') }}"
+        - name: Reading in psk secret
+          set_fact:
+            cloud_psk_secret: "{{ lookup('file', '/etc/trinity/passwords/psk/vpn.txt') }}"
 
-      - name: Reading in ssh public key
-        set_fact:
-          cloud_ssh_public_key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+        - name: Reading in ssh public key
+          set_fact:
+            cloud_ssh_public_key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
 
-      - name: Include Cloud Role and Install IAC approach.
-        include_role:
-          name: "cloud/{{ item }}"
-        vars:
-          vpn_psk_secret: "{{ cloud_psk_secret }}"
-          terraform_files: "{{ trix_local }}/terraform/{{ item }}"
-          ssh_public_key_access: "{{ cloud_ssh_public_key }}"
-          on_premise_controller_ip: "{{ trix_ctrl_ip }}"
-          include_ipxe_efi_build: true
-        loop: "{{ vars.cloud_support }}"
-        when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+        - name: Include Cloud Role and Install IAC approach.
+          include_role:
+            name: "cloud/{{ item }}"
+          vars:
+            vpn_psk_secret: "{{ cloud_psk_secret }}"
+            terraform_files: "{{ trix_local }}/terraform/{{ item }}"
+            ssh_public_key_access: "{{ cloud_ssh_public_key }}"
+            on_premise_controller_ip: "{{ trix_ctrl_ip }}"
+            include_ipxe_efi_build: true
+          loop: "{{ vars.cloud_support }}"
+          when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
 
-      - name: Run Terraform playbook Stage one
-        include_role:
-          name: "cloud/terraform"
-        vars:
-          stage: init
-          cloudname: "{{ cloud_item }}"
-          terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
-        loop: "{{ vars.cloud_support }}"
-        loop_control:
-          loop_var: cloud_item
-        when:
-          - terraform_installer
-          - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+        - name: Run Terraform playbook Stage one
+          include_role:
+            name: "cloud/terraform"
+          vars:
+            stage: init
+            cloudname: "{{ cloud_item }}"
+            terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
+          loop: "{{ vars.cloud_support }}"
+          loop_control:
+            loop_var: cloud_item
+          when:
+            - terraform_installer
+            - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
 
-      - name: Obtaining VPN remote ip address
-        set_fact:
-          "{{ cloud_item + '_obtained_remote_ip' }}": "{{ lookup('file', trix_local+'/terraform/'+cloud_item+'/variables.dat').splitlines() | regex_findall('vng_ip = \"[0-9\\.]+\"') | first | regex_findall('[0-9\\.]+') | first }}"
-        loop: "{{ vars.cloud_support }}"
-        loop_control:
-          loop_var: cloud_item
-        when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+        - name: Obtaining VPN remote ip address
+          set_fact:
+            "{{ cloud_item + '_obtained_remote_ip' }}": "{{ lookup('file', trix_local+'/terraform/'+cloud_item+'/variables.dat').splitlines() | regex_findall('vng_ip = \"[0-9\\.]+\"') | first | regex_findall('[0-9\\.]+') | first }}"
+          loop: "{{ vars.cloud_support }}"
+          loop_control:
+            loop_var: cloud_item
+          when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
 
-      - name: Calling VPN role
-        include_role:
-          name: "vpn/strongswan"
-        vars:
-          vpn_connection_name: "{{ vars[cloud_item + '_vpn_connection_name'] }}"
-          vpn_remote_public_ip: "{{ vars[cloud_item + '_obtained_remote_ip'] }}"
-          vpn_local_external_ip: "{{ trix_ctrl_external_ip }}"
-          vpn_local_private_subnet: "{{ trix_cluster_net +'/'+ trix_cluster_netprefix | string }}"
-          vpn_remote_private_subnet: "{{ vars[cloud_item + '_cluster_net'] +'/'+ vars[cloud_item + '_cluster_netprefix'] | string }}"
-          vpn_psk_secret: "{{ cloud_psk_secret }}"
-        loop: "{{ vars.cloud_support }}"
-        loop_control:
-          loop_var: cloud_item
-        when: vars[cloud_item + '_obtained_remote_ip'] is defined
+        - name: Calling VPN role
+          include_role:
+            name: "vpn/strongswan"
+          vars:
+            vpn_connection_name: "{{ vars[cloud_item + '_vpn_connection_name'] }}"
+            vpn_remote_public_ip: "{{ vars[cloud_item + '_obtained_remote_ip'] }}"
+            vpn_local_external_ip: "{{ trix_ctrl_external_ip }}"
+            vpn_local_private_subnet: "{{ trix_cluster_net +'/'+ trix_cluster_netprefix | string }}"
+            vpn_remote_private_subnet: "{{ vars[cloud_item + '_cluster_net'] +'/'+ vars[cloud_item + '_cluster_netprefix'] | string }}"
+            vpn_psk_secret: "{{ cloud_psk_secret }}"
+          loop: "{{ vars.cloud_support }}"
+          loop_control:
+            loop_var: cloud_item
+          when: vars[cloud_item + '_obtained_remote_ip'] is defined
+        when: not cloud_phaseone_done.stat.exists
 
-      - name: Include Luna cluster cloud configuration
-        include_role:
-          name: "cloud/luna"
-        vars:
-          createnodes: "{{ True if vars[cloud_item + '_node'] is defined and vars[cloud_item + '_node'] is true else False }}"
-          rawhostlist: "{{ vars[cloud_item + '_nodes'] | default('') }}"
-          cloudname: "{{ cloud_item }}"
-          cloudtype: "{{ cloud_item }}"
-          network: "{{ vars[cloud_item + '_cluster_net'] + '/' + vars[cloud_item + '_cluster_netprefix'] | string }}"
-          dhcprange: "{{ vars[cloud_item + '_cluster_dhcp_start'] | default('') + '-' + vars[cloud_item + '_cluster_dhcp_end'] | default('') }}"
-        loop: "{{ vars.cloud_support }}"
-        loop_control:
-          loop_var: cloud_item
-        when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+      - name: Signing cloud phase one off
+        copy:
+          content: ""
+          dest: /etc/trinity/cloud-phaseone.done
+      
+      - name: Verifying if cloud phase two already done
+        stat:
+          path: /etc/trinity/cloud-phasetwo.done
+        register: cloud_phasetwo_done
 
-      - name: Include cloud controller installer
-        include_role:
-          name: "cloud/controller"
-        vars:
-          cloudname: "{{ cloud_item }}"
-          controller: "{{ vars[cloud_item + '_ctrl_ip'] }}"
-        loop: "{{ vars.cloud_support }}"
-        loop_control:
-          loop_var: cloud_item
-        when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+      - block:
+        - name: Include Luna cluster cloud configuration
+          include_role:
+            name: "cloud/luna"
+          vars:
+            createnodes: "{{ True if vars[cloud_item + '_node'] is defined and vars[cloud_item + '_node'] is true else False }}"
+            rawhostlist: "{{ vars[cloud_item + '_nodes'] | default('') }}"
+            cloudname: "{{ cloud_item }}"
+            cloudtype: "{{ cloud_item }}"
+            network: "{{ vars[cloud_item + '_cluster_net'] + '/' + vars[cloud_item + '_cluster_netprefix'] | string }}"
+            dhcprange: "{{ vars[cloud_item + '_cluster_dhcp_start'] | default('') + '-' + vars[cloud_item + '_cluster_dhcp_end'] | default('') }}"
+          loop: "{{ vars.cloud_support }}"
+          loop_control:
+            loop_var: cloud_item
+          when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
 
-      - name: Run Terraform playbook Stage two
-        include_role:
-          name: "cloud/terraform"
-        vars:
-          stage: nodes
-          cloudname: "{{ cloud_item }}"
-          terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
-          subscription_id: "{{ vars[cloud_item + '_subscription_id'] }}"
-          resource_group_name: "{{ vars[cloud_item + '_resource_group_name'] }}"
-        loop: "{{ vars.cloud_support }}"
-        loop_control:
-          loop_var: cloud_item
-        when:
-          - terraform_installer
-          - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
-          - vars[cloud_item + '_node'] is defined and vars[cloud_item + '_node'] is true
+        - name: Include cloud controller installer
+          include_role:
+            name: "cloud/controller"
+          vars:
+            cloudname: "{{ cloud_item }}"
+            controller: "{{ vars[cloud_item + '_ctrl_ip'] }}"
+          loop: "{{ vars.cloud_support }}"
+          loop_control:
+            loop_var: cloud_item
+          when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+
+        - name: Run Terraform playbook Stage two
+          include_role:
+            name: "cloud/terraform"
+          vars:
+            stage: nodes
+            cloudname: "{{ cloud_item }}"
+            terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
+            subscription_id: "{{ vars[cloud_item + '_subscription_id'] }}"
+            resource_group_name: "{{ vars[cloud_item + '_resource_group_name'] }}"
+          loop: "{{ vars.cloud_support }}"
+          loop_control:
+            loop_var: cloud_item
+          when:
+            - terraform_installer
+            - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+            - vars[cloud_item + '_node'] is defined and vars[cloud_item + '_node'] is true
+        when: not cloud_phaseone_done.stat.exists
+
+      - name: Signing cloud phase two off
+        copy:
+          content: ""
+          dest: /etc/trinity/cloud-phasetwo.done
       when: cloud_condition
     
   environment:
