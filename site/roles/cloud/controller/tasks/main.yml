@@ -23,7 +23,7 @@
       dest: /tmp/remote_controller/all.yml
 
   - name: preparing TrinityX repo for remote controller
-    shell: "tar -C {{ playbook_dir }}/.. --exclude group_vars/*.yml -zcvf /tmp/remote_controller/trinityx.tgz ."
+    shell: "tar -C {{ playbook_dir }}/../.. --exclude site/group_vars/*.yml --exclude .git -zcvf /tmp/remote_controller/trinityx.tgz ."
 
   - name: Transferring file to remote controller
     shell: "scp /tmp/remote_controller/{{ item }} {{ controller }}:"
@@ -32,9 +32,9 @@
       - trinityx.tgz
 
   - name: Preparing remote controller installation
-    shell: "ssh {{ controller }} \"mkdir install && cd install && tar -zxvf ../trinityx.tgz && cp ../all.yml site/group_vars/\""
+    shell: "ssh {{ controller }} \"mkdir install; cd install && tar -zxvf ../trinityx.tgz && cp ../all.yml site/group_vars/\""
 
   - name: Running playbook on remote controller
-    shell: "ssh {{ controller }} \"cd install && bash WITH_ZFS=no USE_CURRENT_KERNEL=yes prepare.sh && cd site/imports && ansible-playbook cloud-controller.yml\""
+    shell: "ssh {{ controller }} \"cd install && WITH_ZFS=no USE_CURRENT_KERNEL=yes bash prepare.sh && cd site/imports && ansible-playbook cloud-controller.yml\""
 
   when: controller
