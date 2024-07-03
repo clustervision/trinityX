@@ -58,8 +58,8 @@
     - role: trinity/chrony
       tags: chrony
 
-    - role: trinity/ssh
-      tags: ssh
+#    - role: trinity/ssh
+#      tags: ssh
 
     # -----
     # - role: trinity/fail2ban
@@ -76,7 +76,7 @@
         - '{{ ansible_fqdn }}'
         - '{{ trix_external_fqdn }}'
       ssl_cert_altip: 
-        - '{{ all_ctrl_ip }}'
+        - '{{ cloud_ctrl_ip|default([]) }}'
       ssl_cert_days: '36500'
       tags: 
         - ssl-cert
@@ -95,12 +95,12 @@
         cluster:
           domain_search: '{{ resolv_search_domains }}'
           dns_forwarders: '{{ trix_dns_forwarders }}'
-        ha: '{{ True if ha or cloud_controller else False }}'
+        ha: '{{ True if ha or cloud_install else False }}'
         frontend_address: '{{ trix_ctrl_ip }}'
         frontend_hostname: '{{ trix_ctrl_hostname }}'
         controllers: 
-          hostnames: '{{ all_ctrl_hostname }}'
-          ip_addresses: '{{ all_ctrl_ip }}'
+          hostnames: '{{ all_ctrl_hostname + cloud_ctrl_hostname|default([]) }}'
+          ip_addresses: '{{ all_ctrl_ip + cloud_ctrl_ip|default([]) }}'
         networks:
         - name: '{{ trix_domain }}'
           function: 'default'
