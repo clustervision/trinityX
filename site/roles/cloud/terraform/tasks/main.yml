@@ -98,7 +98,7 @@
       - block:
         - name: Obtaining required variables
           set_fact:
-            "{{ cloudname + '_' + item }}": "{{ lookup('file', terraform_files+'/variables.dat').splitlines() | regex_findall( '^'+item+' = \"[a-zA-Z0-9\\.\\-\\\/\\:]+\"') | first | regex_findall('[a-zA-Z0-9\\.\\-\\\/\\:]+') | first }}"
+            "{{ cloudname + '_' + item }}": "{{ lookup('file', terraform_files + '/variables.dat').splitlines() | regex_findall( item + ' = \"[a-zA-Z0-9\\.\\-\\\/\\:]+\"') | first | regex_findall('[a-zA-Z0-9\\.\\-\\\/\\:]+') | first }}"
           with_items:
             - subnet_id
             - image_id
@@ -122,6 +122,10 @@
             path: "{{ terraform_path }}/terraform.tfvars"
             line: "{{ item }} = \"{{ vars[cloudname + '_' + item] }}\""
             state: present
+          with_items:
+            - subnet_id
+            - image_id
+            - storage_name
 
         - name: Do Terraform runs
           shell: "terraform {{ item }}"
