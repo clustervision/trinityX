@@ -188,7 +188,7 @@
   - name: Grub Set Default to Trinity iPXE
     lineinfile:
       path: "{{ vhd_path }}/etc/rc.local"
-      line: "grub2-set-default 'Trinity iPXE' && grub2-mkconfig -o /boot/grub2/grub.cfg && shutdown -r now"
+      line: "sed -i 's/default=1/default=0/' /boot/efi/EFI/*/grub.cfg && shutdown -r now"
  
   - name: Set Permissions for RC Local
     shell: "chroot {{ vhd_path }} chmod +x /etc/rc.d/rc.local"
