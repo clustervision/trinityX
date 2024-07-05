@@ -185,6 +185,31 @@
   - name: Update Grub
     shell: "chroot {{ vhd_path }} grub2-set-default 'Trinity iPXE'"
 
+  - name: Grub Set Default to Trinity iPXE
+    lineinfile:
+      path: "{{ vhd_path }}/etc/rc.local"
+      line: "grub2-set-default 'Trinity iPXE' && sudo shutdown -r now"
+ 
+  - name: Set Permissions for RC Local
+    shell: "chroot {{ vhd_path }} chmod +x /etc/rc.d/rc.local"
+ 
+  - name: Enable RC Local to Boot to Trinity iPXE
+    shell: "chroot {{ vhd_path }} systemctl enable rc-local"
+ 
+  - name: Start RC Local to Boot to Trinity iPXE
+    shell: "chroot {{ vhd_path }} systemctl start rc-local"
+ 
+  - name: Update Azure Provising
+    shell: "chroot {{ vhd_path }} {{ az_pro }}"
+    with_items:
+      - "systemctl enable waagent.service"
+      - "systemctl enable cloud-init.service"
+      - "sed -i 's/Provisioning.Agent=auto/Provisioning.Agent=cloud-init/g' /etc/waagent.conf"
+      - "sed -i 's/ResourceDisk.Format=y/ResourceDisk.Format=n/g' /etc/waagent.conf"
+      - "sed -i 's/ResourceDisk.EnableSwap=y/ResourceDisk.EnableSwap=n/g' /etc/waagent.conf"
+    loop_control:
+      loop_var: az_pro
+
   - name: Unmount dev, sys and Proc
     mount:
       src: "{{ umount_dir.src }}"

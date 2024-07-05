@@ -190,6 +190,11 @@
         copy:
           content: "{{ terraform_output.stdout }}"
           dest: "{{ terraform_files }}/variables.dat"
+
+      - name: Backup current state file
+        copy:
+          src: "{{ terraform_path }}/terraform.tfstate"
+          dest: "{{ terraform_files }}/terraform-default.tfstate"
       when: stage is not defined
     when: terraform_tfvars_file.stat.exists
   when:
