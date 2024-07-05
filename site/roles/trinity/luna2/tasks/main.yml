@@ -429,6 +429,16 @@
     state: started
   with_items:
     - "{{ start_services }}"
+  when: not in_cloud | default(False)
+
+- name: Start other luna services for controller in cloud
+  service:
+    name: '{{ item }}'
+    state: started
+  with_items:
+    - "{{ start_services }}"
+  ignore_errors: true
+  when: in_cloud | default(False)
 
 - name: Setting permissions on database
   file:
@@ -460,7 +470,8 @@
       enabled: true
   when:
     - not ha | default(False)
-    - cloud_install | default(False)  
+    - cloud_install | default(False)
+    - not in_cloud | default(False)
 
 - block:
   - name: Set me as Luna master
