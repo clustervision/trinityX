@@ -182,13 +182,13 @@
     set_fact:
       initrd_version: "{{ latest_initramfs.stdout | basename }}"
 
-  - name: Update Grub
-    shell: "chroot {{ vhd_path }} grub2-set-default 'Trinity iPXE'"
+#  - name: Update Grub
+#    shell: "chroot {{ vhd_path }} grub2-set-default 'Trinity iPXE'"
 
   - name: Grub Set Default to Trinity iPXE
     lineinfile:
       path: "{{ vhd_path }}/etc/rc.local"
-      line: "grub2-set-default 'Trinity iPXE' && sudo shutdown -r now"
+      line: "grub2-set-default 'Trinity iPXE' && grub2-mkconfig -o /boot/grub2/grub.cfg && shutdown -r now"
  
   - name: Set Permissions for RC Local
     shell: "chroot {{ vhd_path }} chmod +x /etc/rc.d/rc.local"
