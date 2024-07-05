@@ -51,16 +51,30 @@
 
 - name: Load all swanctl configurations
   command: swanctl --load-all
-  register: load_all_output
+  register: swan_load_all_output
 
 - name: Verify load-all output
-  debug:
+  fail:
     msg: "{{ load_all_output.stdout }}"
-  failed_when: not ("successfully loaded 1 connections" in load_all_output.stdout and "loaded connection '{{ vpn_connection_name }}'" in load_all_output.stdout)
+  when: not ("successfully loaded 1 connections" in swan_load_all_output.stdout and "loaded connection '{{ vpn_connection_name }}'" in swan_load_all_output.stdout)
 
 - name: List swanctl connections
   command: swanctl --list-conns
-  register: list_conns_output
+  register: swan_list_conns_output
+
+- name: Wait 15s for strongswan to settle
+  wait_for:
+    timeout: 15
+
+- name: Get link numbers
+  shell: "swanctl --list-sas 2> /dev/null|grep -e in -e out|grep bytes|awk '{ print $3 }'|grep -E "[1-9][0-9]+" &> /dev/null && echo up"
+  register: swan_link_status
+  ignore_errors: true
+
+- name: Verify the link is up
+  fail:
+    msg: "VPN not up!"
+  when: swan_link_status.stdout != "up"
 
 #- name: Verify listed connections
 #  debug:
