@@ -1,6 +1,16 @@
 ---
 # Main file to enable the Azure Support for the TrinityX Installation.
 
+- name: Install HashiCorp Terraform on Redhat
+  include_tasks: "redhat-terraform.yml"
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+
+- name: Install HashiCorp Terraform on Debian
+  include_tasks: "debian-terraform.yml"
+  when:
+    - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
 - name: Verifying if clones repo already exists
   stat:
     path: "{{ trix_local }}/gitrepos/trinityx-terraform"
