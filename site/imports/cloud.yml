@@ -117,19 +117,34 @@
           loop: "{{ vars.cloud_support }}"
           when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
 
-        - name: Run Terraform playbook Stage one
-          include_role:
-            name: "cloud/terraform"
-          vars:
-#            stage: init
-            cloudname: "{{ cloud_item }}"
-            terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
-          loop: "{{ vars.cloud_support }}"
-          loop_control:
-            loop_var: cloud_item
-          when:
-            - terraform_installer
-            - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+        # -------------------------------------------------------------
+
+        - name: Verifying if terraform already done
+          stat:
+            path: /etc/trinity/cloud-terraform.done
+          register: cloud_terraform_done
+
+        - block:
+          - name: Run Terraform playbook Stage one
+            include_role:
+              name: "cloud/terraform"
+            vars:
+              cloudname: "{{ cloud_item }}"
+              terraform_files: "{{ trix_local }}/terraform/{{ cloud_item }}"
+            loop: "{{ vars.cloud_support }}"
+            loop_control:
+              loop_var: cloud_item
+            when:
+              - terraform_installer
+              - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+
+          - name: Signing terraform off
+            copy:
+              content: ""
+              dest: /etc/trinity/cloud-terraform.done
+          when: not cloud_terraform_done.stat.exists
+
+        # -------------------------------------------------------------
 
         - name: Obtaining VPN remote ip address
           set_fact:
