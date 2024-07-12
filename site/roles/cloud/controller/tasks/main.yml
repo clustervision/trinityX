@@ -32,12 +32,12 @@
       - trinityx.tgz
 
   - debug:
-      msg: "Please note that the next tasks may take very long...."
+      msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/cloud-controller-pre.out and /tmp/cloud-controller-run.out"
 
   - name: Preparing remote controller installation
     shell: "ssh {{ controller }} \"mkdir install; cd install && tar -zxvf ../trinityx.tgz && cp ../all.yml site/group_vars/ && touch site/group_vars/{{ cloudname }}.yml\" | tee /tmp/cloud-controller-pre.out"
 
   - name: Running playbook on remote controller
-    shell: "ssh {{ controller }} \"cd install && WITH_ZFS=no USE_CURRENT_KERNEL=yes bash prepare.sh && cd site && ansible-playbook imports/cloud-controller.yml\" | tee /tmp/cloud-controller-run.out"
+    shell: "ssh {{ controller }} \"cd install && WITH_ZFS=no USE_CURRENT_KERNEL=yes bash prepare.sh && cd site && ansible-playbook imports/cloud-shadow-controller.yml\" | tee /tmp/cloud-controller-run.out"
 
   when: controller
