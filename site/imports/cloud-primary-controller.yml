@@ -8,10 +8,33 @@
   hosts: controllers
   gather_facts: true
   tasks:
+    - name: Calling init
+      include_role:
+        name: "trinity/init"
+      when: init_dmidecode is not defined
+
     - name: Set cloud_condition fact
       set_fact:
         cloud_condition: "{{ True if in_cloud else False }}"
-    
+
+    - name: We are on Azure
+      set_fact:
+        cloud_name: 'azure'
+      when: "'icrosoft' in init_dmidecode.stdout"
+
+    - name: We are on Google
+      set_fact:
+        cloud_name: 'gcp'
+      when: "'oogle' in init_dmidecode.stdout"
+
+    - name: We are on Amazon
+      set_fact:
+        cloud_name: 'aws'
+      when: "'mazon' in init_dmidecode.stdout"
+
+    - debug:
+        msg: "Detected cloud: {{ cloud_name }}"
+
     - block:
       - name: Include Cloud variables
         include_vars: "group_vars/{{ cloud_name }}.yml"
