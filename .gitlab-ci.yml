@@ -51,7 +51,7 @@ rollout:
 
   - echo Run compute
   - "( cd site && (ansible-playbook compute-default.yml || ansible-playbook compute-default.yml) )"
-  - "( cd site && (ansible-playbook compute-ubuntu.yml || ansible-playbook compute-ubuntu.yml) )"
+  # - "( cd site && (ansible-playbook compute-ubuntu.yml || ansible-playbook compute-ubuntu.yml) )"
 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
@@ -144,7 +144,8 @@ ha-rollout:
   - ssh $TST_CTRL002_IP "( cd $PWD/site && (INSIDE_RUNNER=true ansible-playbook controller.yml || INSIDE_RUNNER=true ansible-playbook controller.yml) )"
 
   - echo Run compute on Primary
-  - "( cd site && (ansible-playbook compute-default.yml compute-ubuntu.yml || ansible-playbook compute-default.yml compute-ubuntu.yml) )"
+  # - "( cd site && (ansible-playbook compute-default.yml compute-ubuntu.yml || ansible-playbook compute-default.yml compute-ubuntu.yml) )"
+  - "( cd site && (ansible-playbook compute-default.yml || ansible-playbook compute-default.yml) )"
 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
