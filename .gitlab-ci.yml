@@ -41,7 +41,6 @@ rollout:
 
   - echo Fix repositories if needed
   - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
-  # - "if [ \"$TAG\" == \"centos8\" ]; then echo \"...change for [$TAG]\"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *; sed -i 's/^mirror/#mirror/g' *; sed -i 's/mirror\\.centos/vault.centos/g' *; cd -; fi"
 
   - echo Run prepare
   - ./prepare.sh
@@ -122,16 +121,11 @@ ha-rollout:
   - cat "site/group_vars/all.yml"
 
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
- - "scp -r $PWD/* $TST_CTRL002_IP:"
-  # - "dnf -y install rsync || true"
-  # - "ssh $TST_CTRL002_IP 'mkdir -p '$PWD'; dnf -y install rsync' || true"
-  # - "rsync -aH $PWD/* $TST_CTRL002_IP:$PWD/"
+  - "scp -r $PWD/* $TST_CTRL002_IP:"
 
   - echo Fix repositories if needed
   - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
   - ssh $TST_CTRL002_IP find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
-  # - "if [ \"$TAG\" == \"centos8\" ]; then echo \"...change for [$TAG]\"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *; sed -i 's/^mirror/#mirror/g' *; sed -i 's/mirror\\.centos/vault.centos/g' *; cd -; fi"
-  # - "ssh $TST_CTRL002_IP \"if [ \\\"$TAG\\\" == \\\"centos8\\\" ]; then echo \\\"...change for [$TAG]\\\"; cd /etc/yum.repos.d; sed -i 's/^#base/base/g' *; sed -i 's/^mirror/#mirror/g' *; sed -i 's/mirror\\\\.centos/vault.centos/g' *; cd -; fi\""
 
   - echo Run prepare on Primary
   - ./prepare.sh
