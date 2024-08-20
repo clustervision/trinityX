@@ -36,18 +36,17 @@
   #   with_items: "{{ trinityx_repositories }}"
   #   ignore_errors: True
 
-  - name: "Download external repo RPMS"
-    get_url:
-      url: "{{ item.name }}"
-      dest: "/tmp/{{ item.file }}"
-    retries: 10
-    delay: 60
-    with_items: "{{ external_repository_rpms }}"
+  # - name: "Download external repo RPMS"
+  #   get_url:
+  #     url: 
+  #     dest: "/tmp/{{ item.file }}"
+  #   retries: 10
+  #   delay: 60
+  #   with_items: "{{ external_repository_rpms }}"
 
   - name: Install external repo RPMS
     dnf:
-      # name: "/tmp/{{ item.file }}"
-      name: "/tmp/{{ item.file }}"
+      name: "{{ item.name }}"
       disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       state: present
       # update_cache: true
@@ -64,7 +63,7 @@
     # until: result.rc == 0
 >>>>>>> a24c1077 (NOJRIA Trying to download external repo RPMS before installing)
     with_items: "{{ external_repository_rpms }}"
-    # when: item.name is defined
+    when: item.name is defined
 
   - name: Install external repo Packages
     dnf:
