@@ -118,7 +118,9 @@ ha-rollout:
   - cat "site/group_vars/all.yml"
 
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
-  - "scp -rp $PWD/* $TST_CTRL002_IP:"
+  - "tar -cvf /tmp/trinityx-combined-bundle.tar $PWD"
+  - "scp /tmp/trinityx-combined-bundle.tar $TST_CTRL002_IP:/tmp/"
+  - "ssh $TST_CTRL002_IP 'tar -xvf /tmp/trinityx-combined-bundle.tar'"
 
   - echo Fix repositories if needed
   - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
@@ -127,12 +129,12 @@ ha-rollout:
   - echo Run prepare on Primary
   - ./prepare.sh
   - echo Run prepare on Secondary
-  - ssh $TST_CTRL002_IP 'cd '$PWD'; GITLAB_CI=true ./prepare.sh'
+  - ssh $TST_CTRL002_IP GITLAB_CI=true ./prepare.sh'
 
   - echo Run controller on Primary
   - "( cd site && ansible-playbook -vvv controller.yml )"
   - echo Run controller on Secondary
-  - ssh $TST_CTRL002_IP "( cd $PWD/site && GITLAB_CI=true ansible-playbook -vvv controller.yml )"
+  - ssh $TST_CTRL002_IP "( cd site && GITLAB_CI=true ansible-playbook -vvv controller.yml )"
 
   - echo Run compute on Primary
   # - "( cd site && ansible-playbook -vvv compute-default.yml compute-ubuntu.yml )"
