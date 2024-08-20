@@ -3,7 +3,11 @@ stages:
 
 rollout:
   stage: test
-  when: manual
+  rules:
+  - if: $CI_PIPELINE_SOURCE != "schedule"
+    when: manual
+    # allow_failure: true
+  - when: on_success
   
   parallel:
     matrix:
@@ -64,7 +68,12 @@ rollout:
 
 ha-rollout:
   stage: test
-  when: manual
+  rules:
+  - if: $CI_PIPELINE_SOURCE != "schedule"
+    when: manual
+    # allow_failure: true
+  - when: on_success
+
   
   parallel:
     matrix:
