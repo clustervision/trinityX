@@ -43,11 +43,11 @@ rollout:
   - ./prepare.sh
 
   - echo Run controller
-  - "( cd site && ansible-playbook -vvvv controller.yml )"
+  - "( cd site && ansible-playbook -vvv controller.yml )"
 
   - echo Run compute
-  - "( cd site && ansible-playbook -vvvv compute-default.yml )"
-  # - "( cd site && ansible-playbook -vvvv compute-ubuntu.yml )"
+  - "( cd site && ansible-playbook -vvv compute-default.yml )"
+  # - "( cd site && ansible-playbook -vvv compute-ubuntu.yml )"
 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
@@ -118,7 +118,7 @@ ha-rollout:
   - cat "site/group_vars/all.yml"
 
   - echo Setup site/hosts and site/group_vars/all.yml on Secondary
-  - "scp -r $PWD/* $TST_CTRL002_IP:"
+  - "scp -rp $PWD/* $TST_CTRL002_IP:"
 
   - echo Fix repositories if needed
   - find /etc/yum.repos.d/ -type f | xargs sed -i 's|baseurl=http://dl.rockylinux.org/$contentdir/|baseurl=https://updates.clustervision.com/mirror/rocky-linux/|g'
@@ -130,13 +130,13 @@ ha-rollout:
   - ssh $TST_CTRL002_IP 'cd '$PWD'; GITLAB_CI=true ./prepare.sh'
 
   - echo Run controller on Primary
-  - "( cd site && ansible-playbook -vvvv controller.yml )"
+  - "( cd site && ansible-playbook -vvv controller.yml )"
   - echo Run controller on Secondary
-  - ssh $TST_CTRL002_IP "( cd $PWD/site && GITLAB_CI=true ansible-playbook -vvvv controller.yml )"
+  - ssh $TST_CTRL002_IP "( cd $PWD/site && GITLAB_CI=true ansible-playbook -vvv controller.yml )"
 
   - echo Run compute on Primary
-  # - "( cd site && ansible-playbook -vvvv compute-default.yml compute-ubuntu.yml )"
-  - "( cd site && ansible-playbook -vvvv compute-default.yml )"
+  # - "( cd site && ansible-playbook -vvv compute-default.yml compute-ubuntu.yml )"
+  - "( cd site && ansible-playbook -vvv compute-default.yml )"
 
   - systemctl restart NetworkManager
   - /tmp/fix-firewalld-zones.sh || true
