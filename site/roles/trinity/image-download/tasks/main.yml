@@ -20,6 +20,12 @@
     state: directory
   when: not image_dir_check.stat.exists
 
+- name: Verify if destination image directory exists
+  fail:
+    msg: "{{ image_path }} seems to already exist. I will not download and unpack in there to prevent possible disaster..."
+  ignore_errors: true
+  when: image_dir_check.stat.exists
+
 - block:
   - name: Downloading base image
     get_url:
