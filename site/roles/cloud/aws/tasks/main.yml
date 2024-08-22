@@ -1,6 +1,53 @@
 ---
 # Main file to enable the AWS Cloud Support for the TrinityX Installation.
 
+#- name: Check if aws-cli is already Installed
+#  shell: "aws help"
+#  register: awscli_check
+#  ignore_errors: true
+
+- name: Remove the previous Installation
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    - "/usr/local/bin/aws"
+    - "/usr/local/bin/aws_completer"
+    - "/usr/local/aws-cli"
+    - "~/.aws/"
+#  when: awscli_check.rc|int == 0
+
+- name: Download the AWS installation file
+  get_url:
+    url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+    dest: /tmp/awscliv2.zip
+    force: true
+
+- name: Unzip the installer
+  unarchive:
+    src: /tmp/awscliv2.zip
+    dest: /tmp/
+
+- name: Installing AWS CLI
+  shell: "sh /tmp/aws/install"
+
+- name: Clean up
+  file:
+    state: absent
+    path: /tmp/aws
+
+
+- block:
+  - name: Create GRUB VHD Disk
+    include_tasks: "{{ role_path }}/tasks/redhat-vhd.yml"
+    when:
+      - ansible_facts['os_family'] == "RedHat"
+
+  - name: Create GRUB VHD Disk
+    include_tasks: "{{ role_path }}/tasks/debian-vhd.yml"
+    when:
+      - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
 - block:
   - name: Verifying terraform files directory exists
     file:
@@ -11,11 +58,7 @@
     template:
       src: terraform.tfvars.j2
       dest: "{{ terraform_files }}/terraform.tfvars"
+      force: true
   when:
-    - vars.azure_installer == 'terraform'
+    - vars.aws_installer == 'terraform'
 
-- block:
-  - name: Install Amazon Web services CLI on Redhat
-    include_tasks: "{{ role_path }}/tasks/aws.yml"
-  when:
-    - vars.azure_installer == 'aws'

@@ -188,7 +188,7 @@
   - name: Grub Set Default to Trinity iPXE
     lineinfile:
       path: "{{ vhd_path }}/etc/rc.local"
-      line: "sed -i 's/default=1/default=0/' /boot/efi/EFI/*/grub.cfg && shutdown -r now"
+      line: "sed -i 's/default=1/default=0/' /boot/efi/EFI/*/grub.cfg /root/boot/grub2/grub.cfg && shutdown -r now"
  
   - name: Set Permissions for RC Local
     shell: "chroot {{ vhd_path }} chmod +x /etc/rc.d/rc.local"
@@ -307,10 +307,29 @@
       dest: "{{ grub_dest }}"
     with_items:
       - "{{ vhd_path }}/boot/efi/EFI/rocky/grub.cfg"
+      - "/mnt/{{ vhd_name }}/boot/efi/EFI/rocky/grub.cfg"
+      - "/mnt/{{ vhd_name }}/root/boot/efi/EFI/rocky/grub.cfg"
       - "/mnt/{{ vhd_name }}/efi/EFI/rocky/grub.cfg"
     loop_control:
       loop_var: grub_dest
-  
+
+  - name: Ensure default directory exists
+    file:
+      state: directory
+      path: "/mnt/{{ vhd_name }}/root/etc/default"
+
+  - name: Create dummy grub defaults for AWS
+    copy:
+      dest: "/mnt/{{ vhd_name }}/root/etc/default/grub"
+      content: |
+        GRUB_DEFAULT=saved
+        GRUB_CMDLINE_LINUX_DEFAULT="console=ttyS0,115200n8 no_timer_check crashkernel=auto net.ifnames=0 nvme_core.io_timeout=4294967295 nvme_core.max_retries=10"
+        GRUB_ENABLE_BLSCFG=true
+        GRUB_GFXMODE=auto
+        GRUB_TERMINAL_INPUT="console"
+        GRUB_TERMINAL_OUTPUT="gfxterm"
+        GRUB_TIMEOUT=10
+
   - name: Ensure /etc/fstab is correct
     copy:
       content: |
