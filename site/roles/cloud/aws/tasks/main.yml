@@ -9,12 +9,14 @@
 - name: Remove the previous Installation
   file:
     state: absent
-    path: "{{ item }}"
+    path: "{{ remove_item }}"
   with_items:
     - "/usr/local/bin/aws"
     - "/usr/local/bin/aws_completer"
     - "/usr/local/aws-cli"
     - "~/.aws/"
+  loop_control:
+    loop_var: remove_item
 #  when: awscli_check.rc|int == 0
 
 - name: Download the AWS installation file
