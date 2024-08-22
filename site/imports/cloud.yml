@@ -148,11 +148,22 @@
 
         - name: Obtaining VPN remote ip address
           set_fact:
-            "{{ cloud_item + '_obtained_remote_ip' }}": "{{ lookup('file', trix_local+'/terraform/'+cloud_item+'/variables.dat').splitlines() | regex_findall('vng_ip = \"[0-9\\.]+\"') | first | regex_findall('[0-9\\.]+') | first }}"
+            "{{ cloud_item + '_obtained_remote_ip' }}": "{{ lookup('file', trix_local+'/terraform/'+cloud_item+'/variables.dat').splitlines() | regex_findall(cloud_vpn_namekey[cloud_item] + ' = \"[0-9\\.]+\"') | first | regex_findall('[0-9]+\\.[0-9\\.]+') | first }}"
           loop: "{{ vars.cloud_support }}"
           loop_control:
             loop_var: cloud_item
-          when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+          when: 
+            - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+
+        - name: Obtaining VPN remote PSK
+          set_fact:
+            "{{ cloud_item + '_obtained_remote_psk' }}": "{{ lookup('file', '/tmp/variables.dat').splitlines() | regex_findall(cloud_vpn_pskkey[cloud_item] + ' = \".[^\\\"]+\"') | first | regex_findall('\".+\"') | first | regex_findall('[a-zA-Z0-9\\_\\.]+') | first }}"
+          loop: "{{ vars.cloud_support }}"
+          loop_control:
+            loop_var: cloud_item
+          when:
+            - cloud_item == aws
+            - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
 
         - name: Calling VPN role
           include_role:
@@ -163,7 +174,7 @@
             vpn_local_external_ip: "{{ trix_ctrl_external_ip }}"
             vpn_local_private_subnet: "{{ trix_cluster_net +'/'+ trix_cluster_netprefix | string }}"
             vpn_remote_private_subnet: "{{ vars[cloud_item + '_cluster_net'] +'/'+ vars[cloud_item + '_cluster_netprefix'] | string }}"
-            vpn_psk_secret: "{{ cloud_psk_secret }}"
+            vpn_psk_secret: "{{ vars[cloud_item + '_obtained_remote_psk'] | default(cloud_psk_secret) }}"
           loop: "{{ vars.cloud_support }}"
           loop_control:
             loop_var: cloud_item

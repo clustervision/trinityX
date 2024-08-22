@@ -22,3 +22,41 @@
       name: "terraform"
       state: present
   when: terraform_check.rc|int != 0
+
+
+#- name: Check if aws-cli is already Installed
+#  shell: "aws help"
+#  register: awscli_check
+#  ignore_errors: true
+
+- name: Remove the previous Installation
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    - "/usr/local/bin/aws"
+    - "/usr/local/bin/aws_completer"
+    - "/usr/local/aws-cli"
+    - "~/.aws/"
+#  when: awscli_check.rc|int == 0
+
+- name: Download the AWS installation file
+  get_url:
+    url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+    dest: /tmp/awscliv2.zip
+    force: true
+
+- name: Unzip the installer
+  unarchive:
+    src: /tmp/awscliv2.zip
+    dest: /tmp/
+
+- name: Installing AWS CLI
+  shell: "sh /tmp/aws/install"
+
+- name: Clean up
+  file:
+    state: absent
+    path: /tmp/aws
+
+
