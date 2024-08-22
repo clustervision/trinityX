@@ -2,14 +2,15 @@
 
 # --- DRBD disks
 - name: "Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file."
-  ansible.builtin.include_vars: "{{ item }}"
-  with_first_found:
-    files:
-    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
-    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
-    - defaults.yaml
-    paths:
-      - 'vars'
+  ansible.builtin.include_vars: "{{lookup('ansible.builtin.first_found', params)}}"
+  vars:
+    params:
+      files:
+        - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+        - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+        - "defaults.yaml"
+      paths:
+        - "vars"
     
 
 - name: Build DRBD disk list
