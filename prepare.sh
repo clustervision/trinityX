@@ -97,7 +97,7 @@ else
   setenforce 0
   sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
 
-  if [ ! "$INSIDE_RUNNER" ]; then
+  if [ ! "$GITLAB_CI" ]; then
     if [ -f site/tui_configurator ]; then
         rm -f site/tui_configurator
     fi
@@ -110,7 +110,7 @@ else
   fi
 
   # inside a runner (test mode) we do not update the kernel.
-  if [ "$INSIDE_RUNNER" ]; then
+  if [ "$GITLAB_CI" ]; then
       dnf update -y --exclude=kernel*
   else
       dnf update -y
@@ -139,7 +139,7 @@ else
   CURRENT_KERNEL=$(uname -r)
   LATEST_KERNEL=$(ls -tr /lib/modules/|tail -n1)
 
-  if [ "$USE_CURRENT_KERNEL" != "yes" ] && [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ] && [ ! "$INSIDE_RUNNER" ]; then
+  if [ "$USE_CURRENT_KERNEL" != "yes" ] && [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ] && [ ! "$GITLAB_CI" ]; then
     add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
     add_message "After reboot, please re-run prepare.sh to make sure all requirements are met."
     show_message
@@ -149,7 +149,7 @@ else
     fi
   fi
 
-  if [ ! "$WITH_ZFS" ] && [ ! "$INSIDE_RUNNER" ]; then
+  if [ ! "$WITH_ZFS" ] && [ ! "$GITLAB_CI" ]; then
     add_message "Would you prefer to include ZFS?" 
     add_message "ZFS is supported in the shared_fs_disk/HA role. If you prefer to use ZFS there, please confirm below."
     show_message
@@ -157,7 +157,7 @@ else
   fi
   store_config 'WITH_ZFS' $WITH_ZFS
 
-  if [ "$WITH_ZFS" == "yes" ] || [ "$INSIDE_RUNNER" ]; then
+  if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
     yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
     yes y | dnf -y install zfs zfs-dkms
     echo "zfs" >> /etc/modules-load.d/zfs.conf
