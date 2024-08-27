@@ -1,7 +1,7 @@
 connections {
     {{ vpn_connection_name }} {
         version = 2
-        proposals = aes256-sha1-modp1024
+        proposals = ['aes256-sha1-modp1024','aes128-sha1-modp1024']
         local_addrs = {{ vpn_local_external_ip }}
         remote_addrs = {{ vpn_remote_public_ip }}
         local {
@@ -13,10 +13,10 @@ connections {
             id = {{ vpn_remote_public_ip }}
         }
         children {
-            azure {
+            {{ vpn_connection_name }}_child {
                 local_ts = {{ vpn_local_private_subnet }}
                 remote_ts = {{ vpn_remote_private_subnet }}
-                esp_proposals = aes256-sha1-modp1024
+                esp_proposals = ['aes256-sha1-modp1024','aes128-sha1-modp1024']
                 dpd_action = restart
                 rekey_time = 8h
                 start_action = start
@@ -26,7 +26,7 @@ connections {
     }
 }
 secrets {
-    ike-azurevmware {
+    ike-{{ vpn_connection_name }} {
         id = {{ vpn_remote_public_ip }}
         secret = {{ vpn_psk_secret }}
     }
