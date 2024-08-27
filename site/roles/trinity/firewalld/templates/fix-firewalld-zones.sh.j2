@@ -1,5 +1,7 @@
 #!/bin/bash
 
+systemctl restart NetworkManager
+
 {% for interface in firewalld_trusted_interfaces|unique %}
 firewall-cmd --list-all --zone=trusted | grep interface | awk -F ': ' '{ print $2 }' | grep -w {{ interface }} || firewall-cmd --permanent --zone=trusted --change-interface={{ interface }}
 {% endfor %}
