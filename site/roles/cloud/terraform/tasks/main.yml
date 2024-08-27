@@ -99,13 +99,16 @@
             msg: "Please note that the next tasks may take very long...."
 
         - name: Do Terraform runs
-          shell: "terraform {{ item }}"
+          shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
           args:
             chdir: "{{ terraform_path }}"
           with_items:
             - "import azurerm_resource_group.rg /subscriptions/{{ subscription_id }}/resourceGroups/{{ resource_group_name }}"
             - "plan -out {{ cloudname }}-storage-tfplan"
             - "apply {{ cloudname }}-storage-tfplan"
+          environment:
+            TF_LOG: DEBUG
+            TF_LOG_PATH: /tmp/terraform-debug.log
         when: 
           - stage == 'storage'
           - subscription_id is defined
@@ -133,6 +136,9 @@
             - network
             - images
             - storage
+          environment:
+            TF_LOG: DEBUG
+            TF_LOG_PATH: /tmp/terraform-debug.log
 
         - name: Add required parameters
           lineinfile:
@@ -148,7 +154,7 @@
             msg: "Please note that the next tasks may take very long...."
 
         - name: Do Terraform runs
-          shell: "terraform {{ item }}"
+          shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
           args:
             chdir: "{{ terraform_path }}"
           with_items:
@@ -192,7 +198,7 @@
           msg: "Please note that the next tasks may take very long...."
 
       - name: Do Terraform runs
-        shell: "terraform {{ item }}"
+        shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
         args:
           chdir: "{{ terraform_path }}"
         with_items:
@@ -201,6 +207,9 @@
           - "plan -out {{ cloudname }}-tfplan"
           - "apply {{ cloudname }}-tfplan"
 #          - destroy
+        environment:
+          TF_LOG: DEBUG
+          TF_LOG_PATH: /tmp/terraform-debug.log
 
       # ----------------------- after run parts -------------------------
       - name: Collect all output variables
