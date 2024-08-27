@@ -8,6 +8,16 @@
     name: "{{ required_packages }}"
     state: present
 
+- name: Copy missing debootstrap files
+  copy:
+    src: "files/ubuntu/{{ item }}"
+    dest: "/usr/share/debootstrap/scripts/"
+    mode: 0755
+  with_items:
+    - focal
+    - jammy
+    - noble
+
 - name: Build basic Ubuntu image
   shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ image_path }} {{ ubuntu_distribution_source }} | tee /tmp/debootstrap.log"
   retries: 10
