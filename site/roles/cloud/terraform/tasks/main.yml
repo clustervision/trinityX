@@ -68,7 +68,7 @@
             msg: "Please note that the next tasks may take very long...."
 
         - name: Do Terraform runs
-          shell: "terraform {{ item }}"
+          shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
           args:
             chdir: "{{ terraform_path }}"
           with_items:
@@ -77,6 +77,9 @@
             - "plan -out {{ cloudname }}-tfplan"
             - "apply {{ cloudname }}-tfplan"
 #            - destroy
+          environment:
+            TF_LOG: DEBUG
+            TF_LOG_PATH: /tmp/terraform-debug.log
         when: stage == 'init'
 
       # ----------------------- storage run -------------------------
