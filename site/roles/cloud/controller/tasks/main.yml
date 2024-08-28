@@ -34,9 +34,26 @@
   - debug:
       msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/cloud-controller-pre.out and /tmp/cloud-controller-run.out"
 
+#  Below should be the way, but we have roles where file_globs (e.g. trinity/ssl-cert) renders below invalid
+#  We're stuck with the further down below....
+#
+#  - name: Preparing remote hosts inventory
+#    copy:
+#      dest: "hosts-{{ cloudname }}"
+#      content: |
+#        [controllers]
+#        controller-{{ cloudname }} ansible_host={{ controller }}
+#
+#  - name: Running remote playbook
+#    shell: "ansible-playbook -i hosts-{{ cloudname }} imports/cloud-shadow-controller.yml"
+
   - name: Preparing remote controller installation
     shell: "ssh {{ controller }} \"mkdir install; cd install && tar -zxvf ../trinityx.tgz && cp ../all.yml site/group_vars/ && touch site/group_vars/{{ cloudname }}.yml\" | tee /tmp/cloud-controller-pre.out"
 
+  - name: Creating dummy vars files for remote controller installation
+    shell: "ssh {{ controller }} \"touch install/site/group_vars/{{ item }}.yml\" | tee -a /tmp/cloud-controller-pre.out"
+    with_items: "{{ cloud_support }}"
+    
   - name: Running playbook on remote controller
     shell: "ssh {{ controller }} \"cd install && WITH_ZFS=no USE_CURRENT_KERNEL=yes bash prepare.sh && cd site && ansible-playbook imports/cloud-shadow-controller.yml\" | tee /tmp/cloud-controller-run.out"
 
