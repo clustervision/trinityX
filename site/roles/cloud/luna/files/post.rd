@@ -6,8 +6,7 @@ if [ -f /tmp/disk.dat ]; then
     echo "${DISK}   /       ext4    defaults        1 1" >> /sysroot/etc/fstab
 else
     for DISK in /dev/sda /dev/nvme0n1; do
-        ls $DISK &> /dev/null
-        if [ "$?" == "0" ]; then
+        if [[ -b $DISK ]]; then
             break
         else
             DISK=""
@@ -22,10 +21,8 @@ else
 
     mkdir /sysroot/proc /sysroot/dev /sysroot/sys
 
-    if [[ ! -b ${DISK}${ROOTPT} ]]; then 
-        if [[ -b ${DISK}p${ROOTPT} ]]; then
-            ROOTP="p${ROOTP}"
-        fi
+    if [[ -b ${DISK}p${ROOTPT} ]]; then 
+        ROOTP="p${ROOTP}"
     fi
  
     echo "${DISK}${ROOTPT}   /       ext4    defaults        1 1" >> /sysroot/etc/fstab

@@ -1,6 +1,5 @@
 for DISK in /dev/sda /dev/nvme0n1; do
-    ls $DISK &> /dev/null
-    if [ "$?" == "0" ]; then
+    if [[ -b $DISK ]]; then
         break
     else
         DISK=""
@@ -40,11 +39,11 @@ if [ ! "$ROOTPT" ]; then
 fi
 
 while [ 0 ]; do
-    if [[ -b ${DISK}${ROOTPT} ]]; then
+    if [[ -b ${DISK}p${ROOTPT} ]]; then
+        ROOTP="p${ROOTP}"
         break
     else
-        if [[ -b ${DISK}p${ROOTPT} ]]; then
-            ROOTP="p${ROOTP}"
+        if [[ -b ${DISK}${ROOTPT} ]]; then
             break
         fi
     fi
