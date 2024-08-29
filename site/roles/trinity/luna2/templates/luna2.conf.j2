@@ -14,9 +14,11 @@ CONTROLLER = {{ luna2_cluster.frontend_hostname }}:{{ luna2_cluster.frontend_add
 {% for index in range( luna2_cluster.controllers['hostnames'] | length ) %}
 CONTROLLER{{ index + 1 }} = {{ luna2_cluster.controllers['hostnames'][index] }}:{{ luna2_cluster.controllers['ip_addresses'][index] }}
 {% endfor %}
+{% if luna2_cluster.shadow_controllers is defined %}
 {% for index in range( luna2_cluster.shadow_controllers['hostnames'] | length ) %}
 CONTROLLER{{ index + 1 + luna2_cluster.controllers['hostnames'] | length }} = {{ luna2_cluster.shadow_controllers['hostnames'][index] }}:{{ luna2_cluster.shadow_controllers['ip_addresses'][index] }}:shadow
 {% endfor %}
+{% endif %}
 {% endif %}
 ; CONTROLLER1 = controller1:10.141.255.251
 ; CONTROLLER2 = None
