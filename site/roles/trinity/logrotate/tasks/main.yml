@@ -4,24 +4,14 @@
     src: '{{ item }}'
     dest: '/etc/logrotate.d/{{ item }}'
     force: "no"
-  with_items:
-    - trinityx
-    - slurm
-    - luna
-    - aria2c
-    - prometheus
+  with_items: "{{ logrotate_files }}"
 
 - name: Changing owner and group for logrotate config
   file:
     path: '/etc/logrotate.d/{{ item }}'
     owner: root
     group: root
-  with_items:
-    - trinityx
-    - slurm
-    - luna
-    - aria2c
-    - prometheus
+  with_items: "{{ logrotate_files }}"
 
 
 - name: Restart logrotate
