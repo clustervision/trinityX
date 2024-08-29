@@ -51,5 +51,10 @@ while [ 0 ]; do
     sleep 2
 done
 
+if [ ! -d /tmp ]; then
+    mkdir /tmp
+fi
+echo "${DISK}${ROOTPT}" > /tmp/disk.dat
+
 mkfs.ext4 ${DISK}${ROOTPT}
 mount ${DISK}${ROOTPT} /sysroot
