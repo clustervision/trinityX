@@ -22,7 +22,7 @@ else
     mkdir /sysroot/proc /sysroot/dev /sysroot/sys
 
     if [[ -b ${DISK}p${ROOTPT} ]]; then 
-        ROOTP="p${ROOTP}"
+        ROOTPT="p${ROOTPT}"
     fi
  
     echo "${DISK}${ROOTPT}   /       ext4    defaults        1 1" >> /sysroot/etc/fstab

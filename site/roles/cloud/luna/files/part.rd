@@ -40,7 +40,7 @@ fi
 
 while [ 0 ]; do
     if [[ -b ${DISK}p${ROOTPT} ]]; then
-        ROOTP="p${ROOTP}"
+        ROOTPT="p${ROOTPT}"
         break
     else
         if [[ -b ${DISK}${ROOTPT} ]]; then
