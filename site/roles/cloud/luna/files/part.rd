@@ -39,7 +39,17 @@ if [ ! "$ROOTPT" ]; then
     exit 1
 fi
 
-while [[ ! -b ${DISK}${ROOTPT} ]]; do sleep 1; done
+while [ 0 ]; do
+    if [[ -b ${DISK}${ROOTPT} ]]; then
+        break
+    else
+        if [[ -b ${DISK}p${ROOTPT} ]]; then
+            ROOTP="p${ROOTP}"
+            break
+        fi
+    fi
+    sleep 2
+done
 
 mkfs.ext4 ${DISK}${ROOTPT}
 mount ${DISK}${ROOTPT} /sysroot

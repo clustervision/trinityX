@@ -14,6 +14,10 @@ fi
 ROOTPT=$(parted $DISK print|grep -A100 Number|grep -i root|awk '{ print $1 }')
 
 mkdir /sysroot/proc /sysroot/dev /sysroot/sys
+
+if [[ ! -b ${DISK}${ROOTPT} ]] && [[ -b ${DISK}p${ROOTPT} ]]; then
+    ROOTP="p${ROOTP}"
+fi
  
 cat << EOF >> /sysroot/etc/fstab
 ${DISK}${ROOTPT}   /       ext4    defaults        1 1
