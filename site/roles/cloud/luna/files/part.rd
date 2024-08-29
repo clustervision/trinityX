@@ -55,5 +55,6 @@ if [ ! -d /tmp ]; then
 fi
 echo "${DISK}${ROOTPT}" > /tmp/disk.dat
 
+umount -l ${DISK}${ROOTPT} &> /dev/null
 mkfs.ext4 ${DISK}${ROOTPT}
 mount ${DISK}${ROOTPT} /sysroot
