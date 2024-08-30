@@ -15,6 +15,13 @@
   with_items: '{{ firewalld_public_interfaces }}'
   ignore_errors: true
 
+  # https://github.com/ansible-collections/ansible.posix/issues/75
+- name: Render interface and zone mismatches fix script
+  template:
+    src: 'fix-firewalld-zones.sh.j2'
+    dest: '/tmp/fix-firewalld-zones.sh'
+    mode: 0750
+
 - name: Install firewalld packages
   yum:
     name: '{{ firewalld_packages }}'
@@ -112,13 +119,6 @@
     dest: '/etc/firewalld/direct.xml'
   when: firewalld_direct_rules is defined
   notify: reload firewalld
-
-  # https://github.com/ansible-collections/ansible.posix/issues/75
-- name: Render interface and zone mismatches fix script
-  template:
-    src: 'fix-firewalld-zones.sh.j2'
-    dest: '/tmp/fix-firewalld-zones.sh'
-    mode: 0750
 
 - name: Run interface and zone mismatch fix script
   shell: '/tmp/fix-firewalld-zones.sh'
