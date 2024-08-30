@@ -4,8 +4,15 @@
   service:
     name: firewalld
     state: reloaded
+  notify: reload NetworkManager
+
+- name: reload NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
   notify: fix firewall zones
 
 - name: fix firewall zones
   shell: /tmp/fix-firewalld-zones.sh
   ignore_errors: true
+
