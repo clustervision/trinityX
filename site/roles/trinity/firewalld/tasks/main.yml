@@ -41,6 +41,7 @@
     state: enabled
     permanent: true
     immediate: true
+  notify: reload firewalld
   with_items: '{{ firewalld_public_interfaces }}'
 
 - name: Update ifcfg files for interfaces '{{ firewalld_public_interfaces }}'
@@ -64,6 +65,7 @@
     state: enabled
     permanent: true
     immediate: true
+  notify: reload firewalld
   with_items: '{{ firewalld_trusted_interfaces|unique }}'
 
 - name: Update ifcfg files for interfaces '{{ firewalld_trusted_interfaces|unique }}'
@@ -120,7 +122,7 @@
   when: firewalld_direct_rules is defined
   notify: reload firewalld
 
-- name: Run interface and zone mismatch fix script
-  shell: '/tmp/fix-firewalld-zones.sh'
-  ignore_errors: true
+#- name: Run interface and zone mismatch fix script
+#  shell: '/tmp/fix-firewalld-zones.sh'
+#  ignore_errors: true
 
