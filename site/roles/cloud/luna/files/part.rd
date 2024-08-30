@@ -10,9 +10,18 @@ if [ "$DISK" == "" ]; then
     exit 1
 fi
 
-ROOTTHERE=$(parted $DISK print|grep -A100 Number|grep -i root|awk '{ print $1 }')
+ROOTTHERE=$(printf "fix\n"|parted ---pretend-input-tty $DISK print|grep -A100 Number|grep -i root|awk '{ print $1 }')
+
+if [ "$ROOTTHERE" ]; then
+    ROOTSIZE=$(parted $DISK unit MB print|grep '^\s*'$ROOTTHERE|awk '{ print $4 }'|grep -oE '[0-9]+' || echo 0)
+    echo "I have found a root partition, but its size $ROOTSIZE is too small."
+    if [ "$ROOTSIZE" -lt "4500" ]; then
+        ROOTTHERE=""
+    fi
+fi
 
 if [ ! "$ROOTTHERE" ]; then
+    echo "(Re)creating a root partition."
     for partition in $(parted $DISK print|grep -A100 Number|grep -v -e msftdata -e boot -e Number|awk '{ print $1 }'|grep -v '^$'); do
         parted $DISK rm $partition
     done
