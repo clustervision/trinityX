@@ -58,7 +58,7 @@
     - name: Reconfiguring resolv_search_domains
       set_fact: 
         resolv_search_domains:
-          "{{ resolv_search_domains + ' ' + vars[item + '_domain'] | default() }}"
+          "{{ resolv_search_domains | replace('__CLOUD__', vars[item + '_domain'] | default() + '__CLOUD__') }}"
       loop: "{{ vars.cloud_support }}"
       when: 
         - '"__CLOUD__" in resolv_search_domains'
