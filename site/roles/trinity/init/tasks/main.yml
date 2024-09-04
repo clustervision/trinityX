@@ -54,8 +54,23 @@
       include_vars: "group_vars/{{ item }}.yml"
       loop: "{{ vars.cloud_support }}"
       when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+
+    - name: Reconfiguring resolv_search_domains
+      set_fact: 
+        resolv_search_domains: >-
+          {{ resolv_search_domains + ' ' + vars[item + '_domain'] | default() }} 
+      loop: "{{ vars.cloud_support }}"
+      when: 
+        - '"__CLOUD__" in resolv_search_domains'
+        - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
     when: cloud_install 
       
+  - Cleaning up resolv_search_domains
+    set_fact:
+      resolv_search_domains: >-
+        {{ resolv_search_domains | replace('__CLOUD__','') }}
+    when: '"__CLOUD__" in resolv_search_domains'
+
   - block:
     - name: Update the trix_ctrl_* variables in case of non-HA setup
       set_fact:
