@@ -27,3 +27,6 @@ else
  
     echo "${DISK}${ROOTPT}   /       ext4    defaults        1 1" >> /sysroot/etc/fstab
 fi
+
+# below is to prevent cloud DHCP overriding the hostname
+sed -i 's/^\[main\]/[main]\nhostname-mode=none/' /sysroot/etc/NetworkManager/NetworkManager.conf
