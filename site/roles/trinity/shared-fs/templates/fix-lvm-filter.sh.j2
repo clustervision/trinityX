@@ -60,7 +60,10 @@ for DISK in $LVM_DISKS; do
 	esac
 	if [ "$REAL_DISK" ]; then
 		echo "------------ $DISK -- $REAL_DISK -------------"
-		EXCL=$(grep $REAL_DISK /tmp/dev-links.dat | awk -F'=' '{ print $1 }')
+                if [ "$DISK" == "$REAL_DISK" ]; then
+                        FILTER="$FILTER \"r|$DISK|\","
+                fi
+		EXCL=$(grep -w $REAL_DISK /tmp/dev-links.dat | awk -F'=' '{ print $1 }')
 		for F in $EXCL; do
 			echo "1: $F"
 			FILTER="$FILTER \"r|$F|\","
