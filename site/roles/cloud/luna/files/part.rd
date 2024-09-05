@@ -14,8 +14,8 @@ ROOTTHERE=$(printf "fix\n"|parted ---pretend-input-tty $DISK print|grep -A100 Nu
 
 if [ "$ROOTTHERE" ]; then
     ROOTSIZE=$(parted $DISK unit MB print|grep '^\s*'$ROOTTHERE|awk '{ print $4 }'|grep -oE '[0-9]+' || echo 0)
-    echo "I have found a root partition, but its size $ROOTSIZE is too small."
     if [ "$ROOTSIZE" -lt "4500" ]; then
+        echo "I have found a root partition, but its size $ROOTSIZE is too small."
         ROOTTHERE=""
     fi
 fi
