@@ -64,7 +64,7 @@ aws_network_acl_name    = "TrinityX-VPC-Public-NACL"
 aws_network_acl_rules   = [
   {
     direction  = "egress"
-    protocol   = "-1" 
+    protocol   = "-1"
     rule_no    = 100
     action     = "allow"
     cidr_block = "0.0.0.0/0"
@@ -90,8 +90,26 @@ aws_network_acl_rules   = [
     to_port    = 4500
   },
   {
+    direction  = "egress"
+    protocol   = "udp"
+    rule_no    = 130
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 53
+    to_port    = 53
+  },
+  {
+    direction  = "egress"
+    protocol   = "tcp"
+    rule_no    = 140
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 53
+    to_port    = 53
+  },
+  {
     direction  = "ingress"
-    protocol   = "-1" 
+    protocol   = "-1"
     rule_no    = 100
     action     = "allow"
     cidr_block = "0.0.0.0/0"
@@ -115,6 +133,24 @@ aws_network_acl_rules   = [
     cidr_block = "0.0.0.0/0"
     from_port  = 4500
     to_port    = 4500
+  },
+  {
+    direction  = "ingress"
+    protocol   = "udp"
+    rule_no    = 130
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 53
+    to_port    = 53
+  },
+  {
+    direction  = "ingress"
+    protocol   = "tcp"
+    rule_no    = 140
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 53
+    to_port    = 53
   }
 ]
 
@@ -145,6 +181,22 @@ aws_security_group_rules  = [
     description = "Allow inbound VPN traffic"
   },
   {
+    direction   = "ingress"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow inbound DNS traffic (UDP)"
+  },
+  {
+    direction   = "ingress"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow inbound DNS traffic (TCP)"
+  },
+  {
     direction   = "egress"
     from_port   = 500
     to_port     = 500
@@ -161,12 +213,20 @@ aws_security_group_rules  = [
     description = "Allow outbound VPN traffic"
   },
   {
-    direction   = "ingress"
-    from_port   = 22
-    to_port     = 22
+    direction   = "egress"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow outbound DNS traffic (UDP)"
+  },
+  {
+    direction   = "egress"
+    from_port   = 53
+    to_port     = 53
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow SSH"
+    description = "Allow outbound DNS traffic (TCP)"
   },
   {
     direction   = "ingress"
@@ -175,6 +235,14 @@ aws_security_group_rules  = [
     protocol    = "icmp"
     cidr_blocks = ["0.0.0.0/0"]
     description = "Allow inbound ICMP Echo Request (Ping)"
+  },
+  {
+    direction   = "ingress"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow SSH"
   },
   {
     direction   = "ingress"
@@ -219,7 +287,7 @@ aws_security_group_rules  = [
 ]
 
 # AWS VPN
-aws_customer_gateway_name       = "TrinityX-VSphere"
+aws_customer_gateway_name       = "TrinityX-Cloud"
 aws_customer_gateway_bgp_asn    = 65000
 aws_customer_gateway_ip_address = "{{ cloud_local_external_as_ip }}"
 aws_customer_gateway_type       = "ipsec.1"
