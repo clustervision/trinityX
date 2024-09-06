@@ -9,6 +9,8 @@ FORWARDSERVER_IP = {{ luna2_cluster.cluster['dns_forwarders']|join(',') }}
 [HOSTS]
 ; used in cluster, "clusterips" for templates
 ; add another Controller By Increasing the Number for H/A
+; The syntax:
+;  controller[index] = <name>:<ip>[:network:SHADOW]
 CONTROLLER = {{ luna2_cluster.frontend_hostname }}:{{ luna2_cluster.frontend_address }}
 {% if luna2_cluster['ha'] %}
 {% for index in range( luna2_cluster.controllers['hostnames'] | length ) %}
@@ -16,7 +18,7 @@ CONTROLLER{{ index + 1 }} = {{ luna2_cluster.controllers['hostnames'][index] }}:
 {% endfor %}
 {% if luna2_cluster.shadow_controllers is defined %}
 {% for index in range( luna2_cluster.shadow_controllers['hostnames'] | length ) %}
-CONTROLLER{{ index + 1 + luna2_cluster.controllers['hostnames'] | length }} = {{ luna2_cluster.shadow_controllers['hostnames'][index] }}:{{ luna2_cluster.shadow_controllers['ip_addresses'][index] }}:{{ luna2_cluster.shadow_networks[index]['name']|default('') }}:shadow
+CONTROLLER{{ index + 1 + luna2_cluster.controllers['hostnames'] | length }} = {{ luna2_cluster.shadow_controllers['hostnames'][index] }}:{{ luna2_cluster.shadow_controllers['ip_addresses'][index] }}:{{ luna2_cluster.shadow_networks[index]['name']|default('') }}:SHADOW
 {% endfor %}
 {% endif %}
 {% endif %}
