@@ -1,0 +1,86 @@
+---
+
+- name: Generate raw host list parser
+  copy:
+   src: 'rawhostlist.py'
+   dest: '/usr/local/bin/rawhostlist.py'
+   mode: 0755
+
+- block:
+  - name: Parse the raw host list
+    shell: "/usr/local/bin/rawhostlist.py {{ rawhostlist }}"
+    register: luna_parsed_hostlist
+    when:
+      - createnodes
+      - rawhostlist
+      - rawhostlist | length > 0
+
+  - name: Verify if cloud network exists
+    shell: "luna network show {{ domain }}"
+    register: luna_cloudnetwork_exists
+    ignore_errors: true
+
+  - block:
+    - name: Add cloud network with dhcp range
+      shell: >
+        luna network add -N {{ network }} -dhcp y 
+        -ds {{ dhcprange.split('-')[0] }} -de {{ dhcprange.split('-')[1] }}
+        -t ethernet -z internal {{ domain }}
+      when:
+        - dhcprange | length > 14
+        - dhcprange.split('-') | length == 2
+
+    - name: Add cloud network without dhcp range
+      shell: "luna network add -N {{ network }} -t ethernet -z internal {{ domain }}"
+      when:
+        - dhcprange | length < 15
+        - dhcprange.split('-') | length != 2
+    when: luna_cloudnetwork_exists.rc | int != 0
+
+  - name: Verify if cloudname/type exists
+    shell: "luna cloud show {{ cloudname }}"
+    register: luna_cloudname_exists
+    ignore_errors: true
+
+  - name: Create cloud
+    shell: "luna cloud add -t {{ cloudtype }} {{ cloudname }}"
+    when: luna_cloudname_exists.rc | int != 0
+
+  - name: Verify if cloud group exists
+    shell: "luna group show compute-{{ cloudname }}"
+    register: luna_cloudgroup_exists
+    ignore_errors: true
+
+  - block:
+    - name: generate part/post scripts
+      copy:
+        src: "{{ item }}"
+        dest: "/tmp/{{ item }}"
+      with_items:
+        - part.rd
+        - post.rd
+
+    - name: Create cloud group
+      shell: >
+        luna group add -o compute -pm http -qpart /tmp/part.rd -qpost /tmp/post.rd 
+        -if BOOTIF -N {{ domain }}
+        -qko 'rootdelay=30 console=ttyS0 earlyprintk=ttyS0 no_timer_check net.ifnames=0 biosdevname=0 luna.bootproto=dhcp luna.ctty=/dev/ttyS0'
+        compute-{{ cloudname }}
+    when: luna_cloudgroup_exists.rc | int != 0
+
+  - block:
+    - debug: 
+        msg: "luna_parsed_hostlist: {{ luna_parsed_hostlist.stdout_lines }}"
+
+    - name: Create nodes
+      shell: "luna node add -g compute-{{ cloudname }} -cl {{ cloudname }} {{ item }}"
+      with_items: "{{ luna_parsed_hostlist.stdout_lines }}"
+      ignore_errors: true
+    when:
+      - luna_parsed_hostlist is defined
+      - luna_parsed_hostlist.rc | int == 0 
+      - luna_parsed_hostlist.stdout_lines | length > 0
+  when:
+    - cloudname
+    - cloudtype
+    - network

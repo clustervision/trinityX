@@ -191,12 +191,16 @@
         cluster:
           domain_search: '{{ resolv_search_domains }}'
           dns_forwarders: '{{ trix_dns_forwarders }}'
-        ha: '{{ ha }}'
+        ha: '{{ True if ha or cloud_install else False }}'
+        nosharedip: '{{ True if cloud_install and not ha else False }}'
         frontend_address: '{{ trix_ctrl_ip }}'
         frontend_hostname: '{{ trix_ctrl_hostname }}'
         controllers: 
           hostnames: '{{ all_ctrl_hostname }}'
           ip_addresses: '{{ all_ctrl_ip }}'
+        shadow_controllers:
+          hostnames: '{{ cloud_ctrl_hostname|default([]) }}'
+          ip_addresses: '{{ cloud_ctrl_ip|default([]) }}'
         networks:
         - name: '{{ trix_domain }}'
           function: 'default'
@@ -215,6 +219,7 @@
           ip: '{{ trix_infiniband_net }}'
           prefix: '{{ trix_infiniband_netprefix }}'
           type: 'infiniband'
+        shadow_networks: "{{ cloud_networks|default({}) }}"
       tags: luna
 
     - role: trinity/resolv
@@ -371,9 +376,28 @@
     - role: trinity/cleanup-legacy
       tags: cleanup-legacy
 
+      # wrapup role contains a mix bag of things to be run to conclude the setup.
+      # expect the unexpected!
     - role: trinity/wrapup
+      fence_ipmilan_enabled: '{{ enable_ipmilan_fencing | default(True) }}'
       tags: wrapup
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
     NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+
+- import_playbook: imports/cloud.yml
+  when: 
+    - cloud_install | default(False)
+    - not in_cloud | default(False)
+    - primary
+  tags: cloud
+
+  # below is when the controller is solo in the cloud where we just
+  # need to create the network, image and storage for the nodes to boot
+- import_playbook: imports/cloud-primary-controller.yml
+  when: 
+    - in_cloud | default(False)
+    - primary
+  tags: cloud
+

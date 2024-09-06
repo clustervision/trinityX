@@ -1,0 +1,241 @@
+---
+# This file contains variables that are global to all playbooks
+# in this repository.
+
+
+# Any alerts, events and notifications will be sent to this email address:
+
+administrator_email: '{{ administrator_email }}'
+
+
+# -----------------------------------------------------------------------
+# Trinity version number
+
+trix_version: '{{ trix_version }}'
+
+# What stream to follow. Stable is the default and recommended.
+trix_stream: '{{ trix_stream }}'
+
+# -----------------------------------------------------------------------
+# Project ID or string that'll show up in the default
+# prompt on the controllers.
+
+project_id: '{{ project_id }}'
+
+
+#########################################################################
+#                           Cloud Details                               #
+#########################################################################
+
+azure_cloud: {{ azure_cloud }}
+{% if azure_cloud and azure_cluster_net is defined %}
+azure_controller: {{ azure_controller if azure_controller is defined else False }}
+azure_cluster_net: {{ azure_cluster_net }}
+azure_cluster_netprefix: {{ azure_cluster_netprefix }}
+{% if azure_ctrl_hostname is defined %}
+azure_ctrl_hostname: {{ azure_ctrl_hostname }}
+azure_ctrl_ip: {{ azure_ctrl_ip }}
+{% endif %}
+{% endif %}
+
+aws_cloud: {{ aws_cloud }}
+{% if aws_cloud and aws_cluster_net is defined %}
+aws_controller: {{ aws_controller if aws_controller is defined else False }}
+aws_cluster_net: {{ aws_cluster_net }}
+aws_cluster_netprefix: {{ aws_cluster_netprefix }}
+{% if aws_ctrl_hostname is defined %}
+aws_ctrl_hostname: {{ aws_ctrl_hostname }}
+aws_ctrl_ip: {{ aws_ctrl_ip }}
+{% endif %}
+{% endif %}
+
+gcp_cloud: {{ gcp_cloud }}
+{% if gcp_cloud and gcp_cluster_net is defined %}
+gcp_controller: {{ gcp_controller if gcp_controller is defined else False }}
+gcp_cluster_net: {{ gcp_cluster_net }}
+gcp_cluster_netprefix: {{ gcp_cluster_netprefix }}
+{% if gcp_ctrl_hostname is defined %}
+gcp_ctrl_hostname: {{ gcp_ctrl_hostname }}
+gcp_ctrl_ip: {{ gcp_ctrl_ip }}
+{% endif %}
+{% endif %}
+
+
+#########################################################################
+#                         High Availability                             #
+#########################################################################
+# -----------------------------------------------------------------------
+# Do we want HA?
+# Set to 'False' to disable HA, set to 'True' to enable it.
+
+ha: {{ ha }}
+
+#########################################################################
+
+
+# -----------------------------------------------------------------------
+# A domain name to be assigned to the controller(s) and nodes
+# on the internal network.
+# Luna's provisioning network name will be set to the same value.
+
+trix_domain: {{ trix_domain }}
+
+
+# -----------------------------------------------------------------------
+# Internal network definitions and the DHCP range used to to PXE boot
+# the compute nodes. Also Infiniband IPoIB and bmc/ipmi networks.
+
+trix_cluster_net: {{ trix_cluster_net }}
+trix_cluster_netprefix: {{ trix_cluster_netprefix }}
+trix_cluster_dhcp_start: {{ trix_cluster_dhcp_start }}
+trix_cluster_dhcp_end: {{ trix_cluster_dhcp_end }}
+
+trix_infiniband_net: {{ trix_infiniband_net }}
+trix_infiniband_netprefix: {{ trix_infiniband_netprefix }}
+
+trix_bmc_net: {{ trix_bmc_net }}
+trix_bmc_netprefix: {{ trix_bmc_netprefix }}
+
+
+# -----------------------------------------------------------------------
+# Default hostname and IP for the controller
+# In an H/A pair, those are the hostname and IP for the first controller.
+# Those variables are required, with or without HA.
+
+trix_ctrl1_ip: {{ trix_ctrl1_ip }}
+trix_ctrl1_bmcip: {{ trix_ctrl1_bmcip }}
+trix_ctrl1_heartbeat_ip: {{ trix_ctrl1_heartbeat_ip }}
+trix_ctrl1_hostname: {{ trix_ctrl1_hostname }}
+
+# In a non-H/A setup, all of the following variables will be ignored:
+# - the variables for CTRL will be set to the same as CTRL1;
+# - the variables for CTRL2 will be ignored.
+
+# Hostname and IP of the second controller
+
+trix_ctrl2_ip: {{ trix_ctrl2_ip }}
+trix_ctrl2_bmcip: {{ trix_ctrl2_bmcip }}
+trix_ctrl2_heartbeat_ip: {{ trix_ctrl2_heartbeat_ip }}
+trix_ctrl2_hostname: {{ trix_ctrl2_hostname }}
+
+# Floating hostname and IP
+
+trix_ctrl_ip: {{ trix_ctrl_ip }}
+trix_ctrl_hostname: {{ trix_ctrl_hostname }}
+
+# -----------------------------------------------------------------------
+# optional hostname/fqdn to be used for services that are outward facing,
+# like open-ondemand. This hostname is in most scenarios the fqdn of the host,
+# but this can be overridden if external resolution/name differs.
+# The fqdn of the host will be used when Left empty or open.
+
+trix_external_fqdn: {{ trix_external_fqdn }}
+
+
+# -----------------------------------------------------------------------
+# DNS forwarders.
+
+trix_dns_forwarders: {{ trix_dns_forwarders }}
+
+# -----------------------------------------------------------------------
+# Default search domains to be added to /etc/resolv.conf
+
+resolv_search_domains: {{ resolv_search_domains }}
+
+
+# -----------------------------------------------------------------------
+# Path to which the standard TrinityX files will be installed.
+# If not set, it will default to /trinity
+
+trix_root: '{{ trix_root }}'
+
+# The TrinityX root contains multiple subdirectories for different uses:
+# - trix_images For the compute node images
+# - trix_shared for everything shared by the controllers to the nodes
+# - trix_local for configuration files specific to each machine
+# - trix_home for the user home directories
+#
+# Since trix_local will also house the monitoring data, it is recommended to
+# put this on a seperate partition for large installations or extensive
+# monitoring setups.
+# The partitioning on the controller must be set up before starting the installation.
+#
+# By default those exist under trix_root. There are some cases where this is not
+# desirable; the following variables allow you to override the default paths.
+# WARNING: use with caution! It's not well tested and there may be some issues
+# here and there...
+
+trix_images: '{{ trix_root }}/images'
+trix_shared: '{{ trix_root }}/shared'
+trix_local: '{{ trix_root }}/local'
+trix_ha: '{{ trix_root }}/ha'
+trix_sync: '{{ trix_local }}/sync'
+trix_luna: '{{ trix_local }}/luna'
+trix_etc: '{{ trix_local }}/etc'
+trix_sbin: '{{ trix_local }}/sbin'
+trix_ood: '{{ trix_local }}/ondemand'
+trix_ssl: '{{ trix_etc }}/ssl'
+trix_home: '{{ trix_root }}/home'
+trix_repos: '{{ trix_root }}/repos'
+trix_ohpc: '{{ trix_root }}/ohpc'
+trix_licenses: '{{ trix_shared }}/licenses'
+trix_docs: '{{ trix_shared }}/docs'
+trix_examples: '{{ trix_shared }}/examples'
+trix_modulefiles: '{{ trix_shared }}/modulefiles'
+
+
+# -----------------------------------------------------------------------
+# Luna credentials. These should be changed.
+
+luna_username: {{ luna_username }}
+luna_password: {{ luna_password }}
+
+
+# luna's default communication protocol
+# options are: http and https
+# by default the system is using the certificates provides and signed by self-signed CV root ca
+# in this case we do not verify the certificate
+
+luna_protocol: {{ luna_protocol }}
+luna_verify_certificate: {{ luna_verify_certificate }}
+
+
+# -----------------------------------------------------------------------
+# Default firewalld configuration
+# Only public tcp/udp ports are allowed on the public interfaces
+# whereas everything is allowed on the trusted interfaces
+
+firewalld_public_interfaces: [ens3]
+firewalld_trusted_interfaces: [ens6]
+firewalld_public_tcp_ports: [22, 443]
+firewalld_public_udp_ports: []
+
+# *Note* that depending on selection of roles, the following ports will be open as well:
+# Grafana:       3000/tcp
+# Uchiwa/Sensu:  3001/tcp
+# Open-ondemand: 8080/tcp
+
+
+# -----------------------------------------------------------------------
+# Admin group is used to give privileges to the members of this group.
+# It's used for logins, ood and others.
+
+admin_group: {{ admin_group }}
+
+
+# -----------------------------------------------------------------------
+# Path in which the generated certificates for the cluster will be installed.
+# ssl_cert_group refers to the UNIX group that has read access to the certs.
+
+ssl_cert_path: '{{ trix_local }}/etc/ssl'
+ssl_ca_cert: '{{ ssl_cert_path }}/cluster-ca.crt'
+ssl_cert_group: ssl
+
+
+# -----------------------------------------------------------------------
+# Whether or not to enable SELinux throughout the cluster
+
+enable_selinux: {{ enable_selinux }}
+
+# -----------------------------------------------------------------------
+# DO NOT REMOVE: yml check: 999999

@@ -1,0 +1,122 @@
+---
+- hosts: controllers
+  roles:
+    - role: trinity/prepare
+      stage: "controller"
+
+- name: Cloud Support
+  hosts: controllers
+  gather_facts: true
+  tasks:
+    - name: Calling init
+      include_role:
+        name: "trinity/init"
+      when: init_dmidecode is not defined
+
+    - name: Set cloud_condition fact
+      set_fact:
+        cloud_condition: "{{ True if in_cloud else False }}"
+
+    - name: We are on Azure
+      set_fact:
+        cloud_name: 'azure'
+      when: "'icrosoft' in init_dmidecode.stdout"
+
+    - name: We are on Google
+      set_fact:
+        cloud_name: 'gcp'
+      when: "'oogle' in init_dmidecode.stdout"
+
+    - name: We are on Amazon
+      set_fact:
+        cloud_name: 'aws'
+      when: "'mazon' in init_dmidecode.stdout"
+
+    - debug:
+        msg: "Detected cloud: {{ cloud_name }}"
+
+    - block:
+      - name: Include Cloud variables
+        include_vars: "group_vars/{{ cloud_name }}.yml"
+      
+      - name: Set IAC fact
+        set_fact:
+          terraform_installer: "{{ True if vars[cloud_name+'_installer] and vars[cloud_name+'_installer] == 'terraform' else False }}"
+      
+      - name: Verifying if iPXE uEFI image has already been build
+        stat:
+          path: /etc/trinity/cloud-image.done
+        register: cloud_uefi_image_done
+
+      - block:
+        - name: Build iPXE uEFI file for GRUB Booting
+          include_role:
+            name: "cloud/ipxe"
+          vars:
+            skip_ipxe_efi_build: true
+
+        - name: Signing iPXE uEFI image creation off
+          copy:
+            content: ""
+            dest: /etc/trinity/cloud-image.done
+        when: not cloud_uefi_image_done.stat.exists
+      
+      - name: Verifying if cloud phase one already done
+        stat:
+          path: /etc/trinity/cloud-phaseone.done
+        register: cloud_phaseone_done
+
+      - block:
+        - name: Include Cloud Role and Install IAC approach.
+          include_role:
+            name: "cloud/{{ cloud_name }}"
+          vars:
+            terraform_files: "{{ trix_local }}/terraform/{{ cloud_name }}"
+            include_ipxe_efi_build: true
+
+        # -------------------------------------------------------------
+
+        - name: Run Terraform playbook Stage one
+          include_role:
+            name: "cloud/terraform"
+          vars:
+            cloudname: "{{ cloud_name }}"
+            terraform_files: "{{ trix_local }}/terraform/{{ cloud_name }}"
+          when: terraform_installer
+
+        # -------------------------------------------------------------
+
+        - name: Signing cloud phase one off
+          copy:
+            content: ""
+            dest: /etc/trinity/cloud-phaseone.done
+        when: not cloud_phaseone_done.stat.exists
+      
+      - name: Verifying if cloud phase two already done
+        stat:
+          path: /etc/trinity/cloud-phasetwo.done
+        register: cloud_phasetwo_done
+
+      - block:
+        - name: Include Luna cluster cloud configuration
+          include_role:
+            name: "cloud/luna"
+          vars:
+            createnodes: "{{ True if vars[cloud_name + '_node'] is defined and vars[cloud_name + '_node'] is true else False }}"
+            rawhostlist: "{{ vars[cloud_name + '_nodes'] | default('') }}"
+            cloudname: "{{ cloud_name }}"
+            cloudtype: "{{ cloud_name }}"
+            network: "{{ vars['trix_cluster_net'] + '/' + vars['trix_cluster_netprefix'] | string }}"
+            dhcprange: "{{ vars['trix_cluster_dhcp_start'] | default('') + '-' + vars['trix_cluster_dhcp_end'] | default('') }}"
+
+        - name: Signing cloud phase two off
+          copy:
+            content: ""
+            dest: /etc/trinity/cloud-phasetwo.done
+        when: not cloud_phasetwo_done.stat.exists
+      when: cloud_condition
+    
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    

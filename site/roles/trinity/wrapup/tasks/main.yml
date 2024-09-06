@@ -6,6 +6,7 @@
     dest: /etc/trinity
     archive: true
     delete: true
+  ignore_errors: true
 
 - name: Refresh exportfs
   shell: "exportfs -a"
@@ -33,7 +34,18 @@
   - name: Clear possible pacemaker dependency messages
     shell: "pcs resource cleanup"
     ignore_errors: true
-  tags: ha,pcs,pacemaker
+
+  - name: Toggle pacemaker stonith property as non-primary is ready
+    pcs_property:
+      name: stonith-enabled
+      value: '{{ fence_ipmilan_enabled }}'
+  tags: ha,pcs,pacemaker,fencing
   when:
     - ha
     - not primary
+
+- name: Set wrap-up flag
+  copy:
+    content: ""
+    dest: /etc/trinity/controller.done
+    force: false

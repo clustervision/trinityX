@@ -9,11 +9,18 @@ FORWARDSERVER_IP = {{ luna2_cluster.cluster['dns_forwarders']|join(',') }}
 [HOSTS]
 ; used in cluster, "clusterips" for templates
 ; add another Controller By Increasing the Number for H/A
+; The syntax:
+;  controller[index] = <name>:<ip>[:network:SHADOW]
 CONTROLLER = {{ luna2_cluster.frontend_hostname }}:{{ luna2_cluster.frontend_address }}
 {% if luna2_cluster['ha'] %}
 {% for index in range( luna2_cluster.controllers['hostnames'] | length ) %}
 CONTROLLER{{ index + 1 }} = {{ luna2_cluster.controllers['hostnames'][index] }}:{{ luna2_cluster.controllers['ip_addresses'][index] }}
 {% endfor %}
+{% if luna2_cluster.shadow_controllers is defined %}
+{% for index in range( luna2_cluster.shadow_controllers['hostnames'] | length ) %}
+CONTROLLER{{ index + 1 + luna2_cluster.controllers['hostnames'] | length }} = {{ luna2_cluster.shadow_controllers['hostnames'][index] }}:{{ luna2_cluster.shadow_controllers['ip_addresses'][index] }}:{{ luna2_cluster.shadow_networks[index]['name']|default('') }}:SHADOW
+{% endfor %}
+{% endif %}
 {% endif %}
 ; CONTROLLER1 = controller1:10.141.255.251
 ; CONTROLLER2 = None
@@ -32,6 +39,16 @@ NODELIST = node[001-004]
 {{ network.name }} = {{ network.function }}:{{ network.type }}:{{ network.ip }}/{{ network.prefix }}
 {% endif %}
 {% endfor %}
+{% if luna2_cluster.shadow_networks is defined %}
+{% for network in luna2_cluster['shadow_networks'] %}
+{% if 'start_ip' in network and network['start_ip'] %}
+{{ network.name }} = {{ network.function }}:{{ network.type }}:{{ network.ip }}/{{ network.prefix }}:DHCP:{{ network.start_ip }}-{{ network.end_ip }}
+{% else %}
+{{ network.name }} = {{ network.function }}:{{ network.type }}:{{ network.ip }}/{{ network.prefix }}
+{% endif %}
+{% endfor %}
+{% endif %}
+#cluster = default:ethernet:10.141.0.0/16:DHCP:10.141.155.0-10.141.165.0
 #cluster = default:ethernet:10.141.0.0/16:DHCP:10.141.155.0-10.141.165.0
 #ipmi = bmc:ethernet:10.148.0.0/16
 #ib = low-latency:infiniband:10.149.0.0/16
@@ -48,4 +65,7 @@ NAME = compute
 USERNAME = admin
 PASSWORD = P@ssword!
 
-
+{% if luna2_cluster['nosharedip'] %}
+[HA]
+NO_SHAREDIP = True
+{% endif %}

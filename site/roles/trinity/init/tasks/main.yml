@@ -20,6 +20,53 @@
     set_fact:
       on_controller: '{{ True if "controllers" in group_names else False }}'
 
+  - name: Check if i am on real hardware or inside cloud
+    shell: dmidecode -s system-manufacturer | grep -iE "microsoft|google|amazon" || true
+    register: init_dmidecode
+
+  - name: Setting supported clouds
+    set_fact:
+      cloud_support: "{{ cloud_support }}"
+
+  - name: Set cloud fact
+    set_fact:
+      in_cloud: '{{ True if init_dmidecode.stdout_lines | length > 0 else False }}'
+
+  - name: Set cloud install fact
+    set_fact:
+      cloud_install: >-
+        {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
+
+  - block:
+    - name: Setting cloud vpn namekey
+      set_fact:
+        cloud_vpn_namekey: "{{ cloud_vpn_namekey }}"
+
+    - name: Setting cloud vpn pskkey
+      set_fact:
+        cloud_vpn_pskkey: "{{ cloud_vpn_pskkey }}"
+
+    - name: Include Cloud variables
+      include_vars: "group_vars/{{ item }}.yml"
+      loop: "{{ vars.cloud_support }}"
+      when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+
+    - name: Reconfiguring resolv_search_domains
+      set_fact: 
+        resolv_search_domains:
+          "{{ resolv_search_domains | replace('__CLOUD__', vars[item + '_domain'] | default() + ' __CLOUD__') }}"
+      loop: "{{ vars.cloud_support }}"
+      when: 
+        - '"__CLOUD__" in resolv_search_domains'
+        - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+    when: cloud_install 
+      
+  - name: Cleaning up resolv_search_domains
+    set_fact:
+      resolv_search_domains:
+        "{{ resolv_search_domains | replace('__CLOUD__','') }}"
+    when: '"__CLOUD__" in resolv_search_domains'
+
   - block:
     - name: Update the trix_ctrl_* variables in case of non-HA setup
       set_fact:
@@ -37,7 +84,7 @@
       set_fact:
         all_ctrl_ip:
           - '{{ trix_ctrl1_ip }}'
-    when: not ha|default(False)
+    when: not ha | default(False)
 
   - debug:
       msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
@@ -99,7 +146,7 @@
     when: primary is not defined
 
   - debug:
-      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}"
+      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}"
 
   - name: Setting trix_external_fqdn
     set_fact:
@@ -143,58 +190,75 @@
 
 
 - block:
-  - name: Standard controller host list
+  - name: Setting up how many controllers we support here
     set_fact:
-       all_ctrl_hostname:
-         - '{{ trix_ctrl1_hostname }}'
-         - '{{ trix_ctrl2_hostname }}'
+      init_controller_array: "{{ ['1','2','3','4'] }}"
 
-  - name: Adding controller 3 host
+  - name: All controller hostnames
     set_fact:
-      all_ctrl_hostname: '{{ all_ctrl_hostname + [ trix_ctrl3_hostname ] }}'
-    when: trix_ctrl3_hostname is defined
+      all_ctrl_hostname: "{{ all_ctrl_hostname | default([]) + [ lookup('vars', 'trix_ctrl' + item + '_hostname') ] }}"
+    loop: "{{ init_controller_array }}"
+    when: vars['trix_ctrl' + item + '_hostname'] is defined
 
-  - name: Adding controller 4 host
+  - name: All controller ips
     set_fact:
-      all_ctrl_hostname: '{{ all_ctrl_hostname + [ trix_ctrl4_hostname ] }}'
-    when: trix_ctrl4_hostname is defined
+      all_ctrl_ip: "{{ all_ctrl_ip | default([]) + [ lookup('vars', 'trix_ctrl' + item + '_ip') ] }}"
+    loop: "{{ init_controller_array }}"
+    when: vars['trix_ctrl' + item + '_ip'] is defined
 
-  - name: Standard controller ip list
+  - name: All controller bmc
     set_fact:
-      all_ctrl_ip:
-        - '{{ trix_ctrl1_ip }}'
-        - '{{ trix_ctrl2_ip }}'
-
-  - name: Adding controller 3 ip
-    set_fact:
-      all_ctrl_ip: '{{ all_ctrl_ip + [ trix_ctrl3_ip ] }}'
-    when: trix_ctrl3_ip is defined
-
-  - name: Adding controller 4 ip
-    set_fact:
-      all_ctrl_ip: '{{ all_ctrl_ip + [ trix_ctrl4_ip ] }}'
-    when: trix_ctrl4_ip is defined
-
-  - name: Standard controller bmc list
-    set_fact:
-      all_ctrl_bmc:
-        - '{{ trix_ctrl1_bmcip }}'
-        - '{{ trix_ctrl2_bmcip }}'
-
-  - name: Adding controller 3 bmc
-    set_fact:
-      all_ctrl_bmc: '{{ all_ctrl_bmc + [ trix_ctrl3_bmcip ] }}'
-    when: trix_ctrl3_bmcip is defined
-
-  - name: Adding controller 4 bmc
-    set_fact:
-      all_ctrl_bmc: '{{ all_ctrl_bmc + [ trix_ctrl4_bmcip ] }}'
-    when: trix_ctrl4_bmcip is defined
+      all_ctrl_bmc: "{{ all_ctrl_bmc | default([]) + [ lookup('vars', 'trix_ctrl' + item + '_bmc') ] }}"
+    loop: "{{ init_controller_array }}"
+    when: vars['trix_ctrl' + item + '_bmc'] is defined
 
   - debug:
       msg: 'all_ctrl_hostname: {{ all_ctrl_hostname }}'
-  when: ha
+  when: ha | default(False)
   tags: always,ha
+
+- block:
+  - name: Adding cloud controllers hostnames
+    set_fact:
+      cloud_ctrl_hostname: "{{ cloud_ctrl_hostname | default([]) + [ lookup('vars', item + '_ctrl_hostname') ] }}"
+    loop: "{{ vars.cloud_support }}"
+    when: 
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      - vars[item + '_controller'] | default(False)
+      - vars[item + '_ctrl_hostname'] is defined
+
+  - name: Adding cloud controllers ips
+    set_fact:
+      cloud_ctrl_ip: "{{ cloud_ctrl_ip | default([]) + [ lookup('vars', item + '_ctrl_ip') ] }}"
+    loop: "{{ vars.cloud_support }}"
+    when: 
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      - vars[item + '_controller'] | default(False)
+      - vars[item + '_ctrl_ip'] is defined
+
+  - debug:
+      msg: "cloud_ctrl_hostname: {{ cloud_ctrl_hostname|default('None') }}"
+
+  - name: Adding cloud networks
+    set_fact:
+      cloud_networks: >-
+       {{ cloud_networks | default([]) + [{
+           'name': lookup('vars', item + '_domain'),
+           'function': 'cloud',
+           'ip': lookup('vars', item + '_cluster_net'),
+           'prefix': lookup('vars', item + '_cluster_netprefix'),
+           'start_ip': lookup('vars', item + '_cluster_dhcp_start', default=''),
+           'end_ip': lookup('vars', item + '_cluster_dhcp_end', default=''),
+           'type': 'ethernet'
+         }]
+       }}
+    loop: "{{ vars.cloud_support }}"
+    when:
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      - vars[item + '_domain'] is defined
+      - vars[item + '_cluster_net'] is defined
+  when: cloud_install    
+  tags: always,cloud
 
 
   # checking nic configs and fix if it can
@@ -215,7 +279,7 @@
 
     - name: Collecting controller interface information
       include_tasks: find-interface.yml
-      with_items: "{{ all_ctrl_ip }}"
+      with_items: "{{ all_ctrl_ip + cloud_ctrl_ip|default([]) }}"
       loop_control:
         loop_var: inner_loop_var
     when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
@@ -245,6 +309,47 @@
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
+- block:
+  - block:
+    - name: Trying to figure out external interface
+      shell: "ip route | grep default | grep -oP 'dev \\K\\S+' | grep '^.\\+$'"
+      ignore_errors: true
+      register: init_ctrl_external_nic
+
+    - name: Set trix_ctrl_external_nic
+      set_fact:
+        trix_ctrl_external_nic: "{{ init_ctrl_external_nic.stdout }}"
+      when: init_ctrl_external_nic.rc | int == 0
+
+    - debug:
+        msg: "trix_ctrl_external_nic: {{ trix_ctrl_external_nic }}"
+    when: trix_ctrl_external_nic is not defined
+
+  - block:
+    - block:
+      - name: Store external nic address information
+        set_fact:
+          init_ctrl_external_network_info: "{{ hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv4'] }}"
+
+      - name: Resolving external interface ip address
+        set_fact:
+          trix_ctrl_external_ip: "{{ init_ctrl_external_network_info['address'] }}"
+        when: trix_ctrl_external_ip is not defined or trix_ctrl_external_ip == "" 
+
+      - name: Resolving external interface network address
+        set_fact:
+          trix_ctrl_external_network: "{{ init_ctrl_external_network_info['network']+'/'+init_ctrl_external_network_info['prefix'] }}"
+        when: trix_ctrl_external_network is not defined or trix_ctrl_external_network == "" 
+      when: hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv4'] is defined
+    when: trix_ctrl_external_nic is defined
+
+  - debug:
+      msg: "trix_ctrl_external_ip: {{ trix_ctrl_external_ip }}, trix_ctrl_external_network: {{ trix_ctrl_external_network }}"
+    when: 
+      - trix_ctrl_external_ip is defined
+      - trix_ctrl_external_network is defined
+  tags: always
+  when: ansible_connection not in 'chroot' and on_controller
 
 - block:
   - name: Resolve admin group

@@ -1,0 +1,234 @@
+---
+# Main file to enable the Azure Support for the TrinityX Installation.
+
+- name: Install HashiCorp Terraform on Redhat
+  include_tasks: "redhat-terraform.yml"
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+
+- name: Install HashiCorp Terraform on Debian
+  include_tasks: "debian-terraform.yml"
+  when:
+    - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Verifying if clones repo already exists
+  stat:
+    path: "{{ trix_local }}/gitrepos/trinityx-terraform"
+  register: terraform_cloned_repo_dir
+  
+- name: Clone TerraForm repository
+  git:
+    repo: "{{ cloud_terraform_repository }}"
+    dest: "{{ trix_local }}/gitrepos/trinityx-terraform"
+  environment:
+    - GIT_SSL_NO_VERIFY: "true"
+  when: not terraform_cloned_repo_dir.stat.exists
+
+- name: Update TerraForm repository
+  git:
+    repo: "{{ cloud_terraform_repository }}"
+    dest: "{{ trix_local }}/gitrepos/trinityx-terraform"
+    clone: false
+    update: true
+    force: true
+  environment:
+    - GIT_SSL_NO_VERIFY: "true"
+  when: terraform_cloned_repo_dir.stat.exists
+
+# --------------------- actual runs below --------------------------
+
+- block:
+  - name: Verifying if we have a terraform.tfvars file...
+    stat:
+      path: "{{ terraform_files }}/terraform.tfvars"
+    register: terraform_tfvars_file
+
+  - name: Set shorter path variable
+    set_fact:
+      terraform_path: "{{ trix_local }}/gitrepos/trinityx-terraform/{{ cloudname }}"
+
+  - block:
+    - name: Copy Terraform tfvars into correct place
+      copy:
+        src: "{{ terraform_files }}/terraform.tfvars"
+        dest: "{{ terraform_path }}/"
+
+    - block:
+      # ----------------------- init run -------------------------
+      - block:
+        - name: Prepare for stage network, controller and vpn
+          replace:
+            path: "{{ terraform_path }}/terraform.tfvars"
+            regexp: "^{{ cloudname }}_{{ item }}\\s*=\\s*true"
+            replace: "{{ cloudname }}_{{ item }} = false"
+          with_items:
+            - node
+
+        - debug:
+            msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/terraform-output.log"
+
+        - name: Do Terraform runs
+          shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
+          args:
+            chdir: "{{ terraform_path }}"
+          with_items:
+            - init
+            - validate
+            - "plan -out {{ cloudname }}-tfplan"
+            - "apply {{ cloudname }}-tfplan"
+#            - destroy
+          environment:
+            TF_LOG: DEBUG
+            TF_LOG_PATH: /tmp/terraform-debug.log
+        when: stage == 'init'
+
+      # ----------------------- storage run -------------------------
+      - block:
+        - name: Prepare for stage storage
+          replace:
+            path: "{{ terraform_path }}/terraform.tfvars"
+            regexp: "^{{ cloudname }}_{{ item }}\\s*=\\s*true"
+            replace: "{{ cloudname }}_{{ item }} = false"
+          with_items:
+            - node
+            - controller
+            - vpn
+            - network
+
+        - debug:
+            msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/terraform-output.log"
+
+        - name: Do Terraform runs
+          shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
+          args:
+            chdir: "{{ terraform_path }}"
+          with_items:
+            - "import azurerm_resource_group.rg /subscriptions/{{ subscription_id }}/resourceGroups/{{ resource_group_name }}"
+            - "plan -out {{ cloudname }}-storage-tfplan"
+            - "apply {{ cloudname }}-storage-tfplan"
+          environment:
+            TF_LOG: DEBUG
+            TF_LOG_PATH: /tmp/terraform-debug.log
+        when: 
+          - stage == 'storage'
+          - subscription_id is defined
+          - resource_group_name is defined
+
+      # ----------------------- nodes run -------------------------
+      - block:
+        - name: Obtaining required variables
+          set_fact:
+            "{{ cloudname + '_' + item }}": "{{ lookup('file', terraform_files + '/variables.dat').splitlines() | regex_findall( item + ' = \".[^\"]+\"') | first | regex_findall('\".[^\"]+\"') | first | replace('\"','') }}"
+          with_items:
+            - subnet_id
+            - image_id
+            - storage_name
+          ignore_errors: true
+
+        - name: Prepare for stage nodes
+          replace:
+            path: "{{ terraform_path }}/terraform.tfvars"
+            regexp: "^{{ cloudname }}_{{ item }}\\s*=\\s*true"
+            replace: "{{ cloudname }}_{{ item }} = false"
+          with_items:
+            - controller
+            - vpn
+            - network
+            - images
+            - storage
+          environment:
+            TF_LOG: DEBUG
+            TF_LOG_PATH: /tmp/terraform-debug.log
+
+        - name: Add required parameters
+          lineinfile:
+            path: "{{ terraform_path }}/terraform.tfvars"
+            line: "{{ item }} = \"{{ vars[cloudname + '_' + item] }}\""
+            state: present
+          with_items:
+            - subnet_id
+            - image_id
+            - storage_name
+
+        - debug:
+            msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/terraform-output.log"
+
+        - name: Do Terraform runs
+          shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
+          args:
+            chdir: "{{ terraform_path }}"
+          with_items:
+            - "import azurerm_resource_group.rg /subscriptions/{{ subscription_id }}/resourceGroups/{{ resource_group_name }}"
+            - "plan -out {{ cloudname }}-node-tfplan"
+            - "apply {{ cloudname }}-node-tfplan"
+        when: 
+          - stage == 'nodes'
+          - subscription_id is defined
+          - resource_group_name is defined
+
+      # ----------------------- after run parts -------------------------
+      - name: Collect all output variables
+        shell: "terraform output"
+        args:
+          chdir: "{{ terraform_path }}"
+        register: terraform_output
+
+      - name: Storing all output variables
+        copy:
+          content: "{{ terraform_output.stdout }}"
+          dest: "{{ terraform_files }}/variables.dat"
+        when:
+          - terraform_output is defined
+          - terraform_output.rc | int == 0
+
+      - name: Backup current state file
+        copy:
+          src: "{{ terraform_path }}/terraform.tfstate"
+          dest: "{{ terraform_files }}/terraform-{{ stage }}.tfstate"
+         
+#      - name: Removing current state file
+#        file:
+#          path: "{{ terraform_path }}/terraform.tfstate"
+#          state: absent 
+      when: stage is defined
+
+    # ----------------------- straight forward run -------------------------
+    - block:
+      - debug:
+          msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/terraform-output.log"
+
+      - name: Do Terraform runs
+        shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
+        args:
+          chdir: "{{ terraform_path }}"
+        with_items:
+          - init
+          - validate
+          - "plan -out {{ cloudname }}-tfplan"
+          - "apply {{ cloudname }}-tfplan"
+#          - destroy
+        environment:
+          TF_LOG: DEBUG
+          TF_LOG_PATH: /tmp/terraform-debug.log
+
+      # ----------------------- after run parts -------------------------
+      - name: Collect all output variables
+        shell: "terraform output"
+        args:
+          chdir: "{{ terraform_path }}"
+        register: terraform_output
+
+      - name: Storing all output variables
+        copy:
+          content: "{{ terraform_output.stdout }}"
+          dest: "{{ terraform_files }}/variables.dat"
+
+      - name: Backup current state file
+        copy:
+          src: "{{ terraform_path }}/terraform.tfstate"
+          dest: "{{ terraform_files }}/terraform-default.tfstate"
+      when: stage is not defined
+    when: terraform_tfvars_file.stat.exists
+  when:
+    - cloudname
+    - terraform_files

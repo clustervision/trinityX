@@ -1,0 +1,83 @@
+---
+# Install the VPN on Redhat Controller on premises
+
+- name: Add ipsec0 to the trusted zone
+  firewalld:
+    zone: trusted
+    interface: 'ipsec0'
+    state: enabled
+    permanent: true
+    immediate: true
+
+- name: Open firewalld protocols for strongSwan
+  firewalld:
+    rich_rule: "rule protocol value={{ item }} accept"
+    state: enabled
+    permanent: true
+    immediate: true
+  with_items:
+    - ah
+    - esp
+
+- name: Install strongSwan packages
+  dnf:
+    name:
+      - strongswan
+      - strongswan-libipsec
+      - strongswan-sqlite
+    state: present
+
+- name: Deploy swanctl.conf from template
+  template:
+    src: redhat-swanctl.conf.j2
+    dest: "/etc/strongswan/swanctl/conf.d/{{ vpn_connection_name }}.conf"
+  when: vpn_template is not defined
+
+- name: Deploy swanctl.conf from profiled template
+  template:
+    src: "redhat-{{ vpn_template }}.conf.j2"
+    dest: "/etc/strongswan/swanctl/conf.d/{{ vpn_connection_name }}.conf"
+  when: vpn_template is defined
+
+- name: Restart strongswan service
+  systemd:
+    name: strongswan.service
+    state: restarted
+
+- name: Load all swanctl configurations
+  command: swanctl --load-all
+  register: swan_load_all_output
+
+#- name: Verify load-all output
+#  fail:
+#    msg: "{{ load_all_output.stdout }}"
+#  when: not ("successfully loaded 1 connections" in swan_load_all_output.stdout and "loaded connection '{{ vpn_connection_name }}'" in swan_load_all_output.stdout)
+
+- name: List swanctl connections
+  command: swanctl --list-conns
+  register: swan_list_conns_output
+
+- name: Wait 15s for strongswan to settle
+  wait_for:
+    timeout: 15
+
+- name: Get link numbers
+  shell: "swanctl --list-sas 2> /dev/null|grep -e in -e out|grep bytes|awk '{ print $3 }'|grep -E \"[1-9][0-9]+\" &> /dev/null && echo up"
+  register: swan_link_status
+  ignore_errors: true
+
+- name: Verify the link is up
+  fail:
+    msg: "VPN not up!"
+  when: swan_link_status.stdout != "up"
+
+#- name: Verify listed connections
+#  debug:
+#    msg: "{{ list_conns_output.stdout }}"
+#  failed_when: not (("192.168.164.20" in list_conns_output.stdout) and
+#                    ("20.160.98.251" in list_conns_output.stdout) and
+#                    ("10.141.0.0/16" in list_conns_output.stdout) and
+#                    ("10.1.0.0/16" in list_conns_output.stdout))
+
+
+

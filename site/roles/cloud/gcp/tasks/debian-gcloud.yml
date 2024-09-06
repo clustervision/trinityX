@@ -1,0 +1,28 @@
+---
+# Enable the GCP CLI Support for the TrinityX Installation.
+
+- name: Check if gcloud is already Installed
+  shell: "gcloud version"
+  register: gcloud_check
+
+- block:
+  - name: Install gcloud Dependencies
+    apt:
+      name: "apt-transport-https ca-certificates curl gnupg"
+      state: present
+
+  - name: Import the Google Cloud public key
+    shell: "curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg"
+
+  - name: Add the gcloud CLI distribution URI as a package source
+    shell: "echo 'deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main' | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list"
+
+  - name: Update package indexes
+    apt:
+      update_cache: yes
+
+  - name: Install gcloud
+    apt:
+      name: "google-cloud-cli"
+      state: present
+  when: gcloud_check.stderr

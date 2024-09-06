@@ -1,0 +1,23 @@
+#!ipxe
+dhcp && goto firstnetboot || goto dhcperror
+
+:dhcperror
+prompt --key s --timeout 10000 DHCP failed, hit 's' for the iPXE shell; reboot in 10 seconds && shell || reboot
+
+{% if on_premise_controller_ip and azure_controller and azure_ctrl_ip %}
+:firstnetboot
+chain http://{{ azure_ctrl_ip }}:7051/boot || goto secondnetboot
+
+:secondnetboot
+#chain http://{{ on_premise_controller_ip }}:7051/boot || goto chainerror
+chain http://{{ azure_ctrl_ip }}:7051/boot || goto chainerror
+{% elif on_premise_controller_ip and not azure_controller %}
+:firstnetboot
+chain http://{{ on_premise_controller_ip }}:7051/boot || goto chainerror
+{% else %}
+:firstnetboot
+chain http://{{ azure_ctrl_ip }}:7051/boot || goto chainerror
+{% endif %}
+
+:chainerror
+prompt --key s --timeout 10000 Chainloading failed, hit 's' for the iPXE shell; reboot in 10 seconds && shell || reboot

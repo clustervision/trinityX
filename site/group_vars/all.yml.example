@@ -2,6 +2,7 @@
 # This file contains variables that are global to all playbooks
 # in this repository.
 
+
 # Any alerts, events and notifications will be sent to this email address:
 
 administrator_email: 'root@localhost'
@@ -10,7 +11,7 @@ administrator_email: 'root@localhost'
 # -----------------------------------------------------------------------
 # Trinity version number
 
-trix_version: '14.1'
+trix_version: '14.3'
 
 # What stream to follow. Stable is the default and recommended.
 trix_stream: 'stable'
@@ -20,6 +21,27 @@ trix_stream: 'stable'
 # prompt on the controllers.
 
 project_id: '000000'
+
+
+#########################################################################
+#                           Cloud Details                               #
+#########################################################################
+# -----------------------------------------------------------------------
+# Which Cloud Providers need to be used for this installation.
+# Currently only azure_cloud is supported.
+azure_cloud: false
+aws_cloud: false
+gcp_cloud: false
+
+# Detailed configuration can be found in group_vars/<cloud>.yml
+# Please consider configuring these yml files, before proceeding
+
+# -----------------------------------------------------------------------
+# optional overrides. If not defined or left empty, ansible attempts to figure
+# out the IP address on the outside (AS) of your network. This variable is
+# used by cloud VPN.
+
+# cloud_local_external_as_ip:
 
 
 #########################################################################
@@ -109,6 +131,14 @@ trix_ctrl2_hostname: controller2
 trix_ctrl_ip: 10.141.255.252
 trix_ctrl_hostname: controller
 
+# Optional overrides when defaults do not fullfil what's expected
+# When left undefined or empty, ansible will use the IP/network address
+# assigned to the interface where the default route is defined for.
+# trix_ctrl_external_network is used for e.g. cloud VPN.
+
+# trix_ctrl_external_ip:
+# trix_ctrl_external_network: # w.x.y.z/nn
+
 # -----------------------------------------------------------------------
 # optional hostname/fqdn to be used for services that are outward facing,
 # like open-ondemand. This hostname is in most scenarios the fqdn of the host,
@@ -128,8 +158,11 @@ trix_dns_forwarders:
 
 # -----------------------------------------------------------------------
 # Default search domains to be added to /etc/resolv.conf
+# __CLOUD__ is a placeholder for the cloud domains if applicable.
+# It will be searched/replaced for the actual configured domains.
+# This placeholder will be removed and can be ignored safely.
 
-resolv_search_domains: '{{ trix_domain }} ib ipmi'
+resolv_search_domains: '{{ trix_domain }} __CLOUD__ ib ipmi'
 
 
 # -----------------------------------------------------------------------
@@ -423,4 +456,4 @@ enable_authentication: true
 
 
 # -----------------------------------------------------------------------
-# DO NOT REMOVE: yml check: 140103
+# DO NOT REMOVE: yml check: 140301

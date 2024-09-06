@@ -1,0 +1,44 @@
+---
+# Enable the Azure CLI Support for the TrinityX Installation.
+
+- name: Check if azure-cli is already Installed
+  shell: "az -h"
+  register: azure_cli_check
+
+- name: Install azure-cli Dependencies
+  apt:
+    name: "apt-transport-https ca-certificates curl gnupg lsb-release"
+    state: present
+  when: azure_cli_check.stdout
+
+- name: Download and install the Microsoft signing key
+  shell: "{{ microsoft_sig }}"
+  with_items: 
+    - "mkdir -p /etc/apt/keyrings"
+    - "curl -sLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg"
+    - "chmod go+r /etc/apt/keyrings/microsoft.gpg"
+  loop_control:
+    loop_var: microsoft_sig
+  when: azure_cli_check.stdout
+
+- name: Add the Azure CLI software repository
+  shell: |
+    AZ_DIST=$(lsb_release -cs)
+    echo "Types: deb
+    URIs: https://packages.microsoft.com/repos/azure-cli/
+    Suites: ${AZ_DIST}
+    Components: main
+    Architectures: $(dpkg --print-architecture)
+    Signed-by: /etc/apt/keyrings/microsoft.gpg" | sudo tee /etc/apt/sources.list.d/azure-cli.sources
+  when: azure_cli_check.stdout
+
+- name: Update package indexes
+  apt:
+    update_cache: yes
+  when: azure_cli_check.stdout
+
+- name: Install azure-cli
+  apt:
+    name: "azure-cli"
+    state: present
+  when: azure_cli_check.stdout

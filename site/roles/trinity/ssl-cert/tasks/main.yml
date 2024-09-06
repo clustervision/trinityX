@@ -35,7 +35,7 @@
     args:
       creates: '{{ ssl_cert_path }}/cluster-ca.crt'
   when: 
-    - primary | default(True)
+    - primary | default(True) or in_cloud | default(False)
     - on_controller | default(False)
 
 # -- start sync
@@ -46,7 +46,8 @@
   with_items:
     - cluster-ca.crt
     - cluster-ca.key
-  when: 
+  when:
+    - not in_cloud | default(False)
     - not primary | default(False)
     - on_controller | default(False)
     - ansible_connection not in 'chroot'

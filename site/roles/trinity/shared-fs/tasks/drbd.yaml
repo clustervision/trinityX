@@ -95,11 +95,14 @@
       owner: root
       group: root
 
+  - debug:
+      msg: "If next step fails, please make sure to have wiped the disk. Use wipefs and/or dd for that"
+
   - name: Initialize DRBD shared resources
     shell: '/usr/sbin/drbdadm create-md --force {{ item.name | replace("/","_") }}'
     loop: "{{ drbd_fs_disks }}"
-    ignore_errors: yes
-
+    ignore_errors: false
+    # we wont ignore errors here as we have to make sure this step succeeds before proceeding
   when: not drbd_res_config.stat.exists
 
 - block:

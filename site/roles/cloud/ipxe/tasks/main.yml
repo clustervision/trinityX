@@ -1,0 +1,83 @@
+---
+# Main file to build the iPXE.efi file for the grub booting.
+
+- name: Set package manager variable
+  set_fact:
+    package_manager: "{{ ansible_facts['pkg_mgr'] }}"
+
+- name: Package Manager
+  debug:
+    msg: "This Linux Installation, {{ ansible_facts['distribution'] }} has available Package Manager {{ package_manager  }}"
+
+- name: Install required packages for RPM-based systems
+  package:
+    name:
+      - make
+      - gcc
+      - binutils
+      - perl
+      - mtools
+      - genisoimage
+      - syslinux
+      - xz-devel
+      - libtool
+      - m4
+      - git
+    state: present
+  when: package_manager in ['dnf', 'yum']
+
+- name: Install required packages for Debian-based systems
+  package:
+    name:
+      - make
+      - gcc
+      - binutils
+      - perl
+      - mtools
+      - mkisofs
+      - syslinux
+      - liblzma-dev
+      - isolinux
+    state: present
+  when: package_manager == 'apt'
+  
+- name: Check if the folder /trinity/images/ipxe exists
+  stat:
+    path: /trinity/images/ipxe
+  register: ipxe_folder
+
+- name: Remove the folder /trinity/images/ipxe if it exists
+  file:
+    path: /trinity/images/ipxe
+    state: absent
+  when: ipxe_folder.stat.exists
+  
+- name: Clone iPXE
+  git:
+    repo: git://git.ipxe.org/ipxe.git
+    dest: /trinity/images/ipxe
+
+- block:
+  - name: Create File to embed Next Server IP with iPXE
+    template:
+      src: embed.ipxe.j2
+      dest: /trinity/images/ipxe/src/embed.ipxe
+
+  - name: Enable NTFS support
+    lineinfile:
+      path: /trinity/images/ipxe/src/config/general.h
+      regexp: '^#undef\s+DOWNLOAD_PROTO_NFS'
+      line: '#define DOWNLOAD_PROTO_NFS'
+
+  - name: Enable PING support
+    replace:
+      path: /trinity/images/ipxe/src/config/general.h
+      regexp: '^\/\/#define\ (PING_CMD|IPSTAT_CMD|REBOOT_CMD|POWEROFF)'
+      replace: '#define \1'
+
+  - name: Build iPXE
+    command: make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe
+    args:
+      chdir: /trinity/images/ipxe/src
+  when: skip_ipxe_efi_build is not defined or not skip_ipxe_efi_build
+

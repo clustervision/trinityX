@@ -1,0 +1,28 @@
+---
+# Main file to enable the GCP Support for the TrinityX Installation.
+
+- block:
+  - name: Verifying terraform files directory exists
+    file:
+      path: "{{ terraform_files }}"
+      state: directory
+
+  - name: Generate terraform.tfvars file
+    template:
+      src: terraform.tfvars.j2
+      dest: "{{ terraform_files }}/terraform.tfvars"
+  when:
+    - vars.azure_installer == 'terraform'
+
+- block:
+  - name: Install Google Cloud Platform CLI on Redhat
+    include_tasks: "{{ role_path }}/tasks/redhat-gcloud.yml"
+    when:
+      - ansible_facts['os_family'] == "RedHat"
+
+  - name: Install Google Cloud Platform CLI on Debian
+    include_tasks: "{{ role_path }}/tasks/debian-gcloud.yml"
+    when:
+      - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  when:
+    - vars.azure_installer == 'gcloud'
