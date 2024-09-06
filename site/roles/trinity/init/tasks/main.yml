@@ -240,6 +240,25 @@
       - vars[item + '_controller'] | default(False)
       - vars[item + '_ctrl_ip'] is defined
 
+  - name: Adding cloud networks
+    set_fact:
+      cloud_networks: >- 
+       {{ cloud_networks|default({}) | combine({lookup('vars', item + '_domain'): 
+         {
+           'function': 'cloud',
+           'ip': lookup('vars', item + '_cluster_net'),
+           'prefix': lookup('vars', item + '_cluster_netprefix'),
+           'start_ip': lookup('vars', item + '_cluster_dhcp_start', default=''),
+           'end_ip': lookup('vars', item + '_cluster_dhcp_end', default=''),
+           'type': 'ethernet'
+         }}) 
+       }}
+    loop: "{{ vars.cloud_support }}"
+    when: 
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      - vars[item + '_domain'] is defined
+      - vars[item + '_cluster_net'] is defined
+
   - debug:
       msg: "cloud_ctrl_hostname: {{ cloud_ctrl_hostname|default('None') }}"
   when: cloud_install    

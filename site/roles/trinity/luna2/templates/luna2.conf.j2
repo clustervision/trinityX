@@ -37,6 +37,16 @@ NODELIST = node[001-004]
 {{ network.name }} = {{ network.function }}:{{ network.type }}:{{ network.ip }}/{{ network.prefix }}
 {% endif %}
 {% endfor %}
+{% if luna2_cluster.shadow_networks is defined %}
+{% for network in luna2_cluster['shadow_networks'] %}
+{% if 'start_ip' in network and network['start_ip'] %}
+{{ network.name }} = {{ network.function }}:{{ network.type }}:{{ network.ip }}/{{ network.prefix }}:DHCP:{{ network.start_ip }}-{{ network.end_ip }}
+{% else %}
+{{ network.name }} = {{ network.function }}:{{ network.type }}:{{ network.ip }}/{{ network.prefix }}
+{% endif %}
+{% endfor %}
+{% endif %}
+#cluster = default:ethernet:10.141.0.0/16:DHCP:10.141.155.0-10.141.165.0
 #cluster = default:ethernet:10.141.0.0/16:DHCP:10.141.155.0-10.141.165.0
 #ipmi = bmc:ethernet:10.148.0.0/16
 #ib = low-latency:infiniband:10.149.0.0/16
