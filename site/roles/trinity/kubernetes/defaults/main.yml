@@ -10,11 +10,22 @@ kubernetes_helm_url: https://get.helm.sh/helm-{{ kubernetes_helm_version }}-linu
 kubernetes_sql_user: "k3s"
 kubernetes_sql_db: "k3s"
 
+kubernetes_root_ca_cert_path: {{ ssl_ca_cert }}
+kubernetes_root_ca_key_path: {{ ssl_ca_key }}
+
+
 kubernetes_certs:
+
   - name: root
-    signer: selfsigned
     cert_privatekey_path: "/var/lib/rancher/k3s/server/tls/root-ca.key"
     cert_path: "/var/lib/rancher/k3s/server/tls/root-ca.crt"
+    {% if kubernetes_root_ca_cert_path and kubernetes_root_ca_key_path %}
+    signer: ownca
+    ownca_privatekey_path: "{{ kubernetes_root_ca_key_path }}"
+    ownca_path: "{{ kubernetes_root_ca_cert_path }}"
+    {% else %}
+    signer: selfsigned
+    {% endif %}
 
   - name: intermediate
     cert_privatekey_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.key"
