@@ -1,0 +1,44 @@
+---
+
+- import_playbook: imports/trinity-ubuntu-image-create.yml
+  vars:
+    image_name: "k3s-ubuntu"
+    # The password to set up for the root user in the image.
+    # If empty, it will be generated at random.
+    #
+    image_password:
+    #
+    # Alternative distribution build. Supported are Ubuntu, version 20, 22 and 24
+    # or any docker image, e.g. ubuntu:rolling
+    #alternative_distribution: Ubuntu-22
+    # 
+    # The alternative source can be 'base' or 'docker'
+    #alternative_image_source: 'base'
+
+
+- import_playbook: imports/trinity-ubuntu-image-setup.yml
+  vars:
+    image_name: "k3s-ubuntu"
+    image_password:
+
+- hosts: 
+  - luna.controllers.luna-dev-ctrl001
+  vars:
+    image_name: "k3s-ubuntu"
+    image_password:
+  roles:
+    - role: trinity/wrapup-images
+      tags: wrapup-images
+
+    - role: trinity/kubernetes
+      tags: kubernetes, k3s
+
+
+- hosts: 
+  - luna.controllers.luna-dev-ctrl001
+  vars:
+    image_name: "k3s-ubuntu"
+    image_password:
+  roles:
+    - role: trinity/pack-images
+      tags: pack-images

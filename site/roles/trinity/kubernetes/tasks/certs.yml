@@ -1,0 +1,60 @@
+# Checks
+- name: Check that item.name is defined
+  fail:
+    msg: "item.name is not defined"
+  when: item.name is not defined
+
+- name: Check that item.signer is defined and is one of selfsigned or ownca
+  fail:
+    msg: "item.signer is not defined or is not one of selfsigned or ownca"
+  when: item.signer is not defined or item.signer not in ['selfsigned', 'ownca']
+
+- name: Check that item.ownca_path and item.ownca_privatekey_path are defined when signer is ownca
+  fail:
+    msg: "item.ownca_path is not defined"
+  when: item.signer == 'ownca' and (item.ownca_path is not defined or item.ownca_privatekey_path is not defined)
+
+# Certificate Authority (CA) generation
+- name: Generate {{ item.name }} certificate authority RSA key
+  community.crypto.openssl_privatekey:
+    path: "{{ item.cert_privatekey_path }}"
+    type: RSA
+    size: 2048
+    mode: 0600
+    regenerate: never
+
+- name: Check if {{ item.name }}-ca.crt exists
+  stat:
+    path: "/var/lib/rancher/k3s/server/tls/{{ item.name }}-ca.crt"
+  register: ca_check
+
+- name: Create and sign {{ item.name }} certificate authority (CA) certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ item.cert_privatekey_path }}"
+    common_name: "k3s-{{ item.name }}-ca"
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    key_usage: "{{ item.key_usage | default(['digitalSignature', 'keyEncipherment', 'keyCertSign']) }}"
+    key_usage_critical: "{{ item.key_usage_critical | default(true) }}"
+    basic_constraints:
+      - 'CA:TRUE'
+    basic_constraints_critical: true
+  when: ca_check.stat.exists == false
+  register: ca_csr
+
+- name: Create {{ item.name }} CA certificate from CSR (signed by ownca)
+  community.crypto.x509_certificate:
+    path: "/var/lib/rancher/k3s/server/tls/{{ item.name }}-ca.crt"
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: "{{ item.cert_privatekey_path }}"
+    provider: ownca
+    ownca_path: "{{ item.ownca_path }}"
+    ownca_privatekey_path : "{{ item.ownca_privatekey_path }}"
+  when: (ca_check.stat.exists == false) and (item.signer == 'ownca')
+
+- name: Create self-signed CA certificate from CSR (signed by selfsigned)
+  community.crypto.x509_certificate:
+    path: "{{ item.cert_path }}"
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: "/var/lib/rancher/k3s/server/tls/{{ item.name }}-ca.key"
+    provider: selfsigned
+  when: (ca_check.stat.exists == false) and (item.signer == 'selfsigned')
