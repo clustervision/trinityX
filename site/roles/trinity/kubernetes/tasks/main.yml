@@ -20,7 +20,7 @@
       path: "{{ trix_sync }}/k3s/tls"
       state: directory
       mode: '0755'
-    when: ha and primary
+    when: ha
 
 
 - name: Generate certificates and keys
@@ -30,12 +30,12 @@
     ansible.builtin.copy:
       src: "{{ trix_sync }}/k3s/tls"
       dest: "/var/lib/rancher/k3s/server/tls"
-    when: ha and primary
+    when: ha and not primary
 
   - name: Generate certificates and keys
     with_items: "{{ kubernetes_certs }}"
     include_tasks: certs.yml
-    when: not ha or primary
+    when: primary
   
   - name: Copy certificates and keys to {{trix_sync}}/k3s
     ansible.builtin.copy:
@@ -70,7 +70,7 @@
     mysql_db:
       name: '{{ kubernetes_sql_db }}'
       state: present
-    when: not ha or primary
+    when: primary
 
   - name: Create DB user for k3s
     mysql_user:
@@ -79,7 +79,7 @@
       password: '{{ kubernetes_sql_pwd }}'
       priv: '{{ kubernetes_sql_db }}.*:ALL'
       state: present
-    when: not ha or primary
+    when: primary
    
 
 - name: "Download and install k3s"
@@ -172,7 +172,7 @@
         src: /var/lib/rancher/k3s/server/token
         dest: "{{ kubernetes_k3s_agent_token_dir }}/token"
         mode: '0600'
-
+      when: primary
 
 
 - name: "Configure k3s agent"
