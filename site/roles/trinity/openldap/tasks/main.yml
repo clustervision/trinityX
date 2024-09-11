@@ -102,7 +102,7 @@
 - name: Enable OpenLDAP service
   systemd:
     name: slapd
-    enabled: "yes"
+    enabled: true
   when: not ha|default(False)
 
 - name: Get /etc/openldap/slapd.d status
@@ -140,7 +140,7 @@
         src: '{{ openldap_server_conf_path }}'
         dest: '/etc/openldap/slapd.d'
         state: link
-        force: "yes"
+        force: true
 
   when: openldap_server_conf_path|string not in '/etc/openldap/slapd.d'
         and default_openldap_path.stat.isdir
@@ -171,7 +171,7 @@
     systemd:
       name: slapd
       state: started
-      enabled: "yes"
+      enabled: true
 
   - name: Copy OpenLDAP schemas
     copy:
@@ -245,7 +245,7 @@
     command: >
       ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
                                -f /etc/openldap/schema/local_schema.ldif
-    ignore_errors: "yes"
+    ignore_errors: true
     when: ldapsearch.rc == 32
   when: (primary | default(True)) and (openldap_version is defined and openldap_version.stdout|int < 25)
 
@@ -318,22 +318,28 @@
     command: >
       ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
                                -f /etc/openldap/schema/local_schema.ldif
-    ignore_errors: "yes"
+    ignore_errors: true
     when: ldapsearch.rc == 32
   when: (primary | default(True)) and (openldap_version is defined and openldap_version.stdout|int > 24)
 
 # ---------------------
 
-- name: Add pacemaker resource
-  pcs_resource:
-    name: 'openldap'
-    resource_class: 'systemd'
-    resource_type: 'systemd:slapd'
-    options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
-    state: present
-  when: 
-    - primary | default(True)
-    - ha | default(False)
+- block:
+  - name: Disable OpenLDAP service
+    systemd:
+      name: slapd
+      state: stopped
+      enabled: false
+
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'openldap'
+      resource_class: 'systemd'
+      resource_type: 'systemd:slapd'
+      options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+      state: present
+    when: primary | default(True)
+  when: ha | default(False)
   tags: pcs
 
 - meta: flush_handlers
