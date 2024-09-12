@@ -202,29 +202,29 @@
 #         cmd: "{{ kubernetes_install_dir }}/helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --namespace kube-system"
 
 
-# - name: Configure firewalld for Kubernetes
-#   when: ansible_connection != 'chroot'
+- name: Configure firewalld for Kubernetes
+  
+  block:
+    - name: Add apiserver port to firewalld
+      firewalld:
+        port: 6443/tcp
+        immediate: yes
+        permanent: yes
+        state: enabled
+        when: ansible_connection != 'chroot'
 
-#   block:
-#     - name: Add apiserver port to firewalld
-#       firewalld:
-#         port: 6443/tcp
-#         immediate: yes
-#         permanent: yes
-#         state: enabled
+    - name: Add pod network to trusted zone
+      firewalld:
+        source: 10.42.0.0/16
+        zone: trusted
+        immediate: yes
+        permanent: yes
+        state: enabled
 
-#     - name: Add pod network to trusted zone
-#       firewalld:
-#         source: 10.42.0.0/16
-#         zone: trusted
-#         immediate: yes
-#         permanent: yes
-#         state: enabled
-
-#     - name: Add service network to trusted zone
-#       firewalld:
-#         source: 10.43.0.0/16
-#         zone: trusted
-#         immediate: yes
-#         permanent: yes
-#         state: enabled
+    - name: Add service network to trusted zone
+      firewalld:
+        source: 10.43.0.0/16
+        zone: trusted
+        immediate: yes
+        permanent: yes
+        state: enabled
