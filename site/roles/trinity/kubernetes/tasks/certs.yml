@@ -45,6 +45,7 @@
 
 - name: Create {{ item.name }} CA certificate from CSR (signed by ownca)
   community.crypto.x509_certificate:
+    entrust_not_after: "+3650d"
     path: "/var/lib/rancher/k3s/server/tls/{{ item.name }}-ca.crt"
     csr_content: "{{ ca_csr.csr }}"
     privatekey_path: "{{ item.cert_privatekey_path }}"
@@ -55,6 +56,7 @@
 
 - name: Create self-signed CA certificate from CSR (signed by selfsigned)
   community.crypto.x509_certificate:
+    entrust_not_after: "+3650d"
     path: "{{ item.cert_path }}"
     csr_content: "{{ ca_csr.csr }}"
     privatekey_path: "/var/lib/rancher/k3s/server/tls/{{ item.name }}-ca.key"
