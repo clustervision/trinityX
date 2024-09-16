@@ -146,6 +146,18 @@
         dest: /etc/systemd/system/k3s-server.service
         mode: '0644'
 
+    - name: "Render k3s-server-nodes-cleaner service file"
+      ansible.builtin.template:
+        src: k3s-server-nodes-cleaner.service.j2
+        dest: /etc/systemd/system/k3s-server-nodes-cleaner.service
+        mode: '0644'
+
+    - name: "Render k3s-server-nodes-cleaner timer file"
+      ansible.builtin.template:
+        src: k3s-server-nodes-cleaner.timer.j2
+        dest: /etc/systemd/system/k3s-server-nodes-cleaner.timer
+        mode: '0644'
+
     - name: Retrieve the token from {{ trix_sync }}/k3s/token
       ansible.builtin.copy:
         src: "{{ trix_sync }}/k3s/token"
@@ -156,6 +168,13 @@
     - name: Start and enable k3s-server service
       ansible.builtin.service:
         name: k3s-server
+        state: restarted
+        daemon_reload: true
+        enabled: true
+    
+    - name: Start and enable k3s-server-nodes-cleaner service
+      ansible.builtin.service:
+        name: k3s-server-nodes-cleaner
         state: restarted
         daemon_reload: true
         enabled: true
