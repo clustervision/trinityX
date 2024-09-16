@@ -208,10 +208,9 @@
     - name: Add apiserver port to firewalld
       firewalld:
         port: 6443/tcp
-        immediate: yes
+        immediate: "{{ ansible_connection != 'chroot' }}"
         permanent: yes
         state: enabled
-      when: ansible_connection != 'chroot'
 
     - name: Add pod network to trusted zone
       firewalld:

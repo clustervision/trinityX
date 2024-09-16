@@ -17,7 +17,6 @@ ExecStartPre=/bin/sh -xc '! /usr/bin/systemctl is-enabled --quiet nm-cloud-setup
 ExecStart={{kubernetes_install_dir}}/k3s server \
     {% if not primary %} --server https://{{trix_ctrl_ip}}:6443 \ {% endif %}
     --node-taint node-role.kubernetes.io/control-plane=true:NoSchedule  \
-    --disable traefik \
     --datastore-endpoint "mysql://{{kubernetes_sql_user}}:${KUBERNETES_SQL_PWD}@tcp({{trix_ctrl_ip}}:3306)/{{kubernetes_sql_db}}" 
 KillMode=process
 Delegate=yes
