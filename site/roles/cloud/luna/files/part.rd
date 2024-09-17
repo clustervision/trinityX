@@ -25,7 +25,7 @@ if [ ! "$ROOTTHERE" ]; then
     for partition in $(parted $DISK print|grep -A100 Number|grep -v -e msftdata -e boot -e Number|awk '{ print $1 }'|grep -v '^$'); do
         parted $DISK rm $partition
     done
-    LAST=$(parted $DISK unit s print|grep -A100 Number|awk '{ print $3 }'|grep -oE "[0-9]+"|sort -n -r|grep -v "^$" -m 1)
+    LAST=$(parted $DISK unit s print|grep -A100 Number|awk '{ print $3 }'|grep -oE "[0-9]+"|awk 'END{print}'|grep -v "^$" -m 1)
     if [ "$LAST" ]; then
         NEXT=$[LAST+1]
         echo "Creating partition starting at ${NEXT}s to 100%"
