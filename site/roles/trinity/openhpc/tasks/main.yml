@@ -33,6 +33,8 @@
       - pdsh
       - environment-modules
     state: removed
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install ohpc-base
   yum:
@@ -40,18 +42,24 @@
     state: installed
     enablerepo: powertools
   when: ansible_connection not in 'chroot'
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install ohpc-base-compute
   yum:
     name: ohpc-base-compute
     state: installed
   when: ansible_connection not in 'chroot'
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - block:
   - name: Install pdsh-mod-genders-ohpc
     yum:
       name: pdsh-mod-genders-ohpc
       state: installed
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
 
   - name: Create empty pdsh genders file
     file:
@@ -67,6 +75,8 @@
     enablerepo: powertools
     state: installed
   when: ansible_connection in 'chroot'
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Create symlinks for pdsh and pdcp
   file:
@@ -84,6 +94,8 @@
     name: lmod-ohpc
     state: installed
     enablerepo: powertools
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install profile for modules
   template:

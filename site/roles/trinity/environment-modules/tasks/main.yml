@@ -21,6 +21,8 @@
     name: '{{ envmodules_packages }}'
     state: present
   tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Add the group paths to the default configuration
   blockinfile:
@@ -44,6 +46,8 @@
     name: '{{ repoquery.stdout_lines }}'
     state: present
     disablerepo: userspace-shared-*
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Reuse local /etc/yum.conf
   copy:
@@ -60,3 +64,5 @@
   yum:
     conf_file: /tmp/yum.conf
     name: "{{ envmodules_list }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"

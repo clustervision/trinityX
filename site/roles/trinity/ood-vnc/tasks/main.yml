@@ -14,7 +14,9 @@
         update_cache: true
         disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
       with_items: "{{ ood_compute_repository_rpms }}"
-    
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
+
     - name: Install required yum packages
       dnf:
         enablerepo: crb
@@ -24,6 +26,9 @@
           - python3-websockify
           - dbus-x11
         state: present
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
+
   when: enable_ood_vnc == true and ansible_connection in 'chroot'
 
 # This should be done by controller because /trinity/shared is not mounted on compute node

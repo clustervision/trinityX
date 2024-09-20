@@ -21,12 +21,16 @@
     name: python3-firewall
     state: present
   when: ansible_virtualization_type != 'docker'
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install grafana dashboard
   yum:
     name: "{{ grafana_rpm }}"
     disable_gpg_check: true
     state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Configure LDAP
   template:
