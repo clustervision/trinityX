@@ -1,0 +1,42 @@
+---
+- name: Copy the infiniband Exporter systemd service file
+  template:
+    src: prometheus-infiniband-exporter.service.j2
+    dest: /etc/systemd/system/prometheus-infiniband-exporter.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart prometheus-infiniband-exporter
+
+- name: Allow infiniband Exporter port in SELinux on RedHat OS family
+  seport:
+    ports: "{{ prometheus_infiniband_exporter_web_listen_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  when:
+    - ansible_version.full is version_compare('2.4', '>=')
+    - ansible_selinux.status == "enabled"
+
+- name: Create prometheus_infiniband_exporter_sd_file if not exists
+  file:
+    path: "{{ prometheus_infiniband_exporter_sd_file }}"
+    state: touch
+  when:
+    - prometheus_infiniband_exporter_sd_file is defined
+
+- name: Configure prometheus infiniband-exporter if prometheus_infiniband_exporter_sd_file is defined
+  blockinfile:
+    path: "{{ prometheus_infiniband_exporter_sd_file }}"
+    block: |
+      {% for target_ip, target_hostname, target_domain in prometheus_infiniband_exporter_targets %}
+      - targets:
+        - {{ target_ip }}:{{ prometheus_infiniband_exporter_web_listen_port }}
+        labels:
+          exporter: infiniband
+          luna_group: controller
+          hostname: {{ target_hostname }}.{{ target_domain }}
+      {% endfor %}
+    marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_infiniband_exporter)"
+  when:
+    - prometheus_infiniband_exporter_sd_file is defined
