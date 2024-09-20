@@ -51,8 +51,8 @@
       state: present
       update_cache: true
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
-    retries: 10
-    delay: 15
+    retries: "{{ network_retries | default(3) }}"
+    delay: "{{ network_delay | default(15) }}"
     with_items: "{{ external_repository_rpms }}"
     when: item.name is defined
 
@@ -63,8 +63,8 @@
       state: present
       update_cache: true
       installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
-    retries: 10
-    delay: 15
+    retries: "{{ network_retries | default(3) }}"
+    delay: "{{ network_delay | default(15) }}"
     with_items: "{{ package_based_repositories }}"
     when: item.name is defined
 
@@ -120,6 +120,8 @@
     yum:
       name: yum-utils
       state: installed
+    retries: "{{ network_retries | default(3) }}"
+    delay: "{{ network_delay | default(15) }}"
 
   - name: Disable all repo without '*-local' suffix
     shell: >

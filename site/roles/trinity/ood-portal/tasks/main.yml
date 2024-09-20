@@ -36,6 +36,8 @@
     name: '{{ ood_portal_packages }}'
     state: latest
     enablerepo: luna2
+  retries: "{{ network_retries | default(3) }}"
+  delay: "{{ network_delay | default(15) }}"
 
 - name: Install required repos
   dnf:
@@ -43,6 +45,8 @@
     state: latest
     disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
   with_items: "{{ ood_portal_repository_rpms }}"
+  retries: "{{ network_retries | default(3) }}"
+  delay: "{{ network_delay | default(15) }}"
 
 - name: Install required packages
   dnf:
@@ -51,6 +55,8 @@
       - 'ondemand'
     state: latest
     enablerepo: powertools
+  retries: "{{ network_retries | default(3) }}"
+  delay: "{{ network_delay | default(15) }}"
 
 - name: Ensure OOD config paths exist
   file:

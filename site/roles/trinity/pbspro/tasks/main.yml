@@ -16,6 +16,8 @@
     state: present
   tags: install-only
   when: on_controller|default(True)
+  retries: "{{ network_retries | default(3) }}"
+  delay: "{{ network_delay | default(15) }}"
 
 - name: Install openpbs-execution-ohpc
   yum:
@@ -23,6 +25,8 @@
     state: present
   tags: install-only
   when: compute|default(False)
+  retries: "{{ network_retries | default(3) }}"
+  delay: "{{ network_delay | default(15) }}"
 
 - name: Configure PBSPro
   template:

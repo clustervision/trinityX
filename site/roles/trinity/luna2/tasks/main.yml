@@ -13,11 +13,15 @@
     name: '{{ luna2_packages }}'
     state: present
     enablerepo: luna2
+  retries: "{{ network_retries | default(3) }}"
+  delay: "{{ network_delay | default(15) }}"
 
 - name: Install required packages
   yum:
     name: '{{ required_packages }}'
     state: present
+  retries: "{{ network_retries | default(3) }}"
+  delay: "{{ network_delay | default(15) }}"
 
 - name: Ensure /var/log/luna exists
   file:

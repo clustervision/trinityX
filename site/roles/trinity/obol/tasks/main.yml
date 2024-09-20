@@ -18,11 +18,9 @@
   yum:
     name: '{{ obol_packages }}'
     state: present
-  register: _download_packages
-  until: _download_packages is succeeded
-  retries: 10
-  delay: 15
   tags: install-only
+  retries: "{{ network_retries | default(3) }}"
+  delay: "{{ network_delay | default(15) }}"
 
 
 - name: Install obol to /usr/local/sbin
