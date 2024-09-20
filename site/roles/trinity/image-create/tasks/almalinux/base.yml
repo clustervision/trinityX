@@ -8,8 +8,8 @@
     disable_gpg_check: true
     name: dnf-utils
     state: present
-  retries: "{{ network_retries | default(3) }}"
-  delay: "{{ network_delay | default(15) }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Check OS release on controller
   command: rpm -qf /etc/os-release --qf '%{NAME}'
@@ -65,8 +65,8 @@
     # releasever: "{{ ansible_distribution_major_version }}"
     installroot: "{{ image_path }}"
     state: present
-  retries: "{{ network_retries | default(3) }}"
-  delay: "{{ network_delay | default(15) }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install dnf package in {{ image_path }}
   dnf:
@@ -76,8 +76,8 @@
       - dnf
     installroot: "{{ image_path }}"
     state: present
-  retries: "{{ network_retries | default(3) }}"
-  delay: "{{ network_delay | default(15) }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - synchronize:
     src: "/etc/pki/"
@@ -151,8 +151,8 @@
     name: "{{ image_core_packages }}"
     state: present
     installroot: "{{ image_path }}"
-  retries: "{{ network_retries | default(3) }}"
-  delay: "{{ network_delay | default(15) }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install missing elfutils-libs on RedHat
   dnf:
@@ -161,5 +161,5 @@
     state: present
     installroot: "{{ image_path }}"
   when: ansible_distribution == "RedHat"
-  retries: "{{ network_retries | default(3) }}"
-  delay: "{{ network_delay | default(15) }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
