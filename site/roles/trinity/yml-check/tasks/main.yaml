@@ -22,3 +22,8 @@
     - yml_check_version.stdout is defined
     - yml_check_version.stdout|int < yml_minimum_version
 
+- name: Verify that workload_manager doesn't contain 'slurm' and 'pbspro' at the same time
+  fail:
+    msg: "workload_manager cannot contain both 'slurm' and 'pbspro' at the same time"
+  when: "'slurm' in workload_manager and 'pbspro' in workload_manager"
+

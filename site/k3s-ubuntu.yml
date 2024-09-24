@@ -6,7 +6,7 @@
   #
   - name: Set image name
     set_fact:
-      image_name: "ubuntu"
+      image_name: "k3s-ubuntu"
     tags: always
 
 - import_playbook: imports/trinity-ubuntu-image-create.yml
@@ -33,13 +33,8 @@
     - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
   roles:
 
-    # Not supported on Ubuntu
-
-    # - role: trinity/slurm
-    #   slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-    #   slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
-    #   munge_conf_path: '{{ trix_shared }}/etc/munge'
-    #   tags: slurm
+    - role: trinity/kubernetes
+      tags: kubernetes, k3s
 
     - role: trinity/wrapup-images
       tags: wrapup-images

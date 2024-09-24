@@ -1,0 +1,66 @@
+kubernetes_install_dir: "/usr/local/bin"
+
+kubernetes_k3s_version: "v1.30.2+k3s1"
+kubernetes_k3s_url: "https://github.com/k3s-io/k3s/releases/download/{{ kubernetes_k3s_version }}/k3s"
+kubernetes_k3s_agent_token_dir: "{{ trix_shared }}/etc/k3s"
+
+kubernetes_helm_version: "v3.15.3"
+kubernetes_helm_url: https://get.helm.sh/helm-{{ kubernetes_helm_version }}-linux-amd64.tar.gz
+
+kubernetes_sql_user: "k3s"
+kubernetes_sql_db: "k3s"
+
+kubernetes_root_ca_cert_path: "{{ ssl_ca_cert }}"
+kubernetes_root_ca_key_path: "{{ ssl_ca_key }}"
+
+
+kubernetes_certs:
+
+  - name: root
+    cert_privatekey_path: "/var/lib/rancher/k3s/server/tls/root-ca.key"
+    cert_path: "/var/lib/rancher/k3s/server/tls/root-ca.crt"
+    signer: "{{ 'ownca' if (kubernetes_root_ca_cert_path and kubernetes_root_ca_key_path) else 'selfsigned' }}"
+    ownca_privatekey_path: "{{ kubernetes_root_ca_key_path }}"
+    ownca_path: "{{ kubernetes_root_ca_cert_path }}"
+
+  - name: intermediate
+    cert_privatekey_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.key"
+    cert_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.crt"
+    signer: ownca
+    ownca_privatekey_path: "/var/lib/rancher/k3s/server/tls/root-ca.key"
+    ownca_path: "/var/lib/rancher/k3s/server/tls/root-ca.crt"
+
+  - name: client
+    signer: ownca
+    cert_privatekey_path: "/var/lib/rancher/k3s/server/tls/client-ca.key"
+    cert_path: "/var/lib/rancher/k3s/server/tls/client-ca.crt"
+    ownca_privatekey_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.key"
+    ownca_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.crt"
+
+  - name: server
+    signer: ownca
+    cert_privatekey_path: "/var/lib/rancher/k3s/server/tls/server-ca.key"
+    cert_path: "/var/lib/rancher/k3s/server/tls/server-ca.crt"
+    ownca_privatekey_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.key"
+    ownca_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.crt"
+
+  - name: request-header
+    signer: ownca
+    cert_privatekey_path: "/var/lib/rancher/k3s/server/tls/request-header-ca.key"
+    cert_path: "/var/lib/rancher/k3s/server/tls/equest-header-ca.crt"
+    ownca_privatekey_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.key"
+    ownca_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.crt"
+
+  - name: etcd/peer
+    signer: ownca
+    cert_privatekey_path: "/var/lib/rancher/k3s/server/tls/peer-ca.key"
+    cert_path: "/var/lib/rancher/k3s/server/tls/peer-ca.crt"
+    ownca_privatekey_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.key"
+    ownca_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.crt"
+
+  - name: etcd/server
+    signer: ownca
+    cert_privatekey_path: "/var/lib/rancher/k3s/server/tls/server-ca.key"
+    cert_path: "/var/lib/rancher/k3s/server/tls/server-ca.crt"
+    ownca_privatekey_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.key"
+    ownca_path: "/var/lib/rancher/k3s/server/tls/intermediate-ca.crt"

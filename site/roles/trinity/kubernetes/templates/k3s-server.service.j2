@@ -1,0 +1,34 @@
+#
+# Ansible managed
+#
+
+[Unit]
+Description=Lightweight Kubernetes
+Documentation=https://k3s.io
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/default/%N
+EnvironmentFile=-/etc/sysconfig/%N
+EnvironmentFile=-/etc/systemd/system/k3s-server.service.env
+ExecStartPre=/bin/sh -xc '! /usr/bin/systemctl is-enabled --quiet nm-cloud-setup.service 2>/dev/null'
+ExecStart={{kubernetes_install_dir}}/k3s server \
+    {% if not primary %} --server https://{{trix_ctrl_ip}}:6443 \ {% endif %}
+    --node-taint node-role.kubernetes.io/control-plane=true:NoSchedule  \
+    --datastore-endpoint "mysql://{{kubernetes_sql_user}}:${KUBERNETES_SQL_PWD}@tcp({{trix_ctrl_ip}}:3306)/{{kubernetes_sql_db}}" 
+KillMode=process
+Delegate=yes
+# Having non-zero Limit*s causes performance problems due to accounting overhead
+# in the kernel. We recommend using cgroups to do container-local accounting.
+# LimitNOFILE=1048576
+# LimitNPROC=infinity
+# LimitCORE=infinity
+TasksMax=infinity
+TimeoutStartSec=0
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

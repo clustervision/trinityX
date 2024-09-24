@@ -7,6 +7,7 @@
   - name: Set image name
     set_fact:
       image_name: "alma"
+    tags: always
 
 - import_playbook: imports/trinity-redhat-image-create.yml
   vars:
@@ -30,6 +31,13 @@
   roles:
     - role: trinity/wrapup-images
       tags: wrapup-images
+
+    - role: trinity/slurm
+      slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+      slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+      munge_conf_path: '{{ trix_shared }}/etc/munge'
+      tags: slurm
+
 
 - hosts: controllers
   roles:

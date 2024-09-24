@@ -1,0 +1,269 @@
+
+- name: Create directories
+  when: ansible_connection != 'chroot'
+  block:
+
+  - name: "Create certificates and keys directory"
+    ansible.builtin.file:
+      path: "/var/lib/rancher/k3s/server/tls/etcd"
+      state: directory
+      mode: "0750"
+
+  - name: "Create {{ trix_shared }}/etc/k3s directory"
+    ansible.builtin.file:
+      path: "{{ trix_shared }}/etc/k3s"
+      state: directory
+      mode: '0755'
+
+  - name: "Create {{ trix_sync }}/k3s directory"
+    ansible.builtin.file:
+      path: "{{ trix_sync }}/k3s/tls"
+      state: directory
+      mode: '0755'
+    when: ha
+
+
+- name: Generate certificates and keys
+  when: ansible_connection != 'chroot'
+  block:
+
+  - name: Retrieve the certificate and keys from {{trix_sync}}/k3s
+    ansible.builtin.copy:
+      src: "{{ trix_sync }}/k3s/tls"
+      dest: "/var/lib/rancher/k3s/server/tls"
+    when: ha and not primary | default(True)
+
+  - name: Generate certificates and keys
+    with_items: "{{ kubernetes_certs }}"
+    include_tasks: certs.yml
+    when: primary | default(True)
+  
+  - name: Copy certificates and keys to {{trix_sync}}/k3s
+    ansible.builtin.copy:
+      src: "/var/lib/rancher/k3s/server/tls"
+      dest: "{{ trix_sync }}/k3s/tls"
+    when: ha and primary | default(True)
+
+- name: Configure database for k3s
+  when: ansible_connection != 'chroot'
+  block:
+
+  - name: Retrieve k3s user password for kubernetes DB from {{ trix_sync }}/k3s
+    ansible.builtin.copy:
+      src: "{{ trix_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
+      dest: "/etc/trinity/passwords/mysql/{{ kubernetes_sql_user }}.txt"
+    when: ha and not primary | default(True)
+
+  - name: Get k3s user password for kubernetes DB from /etc/trinity/passwords
+    set_fact:
+      kubernetes_sql_pwd: '{{ lookup("password",
+                            "/etc/trinity/passwords/mysql/{{ kubernetes_sql_user }}.txt
+                              chars=ascii_letters,digits,hexdigits") }}'
+
+  - name: Copy k3s user password to {{ trix_sync }}/k3s
+    ansible.builtin.copy:
+      src: "/etc/trinity/passwords/mysql/{{ kubernetes_sql_user }}.txt"
+      dest: "{{ trix_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
+    when: ha and primary | default(True)
+
+  - name: Create DB for k3s
+    mysql_db:
+      name: '{{ kubernetes_sql_db }}'
+      state: present
+    when: primary | default(True)
+
+  - name: Create DB user for k3s
+    mysql_user:
+      name: '{{ kubernetes_sql_user }}'
+      host: '%'  # Allow connections from any host
+      password: '{{ kubernetes_sql_pwd }}'
+      priv: '{{ kubernetes_sql_db }}.*:ALL'
+      state: present
+    when: primary | default(True)
+   
+
+- name: "Download and install k3s"
+  block:
+    - name: "Download k3s binary"
+      ansible.builtin.get_url:
+        url: "{{ kubernetes_k3s_url }}"
+        dest: "{{ kubernetes_install_dir }}/k3s"
+        mode: '0755'
+        validate_certs: false
+
+    - name: "Ensure /etc/bash_completion.d exists"
+      file:
+        path: /etc/bash_completion.d
+        state: directory
+        mode: '0755'
+
+    - name: "Install k3s shell completions"
+      ansible.builtin.shell:
+        cmd: "{{ kubernetes_install_dir }}/k3s completion bash > /etc/bash_completion.d/k3s"
+        creates: /etc/bash_completion.d/k3s
+
+
+- name: "Download and install helm"
+  when: ansible_connection != 'chroot'
+  block:
+    - name: "Download helm binary"
+      ansible.builtin.unarchive:
+        src: "{{ kubernetes_helm_url }}"
+        dest: "{{ kubernetes_install_dir }}"
+        remote_src: true
+        validate_certs: false
+        mode: '0755'
+        include:
+          - linux-amd64/helm
+        extra_opts:
+          - --transform
+          - s#^linux-amd64/helm#helm#
+
+    - name: "Ensure /etc/bash_completion.d exists"
+      file:
+        path: /etc/bash_completion.d
+        state: directory
+        mode: '0755'
+
+    - name: "Install helm shell completions"
+      ansible.builtin.shell:
+        cmd: "{{ kubernetes_install_dir }}/helm completion bash > /etc/bash_completion.d/helm"
+        creates: /etc/bash_completion.d/helm
+
+    - name: "Create .kube folder in root user"
+      ansible.builtin.file:
+        path: "/root/.kube"
+        state: directory
+
+    - name: "Symlink kubeconfig file to /root/.kube/config"
+      ansible.builtin.file:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: /root/.kube/config
+        state: link
+        force: "yes"
+
+
+- name: "Configure k3s server"
+  when: ansible_connection != 'chroot'
+  block:
+    - name: Render k3s server environment file
+      ansible.builtin.template:
+        src: k3s-server.service.env.j2
+        dest: /etc/systemd/system/k3s-server.service.env
+        mode: '0600'
+        owner: root
+        group: root
+
+    - name: Render k3s-server service file
+      ansible.builtin.template:
+        src: k3s-server.service.j2
+        dest: /etc/systemd/system/k3s-server.service
+        mode: '0644'
+
+    - name: "Render k3s-server-nodes-cleaner service file"
+      ansible.builtin.template:
+        src: k3s-server-nodes-cleaner.service.j2
+        dest: /etc/systemd/system/k3s-server-nodes-cleaner.service
+        mode: '0644'
+
+    - name: "Render k3s-server-nodes-cleaner timer file"
+      ansible.builtin.template:
+        src: k3s-server-nodes-cleaner.timer.j2
+        dest: /etc/systemd/system/k3s-server-nodes-cleaner.timer
+        mode: '0644'
+
+    - name: Retrieve the token from {{ trix_sync }}/k3s/token
+      ansible.builtin.copy:
+        src: "{{ trix_sync }}/k3s/token"
+        dest: /var/lib/rancher/k3s/server/token
+        mode: '0600'
+      when: ha and not primary | default(True)
+
+    - name: Start and enable k3s-server service
+      ansible.builtin.service:
+        name: k3s-server
+        state: restarted
+        daemon_reload: true
+        enabled: true
+    
+    - name: Start and enable k3s-server-nodes-cleaner service
+      ansible.builtin.service:
+        name: k3s-server-nodes-cleaner
+        state: restarted
+        daemon_reload: true
+        enabled: true
+    
+    - name: Start and enable k3s-server-nodes-cleaner timer
+      ansible.builtin.service:
+        name: k3s-server-nodes-cleaner
+        state: restarted
+        daemon_reload: true
+        enabled: true
+
+    - name: "Copy the token to {{ trix_sync }}/k3s/token"
+      ansible.builtin.copy:
+        src: /var/lib/rancher/k3s/server/token
+        dest: "{{ trix_sync }}/k3s/token"
+        mode: '0600'
+      when: ha and primary | default(True)
+
+    - name: "Copy the token to {{ kubernetes_k3s_agent_token_dir }}/token"
+      ansible.builtin.copy:
+        src: /var/lib/rancher/k3s/server/token
+        dest: "{{ kubernetes_k3s_agent_token_dir }}/token"
+        mode: '0600'
+      when: primary | default(True)
+
+
+- name: "Configure k3s agent"
+  when: ansible_connection in 'chroot'
+  block:
+
+    - name: Render k3s-agent service file
+      ansible.builtin.template:
+        src: k3s-agent.service.j2
+        dest: /etc/systemd/system/k3s-agent.service
+        mode: '0644'
+
+    - name: Enable k3s-agent service
+      ansible.builtin.systemd:
+        name: k3s-agent
+        enabled: true
+
+# - name: Install kubernetes dashboard
+#   when: ansible_connection != 'chroot'
+#   block:
+#     - name: "Add kubernetes dashboard chart"
+#       ansible.builtin.shell:
+#         cmd: "{{ kubernetes_install_dir }}/helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/"
+
+#     - name: "Install kubernetes dashboard"
+#       ansible.builtin.shell:
+#         cmd: "{{ kubernetes_install_dir }}/helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --namespace kube-system"
+
+
+- name: Configure firewalld for Kubernetes
+  when: ansible_os_family == 'RedHat'
+  block:
+    - name: Add apiserver port to firewalld
+      firewalld:
+        port: 6443/tcp
+        immediate: "{{ ansible_connection != 'chroot' }}"
+        permanent: yes
+        state: enabled
+
+    - name: Add pod network to trusted zone
+      firewalld:
+        source: 10.42.0.0/16
+        zone: trusted
+        immediate: "{{ ansible_connection != 'chroot' }}"
+        permanent: yes
+        state: enabled
+
+    - name: Add service network to trusted zone
+      firewalld:
+        source: 10.43.0.0/16
+        zone: trusted
+        immediate: "{{ ansible_connection != 'chroot' }}"
+        permanent: yes
+        state: enabled
