@@ -24,25 +24,25 @@
 
 
 - name: Generate certificates and keys
+  when: ansible_connection != 'chroot'
   block:
 
   - name: Retrieve the certificate and keys from {{trix_sync}}/k3s
     ansible.builtin.copy:
       src: "{{ trix_sync }}/k3s/tls"
       dest: "/var/lib/rancher/k3s/server/tls"
-    when: ha and not primary
+    when: ha and not primary | default(True)
 
   - name: Generate certificates and keys
     with_items: "{{ kubernetes_certs }}"
     include_tasks: certs.yml
-    when: primary
+    when: primary | default(True)
   
   - name: Copy certificates and keys to {{trix_sync}}/k3s
     ansible.builtin.copy:
       src: "/var/lib/rancher/k3s/server/tls"
       dest: "{{ trix_sync }}/k3s/tls"
-    when: ha and primary
-
+    when: ha and primary | default(True)
 
 - name: Configure database for k3s
   when: ansible_connection != 'chroot'
@@ -52,7 +52,7 @@
     ansible.builtin.copy:
       src: "{{ trix_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
       dest: "/etc/trinity/passwords/mysql/{{ kubernetes_sql_user }}.txt"
-    when: ha and not primary
+    when: ha and not primary | default(True)
 
   - name: Get k3s user password for kubernetes DB from /etc/trinity/passwords
     set_fact:
@@ -64,13 +64,13 @@
     ansible.builtin.copy:
       src: "/etc/trinity/passwords/mysql/{{ kubernetes_sql_user }}.txt"
       dest: "{{ trix_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
-    when: ha and primary
+    when: ha and primary | default(True)
 
   - name: Create DB for k3s
     mysql_db:
       name: '{{ kubernetes_sql_db }}'
       state: present
-    when: primary
+    when: primary | default(True)
 
   - name: Create DB user for k3s
     mysql_user:
@@ -79,7 +79,7 @@
       password: '{{ kubernetes_sql_pwd }}'
       priv: '{{ kubernetes_sql_db }}.*:ALL'
       state: present
-    when: primary
+    when: primary | default(True)
    
 
 - name: "Download and install k3s"
@@ -88,6 +88,13 @@
       ansible.builtin.get_url:
         url: "{{ kubernetes_k3s_url }}"
         dest: "{{ kubernetes_install_dir }}/k3s"
+        mode: '0755'
+        validate_certs: false
+
+    - name: "Ensure /etc/bash_completion.d exists"
+      file:
+        path: /etc/bash_completion.d
+        state: directory
         mode: '0755'
 
     - name: "Install k3s shell completions"
@@ -104,12 +111,19 @@
         src: "{{ kubernetes_helm_url }}"
         dest: "{{ kubernetes_install_dir }}"
         remote_src: true
+        validate_certs: false
         mode: '0755'
         include:
           - linux-amd64/helm
         extra_opts:
           - --transform
           - s#^linux-amd64/helm#helm#
+
+    - name: "Ensure /etc/bash_completion.d exists"
+      file:
+        path: /etc/bash_completion.d
+        state: directory
+        mode: '0755'
 
     - name: "Install helm shell completions"
       ansible.builtin.shell:
@@ -163,7 +177,7 @@
         src: "{{ trix_sync }}/k3s/token"
         dest: /var/lib/rancher/k3s/server/token
         mode: '0600'
-      when: ha and not primary
+      when: ha and not primary | default(True)
 
     - name: Start and enable k3s-server service
       ansible.builtin.service:
@@ -191,14 +205,14 @@
         src: /var/lib/rancher/k3s/server/token
         dest: "{{ trix_sync }}/k3s/token"
         mode: '0600'
-      when: ha and primary
+      when: ha and primary | default(True)
 
     - name: "Copy the token to {{ kubernetes_k3s_agent_token_dir }}/token"
       ansible.builtin.copy:
         src: /var/lib/rancher/k3s/server/token
         dest: "{{ kubernetes_k3s_agent_token_dir }}/token"
         mode: '0600'
-      when: primary
+      when: primary | default(True)
 
 
 - name: "Configure k3s agent"
@@ -229,7 +243,7 @@
 
 
 - name: Configure firewalld for Kubernetes
-  
+  when: ansible_os_family == 'RedHat'
   block:
     - name: Add apiserver port to firewalld
       firewalld:
