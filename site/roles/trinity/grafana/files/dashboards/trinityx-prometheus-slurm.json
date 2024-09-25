@@ -160,7 +160,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -169,7 +169,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
@@ -396,6 +396,7 @@
             "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -487,6 +488,7 @@
             "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -558,7 +560,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -567,7 +569,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineStyle": {
               "fill": "solid"
             },
@@ -588,6 +590,7 @@
           },
           "links": [],
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -691,9 +694,11 @@
           "datasource": {
             "type": "prometheus"
           },
-          "expr": "slurm_partition_cpus_allocated != 0",
+          "editorMode": "code",
+          "expr": "slurm_partition_cpus_allocated",
           "interval": "",
           "legendFormat": "{{partition}}",
+          "range": true,
           "refId": "A"
         },
         {
@@ -703,7 +708,7 @@
           },
           "editorMode": "code",
           "expr": "slurm_cpus_total",
-          "hide": true,
+          "hide": false,
           "instant": false,
           "legendFormat": "total",
           "range": true,
@@ -713,14 +718,21 @@
       "title": "CPUs Allocated per Partition",
       "transformations": [
         {
-          "disabled": true,
           "id": "configFromData",
           "options": {
+            "applyTo": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
             "configRefId": "B",
             "mappings": [
               {
                 "fieldName": "total",
                 "handlerKey": "max"
+              },
+              {
+                "fieldName": "Time",
+                "handlerKey": "__ignore"
               }
             ]
           }
@@ -740,6 +752,7 @@
             "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -810,7 +823,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -819,7 +832,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -838,6 +851,7 @@
           "links": [],
           "mappings": [],
           "min": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -907,7 +921,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -916,7 +930,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -935,6 +949,7 @@
           "links": [],
           "mappings": [],
           "min": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1029,7 +1044,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -1038,14 +1053,14 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": 31000,
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "normal"
@@ -1057,6 +1072,7 @@
           "links": [],
           "mappings": [],
           "min": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1123,7 +1139,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "slurm_queue_running",
+          "expr": "slurm_queue_running != 0",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1137,10 +1153,10 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "slurm_queue_pending",
+          "expr": "slurm_queue_pending != 0",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "pending",
           "range": true,
           "refId": "F"
@@ -1151,7 +1167,7 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
-          "expr": "slurm_queue_cancelled",
+          "expr": "slurm_queue_cancelled != 0",
           "hide": false,
           "instant": false,
           "legendFormat": "cancelled",
@@ -1164,7 +1180,7 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
-          "expr": "slurm_queue_failed",
+          "expr": "slurm_queue_failed != 0",
           "hide": false,
           "instant": false,
           "legendFormat": "failed",
@@ -1177,7 +1193,7 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
-          "expr": "slurm_queue_timeout",
+          "expr": "slurm_queue_timeout != 0",
           "hide": false,
           "instant": false,
           "legendFormat": "timeout",
@@ -1190,7 +1206,7 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
-          "expr": "suspended",
+          "expr": "slurm_queue_suspended != 0",
           "hide": false,
           "instant": false,
           "legendFormat": "suspended",
@@ -1201,6 +1217,7 @@
       "title": "JobQueue",
       "transformations": [
         {
+          "disabled": true,
           "id": "joinByField",
           "options": {
             "mode": "outer"
@@ -1225,7 +1242,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -1234,7 +1251,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -1253,6 +1270,7 @@
           "links": [],
           "mappings": [],
           "min": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1308,30 +1326,6 @@
                 }
               }
             ]
-          },
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "{__name__=\"slurm_user_jobs_running\", exporter=\"slurm\", job=\"file_sd\", luna_group=\"controller\", user=\"root\"}"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
           }
         ]
       },
@@ -1341,8 +1335,7 @@
         "x": 11,
         "y": 23
       },
-      "id": 40,
-      "links": [],
+      "id": 42,
       "options": {
         "legend": {
           "calcs": [
@@ -1365,13 +1358,14 @@
           },
           "editorMode": "code",
           "expr": "slurm_user_jobs_running",
+          "format": "time_series",
           "instant": false,
           "interval": "",
           "legendFormat": "{{user}}",
           "refId": "A"
         }
       ],
-      "title": "Running Jobs per Users",
+      "title": "Running Jobs per User",
       "type": "timeseries"
     },
     {
@@ -1389,7 +1383,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -1398,7 +1392,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -1417,6 +1411,7 @@
           "links": [],
           "mappings": [],
           "min": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1487,7 +1482,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -1496,7 +1491,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -1515,11 +1510,13 @@
           "links": [],
           "mappings": [],
           "min": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1613,8 +1610,7 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "trixprometheus"
+        "type": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1627,7 +1623,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
@@ -1636,7 +1632,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -1655,11 +1651,13 @@
           "links": [],
           "mappings": [],
           "min": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1669,48 +1667,7 @@
           },
           "unit": "short"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byValue",
-              "options": {
-                "op": "gte",
-                "reducer": "allIsZero",
-                "value": 0
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": true,
-                  "tooltip": true,
-                  "viz": false
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byValue",
-              "options": {
-                "op": "gte",
-                "reducer": "allIsNull",
-                "value": 0
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": true,
-                  "tooltip": true,
-                  "viz": false
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -1718,7 +1675,7 @@
         "x": 17,
         "y": 31
       },
-      "id": 42,
+      "id": 60,
       "options": {
         "legend": {
           "calcs": [
@@ -1739,16 +1696,14 @@
           "datasource": {
             "type": "prometheus"
           },
-          "editorMode": "code",
-          "expr": "slurm_account_jobs_pending",
-          "format": "time_series",
+          "expr": "slurm_user_jobs_pending != 0",
           "instant": false,
           "interval": "",
-          "legendFormat": "{{account}}",
+          "legendFormat": "{{user}}",
           "refId": "A"
         }
       ],
-      "title": "Pending Jobs per Account",
+      "title": "Pending Jobs per Users",
       "type": "timeseries"
     },
     {
@@ -1789,7 +1744,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1865,7 +1821,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1927,7 +1884,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2059,7 +2017,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 41
+            "y": 46
           },
           "id": 4,
           "links": [],
@@ -2166,7 +2124,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 41
+            "y": 46
           },
           "id": 3,
           "links": [],
@@ -2275,7 +2233,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 48
+            "y": 53
           },
           "id": 9,
           "links": [],
@@ -2340,7 +2298,7 @@
             "h": 6,
             "w": 6,
             "x": 12,
-            "y": 48
+            "y": 53
           },
           "id": 34,
           "links": [],
@@ -2458,7 +2416,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 42
+            "y": 60
           },
           "id": 28,
           "options": {
@@ -2560,7 +2518,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 42
+            "y": 60
           },
           "id": 30,
           "options": {
