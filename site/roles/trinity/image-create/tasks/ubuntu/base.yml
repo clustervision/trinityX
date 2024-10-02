@@ -10,17 +10,20 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+- name: Gather debootstrap version
+  shell: "debootstrap --version | awk '{print $2}'"
+  register: debootstrap_version
+
 - name: Copy missing debootstrap files if they don't exist
   copy:
     src: "files/ubuntu/{{ item }}"
     dest: "/usr/share/debootstrap/scripts/"
     mode: 0755
-    force: false
   with_items:
     - focal
     - jammy
     - noble
-
+  when: debootstrap_version.stdout.startswith('1.0.136') or debootstrap_version.stdout.startswith('1.0.137')
   
 
 - name: Build basic Ubuntu image
