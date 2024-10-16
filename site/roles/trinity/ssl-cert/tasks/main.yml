@@ -95,12 +95,17 @@
     when: 
       - ha | default(False)
 
+  - name: Fetch list of private keys
+    find:
+      paths: "{{ ssl_cert_path }}"
+      patterns: '*.key'
+    register: ssl_private_keys
+
   - name: Restrict access permissions to the private keys
     file:
       path: '{{ item }}'
       mode: 0640
-    with_fileglob:
-      - '{{ ssl_cert_path }}/*.key'
+    with_items: "{{ ssl_private_keys.files }}"
 
   - name: Update ownership of the certificates
     file:
