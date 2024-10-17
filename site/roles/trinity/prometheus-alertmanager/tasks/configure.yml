@@ -3,6 +3,7 @@
 # -- start sync
 - name: Copy prometheus password from sync
   copy:
+    remote_src: true
     src: '{{ trix_sync }}/prometheus/{{ prometheus_alertmanager_auth.credentials_file | basename }}'
     dest: '{{ prometheus_alertmanager_auth.credentials_file }}'
   when: 
@@ -40,6 +41,7 @@
 
   - name: Add prometheus password to sync
     copy:
+      remote_src: true
       src: '{{ prometheus_alertmanager_auth.credentials_file }}'
       dest: '{{ trix_sync }}//prometheus/'
       mode: 0640

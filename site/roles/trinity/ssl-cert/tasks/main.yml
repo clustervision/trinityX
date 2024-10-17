@@ -41,6 +41,7 @@
 # -- start sync
 - name: Copy cluster CA certificate from sync
   copy:
+    remote_src: true
     src: '{{ trix_sync }}/ssl/{{ item }}'
     dest: '{{ ssl_cert_path }}'
   with_items:
@@ -103,7 +104,7 @@
 
   - name: Restrict access permissions to the private keys
     file:
-      path: '{{ item }}'
+      path: '{{ item.path }}'
       mode: 0640
     with_items: "{{ ssl_private_keys.files }}"
 
@@ -128,6 +129,7 @@
 
   - name: Add CA certificate to sync
     copy:
+      remote_src: true
       src: '{{ ssl_cert_path }}/{{ item }}'
       dest: '{{ trix_sync }}/ssl/{{ item }}'
       mode: 0640
@@ -143,6 +145,7 @@
 
 - name: Add CA certificate to default trust store
   copy:
+    remote_src: true
     src: '{{ ssl_cert_path }}/cluster-ca.crt'
     dest: '/etc/pki/ca-trust/source/anchors/cluster-ca.crt'
   register: cert_copy
