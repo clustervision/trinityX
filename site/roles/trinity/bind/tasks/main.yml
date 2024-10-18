@@ -10,21 +10,20 @@
   delay: "{{ rpm_delay | default(15) }}"
 
 - block:
-    - name: Selinux fcontext on files
-      sefcontext:
-        target: "{{ bind_db_path }}(/.*)?"
-        setype: named_zone_t
+  - name: Selinux fcontext on files
+    sefcontext:
+      target: "{{ bind_db_path }}(/.*)?"
+      setype: named_zone_t
 
-    - name: Selinux permissions for {{ bind_db_path }}/data
-      sefcontext:
-        target: "{{ bind_db_path }}/data(/.*)?"
-        setype: named_cache_t
+  - name: Selinux permissions for {{ bind_db_path }}/data
+    sefcontext:
+      target: "{{ bind_db_path }}/data(/.*)?"
+      setype: named_cache_t
 
-    - name: Selinux  permissions for {{ bind_db_path }}/dynamic
-      sefcontext:
-        target: "{{ bind_db_path }}/dynamic(/.*)?"
-        setype: named_cache_t
-  when: not ansible_virtualization_type=="docker"
+  - name: Selinux  permissions for {{ bind_db_path }}/dynamic
+    sefcontext:
+      target: "{{ bind_db_path }}/dynamic(/.*)?"
+      setype: named_cache_t
 
 - name: Ensure {{ bind_db_path }} exists
   file:
@@ -103,7 +102,6 @@
     src: "resolv.conf.j2"
     dest: "/etc/resolv.conf"
     backup: "yes"
-  when: not ansible_virtualization_type=="docker"
 
 # - name: Check if the directory exists
 #  stat:
@@ -129,20 +127,19 @@
     enabled: "yes"
 
 - block:
-    - name: Copy default zones to {{ bind_db_path }}
-      synchronize:
-        src: /var/named/
-        dest: "{{ bind_db_path }}"
-      when: not ansible_virtualization_type=="docker"
-    #  creates: "{{ bind_db_path }}/named.empty"
-    # - name: Copy default zones to {{ bind_db_path }}
-    #  shell: rsync -raW -AX /var/named/* {{ bind_db_path }}
-    #  args:
-    #    creates: "{{ bind_db_path }}/named.empty"
+  - name: Copy default zones to {{ bind_db_path }}
+    synchronize:
+      src: /var/named/
+      dest: "{{ bind_db_path }}"
+  #  creates: "{{ bind_db_path }}/named.empty"
+  # - name: Copy default zones to {{ bind_db_path }}
+  #  shell: rsync -raW -AX /var/named/* {{ bind_db_path }}
+  #  args:
+  #    creates: "{{ bind_db_path }}/named.empty"
 
-    - name: Start named service
-      service:
-        name: named
-        state: started
+  - name: Start named service
+    service:
+      name: named
+      state: started
 
 #  when: primary | default(True)

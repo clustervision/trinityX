@@ -1,5 +1,6 @@
 ---
 - hosts: controllers
+  serial: 1
 
   # List of roles to apply to the controllers, in the order in which they will run.
   # NOTE: These and their default configurations can be found in the "roles/"
@@ -250,16 +251,6 @@
           criteria: startswith
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
       tags: rsyslog
-
-    #  ----------
-    # - role: trinity/docker-registry
-    #   when: enable_docker
-    #   docker_registry_path: '{{ trix_local }}/docker-registry'
-    #   docker_ssl_path: '{{ ssl_cert_path }}'
-    #   docker_ssl_cert: '{{ ansible_fqdn }}.crt'
-    #   docker_ssl_key: '{{ ansible_fqdn }}.key'
-    #   tags: docker-registry
-    #  ------------
 
     - role: trinity/aria2c
       tags: aria2c

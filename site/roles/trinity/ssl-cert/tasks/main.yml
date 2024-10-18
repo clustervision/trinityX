@@ -30,10 +30,10 @@
         -nodes -sha512 -x509
         -days {{ ssl_cert_days }}
         -subj "/C=NL/L=Amsterdam/O=ClusterVision Solutions BV./CN=clustervision.com"
-        -out '{{ ssl_cert_path }}/cluster-ca.crt'
-        -keyout '{{ ssl_cert_path }}/cluster-ca.key'
+        -out '{{ ssl_ca_cert }}'
+        -keyout '{{ ssl_ca_key }}'
     args:
-      creates: '{{ ssl_cert_path }}/cluster-ca.crt'
+      creates: '{{ ssl_ca_cert }}'
   when: 
     - primary | default(True) or in_cloud | default(False)
     - on_controller | default(False)
@@ -41,11 +41,12 @@
 # -- start sync
 - name: Copy cluster CA certificate from sync
   copy:
+    remote_src: true
     src: '{{ trix_sync }}/ssl/{{ item }}'
     dest: '{{ ssl_cert_path }}'
   with_items:
-    - cluster-ca.crt
-    - cluster-ca.key
+    - '{{ ssl_ca_cert | basename }}'
+    - '{{ ssl_ca_key | basename }}'
   when:
     - not in_cloud | default(False)
     - not primary | default(False)
@@ -75,8 +76,8 @@
       openssl x509 -req
         -days {{ ssl_cert_days }}
         -in '{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr'
-        -CA '{{ ssl_cert_path }}/cluster-ca.crt'
-        -CAkey '{{ ssl_cert_path }}/cluster-ca.key'
+        -CA '{{ ssl_ca_cert }}'
+        -CAkey '{{ ssl_ca_key }}'
         -out '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
         -extensions req_ext
         -extfile '{{ ssl_cert_path }}/san.conf'
@@ -95,12 +96,17 @@
     when: 
       - ha | default(False)
 
+  - name: Fetch list of private keys
+    find:
+      paths: "{{ ssl_cert_path }}"
+      patterns: '*.key'
+    register: ssl_private_keys
+
   - name: Restrict access permissions to the private keys
     file:
-      path: '{{ item }}'
+      path: '{{ item.path }}'
       mode: 0640
-    with_fileglob:
-      - '{{ ssl_cert_path }}/*.key'
+    with_items: "{{ ssl_private_keys.files }}"
 
   - name: Update ownership of the certificates
     file:
@@ -123,12 +129,13 @@
 
   - name: Add CA certificate to sync
     copy:
+      remote_src: true
       src: '{{ ssl_cert_path }}/{{ item }}'
       dest: '{{ trix_sync }}/ssl/{{ item }}'
       mode: 0640
     with_items:
-      - cluster-ca.crt
-      - cluster-ca.key
+      - '{{ ssl_ca_cert | basename }}'
+      - '{{ ssl_ca_key | basename }}'
   when:
     - primary | default(True)
     - ha | default(False)
@@ -138,8 +145,9 @@
 
 - name: Add CA certificate to default trust store
   copy:
-    src: '{{ ssl_cert_path }}/cluster-ca.crt'
-    dest: '/etc/pki/ca-trust/source/anchors/cluster-ca.crt'
+    remote_src: true
+    src: '{{ ssl_ca_cert }}'
+    dest: '/etc/pki/ca-trust/source/anchors/{{ ssl_ca_cert | basename }}'
   register: cert_copy
   when: 
     - on_controller | default(False)

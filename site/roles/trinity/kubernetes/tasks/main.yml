@@ -29,6 +29,7 @@
 
   - name: Retrieve the certificate and keys from {{trix_sync}}/k3s
     ansible.builtin.copy:
+      remote_src: true
       src: "{{ trix_sync }}/k3s/tls"
       dest: "/var/lib/rancher/k3s/server/tls"
     when: ha and not primary | default(True)
@@ -40,6 +41,7 @@
   
   - name: Copy certificates and keys to {{trix_sync}}/k3s
     ansible.builtin.copy:
+      remote_src: true
       src: "/var/lib/rancher/k3s/server/tls"
       dest: "{{ trix_sync }}/k3s/tls"
     when: ha and primary | default(True)
@@ -47,9 +49,15 @@
 - name: Configure database for k3s
   when: ansible_connection != 'chroot'
   block:
+  - name: Ensure k3s mysql password store exists
+    file:
+      path: /etc/trinity/passwords/mysql
+      state: directory
+      mode: 0700
 
   - name: Retrieve k3s user password for kubernetes DB from {{ trix_sync }}/k3s
     ansible.builtin.copy:
+      remote_src: true
       src: "{{ trix_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
       dest: "/etc/trinity/passwords/mysql/{{ kubernetes_sql_user }}.txt"
     when: ha and not primary | default(True)
@@ -62,6 +70,7 @@
 
   - name: Copy k3s user password to {{ trix_sync }}/k3s
     ansible.builtin.copy:
+      remote_src: true
       src: "/etc/trinity/passwords/mysql/{{ kubernetes_sql_user }}.txt"
       dest: "{{ trix_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
     when: ha and primary | default(True)
@@ -174,6 +183,7 @@
 
     - name: Retrieve the token from {{ trix_sync }}/k3s/token
       ansible.builtin.copy:
+        remote_src: true
         src: "{{ trix_sync }}/k3s/token"
         dest: /var/lib/rancher/k3s/server/token
         mode: '0600'
@@ -202,6 +212,7 @@
 
     - name: "Copy the token to {{ trix_sync }}/k3s/token"
       ansible.builtin.copy:
+        remote_src: true
         src: /var/lib/rancher/k3s/server/token
         dest: "{{ trix_sync }}/k3s/token"
         mode: '0600'
@@ -209,6 +220,7 @@
 
     - name: "Copy the token to {{ kubernetes_k3s_agent_token_dir }}/token"
       ansible.builtin.copy:
+        remote_src: true
         src: /var/lib/rancher/k3s/server/token
         dest: "{{ kubernetes_k3s_agent_token_dir }}/token"
         mode: '0600'

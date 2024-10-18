@@ -1,10 +1,18 @@
 ---
 
 # -- start sync
-- name: Copy prometheus password from sync
-  copy:
-    src: '{{ trix_sync }}/prometheus/{{ prometheus_alertmanager_auth.credentials_file | basename }}'
-    dest: '{{ prometheus_alertmanager_auth.credentials_file }}'
+- block:
+  - name: Ensure prometheus password store exists
+    file:
+      path: '{{ prometheus_alertmanager_auth.credentials_file | dirname }}'
+      state: directory
+      mode: 0700
+
+  - name: Copy prometheus password from sync
+    copy:
+      remote_src: true
+      src: '{{ trix_sync }}/prometheus/{{ prometheus_alertmanager_auth.credentials_file | basename }}'
+      dest: '{{ prometheus_alertmanager_auth.credentials_file }}'
   when: 
     - not primary | default(False)
     - ha | default(False)
@@ -40,6 +48,7 @@
 
   - name: Add prometheus password to sync
     copy:
+      remote_src: true
       src: '{{ prometheus_alertmanager_auth.credentials_file }}'
       dest: '{{ trix_sync }}//prometheus/'
       mode: 0640
@@ -89,4 +98,3 @@
     port: "{{ prometheus_alertmanager_web_listen_port }}/tcp"
     permanent: "yes"
     immediate: "yes"
-  when: ansible_virtualization_type != 'docker'

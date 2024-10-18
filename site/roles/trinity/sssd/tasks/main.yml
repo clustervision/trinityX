@@ -39,14 +39,14 @@
 
 - name: Copy CA certificate
   copy:
+    remote_src: "{{ False if ansible_connection == 'chroot' else True }}"
     src: "{{ ssl_ca_cert }}"
-    dest: "{{ ca_certificate_path }}/cluster-ca.crt"
-  when: ssl_ca_cert is defined
+    dest: "{{ ca_certificate_path }}/{{ ssl_ca_cert | basename }}"
 
 - name: Adjust OpenLDAP client TLS configuration
   lineinfile:
     path: "{{ ldap_conf }}"
-    line: 'TLS_CACERT   {{ ca_certificate_path }}/cluster-ca.crt'
+    line: 'TLS_CACERT   {{ ca_certificate_path }}/{{ ssl_ca_cert | basename }}'
 
 - name: Enable sssd service
   systemd:
