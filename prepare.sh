@@ -94,9 +94,11 @@ if [ "$SELINUX" == "Disabled" ]; then
     add_message "If you continue, the configurable flag for enable_selinux will be set to false"
     add_message "This means you will continue without using SELinux"
     show_message
-    NO_SELINUX=$(get_confirmation n "Do you want to proceed without SELinux")
-    store_config 'NO_SELINUX' $NO_SELINUX
-    if [ "$NO_SELINUX" == "no" ] && [ ! "$GITLAB_CI" ]; then
+    if [ ! "$NO_SELINUX" ] && [ ! "$GITLAB_CI" ]; then
+      NO_SELINUX=$(get_confirmation n "Do you want to proceed without SELinux")
+      store_config 'NO_SELINUX' $NO_SELINUX
+    fi
+    if [ "$NO_SELINUX" == "no" ]; then
       add_message "Please have a look in /etc/selinux/config, configure SELINUX to permissive, reboot and try the installation again"
       show_message
       exit 1
@@ -110,7 +112,6 @@ else
     add_message "TrinityX currently only supports permissive SELinux"
     show_message
     PERM_SELINUX=$(get_confirmation y "Do you want to proceed with permissive SELinux")
-    store_config 'PERM_SELINUX' $PERM_SELINUX
     if [ "$PERM_SELINUX" == "no" ] && [ ! "$GITLAB_CI" ]; then
       add_message "Please reconsider having a look in /etc/selinux/config, configure SELINUX to permissive, setenforce 0 and try the installation again"
       show_message
