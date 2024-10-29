@@ -382,13 +382,25 @@
   register: init_selinux_state
   ignore_errors: true
 
-#- name: Set selinux flag based on fetched SELinux state
-#  set_fact:
-#     enable_selinux: "{{ False if init_selinux_state.stdout == 'Disabled' else enable_selinux }}"
+- name: Verify if selinux matches with preferred state
+  fail:
+    msg: "Selinux enabled, but the system needs a reboot first to take effect. Please re-run after reboot"
+  when:
+    - enable_selinux|default(True)
+    - init_selinux_state.stdout is defined
+    - init_selinux_state.stdout == 'Disabled'
+
+- name: Verify if selinux matches with preferred state
+  fail:
+    msg: "Selinux disabled, but the system needs a reboot first to take effect. Please re-run after reboot"
+  when:
+    - not enable_selinux|default(True)
+    - init_selinux_state.stdout is defined
+    - init_selinux_state.stdout == 'Enforcing'
 
 - name: Toggle selinux state
   selinux:
-    state: "{{ 'permissive' if enable_selinux and init_selinux_state.stdout != 'Disabled' else 'disabled' }}"
+    state: "{{ 'permissive' if enable_selinux else 'disabled' }}"
     policy: 'targeted'
 
 # Workaround the issue where NM is left running in the system
