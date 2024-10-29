@@ -91,7 +91,7 @@ fi
 SELINUX=$(getenforce)
 if [ "$SELINUX" == "Disabled" ]; then
     add_message "SELinux seems to be disabled on the controller"
-    add_message "If you continue, the configurable flag enable_selinux will be set to false"
+    add_message "If you continue, the flag enable_selinux will be set to false"
     add_message "This means you will continue without using SELinux"
     show_message
     if [ ! "$NO_SELINUX" ] && [ ! "$GITLAB_CI" ]; then
