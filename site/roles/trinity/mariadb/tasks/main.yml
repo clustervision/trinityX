@@ -21,12 +21,13 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-- name: Update SELinux context for {{ mariadb_db_path }}
+- name: Update Selinux context for {{ mariadb_db_path }}
   sefcontext:
     target: '{{ mariadb_db_path }}(/.*)?'
     setype: mysqld_db_t
     seuser: system_u
     state: present
+  when: enable_selinux|default(True)
 
 - name: Ensure {{ mariadb_db_path }} exists
   file:
