@@ -93,6 +93,7 @@ if [ "$SELINUX" == "Disabled" ]; then
     add_message "SELinux seems to be disabled on the controller"
     add_message "If you continue, the configurable flag for enable_selinux will be set to false"
     add_message "This means you will continue without using SELinux"
+    show_message
     NO_SELINUX=$(get_confirmation n "Do you want to proceed without SELinux")
     store_config 'NO_SELINUX' $NO_SELINUX
     if [ "$NO_SELINUX" == "no" ] && [ ! "$GITLAB_CI" ]; then
@@ -107,6 +108,7 @@ else
   else
     add_message "SELinux is currently not configured in permissive state"
     add_message "TrinityX currently only supports permissive SELinux"
+    show_message
     PERM_SELINUX=$(get_confirmation y "Do you want to proceed with permissive SELinux")
     store_config 'PERM_SELINUX' $PERM_SELINUX
     if [ "$PERM_SELINUX" == "no" ] && [ ! "$GITLAB_CI" ]; then
