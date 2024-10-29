@@ -377,9 +377,18 @@
     num_ctrl: "{{ all_ctrl_ip | length }}"
   tags: always
 
+- name: Fetch selinux state
+  shell: getenforce || echo 'Disabled'
+  register: init_selinux_state
+  ignore_errors: true
+
+#- name: Set selinux flag based on fetched SELinux state
+#  set_fact:
+#     enable_selinux: "{{ False if init_selinux_state.stdout == 'Disabled' else enable_selinux }}"
+
 - name: Toggle selinux state
   selinux:
-    state: '{{ "permissive" if enable_selinux else "disabled" }}'
+    state: '{{ "permissive" if enable_selinux and init_selinux_state.stdout != 'Disabled' else "disabled" }}'
     policy: 'targeted'
 
 # Workaround the issue where NM is left running in the system
