@@ -216,8 +216,31 @@
 
   - debug:
       msg: 'all_ctrl_hostname: {{ all_ctrl_hostname }}'
+
+  - name: Collecting controller hostname information
+    include_tasks: find-hostname.yml
+    with_items: "{{ all_ctrl_hostname }}"
+    loop_control:
+      loop_var: inner_loop_var
+
+  - name: Verify controller hostname is configured
+    fail:
+      msg: "Current controller hostname does not match any configured in 'trix_ctrl1_hostname' or 'trix_ctrl2_hostname', ... Please set the hostname to match what is configured"
+    when: trix_this_ctrl_hostname is not defined or trix_this_ctrl_hostname == ""
+
+#    ansible_hostname
+#    loop: "{{ init_controller_array }}"
+#    when: vars['trix_ctrl' + item + '_hostname'] is defined
   when: ha | default(False)
   tags: always,ha
+
+- name: Verify controller hostname is configured
+  fail:
+    msg: "Current controller hostname does not match configured 'trix_ctrl1_hostname'. Please set the hostname to match what is configured"
+  when:
+    - not ha | default(False)
+    - trix_ctrl_hostname != ansible_hostname
+
 
 - block:
   - name: Adding cloud controllers hostnames
