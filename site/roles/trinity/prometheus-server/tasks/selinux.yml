@@ -8,7 +8,7 @@
   delay: 15
   when:
     - ansible_version.full is version('2.4', '>=')
-    - ansible_selinux.status == "enabled"
+    - enable_selinux|default(True)
 
 - name: Allow prometheus to bind to port in SELinux
   community.general.seport:
@@ -18,4 +18,4 @@
     state: present
   when:
     - ansible_version.full is version('2.4', '>=')
-    - ansible_selinux.status == "enabled"
+    - enable_selinux|default(True)

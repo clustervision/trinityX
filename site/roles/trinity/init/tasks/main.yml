@@ -216,8 +216,32 @@
 
   - debug:
       msg: 'all_ctrl_hostname: {{ all_ctrl_hostname }}'
+
+  - name: Collecting controller hostname information
+    include_tasks: find-hostname.yml
+    with_items: "{{ all_ctrl_hostname }}"
+    loop_control:
+      loop_var: inner_loop_var
+
+  - name: Verify controller hostname is configured
+    fail:
+      msg: "Current controller hostname does not match any configured in 'trix_ctrl1_hostname' or 'trix_ctrl2_hostname', ... Please set the hostname to match what is configured"
+    when: trix_this_ctrl_hostname is not defined or trix_this_ctrl_hostname == ""
+
+  - debug:
+      msg: 'Using {{ trix_this_ctrl_hostname }} as configured hostname'
+    when: trix_this_ctrl_hostname is defined
+
   when: ha | default(False)
   tags: always,ha
+
+- name: Verify controller hostname is configured
+  fail:
+    msg: "Current controller hostname does not match configured 'trix_ctrl1_hostname'. Please set the hostname to match what is configured"
+  when:
+    - not ha | default(False)
+    - trix_ctrl_hostname != ansible_hostname
+  tags: always
 
 - block:
   - name: Adding cloud controllers hostnames
@@ -377,9 +401,30 @@
     num_ctrl: "{{ all_ctrl_ip | length }}"
   tags: always
 
+- name: Fetch selinux state
+  shell: getenforce || echo 'Disabled'
+  register: init_selinux_state
+  ignore_errors: true
+
+- name: Verify if selinux matches with preferred state
+  fail:
+    msg: "Selinux enabled, but the system needs a reboot first to take effect. Please re-run after reboot"
+  when:
+    - enable_selinux|default(True)
+    - init_selinux_state.stdout is defined
+    - init_selinux_state.stdout == 'Disabled'
+
+- name: Verify if selinux matches with preferred state
+  fail:
+    msg: "Selinux disabled, but the system needs a reboot first to take effect. Please re-run after reboot"
+  when:
+    - not enable_selinux|default(True)
+    - init_selinux_state.stdout is defined
+    - init_selinux_state.stdout == 'Enforcing'
+
 - name: Toggle selinux state
   selinux:
-    state: '{{ "permissive" if enable_selinux else "disabled" }}'
+    state: "{{ 'permissive' if enable_selinux else 'disabled' }}"
     policy: 'targeted'
 
 # Workaround the issue where NM is left running in the system

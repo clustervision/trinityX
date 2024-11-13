@@ -83,10 +83,11 @@
   when: openldap_version is defined
 
 - block:
-    - name: Selinux fcontext on files
-      sefcontext:
-        target: "{{ openldap_server_conf_path }}(/.*)?"
-        setype: slapd_db_t
+  - name: Selinux fcontext on files
+    sefcontext:
+      target: "{{ openldap_server_conf_path }}(/.*)?"
+      setype: slapd_db_t
+  when: enable_selinux|default(True)
 
 - name: Hash OpenLDAP root password
   command: slappasswd -h {SSHA} -s {{ openldap_root_pwd }}
