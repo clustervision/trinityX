@@ -382,9 +382,9 @@
     command: "/tmp/resolv.sh {{ trix_ctrl_external_ip }} {{ trix_dns_forwarders | default([]) | first }}"
     register: trix_resolved_host_fqdn
     ignore_errors: true
-    when:
-      - trix_ctrl_external_ip is defined
+    when: trix_ctrl_external_ip is defined
 
+  - name: Setting trix_external_fqdn
     set_fact:
       trix_external_fqdn: "{{ trix_resolved_host_fqdn.stdout }}"
     when:
