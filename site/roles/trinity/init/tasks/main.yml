@@ -149,14 +149,6 @@
 
   - debug:
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}"
-
-  - name: Setting trix_external_fqdn
-    set_fact:
-      trix_external_fqdn: '{{ ansible_fqdn }}'
-    when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
-
-  - debug:
-      msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
   tags: always
 
 
@@ -335,6 +327,7 @@
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
+
 - block:
   - block:
     - name: Trying to figure out external interface
@@ -377,6 +370,53 @@
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
+
+- block:
+  - name: Copy resolv.sh script to /tmp
+    copy:
+      src: 'resolve.sh'
+      dest: '/tmp/resolve.sh'
+      mode: 0755
+
+  - name: Resolving trix_external_fqdn
+    command: "/tmp/resolve.sh {{ trix_ctrl_external_ip }} {{ trix_dns_forwarders | default([]) | first }}"
+    register: trix_resolved_host_fqdn
+    ignore_errors: true
+    when: trix_ctrl_external_ip is defined
+
+  - name: Setting trix_external_fqdn
+    set_fact:
+      trix_external_fqdn: "{{ trix_resolved_host_fqdn.stdout }}"
+    when:
+      - (trix_external_fqdn is not defined) or trix_external_fqdn==""
+      - trix_resolved_host_fqdn is defined
+
+  - block:
+    - fail: 
+        msg: 'trix_external_fqdn is not configured and it could not be resolved. I can continue but OpenOndemand might not work properly'
+      ignore_errors: true
+
+    - name: Wait 10s before continuing with a default
+      wait_for:
+        timeout: 10
+
+    - name: Setting trix_external_fqdn
+      set_fact:
+        trix_external_fqdn: '{{ ansible_fqdn }}'
+      ignore_errors: true
+      when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
+  tags: always
+  when: 
+    - ansible_connection not in 'chroot' and on_controller
+    - (trix_external_fqdn is not defined) or trix_external_fqdn==""
+
+- debug:
+    msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
+  when: 
+    - ansible_connection not in 'chroot' and on_controller
+    - trix_external_fqdn is defined
+
+
 - block:
   - name: Resolve admin group
     getent:
@@ -401,26 +441,28 @@
     num_ctrl: "{{ all_ctrl_ip | length }}"
   tags: always
 
-- name: Fetch selinux state
-  shell: getenforce || echo 'Disabled'
-  register: init_selinux_state
-  ignore_errors: true
+- block:
+  - name: Fetch selinux state
+    shell: getenforce || echo 'Disabled'
+    register: init_selinux_state
+    ignore_errors: true
 
-- name: Verify if selinux matches with preferred state
-  fail:
-    msg: "Selinux enabled, but the system needs a reboot first to take effect. Please re-run after reboot"
-  when:
-    - enable_selinux|default(True)
-    - init_selinux_state.stdout is defined
-    - init_selinux_state.stdout == 'Disabled'
+  - name: Verify if selinux matches with preferred state
+    fail:
+      msg: "Selinux enabled, but the system needs a reboot first to take effect. Please re-run after reboot"
+    when:
+      - enable_selinux|default(True)
+      - init_selinux_state.stdout is defined
+      - init_selinux_state.stdout == 'Disabled'
 
-- name: Verify if selinux matches with preferred state
-  fail:
-    msg: "Selinux disabled, but the system needs a reboot first to take effect. Please re-run after reboot"
-  when:
-    - not enable_selinux|default(True)
-    - init_selinux_state.stdout is defined
-    - init_selinux_state.stdout == 'Enforcing'
+  - name: Verify if selinux matches with preferred state
+    fail:
+      msg: "Selinux disabled, but the system needs a reboot first to take effect. Please re-run after reboot"
+    when:
+      - not enable_selinux|default(True)
+      - init_selinux_state.stdout is defined
+      - init_selinux_state.stdout == 'Enforcing'
+  when: ansible_connection not in 'chroot' and on_controller
 
 - name: Toggle selinux state
   selinux:
