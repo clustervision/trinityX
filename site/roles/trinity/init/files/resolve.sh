@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ ! "$(which host)" ]; then
-	yum -y install bind-utils 1>&2
+	dnf -y install bind-utils 1>&2
 fi
 
 if [ ! "$(which host)" ]; then
