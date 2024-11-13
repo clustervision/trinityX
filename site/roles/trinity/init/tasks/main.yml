@@ -149,14 +149,6 @@
 
   - debug:
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}"
-
-  - name: Setting trix_external_fqdn
-    set_fact:
-      trix_external_fqdn: '{{ ansible_fqdn }}'
-    when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
-
-  - debug:
-      msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
   tags: always
 
 
@@ -335,6 +327,7 @@
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
 
+
 - block:
   - block:
     - name: Trying to figure out external interface
@@ -376,6 +369,47 @@
       - trix_ctrl_external_network is defined
   tags: always
   when: ansible_connection not in 'chroot' and on_controller
+
+
+- block:
+  - name: Resolving trix_external_fqdn
+    set_fact:
+      trix_external_fqdn: '{{ lookup('community.general.dig', trix_ctrl_external_ip) }}'
+    when:
+      - (trix_external_fqdn is not defined) or trix_external_fqdn==""
+      - trix_ctrl_external_ip is defined 
+    ignore_errors: true
+
+  - name: Resolving trix_external_fqdn using external name servers
+    set_fact:
+      trix_external_fqdn: '{{ lookup('community.general.dig', trix_ctrl_external_ip, '@' + trix_dns_forwarders | first) }}'
+    when:
+      - (trix_external_fqdn is not defined) or trix_external_fqdn==""
+      - trix_dns_forwarders is defined
+      - trix_dns_forwarders | length > 0
+      - trix_ctrl_external_ip is defined 
+    ignore_errors: true
+
+  - fail: 
+     msg: 'trix_external_fqdn is not defined or configured and it could not be resolved. I can continue but OOD might not work properly'
+    when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
+
+  - name: Wait 10s before continuing with a default
+    wait_for:
+      timeout: 10
+    when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
+
+  - name: Setting trix_external_fqdn
+    set_fact:
+      trix_external_fqdn: '{{ ansible_fqdn }}'
+    ignore_errors: true
+    when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
+
+  - debug:
+      msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
+  tags: always
+  when: ansible_connection not in 'chroot' and on_controller
+
 
 - block:
   - name: Resolve admin group
