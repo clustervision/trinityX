@@ -32,5 +32,6 @@ if [ "$RES" ]; then
 fi
 
 echo "could not resolve $HOST" 1>&2
-exit 1
+# yes it should be non-zero exit, but ansible console output will be cluttered
+exit
 
