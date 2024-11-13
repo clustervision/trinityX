@@ -372,23 +372,24 @@
 
 
 - block:
-  - name: Resolving trix_external_fqdn
-    set_fact:
-      trix_external_fqdn: "{{ lookup('community.general.dig', trix_ctrl_external_ip) }}"
-    when:
-      - (trix_external_fqdn is not defined) or trix_external_fqdn==""
-      - trix_ctrl_external_ip is defined 
-    ignore_errors: true
+  - name: Copy resolv.sh script to /tmp
+    copy:
+      src: 'resolv.sh'
+      dest: '/tmp/resolv.sh'
+      mode: 0755
 
-  - name: Resolving trix_external_fqdn using external name servers
+  - name: Resolving trix_external_fqdn
+    command: "/tmp/resolv.sh {{ trix_ctrl_external_ip }} {{ trix_dns_forwarders | default([]) | first }}"
+    register: trix_resolved_host_fqdn
+    ignore_errors: true
+    when:
+      - trix_ctrl_external_ip is defined
+
     set_fact:
-      trix_external_fqdn: "{{ lookup('community.general.dig', trix_ctrl_external_ip, '@' + trix_dns_forwarders | first) }}"
+      trix_external_fqdn: "{{ trix_resolved_host_fqdn.stdout }}"
     when:
       - (trix_external_fqdn is not defined) or trix_external_fqdn==""
-      - trix_dns_forwarders is defined
-      - trix_dns_forwarders | length > 0
-      - trix_ctrl_external_ip is defined 
-    ignore_errors: true
+      - trix_resolved_host_fqdn is defined
 
   - fail: 
       msg: 'trix_external_fqdn is not defined or configured and it could not be resolved. I can continue but OOD might not work properly'
