@@ -95,10 +95,12 @@
   block:
     - name: "Download k3s binary"
       ansible.builtin.get_url:
-        url: "{{ kubernetes_k3s_url }}"
+        url: "{{ item.url }}"
         dest: "{{ kubernetes_install_dir }}/k3s"
         mode: '0755'
         validate_certs: false
+      with_items: "{{ kubernetes_k3s_url }}"
+      where: item.arch == trix_arch
 
     - name: "Ensure /etc/bash_completion.d exists"
       file:
@@ -117,16 +119,19 @@
   block:
     - name: "Download helm binary"
       ansible.builtin.unarchive:
-        src: "{{ kubernetes_helm_url }}"
+        src: "{{ item.url }}"
         dest: "{{ kubernetes_install_dir }}"
         remote_src: true
         validate_certs: false
         mode: '0755'
         include:
           - linux-amd64/helm
+          - linux-arm64/helm
         extra_opts:
           - --transform
-          - s#^linux-amd64/helm#helm#
+          - s#^linux-(amd64|arm64)/helm#helm#
+      with_items: "{{ kubernetes_helm_url }}"
+      when: item.arch == trix_arch
 
     - name: "Ensure /etc/bash_completion.d exists"
       file:
