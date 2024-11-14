@@ -1,0 +1,39 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=Prometheus slurm-job Exporter
+After=network-online.target
+StartLimitInterval=0
+
+[Service]
+Type=simple
+User={{ prometheus_slurm_job_exporter_system_user }}
+Group={{ prometheus_slurm_job_exporter_system_group }}
+ExecStart={{ prometheus_slurm_job_exporter_binary_install_dir }}/prometheus-slurm-job-exporter \
+    --web.listen-address={{ prometheus_slurm_job_exporter_web_listen_host }}:{{ prometheus_slurm_job_exporter_web_listen_port }}
+
+SyslogIdentifier=prometheus_slurm_job_exporter
+Restart=always
+RestartSec=1
+{% if prometheus_slurm_job_exporter_log_dir is defined %}
+StandardOutput=append:{{prometheus_slurm_job_exporter_log_dir}}/prometheus_slurm_job_exporter.log
+{% endif %}
+PrivateTmp=yes
+{% for m in (ansible_mounts|default([])) if m.mount == '/home' %}
+ProtectHome=read-only
+{% else %}
+ProtectHome=yes
+{% endfor %}
+NoNewPrivileges=yes
+
+{% if prometheus_slurm_job_exporter_systemd_version | int >= 232 %}
+ProtectSystem=strict
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=yes
+{% else %}
+ProtectSystem=full
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target
