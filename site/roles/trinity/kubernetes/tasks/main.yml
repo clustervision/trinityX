@@ -125,11 +125,10 @@
         validate_certs: false
         mode: '0755'
         include:
-          - linux-amd64/helm
-          - linux-arm64/helm
+          - "linux-{{ item.filter }}/helm"
         extra_opts:
           - --transform
-          - s#^linux-(amd64|arm64)/helm#helm#
+          - "s#^linux-{{ item.filter }}/helm#helm#"
       with_items: "{{ kubernetes_helm_url }}"
       when: item.arch == trix_arch
 
