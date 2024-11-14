@@ -15,11 +15,39 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 9,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [
+        "home"
+      ],
+      "targetBlank": false,
+      "title": "Home",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [
+        "dashboard"
+      ],
+      "targetBlank": false,
+      "title": "TrinityX Dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -1008,7 +1036,7 @@
           "refId": "B"
         }
       ],
-      "title": "Mean Job Consumption",
+      "title": "Mean Ideal Job Consumption",
       "transformations": [],
       "type": "stat"
     },
@@ -1104,7 +1132,7 @@
           "refId": "B"
         }
       ],
-      "title": "Job Consumption",
+      "title": "Ideal Job Consumption",
       "transformations": [],
       "type": "timeseries"
     },
@@ -1119,7 +1147,18 @@
             "fixedColor": "#808080",
             "mode": "continuous-GrYlRd"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            }
+          ],
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -1197,7 +1236,7 @@
           "refId": "C"
         }
       ],
-      "title": "Amortized Job Consumption",
+      "title": "Mean Actual Job Consumption",
       "transformations": [
         {
           "id": "configFromData",
@@ -1343,7 +1382,7 @@
           "refId": "C"
         }
       ],
-      "title": "Amortized Job Consumption",
+      "title": "Actual Job Consumption",
       "transformations": [
         {
           "id": "configFromData",
@@ -1498,7 +1537,7 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_user_cpu_time{jobid=~\"$job_id\",hostname=~\"$hostname\"}[$__rate_interval:])) or vector(0)",
+          "expr": "sum(rate(slurm_job_user_cpu_time{jobid=~\"$job_id\",hostname=~\"$hostname\"}[$__rate_interval:])) ",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -1512,7 +1551,7 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_system_cpu_time{jobid=~\"$job_id\",hostname=~\"$hostname\"}[$__rate_interval:])) or vector(0)",
+          "expr": "sum(rate(slurm_job_system_cpu_time{jobid=~\"$job_id\",hostname=~\"$hostname\"}[$__rate_interval:]))",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -1567,7 +1606,6 @@
             }
           },
           "mappings": [],
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1727,7 +1765,6 @@
             }
           },
           "mappings": [],
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1873,7 +1910,6 @@
             }
           },
           "mappings": [],
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1979,12 +2015,16 @@
   "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "dashboard",
+    "slurm",
+    "system"
+  ],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -2017,14 +2057,10 @@
         "current": {
           "selected": true,
           "text": [
-            "673",
-            "674",
-            "675"
+            "All"
           ],
           "value": [
-            "673",
-            "674",
-            "675"
+            "$__all"
           ]
         },
         "datasource": {
@@ -2052,8 +2088,8 @@
       {
         "current": {
           "selected": false,
-          "text": "{} 0.2779453003524705 1731414758000",
-          "value": "{} 0.2779453003524705 1731414758000"
+          "text": "{} 0 1731583793000",
+          "value": "{} 0 1731583793000"
         },
         "datasource": {
           "type": "prometheus",
@@ -2078,13 +2114,13 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Slurm Jobs",
   "uid": "dfe8e0f3-30ae-4c5c-b4e3-17cdf8e09fa5",
-  "version": 48,
+  "version": 5,
   "weekStart": ""
 }
