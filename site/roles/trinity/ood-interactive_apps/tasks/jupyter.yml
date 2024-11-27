@@ -1,77 +1,73 @@
 ---
-
 - block:
-  - name: Create Python Module under {{ trix_modulefiles }}
+  - name: Create environment module for Jupyter Notebook Interactive App to load Python virtual environment
     template:
-      src: 'ood-python-module.j2'
-      dest: '{{ trix_shared }}/modulefiles/python'
+      src: 'ood-jupyter-python-module.j2'
+      dest: '{{ trix_shared }}/modulefiles/ood-jupyter-python'
       mode: '0644'
       owner: root
       group: root
 
-  - name: Git Clone Jupyter
+  - name: Clone git repository for Jupyter Notebook Interactive App
     git:
       repo: https://github.com/OSC/bc_example_jupyter.git
       dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
       force: true
 
-  - name: Set The Cluster Name
+  - name: Set cluster name for Jupyter Notebook Interactive App
     lineinfile:
       dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/form.yml"
       regexp: '^.*cluster: (.*)$'
       line: 'cluster: "{{ ood_portal_cluster_name }}"'
 
-  - name: Render submit rubby script
+  - name: Render submit script for Jupyter Notebook Interactive App
     template:
       src: 'submit.yml.erb'
       dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
 
-  - name: Creating Symlink for Jupyter Notebook
+  - name: Creating Symlink for Jupyter Notebook Interactive App
     file:
       src: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
       dest: "/var/www/ood/apps/sys/trinity_jupyter"
       state: link
-      mode: 0755
+      mode: 755
       owner: root
       group: root
-  when: 
-    - on_controller|default(False)
-    - ansible_connection not in 'chroot'
+  when:
+  - on_controller|default(False)
+  - ansible_connection not in 'chroot'
 
 - block:
-  - name: Install Jupyter Notebook Dependency
-    shell: "apt-get -y install python3-pip"
-    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-
-  - name: Install Jupyter Notebook Dependency
-    dnf:
-      disable_gpg_check: true
-      name: "python3-pip"
+  - name: Install python3-pip dependency for Jupyter Notebook
+    apt:
+      name: python3-pip
       state: present
-    when: ansible_facts['os_family'] == "RedHat"
-    retries: "{{ rpm_retries | default(3) }}"
-    delay: "{{ rpm_delay | default(15) }}"
+      update_cache: yes
+    when: ansible_facts['os_family'] == 'Debian'
 
-  - name: Upgrade Python3-pip Version to support Jupyter Notebook Installation
-    shell: "pip3 install --upgrade pip"
-    ignore_errors: true
-
-  - name: Uninstall clashing python packages
+  - name: Install python3-pip dependency for Jupyter Notebook
     dnf:
-      name: '{{ item }}'
-      state: removed
-    with_items:
-      - python3-packaging
-      - python3-requests
+      name: python3-pip
+      state: present
+      disable_gpg_check: true
     when: ansible_facts['os_family'] == "RedHat"
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
 
-  - name: Install Jupyter Notebook
-    shell: "pip3 install {{ item }}"
-    with_items:
+  - name: Create Python virtual environment for Jupyter Notebook
+    shell: "python3 -m venv /opt/ood-jupyter-python"
+    when: ansible_connection in 'chroot'
+
+  - name: Update pip
+    pip:
+      name: pip
+      state: latest
+      virtualenv: /opt/ood-jupyter-python
+
+  - name: Install pip packages dependencies for Jupyter Notebook
+    pip:
+      name:
       - notebook
       - ipyparallel
-    ignore_errors: true
+      virtualenv: /opt/ood-jupyter-python
   when: ansible_connection in 'chroot'
-
