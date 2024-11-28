@@ -1,13 +1,5 @@
 ---
 - block:
-  - name: Create environment module for Jupyter Notebook Interactive App to load Python virtual environment
-    template:
-      src: 'ood-jupyter-python-module.j2'
-      dest: '{{ trix_shared }}/modulefiles/ood-jupyter-python'
-      mode: '0644'
-      owner: root
-      group: root
-
   - name: Clone git repository for Jupyter Notebook Interactive App
     git:
       repo: https://github.com/OSC/bc_example_jupyter.git
@@ -23,16 +15,18 @@
       group: root
       mode: 755
 
-  - name: Set cluster name for Jupyter Notebook Interactive App
-    lineinfile:
-      dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/form.yml"
-      regexp: '^.*cluster: (.*)$'
-      line: 'cluster: "{{ ood_portal_cluster_name }}"'
+  - name: Render environment module for Jupyter Notebook Interactive App to load Python virtual environment
+    template:
+      src: 'jupyter/python-module.lua.j2'
+      dest: '{{ trix_shared }}/modulefiles/ood-jupyter-python.lua'
+      mode: '0644'
+      owner: root
+      group: root
 
   - name: Render submit script for Jupyter Notebook Interactive App
     template:
-      src: 'submit.yml.erb'
-      dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/submit.yml.erb"
+      src: 'jupyter/form.yml'
+      dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/form.yml"
 
   - name: Creating Symlink for Jupyter Notebook Interactive App
     file:
@@ -68,17 +62,3 @@
   - name: Create Python virtual environment for Jupyter Notebook
     shell: "python3 -m venv /opt/ood-jupyter-python"
     when: ansible_connection in 'chroot'
-
-  - name: Update pip
-    pip:
-      name: pip
-      state: latest
-      virtualenv: /opt/ood-jupyter-python
-
-  - name: Install pip packages dependencies for Jupyter Notebook
-    pip:
-      name:
-      - notebook
-      - ipyparallel
-      virtualenv: /opt/ood-jupyter-python
-  when: ansible_connection in 'chroot'
