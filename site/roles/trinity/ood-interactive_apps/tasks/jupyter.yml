@@ -13,7 +13,14 @@
       recurse: yes
       owner: root
       group: root
-      mode: 755
+      mode: u=rw,g=r,o=r,a-x+X
+
+  - name: Set permissions for template files
+    file:
+      path: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter/template"
+      state: directory
+      recurse: yes
+      mode: +x
 
   - name: Render environment module for Jupyter Notebook Interactive App to load Python virtual environment
     template:
@@ -33,9 +40,10 @@
       src: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_jupyter"
       dest: "/var/www/ood/apps/sys/trinity_jupyter"
       state: link
-      mode: 755
+      # force: yes
       owner: root
       group: root
+
   when:
   - on_controller|default(False)
   - ansible_connection not in 'chroot'
