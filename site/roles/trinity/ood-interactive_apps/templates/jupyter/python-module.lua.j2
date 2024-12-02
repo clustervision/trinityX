@@ -32,43 +32,44 @@ local function file_exists(file)
 end
 
 -- Check if the virtual environment exists by checking for 'bin/activate'
-if not file_exists(venv_activate_path) then
-    LmodMessage("The specified virtual environment does not exist. Creating it now...")
 
-    -- Create the parent directory for the virtual environment
-    local mkdir_cmd = "mkdir -p " .. pathJoin(user_home, ".trinity", "venvs")
-    if os.execute(mkdir_cmd) ~= 0 then
-        LmodError("Failed to create the parent directory: " .. pathJoin(user_home, ".trinity", "venvs"))
-    end
-
-    -- Create the virtual environment
-    local create_venv_cmd = "python3 -m venv " .. venv_path
-    local create_status = os.execute(create_venv_cmd)
-    if create_status ~= 0 then
-        LmodError("Failed to execute: " .. create_venv_cmd)
-    end
-
-    -- Verify the virtual environment was created by checking 'bin/activate'
-    if not file_exists(venv_activate_path) then
-        LmodError("Virtual environment creation failed. 'bin/activate' not found in: " .. venv_path)
-    end
-
-    -- Install Jupyter in the new virtual environment
-    LmodMessage("Installing Jupyter in the virtual environment...")
-    local pip_install_cmd = pathJoin(venv_path, "bin", "pip") .. " install --upgrade pip jupyter notebook ipyparallel"
-    if os.execute(pip_install_cmd) ~= 0 then
-        LmodError("Failed to install Jupyter in the virtual environment.")
-    end
-
-    LmodMessage("Virtual environment created and Jupyter installed successfully at: " .. venv_path)
-else
-    LmodMessage("The virtual environment already exists.")
-end
 
 -- Message on load and unload
 if (mode() == "load") then
-    source_sh("bash", venv_activate_path)
+    if not file_exists(venv_activate_path) then
+        LmodMessage("The specified virtual environment does not exist. Creating it now...")
+    
+        -- Create the parent directory for the virtual environment
+    
+        local mkdir_cmd = "mkdir -p " .. pathJoin(user_home, ".trinity", "venvs")
+        local mkdir_cmd_status = os.execute(mkdir_cmd) 
+        if mkdir_cmd_status == false then
+            LmodMessage("Failed to execute: " .. mkdir_cmd)
+        end
+    
+    
+        -- Create the virtual environment
+        
+        local create_venv_cmd = "/usr/bin/env python -m venv " .. venv_path
+        local create_status = os.execute(create_venv_cmd)
+        if create_status == false then
+            LmodError("Failed to execute: " .. create_venv_cmd)
+        end
+
+        source_sh("bash", venv_activate_path, "activate")
+        LmodMessage("The OOD Jupyter virtual environment has been activated.")
+
+        LmodMessage("Installing Jupyter in the virtual environment...")
+        local pip_install_cmd = 'pip install --upgrade pip jupyter notebook ipyparallel 1>&2'
+        local pip_install_cmd_status = os.execute(pip_install_cmd)
+        if pip_install_cmd_status == false then
+            LmodError("Failed to execute: " .. pip_install_cmd)
+        end
+    else
+
+    source_sh("bash", venv_activate_path, "activate")
     LmodMessage("The OOD Jupyter virtual environment has been activated.")
+    end
 end
 
 if (mode() == "unload") then
