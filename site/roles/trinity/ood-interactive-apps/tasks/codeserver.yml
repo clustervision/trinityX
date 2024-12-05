@@ -5,23 +5,23 @@
   - name: Git Clone Code Server
     git:
       repo: https://github.com/OSC/bc_osc_codeserver.git
-      dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_codeserver"
+      dest: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver"
       force: true
 
   - name: Set The Cluster Name
     lineinfile:
-      dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_codeserver/form.yml.erb"
+      dest: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver/form.yml.erb"
       regexp: '^.*cluster: (.*)$'
-      line: 'cluster: "{{ ood_portal_cluster_name }}"'
+      line: 'cluster: "{{ ood_cluster_name }}"'
 
   - name: Correct The Description
     template:
         src: 'manifest.yml'
-        dest: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_codeserver/manifest.yml"
+        dest: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver/manifest.yml"
 
   - name: Creating Symlink for Code Server
     file:
-      src: "{{ trix_ood }}/{{ ood_portal_version }}/trinity_codeserver"
+      src: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver"
       dest: "/var/www/ood/apps/sys/trinity_codeserver"
       state: link
       mode: 0755

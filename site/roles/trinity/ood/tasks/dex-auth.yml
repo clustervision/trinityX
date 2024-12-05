@@ -2,12 +2,12 @@
   package:
     name: "{{ item }}"
     state: "present"
-  loop: "{{ ood_portal_dex_packages }}"
+  loop: "{{ ood_dex_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
 - name: Enable ondemand-dex service on startup
   service:
     name: ondemand-dex
-    enabled: "{{ ood_portal_auth_provider == 'dex' }}"
-    state: "{{ 'started' if ood_portal_auth_provider == 'dex' else 'stopped'}}"
+    enabled: "{{ ood_auth_provider == 'dex' }}"
+    state: "{{ 'started' if ood_auth_provider == 'dex' else 'stopped'}}"
