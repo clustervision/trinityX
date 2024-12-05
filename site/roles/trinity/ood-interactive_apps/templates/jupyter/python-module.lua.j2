@@ -1,0 +1,78 @@
+help([[
+This module activates a user-specific Python virtual environment for Jupyter.
+
+Virtual environment path: ~/.trinity/venvs/ood-jupyter
+]])
+
+-- Module Metadata
+whatis("Name: User-Specific OOD Jupyter Virtual Environment")
+whatis("Version: 1.0")
+whatis("Category: Python")
+whatis("Description: Activates a user-specific Python virtual environment for Jupyter.")
+whatis("URL: https://jupyter.org/")
+
+-- Resolve the user's home directory and set the venv path
+local user_home = os.getenv("HOME")
+if not user_home then
+    LmodError("Unable to determine the user's home directory. Ensure $HOME is set.")
+end
+
+local venv_path = pathJoin(user_home, ".trinity", "venvs", "ood-jupyter")
+local venv_activate_path = pathJoin(venv_path, "bin", "activate")
+
+-- Function to check if a file exists
+local function file_exists(file)
+    local f = io.open(file, "r")
+    if f then
+        f:close()
+        return true
+    else
+        return false
+    end
+end
+
+-- Check if the virtual environment exists by checking for 'bin/activate'
+
+
+-- Message on load and unload
+if (mode() == "load") then
+    if not file_exists(venv_activate_path) then
+        LmodMessage("The specified virtual environment does not exist. Creating it now...")
+    
+        -- Create the parent directory for the virtual environment
+    
+        local mkdir_cmd = "mkdir -p " .. pathJoin(user_home, ".trinity", "venvs")
+        local mkdir_cmd_status = os.execute(mkdir_cmd) 
+        if mkdir_cmd_status == false then
+            LmodMessage("Failed to execute: " .. mkdir_cmd)
+        end
+    
+    
+        -- Create the virtual environment
+        
+        local create_venv_cmd = "/usr/bin/env python -m venv " .. venv_path
+        local create_status = os.execute(create_venv_cmd)
+        if create_status == false then
+            LmodError("Failed to execute: " .. create_venv_cmd)
+        end
+
+        source_sh("bash", venv_activate_path, "activate")
+        LmodMessage("The OOD Jupyter virtual environment has been activated.")
+
+        LmodMessage("Installing Jupyter in the virtual environment...")
+        local pip_install_cmd = 'pip install --upgrade pip jupyter notebook ipyparallel 1>&2'
+        local pip_install_cmd_status = os.execute(pip_install_cmd)
+        if pip_install_cmd_status == false then
+            LmodError("Failed to execute: " .. pip_install_cmd)
+        end
+    else
+
+    source_sh("bash", venv_activate_path, "activate")
+    LmodMessage("The OOD Jupyter virtual environment has been activated.")
+    end
+end
+
+if (mode() == "unload") then
+    source_sh("bash", venv_activate_path, "deactivate")
+    LmodMessage("The OOD Jupyter virtual environment has been deactivated.")
+end
