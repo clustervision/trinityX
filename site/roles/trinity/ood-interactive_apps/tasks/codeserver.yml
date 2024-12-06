@@ -38,7 +38,7 @@
 
   - name: Install Code Server 4.89.0
     dnf:
-      name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-amd64.rpm"
+      name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-{{ ood_interactive_apps_arch }}.rpm"
       disable_gpg_check: true
       state: present
     retries: "{{ rpm_retries | default(3) }}"
@@ -59,13 +59,13 @@
 
   - name: Download Code Server 4.89.0 to temp folder
     get_url:
-      url: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_amd64.deb"
+      url: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_{{ ood_interactive_apps_arch }}.deb"
       validate_certs: false
-      dest: "{{ temp_dir.path }}/code-server_4.89.0_amd64.deb"
+      dest: "{{ temp_dir.path }}/code-server_4.89.0_{{ ood_interactive_apps_arch }}.deb"
 
   - name: Install Code Server 4.89.0
     apt:
-      deb:  "{{ temp_dir.path }}/code-server_4.89.0_amd64.deb"
+      deb:  "{{ temp_dir.path }}/code-server_4.89.0_{{ ood_interactive_apps_arch }}.deb"
       state: present
 
   - name: Install Code Server DEB 4.89.0 Dependencies
