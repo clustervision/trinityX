@@ -7,6 +7,7 @@
       repo: https://github.com/OSC/bc_osc_codeserver.git
       dest: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver"
       force: true
+      version: v0.9.0
 
   - name: Set The Cluster Name
     lineinfile:
@@ -16,8 +17,11 @@
 
   - name: Correct The Description
     template:
-        src: 'manifest.yml'
-        dest: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver/manifest.yml"
+      src: 'manifest.yml'
+      dest: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver/manifest.yml"
+      owner: root
+      group: root
+      mode: 0644
 
   - name: Creating Symlink for Code Server
     file:
@@ -68,8 +72,8 @@
       deb:  "{{ temp_dir.path }}/code-server_4.89.0_{{ ood_interactive_apps_arch }}.deb"
       state: present
 
-  - name: Install Code Server DEB 4.89.0 Dependencies
-    shell: "apt-get install -yf"
+  # - name: Install Code Server DEB 4.89.0 Dependencies
+  #   shell: "apt-get install -yf"
 
   when: 
     - ansible_connection in 'chroot'
