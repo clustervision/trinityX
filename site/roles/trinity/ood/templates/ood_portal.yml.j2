@@ -18,29 +18,11 @@ maintenance_ip_allowlist:
 
 pun_stage_cmd: 'sudo /opt/ood/nginx_stage/sbin/nginx_stage'
 
-{% if ood_interactive_apps %}
+
 host_regex: '[\w.-]+'
 node_url: '/node'
 rnode_uri: '/rnode'
-custom_vhost_directives:
-  - |
-    <LocationMatch "^/node/(?<host>[\w.-]+\.cluster)/(?<port>\d+)">
-          AuthType openid-connect
-          Require valid-user
 
-          # ProxyPassReverse implementation
-          Header edit Location "^[^/]+//[^/]+" ""
-
-          # ProxyPassReverseCookieDomain implemenation
-          Header edit* Set-Cookie ";\s*(?i)Domain[^;]*" ""
-
-          # ProxyPassReverseCookiePath implementation
-          Header edit* Set-Cookie ";\s*(?i)Path[^;]*" ""
-          Header edit  Set-Cookie "^([^;]+)" "$1; Path=/node/%{MATCH_HOST}e/%{MATCH_PORT}e"
-
-          LuaHookFixups node_proxy.lua node_proxy_handler
-      </LocationMatch>
-{% endif %}
 
 {% if ood_auth_provider == 'dex' %}
 dex_uri: /dex

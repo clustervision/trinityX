@@ -1,31 +1,37 @@
 ---
 
 - block:
+  - name: Create Code Server interactive app directory
+    file: 
+      path: "{{ trix_ood }}/latest/trinity_codeserver"
+      state: directory
 
-  - name: Git Clone Code Server
-    git:
-      repo: https://github.com/OSC/bc_osc_codeserver.git
-      dest: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver"
-      force: true
-      version: v0.9.0
+  - name: Download Code Server interactive app
+    unarchive:
+      src: "{{ ood_interactive_apps_codeserver_url }}"
+      dest: "{{ trix_ood }}/latest/trinity_codeserver"
+      remote_src: true
+      extra_opts:
+        - --transform
+        - s#bc_osc_codeserver-[a-zA-Z0-9.]*/#/#g
 
   - name: Set The Cluster Name
     lineinfile:
-      dest: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver/form.yml.erb"
+      dest: "{{ trix_ood }}/latest/trinity_codeserver/form.yml.erb"
       regexp: '^.*cluster: (.*)$'
       line: 'cluster: "{{ ood_cluster_name }}"'
 
   - name: Correct The Description
     template:
-      src: 'manifest.yml'
-      dest: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver/manifest.yml"
+      src: 'codeserver/manifest.yml'
+      dest: "{{ trix_ood }}/latest/trinity_codeserver/manifest.yml"
       owner: root
       group: root
       mode: 0644
 
   - name: Creating Symlink for Code Server
     file:
-      src: "{{ trix_ood }}/{{ ood_version }}/trinity_codeserver"
+      src: "{{ trix_ood }}/latest/trinity_codeserver"
       dest: "/var/www/ood/apps/sys/trinity_codeserver"
       state: link
       mode: 0755

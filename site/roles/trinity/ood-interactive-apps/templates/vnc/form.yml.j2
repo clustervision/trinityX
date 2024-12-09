@@ -1,23 +1,25 @@
 ---
+cluster: TrinityX
 title: "Remote Desktop"
-cluster: '{{ ood_cluster_name }}'
-submit: "submit/trinity.yml.erb"
 
 attributes:
   desktop: 
-    value: "{{ ood_vnc_desktop }}"
-    options: ["{{ ood_vnc_desktop }}"]
+    value: "{{ ood_interactive_apps_vnc_desktops_default }}"
+    options: ["{{ ood_interactive_apps_vnc_desktops }}"]
   bc_vnc_idle:
-    value: "{{ ood_vnc_idle_timeout }}"
+    value: "{{ ood_interactive_apps_vnc_idle_timeout }}"
     label: "Idle timeout"
     help: This is the time you have to connect to a session before it is automatically terminated
   bc_account:
-    help: "This should be left blank most of the time"
+    help: "This can be left blank most of the time"
+  modules:
+    value: "ood-vnc"
 
 batch_connect:
   websockify_cmd: "/usr/bin/websockify"
 
 form:
+  - modules
   - cluster
   - bc_vnc_idle
   - desktop

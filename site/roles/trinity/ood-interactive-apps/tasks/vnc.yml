@@ -1,72 +1,56 @@
-- name: Render OOD remote_desktop config file
-  template:
-    src: 'vnc/form.yml.j2'
-    dest: '{{ ood_interactive_apps_path }}/bc_desktop/form.yml'
-    mode: 0644
-    owner: root
-    group: root
-    backup: "yes"
-  when: enable_ood_vnc
-  notify: run update_ood
+- name: Configure controller for VNC Server
+  when: ansible_connection not in 'chroot'
+  block:
 
-- name: Remove OOD remote_desktop if vnc not enabled
-  file:
-    path: '{{ ood_interactive_apps_path }}/bc_desktop/form.yml'
-    state: absent
-  when: not enable_ood_vnc
-  notify: run update_ood
+  - name: Render vnc interactive app form.yml
+    template:
+      src: 'vnc/form.yml.j2'
+      dest: '{{ ood_interactive_apps_path }}/bc_desktop/form.yml'
+      mode: 0644
+      owner: root
+      group: root
+      backup: "yes"
+    when: "'vnc' in ood_interactive_apps"
+    notify: run update_ood
+
+  - name: Remove vnc interactive app form.yml if not app is not enabled
+    file:
+      path: '{{ ood_interactive_apps_path }}/bc_desktop/form.yml'
+      state: absent
+    when: "'vnc' not in ood_interactive_apps"
+    notify: run update_ood
+  
+  # This should be done by controller because /trinity/shared is not mounted on compute node
+  - name: Render ood-vnc-module template file
+    template:
+      src: 'vnc/module.lua.j2'
+      dest: '{{ trix_shared }}/modulefiles/ood-vnc.lua'
+      mode: '0644'
+      owner: root
+      group: root
 
 # tasks file for ood-vnc
-
 - name: Install ood-vnc requirements ( on machine whoose desktop is forwarded )
   block:
-    # - name: Rebuild RPM DB
-    #   shell: "rpm --rebuilddb"
-    #   ignore_errors: true
-
     - name: Install required yum repos
       dnf:
         name: "{{ item.name }}"
         state: present
         update_cache: true
         disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
-      with_items: "{{ ood_compute_repository_rpms }}"
+        enablerepo: "{{ item.enablerepo | default('') }}"
+      with_items: "{{ ood_interactive_apps_vnc_repos_rpms }}"
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
 
     - name: Install required yum packages
       dnf:
-        enablerepo: crb
-        name:
-          - "{{ ood_vnc_desktop_package }}"  # -> groupinstall xfce
-          - turbovnc
-          - python3-websockify
-          - dbus-x11
+        name: "{{ item.name }}"
         state: present
+        update_cache: true
+        disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+        enablerepo: "{{ item.enablerepo | default('') }}"
+      with_items: "{{ ood_interactive_apps_vnc_rpms }}"
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
 
-  when: enable_ood_vnc and ansible_connection in 'chroot'
-
-# This should be done by controller because /trinity/shared is not mounted on compute node
-- name: Render ood-vnc-module template file
-  template:
-    src: 'ood-vnc-module.j2'
-    dest: '{{ trix_shared }}/modulefiles/ood-vnc'
-    mode: '0644'
-    owner: root
-    group: root
-
-  when: enable_ood_vnc and ansible_connection not in 'chroot'
-
-
-# Fix xfce and other graphical environments using wayland instead of X11
-- name: Override graphical environment scripts
-  copy:
-    src: script.sh.erb
-    dest: /var/www/ood/apps/sys/bc_desktop/template/script.sh.erb
-    mode: '0755'
-    owner: root
-    group: root
-
-  when: enable_ood_vnc and ansible_connection not in 'chroot'
