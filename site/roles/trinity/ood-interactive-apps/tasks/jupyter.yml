@@ -1,83 +1,105 @@
 ---
-- block:
-  - name: Create directory for Jupyter Notebook Interactive App
-    file:
-      path: "{{ trix_ood }}/latest/trinity_jupyter"
-      state: directory
-
-  - name: Clone Jupyter Notebook Interactive App
-    unarchive:
-      src: "{{ ood_interactive_apps_jupyter_url}}"
-      dest: "{{ trix_ood }}/latest/trinity_jupyter"
-      remote_src: true
-      extra_opts:
-        - --transform
-        - s#OOD-bc-jupyter-[a-zA-Z0-9.]*/#/#g
-
-  - name: Reset permissions for Jupyter Notebook Interactive App
-    file:
-      path: "{{ trix_ood }}/latest/trinity_jupyter"
-      state: directory
-      recurse: yes
-      owner: root
-      group: root
-      mode: u=rw,g=r,o=r,a-x+X
-
-  - name: Set permissions for template files
-    file:
-      path: "{{ trix_ood }}/latest/trinity_jupyter/template"
-      state: directory
-      recurse: yes
-      mode: +x
-
-  - name: Render environment module for Jupyter Notebook Interactive App to load Python virtual environment
-    template:
-      src: 'jupyter/python-module.lua.j2'
-      dest: '{{ trix_shared }}/modulefiles/ood-jupyter-python.lua'
-      mode: '0644'
-      owner: root
-      group: root
-
-  - name: Render submit script for Jupyter Notebook Interactive App
-    template:
-      src: 'jupyter/form.yml.j2'
-      dest: "{{ trix_ood }}/latest/trinity_jupyter/form.yml"
-      mode: '0644'
-      owner: root
-      group: root
-
-  - name: Creating Symlink for Jupyter Notebook Interactive App
-    file:
-      src: "{{ trix_ood }}/latest/trinity_jupyter"
-      dest: "/var/www/ood/apps/sys/trinity_jupyter"
-      state: link
-      # force: yes
-      owner: root
-      group: root
-
+- name: Install Jupyter Notebook on the controller
   when:
-  - on_controller|default(False)
-  - ansible_connection not in 'chroot'
+    - on_controller|default(False)
+    - ansible_connection not in 'chroot'
+  block:
+    - name: Create Jupyter Notebook interactive app directory
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/latest/trinity_jupyter"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      notify: Run update_ood
 
-- block:
-  - name: Install python3-pip dependency for Jupyter Notebook
-    apt:
-      name:
-      - python3-pip
-      - python3-venv
-      state: present
-      update_cache: yes
-    when: ansible_facts['os_family'] == 'Debian'
+    - name: Download Jupyter Notebook interactive app
+      ansible.builtin.unarchive:
+        src: "{{ ood_interactive_apps_jupyter_url }}"
+        dest: "{{ trix_ood }}/latest/trinity_jupyter"
+        remote_src: true
+        extra_opts:
+          - --transform
+          - s#OOD-bc-jupyter-[a-zA-Z0-9.]*/#/#g
+      notify: Run update_ood
 
-  - name: Install python3-pip dependency for Jupyter Notebook
-    dnf:
-      name: python3-pip
-      state: present
-      disable_gpg_check: true
-    when: ansible_facts['os_family'] == "RedHat"
-    retries: "{{ rpm_retries | default(3) }}"
-    delay: "{{ rpm_delay | default(15) }}"
+    - name: Set permissions for app
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/latest/trinity_jupyter"
+        state: directory
+        recurse: true
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r,a-x+X
+      notify: Run update_ood
 
-  - name: Create Python virtual environment for Jupyter Notebook
-    shell: "python3 -m venv /opt/ood-jupyter-python"
-    when: ansible_connection in 'chroot'
+    - name: Set permissions for template files
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/latest/trinity_jupyter/template"
+        state: directory
+        recurse: true
+        mode: +x
+      notify: Run update_ood
+
+    - name: Render environment module for Jupyter Notebook Interactive App to load Python virtual environment
+      ansible.builtin.template:
+        src: jupyter/python-module.lua.j2
+        dest: "{{ trix_shared }}/modulefiles/ood-jupyter-python.lua"
+        mode: "0644"
+        owner: root
+        group: root
+      notify: Run update_ood
+
+    - name: Render form.yml
+      ansible.builtin.template:
+        src: jupyter/form.yml.j2
+        dest: "{{ trix_ood }}/latest/trinity_jupyter/form.yml"
+        mode: "0644"
+        owner: root
+        group: root
+      notify: Run update_ood
+
+    - name: Render the manifest.yml.j2
+      ansible.builtin.template:
+        src: jupyter/manifest.yml.j2
+        dest: "{{ trix_ood }}/latest/trinity_jupyter/manifest.yml"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Run update_ood
+
+    - name: Creating Symlink for Jupyter Notebook Interactive App
+      ansible.builtin.file:
+        src: "{{ trix_ood }}/latest/trinity_jupyter"
+        dest: /var/www/ood/apps/sys/trinity_jupyter
+        state: link
+        force: true
+        owner: root
+        group: root
+      notify: Run update_ood
+
+- name: Install jupyter notebook on the compute nodes
+  block:
+    - name: Install python3-pip dependency for Jupyter Notebook
+      ansible.builtin.apt:
+        name:
+          - python3-pip
+          - python3-venv
+        state: present
+        update_cache: true
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Install python3-pip dependency for Jupyter Notebook
+      ansible.builtin.dnf:
+        name: python3-pip
+        state: present
+        disable_gpg_check: true
+      when: ansible_facts['os_family'] == "RedHat"
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
+
+    - name: Create Python virtual environment for Jupyter Notebook
+      ansible.builtin.command: python3 -m venv /opt/ood-jupyter-python
+      register: venv_output
+      changed_when: venv_output.rc != 0
+      when: ansible_connection in 'chroot'

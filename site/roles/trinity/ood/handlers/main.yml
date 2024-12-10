@@ -1,24 +1,25 @@
 ---
-- name: run update_ood
-  command: '/opt/ood/ood-portal-generator/sbin/update_ood_portal -f && /opt/ood/nginx_stage/sbin/nginx_stage nginx_clean -f'
+- name: Run update_ood
+  ansible.builtin.command: /opt/ood/ood-portal-generator/sbin/update_ood_portal -f && /opt/ood/nginx_stage/sbin/nginx_stage nginx_clean -f
   register: command_result
   failed_when: "'Completed successfully!' not in command_result.stdout"
+  changed_when: "'Generating new' in command_result.stdout"
   notify:
-    - restart httpd
-    - restart htcacheclean
-    - restart ondemand-dex
+    - Restart httpd
+    - Restart htcacheclean
+    - Restart ondemand-dex
 
-- name: restart ondemand-dex
-  systemd:
+- name: Restart ondemand-dex
+  ansible.builtin.systemd:
     name: ondemand-dex
     state: "{{ 'restarted' if ood_auth_provider == 'dex' else 'stopped' }}"
 
-- name: restart httpd
-  systemd:
+- name: Restart httpd
+  ansible.builtin.systemd:
     name: httpd
     state: restarted
 
-- name: restart htcacheclean
-  systemd:
+- name: Restart htcacheclean
+  ansible.builtin.systemd:
     name: htcacheclean
     state: restarted

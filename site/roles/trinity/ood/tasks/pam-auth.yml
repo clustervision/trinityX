@@ -1,20 +1,21 @@
+---
 - name: Install ondemand-pam required packages
-  package:
+  ansible.builtin.package:
     name: "{{ item }}"
-    state: "present"
+    state: present
   loop: "{{ ood_pam_rpms }}"
 
 - name: Add authnz_pam_module
-  copy:
+  ansible.builtin.copy:
     content: |
       LoadModule authnz_pam_module modules/mod_authnz_pam.so
     dest: /etc/httpd/conf.modules.d/55-authnz_pam.conf
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
 
 - name: Add pam.conf
-  copy:
+  ansible.builtin.copy:
     content: |
       #%PAM-1.0
       auth       substack     system-auth
@@ -35,13 +36,12 @@
     dest: /etc/pam.d/ood
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
 
 - name: Set permissions on /etc/pam.d/ood
-  file:
+  ansible.builtin.file:
     path: /etc/pam.d/ood
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
     state: file
-

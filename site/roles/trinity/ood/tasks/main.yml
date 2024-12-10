@@ -1,106 +1,104 @@
 ---
-
 ##### New tasks file for ood-portal (3.0 on RockyLinux-8)
 
 - name: Ensure ssl certificate and key exists
-  file:
-    path: '{{ item }}'
+  ansible.builtin.file:
+    path: "{{ item }}"
     state: file
   with_items:
     - "{{ ood_ssl_certificate }}"
     - "{{ ood_ssl_certificate_key }}"
   when: ood_enable_ssl
 
-- name: Enable default ruby module
-  copy:
-    dest: /etc/dnf/modules.d/ruby.module
-    content: |
-      [ruby]
-      name=ruby
-      stream=3.1
-      profiles=
-      state=enabled
+# - name: Enable default ruby module
+#   ansible.builtin.copy:
+#     dest: /etc/dnf/modules.d/ruby.module
+#     content: |
+#       [ruby]
+#       name=ruby
+#       stream=3.1
+#       profiles=
+#       state=enabled
 
-- name: Enable default nodejs module
-  copy:
-    dest: /etc/dnf/modules.d/nodejs.module
-    content: |
-      [nodejs]
-      name=nodejs
-      stream=18
-      profiles=
-      state=enabled
-    owner: root
-    group: root
-    mode: '0644'
-
+# - name: Enable default nodejs module
+#   ansible.builtin.copy:
+#     dest: /etc/dnf/modules.d/nodejs.module
+#     content: |
+#       [nodejs]
+#       name=nodejs
+#       stream=18
+#       profiles=
+#       state=enabled
+#     owner: root
+#     group: root
+# mode: "0644"
 
 - name: Install required repos
-  dnf:
+  ansible.builtin.dnf:
     name: "{{ item.name }}"
-    state: latest
+    state: present
     disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
   with_items: "{{ ood_repos_rpms }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
-  notify: run update_ood
+  notify: Run update_ood
 
 - name: Install ood packages
-  dnf:
-    name: '{{ ood_rpms }}'
-    state: latest
+  ansible.builtin.dnf:
+    name: "{{ ood_rpms }}"
+    state: present
     enablerepo: luna2
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
-  notify: run update_ood
+  notify: Run update_ood
 
 - name: Ensure OOD config paths exist
-  file:
-    path: '{{ item }}'
+  ansible.builtin.file:
+    path: "{{ item }}"
     owner: root
     group: root
-    mode: 0755
+    mode: "0755"
     state: directory
   with_items:
-    - '/etc/ood/config/'
-    - '/etc/ood/config/clusters.d'
-    - '/etc/ood/config/apps'
-    - '/etc/ood/config/apps/bc_desktop'
+    - /etc/ood/config/
+    - /etc/ood/config/clusters.d
+    - /etc/ood/config/apps
+    - /etc/ood/config/apps/bc_desktop
 
 - name: Render OOD ood_portal.yml config file
-  template:
-    src: 'ood_portal.yml.j2'
-    dest: '{{ ood_cfg_path }}/ood_portal.yml'
-    mode: 0644
+  ansible.builtin.template:
+    src: ood_portal.yml.j2
+    dest: "{{ ood_cfg_path }}/ood_portal.yml"
+    mode: "0644"
     owner: root
     group: root
-  notify: run update_ood
+  notify: Run update_ood
   tags: branding
 
 - name: Render OOD nginx_stage.yml config file
-  template:
-    src: 'branding/TrinityX/nginx_stage.yml.j2'
-    dest: '{{ ood_cfg_path }}/nginx_stage.yml'
-    mode: 0644
+  ansible.builtin.template:
+    src: branding/TrinityX/nginx_stage.yml.j2
+    dest: "{{ ood_cfg_path }}/nginx_stage.yml"
+    mode: "0644"
     owner: root
     group: root
-  notify: run update_ood
+  notify: Run update_ood
   tags: branding
 
 - name: Render OOD cluster config file
-  template:
-    src: 'cluster_definition.yml.j2'
-    dest: '{{ ood_cfg_path }}/clusters.d/{{ ood_cluster_name }}.yml'
-    mode: 0644
+  ansible.builtin.template:
+    src: cluster_definition.yml.j2
+    dest: "{{ ood_cfg_path }}/clusters.d/{{ ood_cluster_name }}.yml"
+    mode: "0644"
     owner: root
     group: root
-  notify: run update_ood
+  notify: Run update_ood
 
 - name: Copy TrinityX branding to /var/www/ood/public
-  copy:
+  ansible.builtin.copy:
     src: branding/TrinityX/{{ item }}
     dest: /var/www/ood/public/{{ item }}
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
   with_items:
@@ -108,53 +106,53 @@
     - logo.png
     - custom.css
   when: ood_brand == "TrinityX"
-  notify: run update_ood
+  notify: Run update_ood
   tags: branding
 
-- name: Apply TrinityX en.yml (welcome_html) branding 
-  template:
-    src: 'branding/TrinityX/en.yml.j2'
-    dest: '/var/www/ood/apps/sys/dashboard/config/locales/en.yml'
-    mode: 0644
+- name: Apply TrinityX en.yml (welcome_html) branding
+  ansible.builtin.template:
+    src: branding/TrinityX/en.yml.j2
+    dest: /var/www/ood/apps/sys/dashboard/config/locales/en.yml
+    mode: "0644"
     owner: root
     group: root
     backup: "yes"
   when: ood_brand == "TrinityX"
-  notify: run update_ood
+  notify: Run update_ood
   tags: branding
 
 - name: Create /etc/ood/config/ondemand.d if not present
-  file:
+  ansible.builtin.file:
     path: /etc/ood/config/ondemand.d
     state: directory
-    mode: 0755
+    mode: "0755"
     owner: root
     group: root
   when: ood_brand == "TrinityX"
-  notify: run update_ood
+  notify: Run update_ood
   tags: branding
 
-- name: Apply TrinityX ondemand.yml branding 
-  template:
-    src: 'branding/TrinityX/ondemand.yml.j2'
-    dest: '/etc/ood/config/ondemand.d/ondemand.yml'
-    mode: 0644
+- name: Apply TrinityX ondemand.yml branding
+  ansible.builtin.template:
+    src: branding/TrinityX/ondemand.yml.j2
+    dest: /etc/ood/config/ondemand.d/ondemand.yml
+    mode: "0644"
     owner: root
     group: root
     backup: "yes"
   when: ood_brand == "TrinityX"
-  notify: run update_ood
+  notify: Run update_ood
   tags: branding
 
 - name: Override default 404 page to auto initialize app
-  copy:
+  ansible.builtin.copy:
     src: branding/TrinityX/overrides/pun_config_view.rb
     dest: /opt/ood/nginx_stage/lib/nginx_stage/views/pun_config_view.rb
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
   when: ood_brand == "TrinityX"
-  notify: run update_ood
+  notify: Run update_ood
   tags: branding
 
 
@@ -162,13 +160,11 @@
   include_tasks: lchroot.yml
 
 - name: Include auth task
-  include_tasks: dex-auth.yml
-
+  ansible.builtin.include_tasks: dex-auth.yml
 - name: Include auth task
-  include_tasks: pam-auth.yml
-
+  ansible.builtin.include_tasks: pam-auth.yml
 - name: Enable OOD webserver on startup
-  service:
+  ansible.builtin.service:
     name: httpd
     enabled: "yes"
     state: started
