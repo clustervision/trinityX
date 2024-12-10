@@ -12,7 +12,7 @@
   delay: "{{ rpm_delay | default(15) }}"
 
 - name: Check OS release on controller
-  command: rpm -qf /etc/os-release --qf '%{NAME}'
+  shell: "rpm -qf /etc/os-release --qf '%{NAME}\n' | sort | uniq | tail -n1"
   register: os_release_rpm
   changed_when: false
 
