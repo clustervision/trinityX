@@ -47,7 +47,7 @@
   ansible.builtin.dnf:
     name: "{{ ood_rpms }}"
     state: present
-    enablerepo: luna2
+    enablerepo: ["luna2"]
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
   notify: Run update_ood
@@ -87,7 +87,7 @@
 
 - name: Render OOD cluster config file
   ansible.builtin.template:
-    src: cluster_definition.yml.j2
+    src: cluster.yml.j2
     dest: "{{ ood_cfg_path }}/clusters.d/{{ ood_cluster_name }}.yml"
     mode: "0644"
     owner: root

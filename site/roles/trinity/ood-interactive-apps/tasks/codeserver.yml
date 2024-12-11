@@ -1,86 +1,90 @@
 ---
-
-- block:
-  - name: Create Code Server interactive app directory
-    file: 
-      path: "{{ trix_ood }}/latest/trinity_codeserver"
-      state: directory
-
-  - name: Download Code Server interactive app
-    unarchive:
-      src: "{{ ood_interactive_apps_codeserver_url }}"
-      dest: "{{ trix_ood }}/latest/trinity_codeserver"
-      remote_src: true
-      extra_opts:
-        - --transform
-        - s#bc_osc_codeserver-[a-zA-Z0-9.]*/#/#g
-
-  - name: Set The Cluster Name
-    lineinfile:
-      dest: "{{ trix_ood }}/latest/trinity_codeserver/form.yml.erb"
-      regexp: '^.*cluster: (.*)$'
-      line: 'cluster: "{{ ood_cluster_name }}"'
-
-  - name: Correct The Description
-    template:
-      src: 'codeserver/manifest.yml'
-      dest: "{{ trix_ood }}/latest/trinity_codeserver/manifest.yml"
-      owner: root
-      group: root
-      mode: 0644
-
-  - name: Creating Symlink for Code Server
-    file:
-      src: "{{ trix_ood }}/latest/trinity_codeserver"
-      dest: "/var/www/ood/apps/sys/trinity_codeserver"
-      state: link
-      mode: 0755
-      owner: root
-      group: root
-
-  when: 
+- name: Install Code Server on the controller
+  when:
     - on_controller|default(False)
     - ansible_connection not in 'chroot'
+  block:
+    - name: Create Code Server interactive app directory
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/latest/trinity_codeserver"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      notify: Run update_ood
 
-# Rhel
+    - name: Download Code Server interactive app
+      ansible.builtin.unarchive:
+        src: "{{ ood_interactive_apps_codeserver_url }}"
+        dest: "{{ trix_ood }}/latest/trinity_codeserver"
+        remote_src: true
+        extra_opts:
+          - --transform
+          - s#bc_osc_codeserver-[a-zA-Z0-9.]*/#/#g
+      notify: Run update_ood
+
+    - name: Set permissions for app
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/latest/trinity_codeserver"
+        state: directory
+        recurse: true
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r,a-x+X
+      notify: Run update_ood
+
+    - name: Set permissions for template files
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/latest/trinity_codeserver/template"
+        state: directory
+        recurse: true
+        mode: +x
+      notify: Run update_ood
+
+    - name: Render the form.yml.erb
+      ansible.builtin.lineinfile:
+        dest: "{{ trix_ood }}/latest/trinity_codeserver/form.yml.erb"
+        regexp: "^.*cluster: (.*)$"
+        line: 'cluster: "{{ ood_cluster_name }}"'
+      notify: Run update_ood
+
+    - name: Render the manifest.yml.j2
+      ansible.builtin.template:
+        src: codeserver/manifest.yml.j2
+        dest: "{{ trix_ood }}/latest/trinity_codeserver/manifest.yml"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Run update_ood
+
+    - name: Creating Symlink for Code Server
+      ansible.builtin.file:
+        src: "{{ trix_ood }}/latest/trinity_codeserver"
+        dest: /var/www/ood/apps/sys/trinity_codeserver
+        state: link
+        owner: root
+        group: root
+      notify: Run update_ood
+
 - name: Install Code Server 4.89.0 for Rhel
+  when:
+    - ansible_connection in 'chroot'
+    - ansible_facts['os_family'] == "RedHat"
   block:
+    - name: Install Code Server 4.89.0 rpm
+      ansible.builtin.dnf:
+        name: https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-amd64.rpm
+        disable_gpg_check: true
+        state: present
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
 
-  - name: Install Code Server 4.89.0
-    dnf:
-      name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-{{ ood_interactive_apps_arch }}.rpm"
-      disable_gpg_check: true
-      state: present
-    retries: "{{ rpm_retries | default(3) }}"
-    delay: "{{ rpm_delay | default(15) }}"
-
-  when: 
-  - ansible_connection in 'chroot'
-  - ansible_facts['os_family'] == "RedHat"
-
-# Debian 
-- name: Install Code Server 4.89.0 for Debian
-  block:
-
-  - name: Create temporary folder for Code Server
-    ansible.builtin.tempfile:
-      state: directory
-    register: temp_dir
-
-  - name: Download Code Server 4.89.0 to temp folder
-    get_url:
-      url: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_{{ ood_interactive_apps_arch }}.deb"
-      validate_certs: false
-      dest: "{{ temp_dir.path }}/code-server_4.89.0_{{ ood_interactive_apps_arch }}.deb"
-
-  - name: Install Code Server 4.89.0
-    apt:
-      deb:  "{{ temp_dir.path }}/code-server_4.89.0_{{ ood_interactive_apps_arch }}.deb"
-      state: present
-
-  # - name: Install Code Server DEB 4.89.0 Dependencies
-  #   shell: "apt-get install -yf"
-
-  when: 
+- name: Install Code Server 4.89.0 apt
+  when:
     - ansible_connection in 'chroot'
     - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  block:
+    - name: Install Code Server 4.89.0
+      ansible.builtin.apt:
+        deb: https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_amd64.deb
+        state: present

@@ -26,7 +26,6 @@
         src: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
         dest: "{{ trix_ood }}/latest"
         force: true
-        follow: false
       register: ood_luna_apps_download
 
     - name: Create trinityx-ood luna2 app config directory
@@ -52,35 +51,10 @@
       with_items: "{{ ood_luna_apps }}"
       when: "'f{trix_ood}/latest/{item.name}/requirements.txt' is exists"
 
-    - name: Create custom app folders if they do not exist
-      ansible.builtin.file:
-        path: /var/www/ood/apps/sys/{{ item | basename | regex_replace("\_manifest.yml.j2$", "") }}
-        state: directory
-        mode: "0755"
-        owner: root
-        group: "{{ ood_luna_apps_admin_group }}"
-      notify: Run update_ood
-      with_fileglob:
-        - ../templates/manifests/*.yml.j2
-      tags:
-        - ood-manifests
-
-    - name: Render custom manifests to create buttons in the menu
-      ansible.builtin.template:
-        src: "manifests/{{ item.name }}.yml.j2"
-        dest: /var/www/ood/apps/sys/{{ item.name }}/manifest.yml
-        owner: root
-        group: "{{ ood_luna_apps_admin_group }}"
-        mode: "0644"
-        force: true
-      notify: Run update_ood
-      with_items: "{{ ood_luna_apps }}"
-      when: "{{ ( lookup('ansible.builtin.fileglob', 'templates/manifests/' + item.name + '.yml.j2') | length ) > 0 }}"
-
     - name: Symlink trinityx-ood custom apps
       ansible.builtin.file:
+        dest: /var/www/ood/apps/sys/{{ item.symlink_from }}
         src: "{{ trix_ood }}/latest/{{ item.name }}"
-        dest: /var/www/ood/apps/sys/{{ item.symlink }}
         state: link
         mode: "0755"
         owner: root
@@ -89,6 +63,34 @@
       with_items: "{{ ood_luna_apps }}"
       notify: Run update_ood
       when: item.symlink | default(false)
+
+    - name: Set correct permissions to app folders and create them if they don't exist
+      ansible.builtin.file:
+        path: /var/www/ood/apps/sys/{{ item.name }}
+        state: directory
+        mode: "{{ item.mode | default('0755') }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ ood_luna_apps_admin_group }}"
+        follow: true
+      notify: Run update_ood
+      with_items: "{{ ood_luna_apps }}"
+
+    - name: Render custom manifests to create buttons in the menu
+      ansible.builtin.template:
+        src: "manifests/{{ item.name }}.yml.j2"
+        dest: /var/www/ood/apps/sys/{{ item.name }}/manifest.yml
+        owner: root
+        group: "{{ ood_luna_apps_admin_group }}"
+        mode: "{{ item.mode | default('0644') }}"
+        backup: "yes"
+      notify: Run update_ood
+      with_items: "{{ ood_luna_apps }}"
+      # when: "{{ lookup('ansible.builtin.file', 'templates/manifests/' + item.name + '.yml.j2', errors='ignore') }}"
+      # when: "'templates/manifests/' + item.name + '.yml.j2' is exists"
+      # register: ood_luna_apps_manifest
+      failed_when: false
+    
+
 
     - name: Configure firewalld
       ansible.posix.firewalld:
