@@ -1,0 +1,21 @@
+---
+
+- block:
+  - name: Ensure shell directory exists
+    file:
+      path: /etc/ood/config/apps/shell
+      state: directory
+
+  - name: Creating env file
+    template:
+      src: 'lchroot/env.j2'
+      dest: /etc/ood/config/apps/shell/env
+
+  - name: Creating sudoers file
+    template:
+      src: 'lchroot/sudoers.j2'
+      dest: /etc/sudoers.d/lchroot
+  when:
+  - on_controller|default(False)
+  - ansible_connection not in 'chroot'
+

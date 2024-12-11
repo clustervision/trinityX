@@ -1,6 +1,6 @@
 ---
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
-  include_vars: "image-{{ image_create_distribution }}.yaml"
+  include_vars: "{{ package_arch }}/image-{{ image_create_distribution }}.yaml"
   ignore_errors: true
 
 - name: Install dnf-utils
@@ -12,7 +12,7 @@
   delay: "{{ rpm_delay | default(15) }}"
 
 - name: Check OS release on controller
-  command: rpm -qf /etc/os-release --qf '%{NAME}'
+  shell: "rpm -qf /etc/os-release --qf '%{NAME}\n' | sort | uniq | tail -n1"
   register: os_release_rpm
   changed_when: false
 
