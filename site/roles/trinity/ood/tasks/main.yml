@@ -33,6 +33,7 @@
 #     group: root
 # mode: "0644"
 
+
 - name: Install required repos
   ansible.builtin.dnf:
     name: "{{ item.name }}"
@@ -158,6 +159,13 @@
 
 - name: Configure lchroot
   include_tasks: lchroot.yml
+
+- name: Configure firewalld
+  ansible.posix.firewalld:
+    state: enabled
+    port: "{{ ood_port }}/tcp"
+    permanent: "yes"
+    immediate: "yes"
 
 - name: Include auth task
   ansible.builtin.include_tasks: dex-auth.yml

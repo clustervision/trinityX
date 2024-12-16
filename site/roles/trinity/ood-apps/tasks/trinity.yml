@@ -1,0 +1,65 @@
+---
+- name: Configure ood apps on the controller
+  when: ansible_connection not in 'chroot'
+  block:
+    - name: Create ood directory
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: "{{ ood_admin_group }}"
+
+    - name: Download and Unpack trinityx-ood custom apps
+      ansible.builtin.unarchive:
+        src: "{{ ood_luna_apps_url }}"
+        dest: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
+        mode: u=rw,g=r,o=r,a-x+X
+        remote_src: true
+        extra_opts:
+          - --transform
+          - s#trinityx-ood-[a-zA-Z0-9.]*/#/#g
+
+    - name: Symlink to current build
+      ansible.builtin.file:
+        state: link
+        src: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
+        dest: "{{ trix_ood }}/latest"
+        force: true
+      register: ood_luna_apps_download
+
+    - name: Create trinityx-ood luna2 app config directory
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/latest/config/"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: "{{ ood_apps_admin_group }}"
+
+    - name: Render trinityx-ood luna app luna.ini
+      ansible.builtin.template:
+        src: luna2.ini.j2
+        dest: "{{ trix_ood }}/latest/config/luna.ini"
+        owner: root
+        group: "{{ ood_apps_admin_group }}"
+        mode: "0640"
+
+    - name: Install trinityx-ood custom apps python requirements
+      ansible.builtin.pip:
+        requirements: "{{ trix_ood }}/latest/{{ item.name }}/requirements.txt"
+        virtualenv: /trinity/local/python/
+      with_items: "{{ ood_apps }}"
+      when: "'f{trix_ood}/latest/{item.name}/requirements.txt' is exists"
+
+    - name: Symlink trinityx-ood custom apps
+      ansible.builtin.file:
+        src: "{{ trix_ood }}/latest/{{ item.symlink_from }}"
+        dest: /var/www/ood/apps/sys/{{ item.name }}
+        state: link
+        mode: "0755"
+        owner: root
+        group: root
+        force: true
+      with_items: "{{ ood_apps }}"
+      notify: Run update_ood
+      when: item.symlink_from | default(false)

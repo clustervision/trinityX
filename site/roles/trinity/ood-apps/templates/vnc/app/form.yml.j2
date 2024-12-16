@@ -1,0 +1,46 @@
+---
+
+title: "VNC Desktop Remote Desktop"
+
+form:
+  - modules
+  - cluster
+
+  - bc_account
+  - bc_queue
+  - bc_num_hours
+  - bc_num_slots
+  - bc_email_on_started
+
+  - desktop
+  - bc_vnc_idle
+
+attributes:
+  modules:
+    value: "ood-desktop"
+  cluster: 
+    value: TrinityX
+
+  bc_account:
+    help: "Workload manager account. This can be left blank most of the time"
+  bc_queue:
+    help: "Workload manager queue. This can be left blank most of the time"
+  bc_num_hours:
+    help: "Number of hours to run the job"
+  bc_num_slots:
+    help: "Number of slots to run the job"
+
+
+  desktop: 
+    value: "{% for app in ood_apps %}{% if app.name == 'desktop' %}{{ app.props.desktops_default }}{% endif %}{% endfor %}"
+    options: ["{% for app in ood_apps %}{% if app.name == 'desktop' %}{{ app.props.desktops }}{% endif %}{% endfor %}"]
+  bc_desktop_idle:
+    value: ""{% for app in ood_apps %}{% if app.name == 'desktop' %}{{ app.props.idle_timeout }}{% endif %}{% endfor %}""
+    label: "Idle timeout"
+    help: This is the time you have to connect to a session before it is automatically terminated
+
+
+batch_connect:
+  websockify_cmd: "/usr/bin/websockify"
+
+

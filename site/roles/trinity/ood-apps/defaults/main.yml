@@ -1,0 +1,129 @@
+---
+ood_luna_apps_version: 2.0.latest
+ood_luna_apps_url: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/noarch/pip/{{ trix_stream }}/ood/trinityx-ood-{{ ood_luna_apps_version }}.tar.gz # noqa: yaml[line-length]
+ood_apps_admin_group: admins
+ood_luna_apps_path: 
+
+ood_apps_path: /var/www/ood/apps/sys/
+
+# ood_interactive_apps_jupyter_version: "1.0.1"
+# ood_interactive_apps_jupyter_url: https://github.com/OSC/bc_example_jupyter/archive/refs/tags/v{{ ood_interactive_apps_jupyter_version }}.tar.gz
+
+# ood_interactive_apps_codeserver_version: "0.9.0"
+# ood_interactive_apps_codeserver_url: https://github.com/OSC/bc_osc_codeserver/archive/refs/tags/v{{ ood_interactive_apps_codeserver_version }}.tar.gz
+
+# ood_interactive_apps_desktop_idle_timeout: 3600
+# ood_interactive_apps_desktop_desktops:
+#   - xfce
+# ood_interactive_apps_desktop_desktops_default: xfce
+
+
+
+ood_apps:
+  - name: jupyter
+    node_rpms:
+      - name: python3-pip
+    node_apts:
+      - name: [python3-pip, python3-venv]
+    type: bc
+  - name: codeserver
+    type: bc
+    node_rpms:
+      - name: https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-amd64.rpm
+        no_gpgcheck: true
+    node_apts:
+      - name: https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_amd64.deb
+  - name: desktop
+    type: bc
+    props:
+      idle_timeout: 3600
+      desktops:
+        - xfce
+      desktops_default: xfce
+    node_rpms:
+    - name: https://yum.osc.edu/ondemand/3.1/ondemand-release-compute-3.1-1.el{{ ansible_distribution_major_version }}.noarch.rpm
+      no_gpgcheck: true
+    - name: ["turbovnc", "python3-websockify", "dbus-x11", "@xfce"]
+      enablerepo: crb
+  - name: trinity_bmcsetup
+    type: trinity
+    symlink_from: bmcsetup
+    mode: "0750"
+  - name: trinity_cluster
+    type: trinity
+    symlink_from: cluster
+    mode: "0750"
+  - name: trinity_group
+    type: trinity
+    symlink_from: group
+    mode: "0750"
+  - name: trinity_network
+    type: trinity
+    symlink_from: network
+    mode: "0750"
+  - name: trinity_node
+    type: trinity
+    symlink_from: node
+    mode: "0750"
+  - name: trinity_osimage
+    type: trinity
+    symlink_from: osimage
+    mode: "0750"
+  - name: trinity_otherdev
+    type: trinity
+    symlink_from: otherdev
+    mode: "0750"
+  - name: trinity_secrets
+    type: trinity
+    symlink_from: secrets
+    mode: "0750"
+  - name: trinity_service
+    type: trinity
+    symlink_from: service
+    mode: "0750"
+  - name: trinity_switch
+    type: trinity
+    symlink_from: switch
+    mode: "0750"
+  - name: trinity_control
+    type: trinity
+    symlink_from: control
+    mode: "0750"
+  - name: trinity_users
+    type: trinity
+    symlink_from: users
+    mode: "0750"
+  - name: trinity_osimagetag
+    type: trinity
+    symlink_from: osimagetag
+    mode: "0750"
+  - name: trinity_monitor
+    type: trinity
+    symlink_from: monitor
+    mode: "0750"
+  - name: trinity_dns
+    type: trinity
+    symlink_from: dns
+    mode: "0750"
+  - name: trinity_slurm
+    type: trinity
+    symlink_from: slurm
+    mode: "0750"
+  - name: trinity_infiniband
+    type: trinity
+    symlink_from: infiniband
+    mode: "0750"
+  - name: trinity_rack
+    type: trinity
+    symlink_from: rack
+    mode: "0750"
+  - name: shell
+    type: other
+    mode: "0750"
+  - name: prometheus
+    type: other
+  - name: alertmanager
+    type: other
+    mode: "0750"
+  - name: grafana
+    type: other

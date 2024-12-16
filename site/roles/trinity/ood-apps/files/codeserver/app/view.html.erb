@@ -1,0 +1,35 @@
+<%
+  require 'digest'
+
+  # Generate form id, based on host and port
+  form_id = Digest::SHA1.hexdigest("--" + host.to_s + "--" + port.to_s + "--")
+
+  # Generate SHA256 digest of Code Server Password
+  cookieValue = Digest::SHA256.hexdigest(password)
+%>
+
+<script type="text/javascript">
+(function () {
+  let date = new Date()
+  date.setTime(date.getTime() + (7*24*60*60*1000))
+  let expires = "expires=" + date.toUTCString()
+  let cookiePath = "path=/rnode/" + "<%= host.to_s %>" + "/" + "<%= port.to_s %>/";
+  /**
+    We have to use "key" as the cookie name since upstream in cdr/code-server
+    the authentication cookie is hard coded "key"
+  */
+  let cookie = `key=<%= cookieValue %>;${expires};${cookiePath};secure`;
+  document.cookie = cookie;
+})();
+</script>
+
+<% if code_server_version == '4.8.3' %>
+<form id="<%= form_id %>" action="/rnode/<%= host %>/<%= port %>/login?to=" method="post" target="_blank">
+  <input type="hidden" name="password" value="<%= password %>">
+<% else %>
+<form id="<%= form_id %>" action="/rnode/<%= host %>/<%= port %>/" method="get" target="_blank">
+<% end %>
+  <button class="btn btn-primary" type="submit">
+    <i class="fa fa-cogs"></i> Connect to VS Code
+  </button>
+</form>

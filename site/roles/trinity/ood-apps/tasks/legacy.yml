@@ -1,0 +1,15 @@
+---
+- name: Read legacy 'Jupyter Notebook' variable
+  ansible.builtin.set_fact:
+    ood_interactive_apps: "{{ ood_interactive_apps | default([]) + ['jupyter'] }}"
+  when: "'Jupyter Notebook' in ood_interactive_apps"
+
+- name: Read legacy 'Code Server' variable
+  ansible.builtin.set_fact:
+    ood_interactive_apps: "{{ ood_interactive_apps | default([]) + ['codeserver'] }}"
+  when: "'Code Server' in ood_interactive_apps"
+
+- name: Read legacy 'enable_ood_vnc' variable
+  ansible.builtin.set_fact:
+    ood_interactive_apps: "{{ ood_interactive_apps | default([]) + ['desktop'] }}"
+  when: enable_ood_desktop | default(false)
