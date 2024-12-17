@@ -24,13 +24,13 @@
       ansible.builtin.file:
         state: link
         src: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
-        dest: "{{ trix_ood }}/latest"
+        dest: "{{ trix_ood }}/3.0"
         force: true
       register: ood_luna_apps_download
 
     - name: Create trinityx-ood luna2 app config directory
       ansible.builtin.file:
-        path: "{{ trix_ood }}/latest/config/"
+        path: "{{ trix_ood }}/3.0/config/"
         state: directory
         mode: "0755"
         owner: root
@@ -39,21 +39,21 @@
     - name: Render trinityx-ood luna app luna.ini
       ansible.builtin.template:
         src: luna2.ini.j2
-        dest: "{{ trix_ood }}/latest/config/luna.ini"
+        dest: "{{ trix_ood }}/3.0/config/luna.ini"
         owner: root
         group: "{{ ood_apps_admin_group }}"
         mode: "0640"
 
     - name: Install trinityx-ood custom apps python requirements
       ansible.builtin.pip:
-        requirements: "{{ trix_ood }}/latest/{{ item.name }}/requirements.txt"
+        requirements: "{{ trix_ood }}/3.0/{{ item.name }}/requirements.txt"
         virtualenv: /trinity/local/python/
       with_items: "{{ ood_apps }}"
-      when: "'f{trix_ood}/latest/{item.name}/requirements.txt' is exists"
+      when: "'f{trix_ood}/3.0/{item.name}/requirements.txt' is exists"
 
     - name: Symlink trinityx-ood custom apps
       ansible.builtin.file:
-        src: "{{ trix_ood }}/latest/{{ item.symlink_from }}"
+        src: "{{ trix_ood }}/3.0/{{ item.symlink_from }}"
         dest: /var/www/ood/apps/sys/{{ item.name }}
         state: link
         mode: "0755"
