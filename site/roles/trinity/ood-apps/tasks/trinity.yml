@@ -49,12 +49,12 @@
         requirements: "{{ trix_ood }}/3.0/{{ item.name }}/requirements.txt"
         virtualenv: /trinity/local/python/
       with_items: "{{ ood_apps }}"
-      when: "'f{trix_ood}/3.0/{item.name}/requirements.txt' is exists"
+      when: item.type == 'trinity'
 
     - name: Symlink trinityx-ood custom apps
       ansible.builtin.file:
-        src: "{{ trix_ood }}/3.0/{{ item.symlink_from }}"
-        dest: /var/www/ood/apps/sys/{{ item.name }}
+        src: "{{ trix_ood }}/3.0/{{ item.name }}"
+        dest: /var/www/ood/apps/sys/{{ item.type }}_{{ item.name }}
         state: link
         mode: "0755"
         owner: root
@@ -62,4 +62,4 @@
         force: true
       with_items: "{{ ood_apps }}"
       notify: Run update_ood
-      when: item.symlink_from | default(false)
+      when: item.type == 'trinity'

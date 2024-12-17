@@ -81,8 +81,8 @@
 
     - name: Set correct permissions to app folders and create them if they don't exist
       ansible.builtin.file:
-        path: /var/www/ood/apps/sys/{{ app.name }}
-        state: directory
+        path: /var/www/ood/apps/sys/{% if app.type != 'other' %}{{ app.type }}_{% endif %}{{ app.name }}/
+        # state: directory
         mode: "{{ app.mode | default('0755') }}"
         owner: "{{ app.owner | default('root') }}"
         group: "{{ ood_apps_admin_group }}"
