@@ -4,7 +4,13 @@
 cd "${HOME}"
 
 # Reset module environment (may require login shell for some HPC clusters)
-module purge && module restore
+<%- unless context.modules.blank? -%>
+# Purge the module environment to avoid conflicts
+module purge
+
+# Load the require modules
+module load <%= context.modules %>
+<%- end -%>
 
 # Ensure that the user's configured login shell is used
 export SHELL="$(getent passwd $USER | cut -d: -f7)"
