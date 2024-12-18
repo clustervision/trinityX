@@ -10,30 +10,6 @@
     - "{{ ood_ssl_certificate_key }}"
   when: ood_enable_ssl
 
-# - name: Enable default ruby module
-#   ansible.builtin.copy:
-#     dest: /etc/dnf/modules.d/ruby.module
-#     content: |
-#       [ruby]
-#       name=ruby
-#       stream=3.1
-#       profiles=
-#       state=enabled
-
-# - name: Enable default nodejs module
-#   ansible.builtin.copy:
-#     dest: /etc/dnf/modules.d/nodejs.module
-#     content: |
-#       [nodejs]
-#       name=nodejs
-#       stream=18
-#       profiles=
-#       state=enabled
-#     owner: root
-#     group: root
-# mode: "0644"
-
-
 - name: Install required repos
   ansible.builtin.dnf:
     name: "{{ item.name }}"
@@ -155,10 +131,6 @@
   when: ood_brand == "TrinityX"
   notify: Run update_ood
   tags: branding
-
-
-- name: Configure lchroot
-  include_tasks: lchroot.yml
 
 - name: Configure firewalld
   ansible.posix.firewalld:

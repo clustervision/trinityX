@@ -9,7 +9,8 @@
         mode: "0755"
         owner: root
         group: "{{ ood_admin_group }}"
-
+      register: ood_luna_apps_download
+        
     - name: Download and Unpack trinityx-ood custom apps
       ansible.builtin.unarchive:
         src: "{{ ood_luna_apps_url }}"
@@ -19,6 +20,7 @@
         extra_opts:
           - --transform
           - s#trinityx-ood-[a-zA-Z0-9.]*/#/#g
+      when: ood_luna_apps_download.changed
 
     - name: Symlink to current build
       ansible.builtin.file:
@@ -26,7 +28,7 @@
         src: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
         dest: "{{ trix_ood }}/3.0"
         force: true
-      register: ood_luna_apps_download
+      when: ood_luna_apps_download.changed
 
     - name: Create trinityx-ood luna2 app config directory
       ansible.builtin.file:
@@ -35,6 +37,7 @@
         mode: "0755"
         owner: root
         group: "{{ ood_apps_admin_group }}"
+      when: not ((trix_ood + '/3.0/config/') is exists )
 
     - name: Render trinityx-ood luna app luna.ini
       ansible.builtin.template:
@@ -43,23 +46,24 @@
         owner: root
         group: "{{ ood_apps_admin_group }}"
         mode: "0640"
+      when: not ((trix_ood + '/3.0/config/luna.ini') is exists )
 
     - name: Install trinityx-ood custom apps python requirements
       ansible.builtin.pip:
         requirements: "{{ trix_ood }}/3.0/{{ item.name }}/requirements.txt"
         virtualenv: /trinity/local/python/
       with_items: "{{ ood_apps }}"
-      when: item.type == 'trinity'
+      when: ( item.type | default(None) == 'trinity') and False
 
     - name: Symlink trinityx-ood custom apps
       ansible.builtin.file:
         src: "{{ trix_ood }}/3.0/{{ item.name }}"
         dest: /var/www/ood/apps/sys/{{ item.type }}_{{ item.name }}
         state: link
-        mode: "0755"
-        owner: root
-        group: root
-        force: true
+        # mode: "0755"
+        # owner: root
+        # group: root
+        # force: true
       with_items: "{{ ood_apps }}"
       notify: Run update_ood
-      when: item.type == 'trinity'
+      when: ( item.type | default(None) == 'trinity')

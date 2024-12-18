@@ -17,47 +17,60 @@
   when:
     - ansible_connection not in 'chroot'
   block:
+    - name: Register app path
+      set_fact:
+        app_path: "{{ ood_apps_path }}/{% if app.type | default(None) %}{{ app.type }}_{% endif %}{{ app.name }}"
+
+
     - name: Make folder for app {{ app.name }}
       ansible.builtin.file:
-        path: "{{ ood_apps_path }}/{% if app.type != 'other' %}{{ app.type }}_{% endif %}{{ app.name }}"
+        path: "{{ app_path }}"
         state: directory
-        owner: root
-        group: root
-        mode: "0755"
+        mode: "{{ app.mode | default('0755') }}"
+        owner: "{{ app.owner | default('root') }}"
+        group: "{{ ood_apps_admin_group }}"
+        follow: true
       notify: Run update_ood
+      # when:
+      # - "not ( app_path is exists )"
       
     - name: Make folders for app {{ app.name }}
       ansible.builtin.file:
-        path: "{{ ood_apps_path }}/{% if app.type != 'other' %}{{ app.type }}_{% endif %}{{ app.name }}/{{ item.path }}"
+        path: "{{ app_path }}/{{ item.path }}"
         state: directory
         owner: root
         group: root
         mode: "0755"
       notify: Run update_ood
       loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app', wantlist=True) }}"
-      when: item.state == 'directory'
+      when: 
+        - item.state == 'directory'
+        - "not ( (app_path + '/' + item.path) is exists )"
 
     - name: Copy files for app {{ app.name }}
       ansible.builtin.copy:
         src: "{{ item.src }}"
-        dest: "{{ ood_apps_path }}/{% if app.type != 'other' %}{{ app.type }}_{% endif %}{{ app.name }}/{{ item.path }}"
+        dest: "{{ app_path }}/{{ item.path }}"
         mode: "preserve"
         owner: root
         group: root
       notify: Run update_ood
       loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app', wantlist=True) }}"
-      when: item.state == 'file'
+      when: 
+        - item.state == 'file'
+        - "not ( (app_path + '/' + item.path) is exists )"
 
     - name: Render files for app {{ app.name }}
       ansible.builtin.template:
         src: "{{ item.src }}"
-        dest: "{{ ood_apps_path }}/{% if app.type != 'other' %}{{ app.type }}_{% endif %}{{ app.name }}/{{  item.path | regex_replace('[.]j2$', '') }}"
+        dest: "{{ app_path }}/{{  item.path | regex_replace('[.]j2$', '') }}"
         mode: "0644"
         owner: root
         group: root
       notify: Run update_ood
       loop: "{{ lookup('community.general.filetree', 'templates/{{ app.name }}/app', wantlist=True) }}"
-      when: item.state == 'file'
+      when: 
+        - item.state == 'file'
 
     - name: Render module file for app {{ app.name }}
       ansible.builtin.template:
@@ -67,27 +80,23 @@
         owner: root
         group: root
       notify: Run update_ood
-      # loop: "{{ lookup('community.general.filetree', 'templates/' + app.name + '/module.lua.j2', wantlist=True) }}"
-      # when: item.state == 'file'
+      when: 
+        - "('templates/' + app.name + '/module.lua.j2') is exists "
       failed_when: false
 
     # - name: Set template scripts to executable
     #   ansible.builtin.file:
-    #     path: "{{ ood_apps_path }}/{% if app.type != 'other' %}{{ app.type }}_{% endif %}{{ app.name }}/template/{{ item.path }}"
+    #     path: "{{ app_path }}/template/{{ item.path }}"
     #     mode: "0755"
     #   notify: Run update_ood
     #   loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app/template/', wantlist=True) }}"
     #   when: item.state == 'file'
 
-    - name: Set correct permissions to app folders and create them if they don't exist
-      ansible.builtin.file:
-        path: /var/www/ood/apps/sys/{% if app.type != 'other' %}{{ app.type }}_{% endif %}{{ app.name }}/
-        # state: directory
-        mode: "{{ app.mode | default('0755') }}"
-        owner: "{{ app.owner | default('root') }}"
-        group: "{{ ood_apps_admin_group }}"
-        follow: true
-      notify: Run update_ood
+    
+    - name: Include additional tasks for app {{ app.name }}
+      include_tasks: "{{ item }}"
+      loop: "{{ app.get('tasks', []) }}"
+
 
 
 - name: Install packages on node if required

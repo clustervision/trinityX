@@ -1,0 +1,36 @@
+---
+- name: Run lchroot task for OOD shell app
+  when:
+    - ansible_connection not in 'chroot'
+  block:
+
+  - name: Make config folder for app shell
+    ansible.builtin.file:
+      path: /etc/ood/config/apps/shell
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Creating env file
+    ansible.builtin.template:
+      src: 'shell/env.j2'
+      dest: /etc/ood/config/apps/shell/env
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Creating sudoers file
+    ansible.builtin.template:
+      src: 'shell/sudoers.j2'
+      dest: /etc/sudoers.d/lchroot
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Set wrapper as execturable
+    ansible.builtin.file:
+    path: /trinity/local/ondemand/3.0/osimage/addons/chroot_wrapper.sh
+      owner: root
+      group: {{ ood_apps_admin_group}}
+      mode: "0750"

@@ -2,21 +2,14 @@
 ood_luna_apps_version: 2.0.latest
 ood_luna_apps_url: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/noarch/pip/{{ trix_stream }}/ood/trinityx-ood-{{ ood_luna_apps_version }}.tar.gz # noqa: yaml[line-length]
 ood_apps_admin_group: admins
-ood_luna_apps_path: 
 
 ood_apps_path: /var/www/ood/apps/sys/
 
-# ood_interactive_apps_jupyter_version: "1.0.1"
-# ood_interactive_apps_jupyter_url: https://github.com/OSC/bc_example_jupyter/archive/refs/tags/v{{ ood_interactive_apps_jupyter_version }}.tar.gz
+ood_apps_arch_map:
+  x86_64: 'amd64'
+  aarch64: 'arm64'
 
-# ood_interactive_apps_codeserver_version: "0.9.0"
-# ood_interactive_apps_codeserver_url: https://github.com/OSC/bc_osc_codeserver/archive/refs/tags/v{{ ood_interactive_apps_codeserver_version }}.tar.gz
-
-# ood_interactive_apps_desktop_idle_timeout: 3600
-# ood_interactive_apps_desktop_desktops:
-#   - xfce
-# ood_interactive_apps_desktop_desktops_default: xfce
-
+ood_apps_arch: "{{ ood_apps_arch_map[system_arch] | default(system_arch) }}"
 
 
 ood_apps:
@@ -31,10 +24,10 @@ ood_apps:
   - name: codeserver
     type: bc
     node_rpms:
-      - name: https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-amd64.rpm
+      - name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-{{ ood_apps_arch }}.rpm"
         no_gpgcheck: true
     node_apts:
-      - name: https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_amd64.deb
+      - name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_{{ ood_apps_arch }}.deb"
   
   - name: desktop
     type: bc
@@ -100,18 +93,20 @@ ood_apps:
   - name: infiniband
     type: trinity
     mode: "0750"
+    tasks: ["infiniband.yml"]
   - name: rack
     type: trinity
     mode: "0750"
 
   - name: shell
-    type: other
+    # type: other
     mode: "0750"
+    tasks: ["lchroot.yml"]
   
   - name: prometheus
-    type: other
+    # type: other
   - name: alertmanager
-    type: other
+    # type: other
     mode: "0750"
   - name: grafana
-    type: other
+    # type: other

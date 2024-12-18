@@ -1,10 +1,5 @@
 ---
 
-# tasks file for ood-interactive_apps
-- name: Import legacy variables
-  ansible.builtin.include_tasks:
-    file: legacy.yml
-
 - name: Download and link trinity apps
   ansible.builtin.include_tasks:
     file: trinity.yml
@@ -15,11 +10,3 @@
   loop: "{{ ood_apps }}"
   loop_control:
     loop_var: app
-
-- name: Set permissions for inifinband related apps
-  ansible.builtin.file:
-    path: /dev/infiniband/umad0
-    mode: "0660"
-    owner: root
-    group: "{{ ood_apps_admin_group }}"
-  when: "'/dev/infiniband/umad0' is exists"
