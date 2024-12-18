@@ -381,10 +381,6 @@
         set_fact:
           init_ctrl_external_network_info: "{{ hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv4'] }}"
 
-      - name:
-        debug:
-          msg: "init_ctrl_external_network_info: {{ init_ctrl_external_network_info }}"
-
       - name: Resolving external interface ip address
         set_fact:
           trix_ctrl_external_ip: "{{ init_ctrl_external_network_info['address'] }}"
@@ -431,9 +427,9 @@
         msg: 'trix_external_fqdn is not configured and it could not be resolved. I can continue but OpenOndemand might not work properly'
       ignore_errors: true
 
-    # - name: Wait 10s before continuing with a default
-    #   wait_for:
-    #     timeout: 10
+    - name: Wait 10s before continuing with a default
+      wait_for:
+        timeout: 10
 
     - name: Setting trix_external_fqdn
       set_fact:
