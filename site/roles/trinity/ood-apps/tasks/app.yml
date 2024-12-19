@@ -21,18 +21,15 @@
       set_fact:
         app_path: "{{ ood_apps_path }}/{% if app.type | default(None) %}{{ app.type }}_{% endif %}{{ app.name }}"
 
-
     - name: Make folder for app {{ app.name }}
       ansible.builtin.file:
         path: "{{ app_path }}"
         state: directory
         mode: "{{ app.mode | default('0755') }}"
         owner: "{{ app.owner | default('root') }}"
-        group: "{{ ood_apps_admin_group }}"
+        group: "{{ app.group | default(ood_apps_admin_group) }}"
         follow: true
       notify: Run update_ood
-      # when:
-      # - "not ( app_path is exists )"
       
     - name: Make folders for app {{ app.name }}
       ansible.builtin.file:
@@ -45,7 +42,7 @@
       loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app', wantlist=True) }}"
       when: 
         - item.state == 'directory'
-        - "not ( (app_path + '/' + item.path) is exists )"
+        - override | default((app_path + '/' + item.path) is not exists )
 
     - name: Copy files for app {{ app.name }}
       ansible.builtin.copy:
@@ -58,12 +55,12 @@
       loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app', wantlist=True) }}"
       when: 
         - item.state == 'file'
-        - "not ( (app_path + '/' + item.path) is exists )"
+        - override | default((app_path + '/' + item.path) is not exists )
 
     - name: Render files for app {{ app.name }}
       ansible.builtin.template:
         src: "{{ item.src }}"
-        dest: "{{ app_path }}/{{  item.path | regex_replace('[.]j2$', '') }}"
+        dest: "{{ app_path }}/{{  item.path | replace('.j2', '') }}"
         mode: "0644"
         owner: root
         group: root
@@ -71,6 +68,7 @@
       loop: "{{ lookup('community.general.filetree', 'templates/{{ app.name }}/app', wantlist=True) }}"
       when: 
         - item.state == 'file'
+        - override | default((app_path + '/' + item.path.replace('.j2', '')) is not exists )
 
     - name: Render module file for app {{ app.name }}
       ansible.builtin.template:
@@ -82,16 +80,8 @@
       notify: Run update_ood
       when: 
         - "('templates/' + app.name + '/module.lua.j2') is exists "
+        - override | default((trix_shared + '/modulefiles/ood-' + app.name + '.lua') is not exists )
       failed_when: false
-
-    # - name: Set template scripts to executable
-    #   ansible.builtin.file:
-    #     path: "{{ app_path }}/template/{{ item.path }}"
-    #     mode: "0755"
-    #   notify: Run update_ood
-    #   loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app/template/', wantlist=True) }}"
-    #   when: item.state == 'file'
-
     
     - name: Include additional tasks for app {{ app.name }}
       include_tasks: "{{ item }}"

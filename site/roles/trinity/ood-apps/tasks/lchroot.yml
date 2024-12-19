@@ -12,26 +12,33 @@
       group: root
       mode: "0755"
 
-  - name: Creating env file
+  - name: Render env file
     ansible.builtin.template:
       src: 'shell/env.j2'
       dest: /etc/ood/config/apps/shell/env
       owner: root
       group: root
       mode: "0755"
+    when: 
+      - override | default(('/etc/ood/config/apps/shell/env') is not exists )
 
-  - name: Creating sudoers file
+  - name: Render sudoers file
     ansible.builtin.template:
       src: 'shell/sudoers.j2'
       dest: /etc/sudoers.d/lchroot
       owner: root
       group: root
       mode: "0755"
-      
-  - name: Set wrapper as execturable
+    when: 
+      - override | default(('/etc/sudoers.d/lchroot') is not exists )
+
+  - name: Render lchroot wrapper script
     ansible.builtin.template:
       src: shell/lchroot_wrapper.sh.j2
       dest: '{{ app.props.lchroot_wrapper_path }}'
       owner: root
       group: "{{ ood_apps_admin_group }}"
       mode: "0755"
+    when:
+      - override | default(('/usr/local/bin/lchroot_wrapper') is not exists )
+
