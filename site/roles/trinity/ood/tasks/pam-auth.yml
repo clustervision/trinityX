@@ -1,9 +1,13 @@
 ---
-- name: Install ondemand-pam required packages
-  ansible.builtin.package:
-    name: "{{ item }}"
+- name: Install required rpms
+  ansible.builtin.dnf:
+    name: "{{ item.name }}"
     state: present
-  loop: "{{ ood_pam_rpms }}"
+    disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+  with_items: "{{ ood_pam_rpms }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  notify: Run update_ood
 
 - name: Add authnz_pam_module
   ansible.builtin.copy:

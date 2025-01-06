@@ -1,11 +1,13 @@
 ---
-- name: Install ondemand-dex required packages
-  ansible.builtin.package:
-    name: "{{ item }}"
+- name: Install required rpms
+  ansible.builtin.dnf:
+    name: "{{ item.name }}"
     state: present
-  loop: "{{ ood_dex_rpms }}"
+    disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+  with_items: "{{ ood_dex_rpms }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  notify: Run update_ood
 
 - name: Enable ondemand-dex service on startup
   ansible.builtin.service:
