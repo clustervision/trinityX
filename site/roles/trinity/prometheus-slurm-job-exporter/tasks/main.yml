@@ -1,0 +1,26 @@
+---
+- import_tasks: preflight.yml
+  tags:
+    - prometheus-slurm-job-exporter-install
+    - prometheus-slurm-job-exporter-configure
+    - prometheus-slurm-job-exporter-run
+
+- import_tasks: install.yml
+  become: true
+  tags:
+    - prometheus-slurm-job-exporter-install
+
+- import_tasks: configure.yml
+  become: true
+  tags:
+    - prometheus-slurm-job-exporter-configure
+
+- name: Ensure slurm-job Exporter is enabled on boot
+  become: true
+  systemd:
+    # daemon_reload: true
+    enabled: true
+    name: prometheus-slurm-job-exporter
+  tags:
+    - prometheus-slurm-job-exporter-run
+  # when: ansible_connection not in 'chroot'

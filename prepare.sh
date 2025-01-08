@@ -129,8 +129,9 @@ if [ ! "$GITLAB_CI" ]; then
   if [ ! "$(which wget)" ]; then
       dnf -y install wget
   fi
+  ARCH=$(uname -m)
   TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml.example 2> /dev/null | grep -oE '[0-9\.]+' || echo '14.1')
-  wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/tui_configurator
+  wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
   chmod 755 site/tui_configurator
 fi
 

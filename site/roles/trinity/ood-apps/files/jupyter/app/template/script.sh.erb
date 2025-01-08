@@ -1,0 +1,19 @@
+#!/bin/bash -l
+
+# Set working directory to home directory
+cd "${HOME}"
+
+#
+# Start Jupyter Notebook Server
+#
+
+<%- unless context.modules.blank? -%>
+# Purge the module environment to avoid conflicts
+module purge
+
+# Load the require modules
+module load <%= context.modules %>
+<%- end -%>
+
+# Launch the Jupyter Notebook Server
+jupyter notebook --config="${CONFIG_FILE}" <%= context.extra_jupyter_args %>

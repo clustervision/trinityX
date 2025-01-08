@@ -15,6 +15,37 @@
   delay: "{{ rpm_delay | default(15) }}"
 
 - block:
+  - name: Set architecture specific variables
+    set_fact:
+      package_arch: "{{ _arch | from_yaml | default('x64') }}"
+    vars:
+      _arch: |
+        {% for type in ('armv6l','armhf','armv7l','aarch64','arm64') %}
+          {% if type == ansible_architecture %}
+            {{ 'aa64' }}
+          {% endif %}
+        {% endfor %}
+        {% if ansible_architecture == 'x86_64' %}
+          {{ 'x64' }}
+        {% endif %}
+
+  - name: Set system architecture specific variables
+    set_fact:
+      system_arch: "{{ _arch | from_yaml | default('x86_64') }}"
+    vars:
+      _arch: |
+        {% for type in ('armv6l','armhf','armv7l','aarch64','arm64') %}
+          {% if type == ansible_architecture %}
+            {{ 'aarch64' }}
+          {% endif %}
+        {% endfor %}
+        {% if ansible_architecture == 'x86_64' %}
+          {{ 'x86_64' }}
+        {% endif %}
+
+  - debug:
+      msg: "Detected architecture {{ package_arch }}/{{ system_arch }} based on {{ ansible_architecture }}"
+
   - debug:
       msg: "Using stream {{ trix_stream }}"
 

@@ -1,0 +1,16 @@
+---
+- name: Install required rpms
+  ansible.builtin.dnf:
+    name: "{{ item.name }}"
+    state: present
+    disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+  with_items: "{{ ood_dex_rpms }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  notify: Run update_ood
+
+- name: Enable ondemand-dex service on startup
+  ansible.builtin.service:
+    name: ondemand-dex
+    enabled: "{{ ood_auth_provider == 'dex' }}"
+    state: "{{ 'started' if ood_auth_provider == 'dex' else 'stopped' }}"

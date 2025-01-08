@@ -1,0 +1,44 @@
+---
+- name: Run lchroot task for OOD shell app
+  when:
+    - ansible_connection not in 'chroot'
+  block:
+
+  - name: Make config folder for app shell
+    ansible.builtin.file:
+      path: /etc/ood/config/apps/shell
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Render env file
+    ansible.builtin.template:
+      src: 'shell/env.j2'
+      dest: /etc/ood/config/apps/shell/env
+      owner: root
+      group: root
+      mode: "0755"
+    when: 
+      - override | default(('/etc/ood/config/apps/shell/env') is not exists )
+
+  - name: Render sudoers file
+    ansible.builtin.template:
+      src: 'shell/sudoers.j2'
+      dest: /etc/sudoers.d/lchroot
+      owner: root
+      group: root
+      mode: "0755"
+    when: 
+      - override | default(('/etc/sudoers.d/lchroot') is not exists )
+
+  - name: Render lchroot wrapper script
+    ansible.builtin.template:
+      src: shell/lchroot_wrapper.sh.j2
+      dest: '{{ app.props.lchroot_wrapper_path }}'
+      owner: root
+      group: "{{ ood_apps_admin_group }}"
+      mode: "0755"
+    when:
+      - override | default(('/usr/local/bin/lchroot_wrapper') is not exists )
+

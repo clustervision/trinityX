@@ -1,0 +1,58 @@
+--- 
+
+{% if ood_enable_ssl == true %}
+ssl:
+  - 'SSLCertificateFile "{{ ood_ssl_certificate }}"'
+  - 'SSLCertificateKeyFile "{{ ood_ssl_certificate_key }}"'
+{% endif %}
+
+
+port: {{ ood_port }}
+listen_addr_port: {{ ood_port }}
+servername: {{ ood_login_host }}
+
+use_rewrites: true
+use_maintenance: true
+maintenance_ip_allowlist:
+- 10.*
+
+pun_stage_cmd: 'sudo /opt/ood/nginx_stage/sbin/nginx_stage'
+
+
+host_regex: '[\w.-]+'
+rnode_uri: '/rnode'
+node_uri: '/node'
+
+{% if ood_auth_provider == 'dex' %}
+dex_uri: /dex
+
+dex:
+  connectors:
+    - type: ldap
+      id: ldap
+      name: LDAP
+      config:
+        host: "{{ ood_ldap_host }}:636"
+        insecureSkipVerify: true
+        userSearch:
+          baseDN: ou=People,dc=local
+          filter: "(objectClass=posixAccount)"
+          username: uid
+          emailAttr: uid
+          idAttr: uid
+          preferredUsernameAttr: uid
+        groupSearch:
+          baseDN: ou=Group,dc=local
+          filter: "(objectClass=posixGroup)"
+          userMatchers:
+            - userAttr: DN
+              groupAttr: member
+          nameAttr: cn
+{% elif ood_auth_provider == 'pam' %}
+auth:
+  - 'AuthType Basic'
+  - 'AuthName "Open OnDemand"'
+  - 'AuthBasicProvider PAM'
+  - 'AuthPAMService ood'
+  - 'Require valid-user'
+{% endif %}

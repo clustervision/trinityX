@@ -1,0 +1,141 @@
+---
+##### New tasks file for ood-portal (3.0 on RockyLinux-8)
+
+- name: Ensure ssl certificate and key exists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: file
+  with_items:
+    - "{{ ood_ssl_certificate }}"
+    - "{{ ood_ssl_certificate_key }}"
+  when: ood_enable_ssl
+
+- name: Install required rpms
+  ansible.builtin.dnf:
+    name: "{{ item.name }}"
+    state: present
+    disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+  with_items: "{{ ood_rpms }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  notify: Run update_ood
+
+- name: Ensure OOD config paths exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+    state: directory
+  with_items:
+    - /etc/ood/config/
+    - /etc/ood/config/clusters.d
+    - /etc/ood/config/apps
+    - /etc/ood/config/apps/bc_desktop
+
+- name: Render OOD ood_portal.yml config file
+  ansible.builtin.template:
+    src: ood_portal.yml.j2
+    dest: "{{ ood_cfg_path }}/ood_portal.yml"
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Run update_ood
+  tags: branding
+
+- name: Render OOD nginx_stage.yml config file
+  ansible.builtin.template:
+    src: branding/TrinityX/nginx_stage.yml.j2
+    dest: "{{ ood_cfg_path }}/nginx_stage.yml"
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Run update_ood
+  tags: branding
+
+- name: Render OOD cluster config file
+  ansible.builtin.template:
+    src: cluster.yml.j2
+    dest: "{{ ood_cfg_path }}/clusters.d/{{ ood_cluster_name }}.yml"
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Run update_ood
+
+- name: Copy TrinityX branding to /var/www/ood/public
+  ansible.builtin.copy:
+    src: branding/TrinityX/{{ item }}
+    dest: /var/www/ood/public/{{ item }}
+    mode: "0644"
+    owner: root
+    group: root
+  with_items:
+    - favicon.ico
+    - logo.png
+    - custom.css
+  when: ood_brand == "TrinityX"
+  notify: Run update_ood
+  tags: branding
+
+- name: Apply TrinityX en.yml (welcome_html) branding
+  ansible.builtin.template:
+    src: branding/TrinityX/en.yml.j2
+    dest: /var/www/ood/apps/sys/dashboard/config/locales/en.yml
+    mode: "0644"
+    owner: root
+    group: root
+    backup: "yes"
+  when: ood_brand == "TrinityX"
+  notify: Run update_ood
+  tags: branding
+
+- name: Create /etc/ood/config/ondemand.d if not present
+  ansible.builtin.file:
+    path: /etc/ood/config/ondemand.d
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_brand == "TrinityX"
+  notify: Run update_ood
+  tags: branding
+
+- name: Apply TrinityX ondemand.yml branding
+  ansible.builtin.template:
+    src: branding/TrinityX/ondemand.yml.j2
+    dest: /etc/ood/config/ondemand.d/ondemand.yml
+    mode: "0644"
+    owner: root
+    group: root
+    backup: "yes"
+  when: ood_brand == "TrinityX"
+  notify: Run update_ood
+  tags: branding
+
+- name: Override default 404 page to auto initialize app
+  ansible.builtin.copy:
+    src: branding/TrinityX/overrides/pun_config_view.rb
+    dest: /opt/ood/nginx_stage/lib/nginx_stage/views/pun_config_view.rb
+    owner: root
+    group: root
+    mode: "0644"
+  when: ood_brand == "TrinityX"
+  notify: Run update_ood
+  tags: branding
+
+- name: Configure firewalld
+  ansible.posix.firewalld:
+    state: enabled
+    port: "{{ ood_port }}/tcp"
+    permanent: "yes"
+    immediate: "yes"
+
+- name: Include auth task
+  ansible.builtin.include_tasks: dex-auth.yml
+- name: Include auth task
+  ansible.builtin.include_tasks: pam-auth.yml
+- name: Enable OOD webserver on startup
+  ansible.builtin.service:
+    name: httpd
+    enabled: "yes"
+    state: started
