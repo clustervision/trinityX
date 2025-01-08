@@ -1,0 +1,14 @@
+---
+- name: Run task for OOD infiniband app
+  when:
+    - ansible_connection not in 'chroot'
+  block:
+
+  - name: Set permissions for inifinband related apps
+    ansible.builtin.file:
+      path: /dev/infiniband/umad0
+      mode: "0660"
+      owner: root
+      group: "{{ ood_apps_admin_group }}"
+    when: "'/dev/infiniband/umad0' is exists"
+

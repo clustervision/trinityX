@@ -1,0 +1,51 @@
+---
+- name: Install required rpms
+  ansible.builtin.dnf:
+    name: "{{ item.name }}"
+    state: present
+    disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
+  with_items: "{{ ood_pam_rpms }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  notify: Run update_ood
+
+- name: Add authnz_pam_module
+  ansible.builtin.copy:
+    content: |
+      LoadModule authnz_pam_module modules/mod_authnz_pam.so
+    dest: /etc/httpd/conf.modules.d/55-authnz_pam.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Add pam.conf
+  ansible.builtin.copy:
+    content: |
+      #%PAM-1.0
+      auth       substack     system-auth
+      auth       include      postlogin
+      account    required     pam_nologin.so
+      account    include      system-auth
+      password   include      system-auth
+      # pam_selinux.so close should be the first session rule
+      session    required     pam_selinux.so close
+      session    required     pam_loginuid.so
+      # pam_selinux.so open should only be followed by sessions to be executed in the user context
+      session    required     pam_selinux.so open
+      session    required     pam_namespace.so
+      session    optional     pam_keyinit.so force revoke
+      session    include      system-auth
+      session    include      postlogin
+      -session   optional     pam_ck_connector.so
+    dest: /etc/pam.d/ood
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Set permissions on /etc/pam.d/ood
+  ansible.builtin.file:
+    path: /etc/pam.d/ood
+    owner: root
+    group: root
+    mode: "0644"
+    state: file

@@ -1,0 +1,89 @@
+---
+- name: Configure ood apps on the controller
+  when: ansible_connection not in 'chroot'
+  block:
+    - name: Create ood directory
+      ansible.builtin.file:
+        path: "{{ trix_ood }}"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+    
+    - name: Create temporary directory to download trinityx-ood custom apps
+      ansible.builtin.tempfile:
+        state: directory
+      register: ood_luna_apps_temp
+      changed_when: false
+
+    - name: Download and Unpack trinityx-ood custom apps to temporary directory
+      ansible.builtin.unarchive:
+        src: "{{ ood_luna_apps_url }}"
+        dest: "{{ ood_luna_apps_temp.path }}"
+        mode: u=rw,g=r,o=r,a-x+X
+        remote_src: true
+        list_files: yes
+      register: ood_luna_apps_temp_files
+      changed_when: false
+
+    - name: Get base folder name
+      ansible.builtin.set_fact:
+        ood_luna_apps_version: "{{ ood_luna_apps_temp_files.files[0] | dirname }}"
+
+    - name: Copy trinityx-ood custom apps to the ood directory if it does not exist
+      ansible.builtin.synchronize:
+        src: "{{ ood_luna_apps_temp.path }}/{{ ood_luna_apps_version }}"
+        dest: "{{ trix_ood }}"
+      when: 
+      - override | default((trix_ood + '/' + ood_luna_apps_version) is not exists)
+      register: ood_luna_apps_download
+    
+    - name: Symlink to current build
+      ansible.builtin.file:
+        state: link
+        src: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
+        dest: "{{ trix_ood }}/3.0"
+        force: true
+      when: 
+      - override | default(ood_luna_apps_download.changed)
+
+    - name: Create trinityx-ood luna2 app config directory
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/3.0/config/"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: "{{ ood_apps_admin_group }}"
+      when: 
+      - override | default(ood_luna_apps_download.changed)
+
+    - name: Render trinityx-ood luna app luna.ini
+      ansible.builtin.template:
+        src: luna2.ini.j2
+        dest: "{{ trix_ood }}/3.0/config/luna.ini"
+        owner: root
+        group: "{{ ood_apps_admin_group }}"
+        mode: "0640"
+      when: 
+      - override | default(ood_luna_apps_download.changed)
+
+    - name: Install trinityx-ood custom apps python requirements
+      ansible.builtin.pip:
+        requirements: "{{ trix_ood }}/3.0/{{ item.name }}/requirements.txt"
+        virtualenv: /trinity/local/python/
+      with_items: "{{ ood_apps }}"
+      when: 
+      - item.get('type') == 'trinity'
+      - override | default(ood_luna_apps_download.changed)
+
+    - name: Symlink trinityx-ood custom apps
+      ansible.builtin.file:
+        src: "{{ trix_ood }}/3.0/{{ item.name }}"
+        dest: "{{ ood_apps_path }}/{{ item.type }}_{{ item.name }}"
+        state: link
+        force: yes
+      with_items: "{{ ood_apps }}"
+      notify: Run update_ood
+      when: 
+      - item.get('type') == 'trinity'
+      - override | default(ood_luna_apps_download.changed or (ood_apps_path + '/' + item.type + '_' + item.name) is not exists )

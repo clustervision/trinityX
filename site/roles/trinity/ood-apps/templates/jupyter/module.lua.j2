@@ -1,0 +1,109 @@
+help([[
+This module activates a user-specific Python virtual environment for Jupyter.
+
+Virtual environment path: ~/.trinity/venvs/ood-jupyter
+]])
+
+-- Module Metadata
+whatis("Name: User-Specific OOD Jupyter Virtual Environment")
+whatis("Version: 1.0")
+whatis("Category: Python")
+whatis("Description: Activates a user-specific Python virtual environment for Jupyter.")
+whatis("URL: https://jupyter.org/")
+
+-- Resolve the user's home directory and set the venv path
+local user_home = os.getenv("HOME")
+if not user_home then
+    LmodError("Unable to determine the user's home directory. Ensure $HOME is set.")
+end
+
+local venv_path = pathJoin(user_home, ".trinity", "venvs", "ood-jupyter")
+local venv_activate_path = pathJoin(venv_path, "bin", "activate")
+
+-- Function to check if a file exists
+local function file_exists(file)
+    local f = io.open(file, "r")
+    if f then
+        f:close()
+        return true
+    else
+        return false
+    end
+end
+
+-- Function to get the highest Python3 executable, defaulting to 'python3' if no specific version is found
+local function get_highest_python()
+    -- This command finds all python3.x executables, sorts them, and picks the highest version
+    local find_cmd = [[
+        find $(echo "$PATH" | tr ':' ' ') -maxdepth 1 -type f -executable -name "python3.*" 2>/dev/null | 
+        sort -V | 
+        tail -n1
+    ]]
+    local handle = io.popen(find_cmd)
+    local result = handle:read("*a")
+    handle:close()
+    result = result:gsub("%s+", "") -- Trim any whitespace
+    
+    if result and result ~= "" then
+        return result
+    else
+        -- Fallback to 'python3'
+        local cmd_fallback = "which python3 2>/dev/null"
+        local handle_fallback = io.popen(cmd_fallback)
+        local fallback = handle_fallback:read("*a")
+        handle_fallback:close()
+        fallback = fallback:gsub("%s+", "")
+        
+        if fallback and fallback ~= "" then
+            return fallback
+        else
+            LmodError("No python3 executable found. Please install Python 3.")
+        end
+    end
+end
+
+-- Get the highest Python3 executable or fallback to 'python3'
+local python_executable = get_highest_python()
+
+-- Message on load and unload
+if (mode() == "load") then
+    if not file_exists(venv_activate_path) then
+        LmodMessage("The specified virtual environment does not exist. Creating it now...")
+
+        -- Create the parent directory for the virtual environment
+        local mkdir_cmd = "mkdir -p " .. pathJoin(user_home, ".trinity", "venvs")
+        local mkdir_cmd_status = os.execute(mkdir_cmd)
+        if mkdir_cmd_status ~= true then
+            LmodError("Failed to execute: " .. mkdir_cmd)
+        end
+
+        -- Create the virtual environment using the detected Python executable
+        local create_venv_cmd = python_executable .. " -m venv " .. venv_path
+        local create_status = os.execute(create_venv_cmd)
+        if create_status ~= true then
+            LmodError("Failed to execute: " .. create_venv_cmd)
+        end
+
+        -- Activate the virtual environment
+        source_sh("bash", venv_activate_path, "activate")
+        LmodMessage("The OOD Jupyter virtual environment has been activated.")
+
+        -- Upgrade pip and install necessary packages
+        LmodMessage("Installing Jupyter and related packages in the virtual environment...")
+        local pip_install_cmd = python_executable .. " -m pip install --upgrade pip jupyter notebook ipyparallel 1>&2"
+        local pip_install_status = os.execute(pip_install_cmd)
+        if pip_install_status ~= true then
+            LmodError("Failed to execute: " .. pip_install_cmd)
+        end
+    else
+        -- Activate the existing virtual environment
+        source_sh("bash", venv_activate_path, "activate")
+        LmodMessage("The OOD Jupyter virtual environment has been activated.")
+    end
+end
+
+if (mode() == "unload") then
+    -- Deactivate the virtual environment
+    source_sh("bash", venv_activate_path, "deactivate")
+    LmodMessage("The OOD Jupyter virtual environment has been deactivated.")
+end

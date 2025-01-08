@@ -255,21 +255,19 @@
     - role: trinity/aria2c
       tags: aria2c
 
-    - role: trinity/ood-portal
+    - role: trinity/ood
       enable_ssl: true
-      ood_portal_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
-      ood_portal_ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-      ood_portal_ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      ood_portal_login_host: "{{ trix_external_fqdn }}"
-      ood_portal_ldap_host: "{{ trix_ctrl_ip }}"
-      ood_portal_admin_group: "{{ admin_group }}"
-      tags: ood, ood-portal, interactive-apps, ood-interactive-apps
+      ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
+      ood_ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+      ood_ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+      ood_login_host: "{{ trix_external_fqdn }}"
+      ood_ldap_host: "{{ trix_ctrl_ip }}"
+      ood_admin_group: "{{ admin_group }}"
+      tags: ood, ood-core
 
-    - role: trinity/ood-vnc
-      tags: ood, ood-vnc
-    
-    - role: trinity/ood-interactive_apps
-      tags: ood, interactive-apps, ood-interactive-apps
+    - role: trinity/ood-apps
+      ood_apps_admin_group: "{{ admin_group }}"
+      tags: ood, ood-apps
 
     # - role: trinity/prometheus-auth
     #   prometheus_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
