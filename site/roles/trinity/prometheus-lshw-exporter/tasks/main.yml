@@ -1,0 +1,26 @@
+---
+- import_tasks: preflight.yml
+  tags:
+    - prometheus-lshw-exporter-install
+    - prometheus-lshw-exporter-configure
+    - prometheus-lshw-exporter-run
+
+- import_tasks: install.yml
+  become: true
+  tags:
+    - prometheus-lshw-exporter-install
+
+- import_tasks: configure.yml
+  become: true
+  tags:
+    - prometheus-lshw-exporter-configure
+
+- name: Ensure lshw Exporter is enabled on boot
+  become: true
+  systemd:
+    # daemon_reload: true
+    enabled: true
+    name: prometheus-lshw-exporter
+  tags:
+    - prometheus-lshw-exporter-run
+  # when: ansible_connection not in 'chroot'
