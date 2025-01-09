@@ -1,0 +1,66 @@
+---
+- name: Create the prometheus_lshw_exporter group
+  group:
+    name: "{{ prometheus_lshw_exporter_system_group }}"
+    state: present
+    system: true
+  when: prometheus_lshw_exporter_system_group != "root"
+
+- name: Create the prometheus_lshw_exporter user
+  user:
+    name: "{{ prometheus_lshw_exporter_system_user }}"
+    group: "{{ prometheus_lshw_exporter_system_group }}"
+    groups: "{{ prometheus_lshw_exporter_additional_system_groups }}"
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    createhome: false
+    home: /
+  when: prometheus_lshw_exporter_system_user != "root"
+
+- name: Create prometheus_lshw_exporter_binary_install_dir
+  file:
+    path: "{{prometheus_lshw_exporter_binary_install_dir}}"
+    state: directory
+    mode: 0755
+
+- name: Create the lshwtool {{_prometheus_lshw_exporter_tmp_dir}} if not exists
+  file:
+    path: "{{_prometheus_lshw_exporter_tmp_dir}}"
+    state: directory
+    mode: 0755
+
+- name: Create log dir if prometheus_lshw_exporter_log_dir is defined
+  ansible.builtin.file:
+    path: "{{ prometheus_lshw_exporter_log_dir }}"
+    state: directory
+    mode: 0755
+  when:
+    - prometheus_lshw_exporter_log_dir is defined
+
+- name: "Download prometheus-lshw-exporter binary from {{prometheus_lshw_exporter_binary_url}} to local folder"
+  get_url:
+    url: "{{ prometheus_lshw_exporter_binary_url }}"
+    dest: "{{prometheus_lshw_exporter_binary_install_dir}}/prometheus-lshw-exporter"
+    mode: 0755
+    validate_certs: false
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 10
+  delay: 15
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  ignore_errors: true
+
+- name: Install prometheus_lshw_exporter_packages packages
+  package:
+    name: "{{ prometheus_lshw_exporter_packages }}"
+    state: present
+  when: prometheus_lshw_exporter_packages is defined
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
