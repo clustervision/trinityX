@@ -400,12 +400,13 @@
 
   - block:
     - fail: 
-        msg: 'trix_external_fqdn is not configured and it could not be resolved. I can continue but OpenOndemand might not work properly'
-      ignore_errors: true
+        msg: 'trix_external_fqdn is not configured and it could not be resolved. OpenOndemand will not work properly. This check can be skipped by "-e skip_fqdn"'
+      ignore_errors: skip_fqdn | default(False)
+      when: enable_ood
 
-    - name: Wait 10s before continuing with a default
-      wait_for:
-        timeout: 10
+#    - name: Wait 10s before continuing with a default
+#      wait_for:
+#        timeout: 10
 
     - name: Setting trix_external_fqdn
       set_fact:
