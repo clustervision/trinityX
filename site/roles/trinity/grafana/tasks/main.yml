@@ -5,6 +5,17 @@
     grafana_admin_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/grafana/admin.txt',
                            chars=['ascii_letters','digits','hexdigits']) }}"
+- name: Retrieve grafana_alertmanager_basic_auth
+  set_fact:
+    grafana_alertmanager_basic_auth: "{{ grafana_alertmanager_basic_auth_file is defined and grafana_alertmanager_basic_auth_file | length > 0 }}"
+- name: Retrieve grafana_alertmanagerbasic_auth_user
+  set_fact:
+    grafana_alertmanager_basic_auth_user: "{{ grafana_alertmanager_basic_auth_file | basename | regex_replace('(.*)\\..*', '\\1') }}"
+- name: Retrieve grafana_alertmanager_basic_auth_pwd
+  set_fact:
+    grafana_alertmanager_basic_auth_pwd: "{{ lookup('file', grafana_alertmanager_basic_auth_file) }}"
+
+
 
 - name: Set protocol
   set_fact:
@@ -31,6 +42,10 @@
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install camptocamp-prometheus-alertmanager-datasource
+  # grafana-cli plugins install camptocamp-prometheus-alertmanager-datasource
+  command: grafana-cli plugins install camptocamp-prometheus-alertmanager-datasource
 
 - name: Configure LDAP
   template:

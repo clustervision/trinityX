@@ -80,27 +80,43 @@ prometheus_alertmanager_time_intervals: []
 
 prometheus_alertmanager_inhibit_rules:
   # Inhibit alerts with severity level `warning` or lower for critical alerts
-  - source_match:
-      severity: 'info'
-    target_match:
-      severity: 'warning'
-    equal: ['hostname', 'alertname']
-  - source_match:
-      severity: 'warning'
-    target_match:
-      severity: 'danger'
-    equal: ['hostname', 'alertname']
-  - source_match:
-      severity: 'danger'
-    target_match:
-      severity: 'critical'
-    equal: ['hostname', 'alertname']
-
-  - source_match:
-      severity: 'ServerDown'
-    target_match:
-      severity: 'MultipleServerDown'
-    equal: ['cluster']
+- equal:
+  - cluster
+  - hostname
+  - alertname
+  source_match:
+    severity: warning
+  target_match:
+    severity: info
+- equal:
+  - cluster
+  - hostname
+  - alertname
+  source_match:
+    severity: danger
+  target_match:
+    severity: warning
+- equal:
+  - cluster
+  - hostname
+  - alertname
+  source_match:
+    severity: critical
+  target_match:
+    severity: warning
+- equal:
+  - cluster
+  - hostname
+  source_match:
+    alertname: ServerDown
+  target_match:
+    alertname: ExporterDown
+- equal:
+  - cluster
+  source_match:
+    alertname: MultipleServerDown
+  target_match:
+    alertname: ServerDown
 
 
 prometheus_alertmanager_route: 

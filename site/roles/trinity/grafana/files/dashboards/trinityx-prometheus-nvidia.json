@@ -36,7 +36,7 @@
       "url": ""
     },
     {
-      "asDropdown": true,
+      "asDropdown": false,
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
@@ -1837,23 +1837,23 @@
     "list": [
       {
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "trixprometheus"
-        },
-        "definition": "label_values(nvidia_smi_gpu_info,hostname)",
+        "definition": "label_values(up,luna_group)",
         "hide": 0,
         "includeAll": true,
-        "label": "Host",
+        "label": "Luna Group",
         "multi": true,
-        "name": "host",
+        "name": "luna_group",
         "options": [],
         "query": {
-          "query": "label_values(nvidia_smi_gpu_info,hostname)",
+          "query": "label_values(up,luna_group)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -1876,7 +1876,38 @@
           "type": "prometheus",
           "uid": "trixprometheus"
         },
-        "definition": "label_values(nvidia_smi_index{hostname=~\"$host\"},uuid)",
+        "definition": "label_values(nvidia_smi_gpu_info{luna_group=~\"$luna_group\"},hostname)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Hostname",
+        "multi": true,
+        "name": "hostname",
+        "options": [],
+        "query": {
+          "query": "label_values(nvidia_smi_gpu_info{luna_group=~\"$luna_group\"},hostname)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "trixprometheus"
+        },
+        "definition": "label_values(nvidia_smi_index{hostname=~\"$hostname\"},uuid)",
         "hide": 0,
         "includeAll": true,
         "label": "GPU",
@@ -1884,7 +1915,7 @@
         "name": "gpu",
         "options": [],
         "query": {
-          "query": "label_values(nvidia_smi_index{hostname=~\"$host\"},uuid)",
+          "query": "label_values(nvidia_smi_index{hostname=~\"$hostname\"},uuid)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -1899,8 +1930,8 @@
       {
         "current": {
           "selected": false,
-          "text": "node002.cluster",
-          "value": "node002.cluster"
+          "text": "node001.cluster",
+          "value": "node001.cluster"
         },
         "datasource": {
           "type": "prometheus",

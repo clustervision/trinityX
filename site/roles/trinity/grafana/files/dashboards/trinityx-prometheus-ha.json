@@ -25,24 +25,24 @@
       "includeVars": true,
       "keepTime": true,
       "tags": [
-        "home"
+        "dashboard"
       ],
       "targetBlank": false,
-      "title": "TrinityX Home",
+      "title": "TrinityX Dashboards",
       "tooltip": "",
       "type": "dashboards",
       "url": ""
     },
     {
-      "asDropdown": true,
+      "asDropdown": false,
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
       "tags": [
-        "dashboard"
+        "home"
       ],
       "targetBlank": false,
-      "title": "TrinityX Dashboards",
+      "title": "TrinityX Home",
       "tooltip": "",
       "type": "dashboards",
       "url": ""
@@ -444,7 +444,7 @@
       "panels": [],
       "repeat": "controllers",
       "repeatDirection": "h",
-      "title": "Resources $controllers",
+      "title": "Resources $hostname",
       "type": "row"
     },
     {
@@ -542,7 +542,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=~\"$controllers\", group!='Trinity-stack'} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=~\"$hostname\", group!='Trinity-stack'} != 0",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -748,7 +748,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=\"$controllers\", group!='Trinity-stack'} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=\"$hostname\", group!='Trinity-stack'} != 0",
           "format": "table",
           "instant": false,
           "legendFormat": "__auto",
@@ -892,7 +892,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=\"$controllers\", group='Trinity-stack'} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=\"$hostname\", group='Trinity-stack'} != 0",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1098,7 +1098,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=~\"$controllers\", group=\"Trinity-stack\"} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=~\"$hostname\", group=\"Trinity-stack\"} != 0",
           "format": "table",
           "instant": false,
           "legendFormat": "__auto",
@@ -1162,24 +1162,25 @@
         "current": {
           "selected": true,
           "text": [
-            "All"
+            "office-controller1.cluster"
           ],
           "value": [
-            "$__all"
+            "office-controller1.cluster"
           ]
         },
         "datasource": {
           "type": "prometheus",
           "uid": "trixprometheus"
         },
-        "definition": "label_values(ha_cluster_pacemaker_nodes{job=\"luna_controllers\"},node)",
+        "definition": "label_values(up{luna_group=\"controller\"},hostname)",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
+        "label": "Hostname",
         "multi": true,
-        "name": "controllers",
+        "name": "hostname",
         "options": [],
         "query": {
-          "query": "label_values(ha_cluster_pacemaker_nodes{job=\"luna_controllers\"},node)",
+          "query": "label_values(up{luna_group=\"controller\"},hostname)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -1191,13 +1192,13 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "High Availability",
   "uid": "trixha",
-  "version": 1,
+  "version": 4,
   "weekStart": ""
 }
