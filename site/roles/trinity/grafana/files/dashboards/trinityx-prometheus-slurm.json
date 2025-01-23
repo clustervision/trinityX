@@ -80,8 +80,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "List of all nodes available in SLURM",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -102,7 +103,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
+        "h": 4,
         "w": 3,
         "x": 0,
         "y": 1
@@ -120,9 +121,7 @@
           "fields": "",
           "values": false
         },
-        "text": {
-          "valueSize": 40
-        },
+        "text": {},
         "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
@@ -130,13 +129,13 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
           "expr": "slurm_nodes_alloc + slurm_nodes_comp + slurm_nodes_drain + slurm_nodes_idle + slurm_nodes_maint + slurm_nodes_mix + slurm_nodes_resv",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "available nodes",
           "range": true,
           "refId": "A"
         }
@@ -147,8 +146,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "SLURM nodes state over time",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -179,7 +179,7 @@
             "spanNulls": false,
             "stacking": {
               "group": "A",
-              "mode": "normal"
+              "mode": "percent"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -187,6 +187,7 @@
           },
           "links": [],
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -277,11 +278,131 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slurm_nodes_comp"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slurm_nodes_down"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slurm_nodes_drain"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#7e7e7e",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slurm_nodes_fail"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slurm_nodes_idle"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#99909e",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slurm_nodes_maint"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5a5a5a",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slurm_nodes_mix"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slurm_nodes_resv"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "super-light-blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
           }
         ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 21,
         "x": 3,
         "y": 1
@@ -291,10 +412,9 @@
       "options": {
         "legend": {
           "calcs": [
+            "min",
             "mean",
-            "lastNotNull",
-            "max",
-            "min"
+            "max"
           ],
           "displayMode": "table",
           "placement": "right",
@@ -309,76 +429,26 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "slurm_nodes_down",
+          "expr": "{__name__=~\"slurm_nodes_.*\"} > 0",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "Down Nodes",
+          "legendFormat": "{{__name__}}",
           "range": true,
           "refId": "E"
-        },
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "expr": "slurm_nodes_mix",
-          "intervalFactor": 2,
-          "legendFormat": "Mixed Nodes",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "slurm_nodes_alloc + slurm_nodes_comp",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "Allocated Nodes",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "slurm_nodes_alloc + slurm_nodes_down + slurm_nodes_drain + slurm_nodes_idle + slurm_nodes_mix + slurm_nodes_comp + slurm_nodes_maint + slurm_nodes_resv",
-          "format": "time_series",
-          "instant": false,
-          "intervalFactor": 2,
-          "legendFormat": "Total Nodes",
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "slurm_nodes_idle",
-          "format": "time_series",
-          "hide": true,
-          "instant": false,
-          "intervalFactor": 2,
-          "legendFormat": "Idle",
-          "refId": "C"
         }
       ],
-      "title": "Nodes",
+      "title": "Node state",
       "transformations": [
         {
-          "id": "configFromData",
+          "id": "renameByRegex",
           "options": {
-            "configRefId": "D",
-            "mappings": [
-              {
-                "fieldName": "Total Nodes",
-                "handlerKey": "max"
-              }
-            ]
+            "regex": "slurm_nodes_(.*)",
+            "renamePattern": "$1"
           }
         }
       ],
@@ -387,8 +457,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "List of all nodes allocated in SLURM",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -410,10 +481,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
+        "h": 4,
         "w": 3,
         "x": 0,
-        "y": 4
+        "y": 5
       },
       "id": 58,
       "options": {
@@ -428,9 +499,7 @@
           "fields": "",
           "values": false
         },
-        "text": {
-          "valueSize": 40
-        },
+        "text": {},
         "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
@@ -438,13 +507,13 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
           "expr": "slurm_nodes_alloc + slurm_nodes_mix",
           "instant": true,
-          "legendFormat": "__auto",
+          "legendFormat": "available nodes",
           "range": false,
           "refId": "A"
         }
@@ -461,7 +530,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 9
       },
       "id": 14,
       "panels": [],
@@ -479,8 +548,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Total CPUs available",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -502,10 +572,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 4,
         "w": 3,
         "x": 0,
-        "y": 8
+        "y": 10
       },
       "id": 55,
       "options": {
@@ -520,9 +590,7 @@
           "fields": "",
           "values": false
         },
-        "text": {
-          "valueSize": 40
-        },
+        "text": {},
         "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
@@ -530,13 +598,13 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
           "expr": "slurm_cpus_total - slurm_cpus_other",
           "instant": true,
-          "legendFormat": "__auto",
+          "legendFormat": "available cpus",
           "range": false,
           "refId": "A"
         }
@@ -547,8 +615,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "CPUs Allocated per partition over time",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -590,7 +659,6 @@
           },
           "links": [],
           "mappings": [],
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -665,10 +733,10 @@
         ]
       },
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 21,
         "x": 3,
-        "y": 8
+        "y": 10
       },
       "id": 48,
       "options": {
@@ -692,7 +760,8 @@
       "targets": [
         {
           "datasource": {
-            "type": "prometheus"
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "expr": "slurm_partition_cpus_allocated",
@@ -704,7 +773,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "expr": "slurm_cpus_total",
@@ -745,6 +814,7 @@
         "type": "prometheus",
         "uid": "trixprometheus"
       },
+      "description": "Total CPUs allocated",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -766,10 +836,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 4,
         "w": 3,
         "x": 0,
-        "y": 15
+        "y": 14
       },
       "id": 56,
       "options": {
@@ -784,9 +854,7 @@
           "fields": "",
           "values": false
         },
-        "text": {
-          "valueSize": 40
-        },
+        "text": {},
         "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
@@ -800,7 +868,7 @@
           "exemplar": false,
           "expr": "slurm_cpus_alloc",
           "instant": true,
-          "legendFormat": "__auto",
+          "legendFormat": "allocated cpus",
           "range": false,
           "refId": "A"
         }
@@ -810,8 +878,88 @@
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "trixprometheus"
       },
+      "description": "Top 10 acounts by amount of CPUs running",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "text",
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 3,
+        "x": 0,
+        "y": 18
+      },
+      "id": 61,
+      "options": {
+        "displayMode": "gradient",
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "topk(10, sort_desc(sum by (account) (slurm_account_cpus_running)))",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Top Accounts by CPUs running",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "description": "CPUs running per account over time",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -851,7 +999,6 @@
           "links": [],
           "mappings": [],
           "min": 0,
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -870,10 +1017,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 10,
+        "h": 10,
+        "w": 8,
         "x": 3,
-        "y": 15
+        "y": 18
       },
       "id": 54,
       "options": {
@@ -896,6 +1043,7 @@
           "datasource": {
             "type": "prometheus"
           },
+          "editorMode": "code",
           "expr": "slurm_account_cpus_running{account!~'none'}",
           "instant": false,
           "interval": "",
@@ -903,13 +1051,94 @@
           "refId": "A"
         }
       ],
-      "title": "Utilized CPUs per Account",
+      "title": "CPUs running per Account",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "type": "prometheus"
+        "type": "prometheus",
+        "uid": "trixprometheus"
       },
+      "description": "Top 10 users by amount of CPUs running",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "text",
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 3,
+        "x": 11,
+        "y": 18
+      },
+      "id": 62,
+      "options": {
+        "displayMode": "gradient",
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "topk(10, sort_desc(sum by (user) (slurm_user_cpus_running)))",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Top Users by CPUs running",
+      "transformations": [],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "trixprometheus"
+      },
+      "description": "CPUs running per user over time",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -949,7 +1178,6 @@
           "links": [],
           "mappings": [],
           "min": 0,
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -968,10 +1196,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 11,
-        "x": 13,
-        "y": 15
+        "h": 10,
+        "w": 10,
+        "x": 14,
+        "y": 18
       },
       "id": 52,
       "options": {
@@ -994,6 +1222,7 @@
           "datasource": {
             "type": "prometheus"
           },
+          "editorMode": "code",
           "expr": "slurm_user_cpus_running > 0",
           "instant": false,
           "interval": "",
@@ -1001,7 +1230,7 @@
           "refId": "A"
         }
       ],
-      "title": "Utilized CPUs per user",
+      "title": "CPUs running per User",
       "type": "timeseries"
     },
     {
@@ -1013,7 +1242,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 28
       },
       "id": 13,
       "panels": [],
@@ -1033,6 +1262,7 @@
         "type": "prometheus",
         "uid": "trixprometheus"
       },
+      "description": "Overview of the jobs queue over time",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1072,7 +1302,6 @@
           "links": [],
           "mappings": [],
           "min": 0,
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1110,7 +1339,7 @@
         "h": 16,
         "w": 11,
         "x": 0,
-        "y": 23
+        "y": 29
       },
       "id": 2,
       "links": [],
@@ -1214,7 +1443,7 @@
           "refId": "E"
         }
       ],
-      "title": "JobQueue",
+      "title": "Jobs Queue",
       "transformations": [
         {
           "disabled": true,
@@ -1270,7 +1499,6 @@
           "links": [],
           "mappings": [],
           "min": 0,
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1333,7 +1561,7 @@
         "h": 8,
         "w": 6,
         "x": 11,
-        "y": 23
+        "y": 29
       },
       "id": 42,
       "options": {
@@ -1411,7 +1639,6 @@
           "links": [],
           "mappings": [],
           "min": 0,
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1433,7 +1660,7 @@
         "h": 8,
         "w": 7,
         "x": 17,
-        "y": 23
+        "y": 29
       },
       "id": 44,
       "options": {
@@ -1510,7 +1737,6 @@
           "links": [],
           "mappings": [],
           "min": 0,
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1573,7 +1799,7 @@
         "h": 8,
         "w": 6,
         "x": 11,
-        "y": 31
+        "y": 37
       },
       "id": 46,
       "options": {
@@ -1651,7 +1877,6 @@
           "links": [],
           "mappings": [],
           "min": 0,
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1673,7 +1898,7 @@
         "h": 8,
         "w": 7,
         "x": 17,
-        "y": 31
+        "y": 37
       },
       "id": 60,
       "options": {
@@ -1715,7 +1940,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 45
       },
       "id": 15,
       "panels": [
@@ -1761,7 +1986,7 @@
             "h": 5,
             "w": 8,
             "x": 0,
-            "y": 40
+            "y": 46
           },
           "id": 7,
           "links": [],
@@ -1838,7 +2063,7 @@
             "h": 5,
             "w": 8,
             "x": 8,
-            "y": 40
+            "y": 46
           },
           "id": 8,
           "links": [],
@@ -1901,7 +2126,7 @@
             "h": 5,
             "w": 8,
             "x": 16,
-            "y": 40
+            "y": 46
           },
           "id": 26,
           "options": {
@@ -1951,7 +2176,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 46
       },
       "id": 16,
       "panels": [
@@ -2001,7 +2226,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2017,7 +2243,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 46
+            "y": 47
           },
           "id": 4,
           "links": [],
@@ -2108,7 +2334,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2124,7 +2351,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 46
+            "y": 47
           },
           "id": 3,
           "links": [],
@@ -2217,7 +2444,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2233,7 +2461,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 53
+            "y": 54
           },
           "id": 9,
           "links": [],
@@ -2286,7 +2514,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   }
                 ]
               },
@@ -2298,7 +2527,7 @@
             "h": 6,
             "w": 6,
             "x": 12,
-            "y": 53
+            "y": 54
           },
           "id": 34,
           "links": [],
@@ -2349,7 +2578,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 41
+        "y": 47
       },
       "id": 32,
       "panels": [
@@ -2400,7 +2629,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2416,7 +2646,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 60
+            "y": 48
           },
           "id": 28,
           "options": {
@@ -2502,7 +2732,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2518,7 +2749,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 60
+            "y": 48
           },
           "id": 30,
           "options": {
@@ -2578,10 +2809,30 @@
     "dashboard"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "trixprometheus"
+        },
+        "description": "Prometheus data source",
+        "hide": 2,
+        "includeAll": false,
+        "label": "Prometheus data source",
+        "multi": false,
+        "name": "prometheus_datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -2612,6 +2863,6 @@
   "timezone": "",
   "title": "Slurm Overview",
   "uid": "trixslurm",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
 }
