@@ -15,7 +15,7 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "links": [
@@ -53,8 +53,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Quick view if all the services are up and running",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -136,7 +137,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "expr": "max  (ha_cluster_pacemaker_fail_count)",
@@ -152,8 +153,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Hostname of the controller bearing the floating IP",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -214,7 +216,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -245,8 +247,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of the 'Shoot The Other Node In The Head' feature, allowing to forcefully power off failed nodes, avoiding interferences caused by partial or complex failures",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -325,7 +328,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "expr": "min (ha_cluster_pacemaker_stonith_enabled)",
@@ -341,8 +344,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Expanded view of failing services",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -419,7 +423,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "expr": "max by (resource) (ha_cluster_pacemaker_fail_count)",
@@ -450,8 +454,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of Pacemaker resources on this host",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -538,7 +543,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -640,8 +645,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of Pacemaker resources on this host",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -744,7 +750,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -800,8 +806,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of Pacemaker Trinity-stack resources on this host",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -888,7 +895,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -990,8 +997,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of Pacemaker  Trinity-stack resources on this host",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1094,7 +1102,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1160,12 +1168,12 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
-            "office-controller1.cluster"
+            "All"
           ],
           "value": [
-            "office-controller1.cluster"
+            "All"
           ]
         },
         "datasource": {
@@ -1183,11 +1191,30 @@
           "query": "label_values(up{luna_group=\"controller\"},hostname)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "trixprometheus"
+        },
+        "description": "Prometheus data source",
+        "hide": 2,
+        "includeAll": false,
+        "label": "Prometheus data source",
+        "multi": false,
+        "name": "prometheus_datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
       }
     ]
   },
@@ -1199,6 +1226,6 @@
   "timezone": "",
   "title": "High Availability",
   "uid": "trixha",
-  "version": 4,
+  "version": 1,
   "weekStart": ""
 }
