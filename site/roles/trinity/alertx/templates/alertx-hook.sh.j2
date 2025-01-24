@@ -1,25 +1,25 @@
 #!/bin/bash
 
-function load_config {
-    LUNA_INI='/trinity/local/luna/node/config/luna.ini'
-    if [ -f $LUNA_INI ]; then
-        while IFS='=' read -ra line; do
-            if [ ! "$(echo $line | grep -E '^(#|;)')" ] && [ "$line" ]; then
-                if [ "$(echo $line | grep '^\[')" ]; then
-                    section=$(echo $line | grep -oE "[A-Z]+")
-                else
-                    key=$(echo ${line[0]})
-                    value=$(echo ${line[1]})
-                    declare -x "${section}_${key}"="$value"
-                fi
-            fi
-        done < "$LUNA_INI"
-    else
-        >&2 echo "No config file: $LUNA_INI"
-    fi
-}
+# -------------------------------------------------------
+# loading and setting config
+# -------------------------------------------------------
 
-load_config
+LUNA_INI='/trinity/local/luna/node/config/luna.ini'
+if [ -f $LUNA_INI ]; then
+    while IFS='=' read -ra line; do
+        if [ ! "$(echo $line | grep -E '^(#|;)')" ] && [ "$line" ]; then
+            if [ "$(echo $line | grep '^\[')" ]; then
+                section=$(echo $line | grep -oE "[A-Z]+")
+            else
+                key=$(echo ${line[0]})
+                value=$(echo ${line[1]})
+                declare -x "${section}_${key}"="$value"
+            fi
+        fi
+    done < "$LUNA_INI"
+else
+    >&2 echo "No config file: $LUNA_INI"
+fi
 
 if [ "$API_PROTOCOL" == "" ]; then
 {% if luna_protocol == "https" -%}
@@ -50,22 +50,15 @@ fi
 
 HOST=$(hostname|awk -F'.' '{ print $1 }')
 
-
-function get_credentials {
-    if [ "${API_USERNAME}" == "" ] || [ "${API_PASSWORD}" == "" ]; then
-        load_config
-    fi
-    echo "${API_USERNAME}:${API_PASSWORD}"
-}
+# -------------------------------------------------------
+# the actual calls
+# -------------------------------------------------------
 
 function fetch_token {
-    CREDENTIALS=$(get_credentials)
-    USERNAME=$(echo $CREDENTIALS | awk -F':' '{ print $1 }')
-    PASSWORD=$(echo $CREDENTIALS | awk -F':' '{ print $2 }')
     export TPM2TOOLS_TCTI="device:/dev/tpm0"
     ldconfig
     TPM=$(tpm2_pcrread sha256:0 2> /dev/null | grep '0x' | awk -F' : ' '{ print $2 }')
-    json='{"tpm_sha256":"'$TPM'","username":"'$USERNAME'","password":"'$PASSWORD'"}'
+    json='{"tpm_sha256":"'$TPM'","username":"'$API_USERNAME'","password":"'$API_PASSWORD'"}'
     touch /tmp/token.json
     chmod og-rwx /tmp/token.json
     curl $INSECURE -X POST -H "Content-Type: application/json" -d "$json" -s "${LUNA_URL}/tpm/${HOST}" > /tmp/token.json
