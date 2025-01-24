@@ -21,11 +21,25 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "gnetId": 15765,
   "graphTooltip": 0,
   "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "dashboard"
+      ],
+      "targetBlank": false,
+      "title": "TrinityX Dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    },
     {
       "asDropdown": false,
       "icon": "external link",
@@ -39,20 +53,6 @@
       "tooltip": "",
       "type": "dashboards",
       "url": ""
-    },
-    {
-      "asDropdown": true,
-      "icon": "external link",
-      "includeVars": true,
-      "keepTime": true,
-      "tags": [
-        "dashboard"
-      ],
-      "targetBlank": false,
-      "title": "TrinityX Dashboards",
-      "tooltip": "",
-      "type": "dashboards",
-      "url": ""
     }
   ],
   "liveNow": false,
@@ -60,8 +60,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Machine power status",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -85,11 +86,10 @@
             },
             {
               "options": {
-                "match": "null",
+                "match": "null+nan",
                 "result": {
                   "color": "#808080",
-                  "index": 2,
-                  "text": "Unknown"
+                  "index": 2
                 }
               },
               "type": "special"
@@ -147,11 +147,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "ipmi_chassis_power_state{hostname=\"$host\"}",
+          "expr": "ipmi_chassis_power_state{hostname=\"$hostname\"}",
           "instant": false,
           "interval": "",
           "legendFormat": "{{instance}}",
@@ -164,8 +164,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "List of available sensor available on the target BMC ",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -186,6 +187,16 @@
                 }
               },
               "type": "value"
+            },
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 2
+                }
+              },
+              "type": "special"
             }
           ],
           "thresholds": {
@@ -243,11 +254,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ipmi_up{hostname=\"$host\"}",
+          "expr": "ipmi_up{hostname=\"$hostname\"}",
           "instant": true,
           "legendFormat": "{{collector}}",
           "range": false,
@@ -273,8 +284,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "List of checks executed by BMC and their associated outcome.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -369,11 +381,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "ipmi_sensor_state{hostname=\"$host\"}",
+          "expr": "ipmi_sensor_state{hostname=\"$hostname\"}",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -422,8 +434,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Manifacturer and Firmware info",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -478,11 +491,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "ipmi_bmc_info{hostname=\"$host\"}",
+          "expr": "ipmi_bmc_info{hostname=\"$hostname\"}",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -543,8 +556,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Power faults check outcome",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -556,7 +570,7 @@
                 "0": {
                   "color": "green",
                   "index": 0,
-                  "text": "Normal"
+                  "text": "Ok"
                 },
                 "1": {
                   "color": "yellow",
@@ -573,11 +587,10 @@
             },
             {
               "options": {
-                "match": "null",
+                "match": "null+nan",
                 "result": {
                   "color": "#808080",
-                  "index": 3,
-                  "text": "Unknown"
+                  "index": 3
                 }
               },
               "type": "special"
@@ -622,11 +635,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "ipmi_power_state{hostname=\"$host\"}",
+          "expr": "ipmi_power_state{hostname=\"$hostname\"}",
           "interval": "",
           "legendFormat": "{{name}}",
           "range": true,
@@ -639,9 +652,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
-      "description": "",
+      "description": "Overall chassis power draw reading over time, collected by the BMC ",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -720,11 +733,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(ipmi_dcmi_power_consumption_watts{hostname=\"$host\"}) - (sum(nvidia_smi_power_draw_watts{hostname=\"$host\"}) OR vector(0))",
+          "expr": "(sum(ipmi_dcmi_power_consumption_watts{hostname=\"$hostname\"}) - sum(nvidia_smi_power_draw_watts{hostname=\"$hostname\"})) \r\nOR \r\nsum(ipmi_dcmi_power_consumption_watts{hostname=\"$hostname\"})",
           "interval": "",
           "legendFormat": "system",
           "range": true,
@@ -733,10 +746,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_power_draw_watts{hostname=\"$host\"}",
+          "expr": "nvidia_smi_power_draw_watts{hostname=\"$hostname\"}",
           "hide": false,
           "instant": false,
           "legendFormat": "gpu",
@@ -744,14 +757,15 @@
           "refId": "B"
         }
       ],
-      "title": "Power Consumption watts",
+      "title": "Power draw over time",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Overall chassis power draw reading, collected by the BMC",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -760,11 +774,10 @@
           "mappings": [
             {
               "options": {
-                "match": "null",
+                "match": "null+nan",
                 "result": {
                   "color": "#808080",
-                  "index": 0,
-                  "text": "Unknown"
+                  "index": 0
                 }
               },
               "type": "special"
@@ -813,11 +826,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ipmi_dcmi_power_consumption_watts{hostname=\"$host\"}",
+          "expr": "ipmi_dcmi_power_consumption_watts{hostname=\"$hostname\"}",
           "instant": true,
           "interval": "",
           "legendFormat": "{{name}}",
@@ -825,7 +838,7 @@
           "refId": "A"
         }
       ],
-      "title": "Power reading in Watts",
+      "title": "Power draw",
       "type": "stat"
     },
     {
@@ -844,8 +857,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Temperatures of board components and related errors detected by BMC",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -971,12 +985,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ipmi_temperature_celsius{hostname=\"$host\", name=~\".*[tT][eE][mM]?[pP].*\"}",
+          "expr": "ipmi_temperature_celsius{hostname=\"$hostname\", name=~\".*[tT][eE][mM]?[pP].*\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -990,12 +1004,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ipmi_temperature_state{hostname=\"$host\", name=~\".*[tT][eE][mM]?[pP].*\"}",
+          "expr": "ipmi_temperature_state{hostname=\"$hostname\", name=~\".*[tT][eE][mM]?[pP].*\"}",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1008,7 +1022,7 @@
           "useBackend": false
         }
       ],
-      "title": "IPMI Temperatures",
+      "title": "Temperatures",
       "transformations": [
         {
           "id": "merge",
@@ -1065,8 +1079,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Fan speed of board components and related errors detected by BMC",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1172,12 +1187,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ipmi_fan_speed_rpm{hostname=\"$host\"}",
+          "expr": "ipmi_fan_speed_rpm{hostname=\"$hostname\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1191,12 +1206,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ipmi_fan_speed_state{hostname=\"$host\"}",
+          "expr": "ipmi_fan_speed_state{hostname=\"$hostname\"}",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1209,7 +1224,7 @@
           "useBackend": false
         }
       ],
-      "title": "IPMI Fan Speeds",
+      "title": "Fan Speeds",
       "transformations": [
         {
           "id": "merge",
@@ -1273,8 +1288,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Voltages of board components and related errors  detected by BMC",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1380,12 +1396,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "ipmi_voltage_volts{hostname=\"$host\"}",
+          "expr": "ipmi_voltage_volts{hostname=\"$hostname\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1399,12 +1415,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "ipmi_voltage_state{hostname=\"$host\"}",
+          "expr": "ipmi_voltage_state{hostname=\"$hostname\"}",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1417,7 +1433,7 @@
           "useBackend": false
         }
       ],
-      "title": "IPMI Voltages",
+      "title": "Voltages",
       "transformations": [
         {
           "id": "merge",
@@ -1481,8 +1497,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Temperatures of GPUs",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1502,7 +1519,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1607,12 +1625,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nvidia_smi_temperature_gpu{hostname=\"$host\"}",
+          "expr": "nvidia_smi_temperature_gpu{hostname=\"$hostname\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1693,8 +1711,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Fan speed of GPUs",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1714,7 +1733,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1780,12 +1800,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nvidia_smi_fan_speed_ratio{hostname=\"$host\"}",
+          "expr": "nvidia_smi_fan_speed_ratio{hostname=\"$hostname\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1876,23 +1896,77 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "trixprometheus"
+        },
+        "description": "Prometheus data source",
+        "hide": 2,
+        "includeAll": false,
+        "label": "Prometheus data source",
+        "multi": false,
+        "name": "prometheus_datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "trixprometheus"
         },
-        "definition": "label_values(ipmi_up,hostname)",
+        "definition": "label_values(up,luna_group)",
         "hide": 0,
-        "includeAll": false,
-        "label": "Host",
-        "multi": false,
-        "name": "host",
+        "includeAll": true,
+        "label": "Luna group",
+        "multi": true,
+        "name": "luna_group",
         "options": [],
         "query": {
-          "query": "label_values(ipmi_up,hostname)",
+          "query": "label_values(up,luna_group)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "node002.cluster",
+          "value": "node002.cluster"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "trixprometheus"
+        },
+        "definition": "label_values(up{luna_group=~\"$luna_group\"},hostname)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Hostname",
+        "multi": false,
+        "name": "hostname",
+        "options": [],
+        "query": {
+          "query": "label_values(up{luna_group=~\"$luna_group\"},hostname)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,

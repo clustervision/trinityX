@@ -22,11 +22,25 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "gnetId": 1860,
   "graphTooltip": 1,
   "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "dashboard"
+      ],
+      "targetBlank": false,
+      "title": "TrinityX Dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    },
     {
       "asDropdown": false,
       "icon": "external link",
@@ -40,20 +54,6 @@
       "tooltip": "",
       "type": "dashboards",
       "url": ""
-    },
-    {
-      "asDropdown": true,
-      "icon": "external link",
-      "includeVars": true,
-      "keepTime": true,
-      "tags": [
-        "dashboard"
-      ],
-      "targetBlank": false,
-      "title": "TrinityX Dashboards",
-      "tooltip": "",
-      "type": "dashboards",
-      "url": ""
     }
   ],
   "liveNow": false,
@@ -63,6 +63,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Quick CPU / Mem / Disk",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -85,7 +86,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Busy state of all CPU cores together",
       "fieldConfig": {
@@ -153,11 +154,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode!=\"idle\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))) * 100",
+          "expr": "(sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode!=\"idle\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))) * 100",
           "hide": false,
           "instant": true,
           "intervalFactor": 1,
@@ -173,7 +174,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Busy state of all CPU cores together (5 min average)",
       "fieldConfig": {
@@ -241,11 +242,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "avg_over_time(node_load5{hostname=~\"$host\"}[$__rate_interval]) * 100 / on(hostname) group_left sum by (hostname)(irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval]))",
+          "expr": "avg_over_time(node_load5{hostname=~\"$hostname\"}[$__rate_interval]) * 100 / on(hostname) group_left sum by (hostname)(irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -261,7 +262,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Busy state of all CPU cores together (15 min average)",
       "fieldConfig": {
@@ -329,11 +330,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "avg_over_time(node_load15{hostname=~\"$host\"}[$__rate_interval]) * 100 / on(hostname) group_left sum by (hostname)(irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval]))",
+          "expr": "avg_over_time(node_load15{hostname=~\"$hostname\"}[$__rate_interval]) * 100 / on(hostname) group_left sum by (hostname)(irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval]))",
           "hide": false,
           "instant": true,
           "intervalFactor": 1,
@@ -348,7 +349,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Non available RAM memory",
       "fieldConfig": {
@@ -407,11 +408,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "((avg_over_time(node_memory_MemTotal_bytes{hostname=~\"$host\"}[$__rate_interval]) - avg_over_time(node_memory_MemFree_bytes{hostname=~\"$host\"}[$__rate_interval])) / (avg_over_time(node_memory_MemTotal_bytes{hostname=~\"$host\"}[$__rate_interval]) )) * 100",
+          "expr": "((avg_over_time(node_memory_MemTotal_bytes{hostname=~\"$hostname\"}[$__rate_interval]) - avg_over_time(node_memory_MemFree_bytes{hostname=~\"$hostname\"}[$__rate_interval])) / (avg_over_time(node_memory_MemTotal_bytes{hostname=~\"$hostname\"}[$__rate_interval]) )) * 100",
           "format": "time_series",
           "hide": true,
           "instant": true,
@@ -423,11 +424,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "100 - ((avg_over_time(node_memory_MemAvailable_bytes{hostname=~\"$host\"}[$__rate_interval]) * 100) / avg_over_time(node_memory_MemTotal_bytes{hostname=~\"$host\"}[$__rate_interval]))",
+          "expr": "100 - ((avg_over_time(node_memory_MemAvailable_bytes{hostname=~\"$hostname\"}[$__rate_interval]) * 100) / avg_over_time(node_memory_MemTotal_bytes{hostname=~\"$hostname\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -443,7 +444,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Used Swap",
       "fieldConfig": {
@@ -511,11 +512,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "((avg_over_time(node_memory_SwapTotal_bytes{hostname=~\"$host\"}[$__rate_interval]) - avg_over_time(node_memory_SwapFree_bytes{hostname=~\"$host\"}[$__rate_interval])) / (avg_over_time(node_memory_SwapTotal_bytes{hostname=~\"$host\"}[$__rate_interval]) )) * 100",
+          "expr": "((avg_over_time(node_memory_SwapTotal_bytes{hostname=~\"$hostname\"}[$__rate_interval]) - avg_over_time(node_memory_SwapFree_bytes{hostname=~\"$hostname\"}[$__rate_interval])) / (avg_over_time(node_memory_SwapTotal_bytes{hostname=~\"$hostname\"}[$__rate_interval]) )) * 100",
           "instant": true,
           "intervalFactor": 1,
           "range": false,
@@ -529,7 +530,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Used Root FS",
       "fieldConfig": {
@@ -597,11 +598,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "100 - ((avg_over_time(node_filesystem_avail_bytes{hostname=~\"$host\",mountpoint=\"/\",fstype!=\"rootfs\"}[$__rate_interval]) * 100) / avg_over_time(node_filesystem_size_bytes{hostname=~\"$host\",mountpoint=\"/\",fstype!=\"rootfs\"}[$__rate_interval]))",
+          "expr": "100 - ((avg_over_time(node_filesystem_avail_bytes{hostname=~\"$hostname\",mountpoint=\"/\",fstype!=\"rootfs\"}[$__rate_interval]) * 100) / avg_over_time(node_filesystem_size_bytes{hostname=~\"$hostname\",mountpoint=\"/\",fstype!=\"rootfs\"}[$__rate_interval]))",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -616,7 +617,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Total number of CPU cores",
       "fieldConfig": {
@@ -680,10 +681,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "count(count(node_cpu_seconds_total{hostname=~\"$host\"}) by (cpu))",
+          "expr": "count(count(node_cpu_seconds_total{hostname=~\"$hostname\"}) by (cpu))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -695,7 +696,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "System uptime",
       "fieldConfig": {
@@ -761,11 +762,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_time_seconds{hostname=~\"$host\"} - node_boot_time_seconds{hostname=~\"$host\"}",
+          "expr": "node_time_seconds{hostname=~\"$hostname\"} - node_boot_time_seconds{hostname=~\"$hostname\"}",
           "instant": true,
           "intervalFactor": 1,
           "range": false,
@@ -779,7 +780,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Total RootFS",
       "fieldConfig": {
@@ -848,11 +849,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_filesystem_size_bytes{hostname=~\"$host\",mountpoint=\"/\",fstype!=\"rootfs\"}",
+          "expr": "node_filesystem_size_bytes{hostname=~\"$hostname\",mountpoint=\"/\",fstype!=\"rootfs\"}",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -868,7 +869,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Total RAM",
       "fieldConfig": {
@@ -933,11 +934,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_memory_MemTotal_bytes{hostname=~\"$host\"}",
+          "expr": "node_memory_MemTotal_bytes{hostname=~\"$hostname\"}",
           "instant": true,
           "intervalFactor": 1,
           "range": false,
@@ -951,7 +952,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Total SWAP",
       "fieldConfig": {
@@ -1016,11 +1017,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_memory_SwapTotal_bytes{hostname=~\"$host\"}",
+          "expr": "node_memory_SwapTotal_bytes{hostname=~\"$hostname\"}",
           "instant": true,
           "intervalFactor": 1,
           "range": false,
@@ -1033,6 +1034,7 @@
     },
     {
       "collapsed": false,
+      "description": "Process State",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1047,8 +1049,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Monitored Processes",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1144,12 +1147,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "node_systemd_unit_state{name=~\".*service\", hostname=~\"$host\", state=~\"$service_state\"}",
+          "expr": "node_systemd_unit_state{name=~\".*service\", hostname=~\"$hostname\", state=~\"$service_state\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1217,6 +1220,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Basic CPU / Mem / Net / Disk",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1239,7 +1243,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Basic CPU info",
       "fieldConfig": {
@@ -1430,10 +1434,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"system\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"system\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1445,10 +1449,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"user\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"user\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1460,10 +1464,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"iowait\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"iowait\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Iowait",
@@ -1474,10 +1478,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=~\".*irq\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=~\".*irq\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy IRQs",
@@ -1488,10 +1492,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq'}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq'}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Other",
@@ -1502,10 +1506,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"idle\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+          "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"idle\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Idle",
@@ -1520,7 +1524,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Basic memory usage",
       "fieldConfig": {
@@ -1973,9 +1977,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "expr": "node_memory_MemTotal_bytes{hostname=~\"$host\"}",
+          "expr": "node_memory_MemTotal_bytes{hostname=~\"$hostname\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1986,9 +1990,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "expr": "node_memory_MemTotal_bytes{hostname=~\"$host\"} - node_memory_MemFree_bytes{hostname=~\"$host\"} - (node_memory_Cached_bytes{hostname=~\"$host\"} + node_memory_Buffers_bytes{hostname=~\"$host\"} + node_memory_SReclaimable_bytes{hostname=~\"$host\"})",
+          "expr": "node_memory_MemTotal_bytes{hostname=~\"$hostname\"} - node_memory_MemFree_bytes{hostname=~\"$hostname\"} - (node_memory_Cached_bytes{hostname=~\"$hostname\"} + node_memory_Buffers_bytes{hostname=~\"$hostname\"} + node_memory_SReclaimable_bytes{hostname=~\"$hostname\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1999,9 +2003,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "expr": "node_memory_Cached_bytes{hostname=~\"$host\"} + node_memory_Buffers_bytes{hostname=~\"$host\"} + node_memory_SReclaimable_bytes{hostname=~\"$host\"}",
+          "expr": "node_memory_Cached_bytes{hostname=~\"$hostname\"} + node_memory_Buffers_bytes{hostname=~\"$hostname\"} + node_memory_SReclaimable_bytes{hostname=~\"$hostname\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RAM Cache + Buffer",
@@ -2011,9 +2015,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "expr": "node_memory_MemFree_bytes{hostname=~\"$host\"}",
+          "expr": "node_memory_MemFree_bytes{hostname=~\"$hostname\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RAM Free",
@@ -2023,9 +2027,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "expr": "(node_memory_SwapTotal_bytes{hostname=~\"$host\"} - node_memory_SwapFree_bytes{hostname=~\"$host\"})",
+          "expr": "(node_memory_SwapTotal_bytes{hostname=~\"$hostname\"} - node_memory_SwapFree_bytes{hostname=~\"$hostname\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "SWAP Used",
@@ -2039,7 +2043,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Basic network info per interface",
       "fieldConfig": {
@@ -2480,9 +2484,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "expr": "irate(node_network_receive_bytes_total{hostname=~\"$host\"}[$__rate_interval])*8",
+          "expr": "irate(node_network_receive_bytes_total{hostname=~\"$hostname\"}[$__rate_interval])*8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "recv {{device}}",
@@ -2492,9 +2496,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "expr": "irate(node_network_transmit_bytes_total{hostname=~\"$host\"}[$__rate_interval])*8",
+          "expr": "irate(node_network_transmit_bytes_total{hostname=~\"$hostname\"}[$__rate_interval])*8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "trans {{device}} ",
@@ -2508,7 +2512,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "description": "Disk space used of all filesystems mounted",
       "fieldConfig": {
@@ -2593,9 +2597,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "expr": "100 - ((node_filesystem_avail_bytes{hostname=~\"$host\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{hostname=~\"$host\",device!~'rootfs'})",
+          "expr": "100 - ((node_filesystem_avail_bytes{hostname=~\"$hostname\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{hostname=~\"$hostname\",device!~'rootfs'})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{mountpoint}}",
@@ -2611,6 +2615,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "CPU / Memory / Net / Disk",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2622,9 +2627,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "CPU",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2832,10 +2837,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"system\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"system\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -2847,10 +2852,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"user\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"user\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "User - Normal processes executing in user mode",
@@ -2861,10 +2866,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"nice\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"nice\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Nice - Niced processes executing in user mode",
@@ -2875,10 +2880,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"iowait\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"iowait\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Iowait - Waiting for I/O to complete",
@@ -2889,10 +2894,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"irq\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"irq\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Irq - Servicing interrupts",
@@ -2903,10 +2908,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"softirq\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"softirq\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Softirq - Servicing softirqs",
@@ -2917,10 +2922,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"steal\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"steal\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Steal - Time spent in other operating systems when running in a virtualized environment",
@@ -2931,10 +2936,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$host\", mode=\"idle\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])))",
+              "expr": "sum by(hostname) (irate(node_cpu_seconds_total{hostname=~\"$hostname\", mode=\"idle\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2950,9 +2955,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Memory Stack",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3340,9 +3345,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_MemTotal_bytes{hostname=~\"$host\"} - node_memory_MemFree_bytes{hostname=~\"$host\"} - node_memory_Buffers_bytes{hostname=~\"$host\"} - node_memory_Cached_bytes{hostname=~\"$host\"} - node_memory_Slab_bytes{hostname=~\"$host\"} - node_memory_PageTables_bytes{hostname=~\"$host\"} - node_memory_SwapCached_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_MemTotal_bytes{hostname=~\"$hostname\"} - node_memory_MemFree_bytes{hostname=~\"$hostname\"} - node_memory_Buffers_bytes{hostname=~\"$hostname\"} - node_memory_Cached_bytes{hostname=~\"$hostname\"} - node_memory_Slab_bytes{hostname=~\"$hostname\"} - node_memory_PageTables_bytes{hostname=~\"$hostname\"} - node_memory_SwapCached_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3353,9 +3358,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_PageTables_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_PageTables_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3366,9 +3371,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_SwapCached_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_SwapCached_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SwapCache - Memory that keeps track of pages that have been fetched from swap but not yet been modified",
@@ -3378,9 +3383,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Slab_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Slab_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3391,9 +3396,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Cached_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Cached_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3404,9 +3409,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Buffers_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Buffers_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3417,9 +3422,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_MemFree_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_MemFree_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3430,9 +3435,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "(node_memory_SwapTotal_bytes{hostname=~\"$host\"} - node_memory_SwapFree_bytes{hostname=~\"$host\"})",
+              "expr": "(node_memory_SwapTotal_bytes{hostname=~\"$hostname\"} - node_memory_SwapFree_bytes{hostname=~\"$hostname\"})",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3443,9 +3448,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_HardwareCorrupted_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_HardwareCorrupted_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3460,8 +3465,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3619,9 +3625,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_receive_bytes_total{hostname=~\"$host\"}[$__rate_interval])*8",
+              "expr": "irate(node_network_receive_bytes_total{hostname=~\"$hostname\"}[$__rate_interval])*8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive",
@@ -3631,9 +3637,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_transmit_bytes_total{hostname=~\"$host\"}[$__rate_interval])*8",
+              "expr": "irate(node_network_transmit_bytes_total{hostname=~\"$hostname\"}[$__rate_interval])*8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit",
@@ -3647,9 +3653,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Disk Space Used",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3735,9 +3741,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filesystem_size_bytes{hostname=~\"$host\",device!~'rootfs'} - node_filesystem_avail_bytes{hostname=~\"$host\",device!~'rootfs'}",
+              "expr": "node_filesystem_size_bytes{hostname=~\"$hostname\",device!~'rootfs'} - node_filesystem_avail_bytes{hostname=~\"$hostname\",device!~'rootfs'}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{mountpoint}}",
@@ -3751,9 +3757,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Disk IOps",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4166,9 +4172,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_reads_completed_total{hostname=~\"$host\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "irate(node_disk_reads_completed_total{hostname=~\"$hostname\",device=~\"$diskdevices\"}[$__rate_interval])",
               "intervalFactor": 4,
               "legendFormat": "{{device}} - Reads completed",
               "refId": "A",
@@ -4177,9 +4183,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_writes_completed_total{hostname=~\"$host\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "irate(node_disk_writes_completed_total{hostname=~\"$hostname\",device=~\"$diskdevices\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Writes completed",
               "refId": "B",
@@ -4192,9 +4198,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "I/O Usage Read / Write",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4394,9 +4400,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_read_bytes_total{hostname=~\"$host\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "irate(node_disk_read_bytes_total{hostname=~\"$hostname\",device=~\"$diskdevices\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -4407,9 +4413,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_written_bytes_total{hostname=~\"$host\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "irate(node_disk_written_bytes_total{hostname=~\"$hostname\",device=~\"$diskdevices\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -4424,9 +4430,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "I/O Utilization",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4540,9 +4546,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_io_time_seconds_total{hostname=~\"$host\",device=~\"$diskdevices\"} [$__rate_interval])",
+              "expr": "irate(node_disk_io_time_seconds_total{hostname=~\"$hostname\",device=~\"$diskdevices\"} [$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -4558,8 +4564,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "CPU spent seconds in guests (VMs)",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4673,10 +4680,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_guest_seconds_total{hostname=~\"$host\", mode=\"user\"}[1m])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[1m])))",
+              "expr": "sum by(hostname) (irate(node_cpu_guest_seconds_total{hostname=~\"$hostname\", mode=\"user\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "hide": false,
               "legendFormat": "Guest - Time spent running a virtual CPU for a guest operating system",
               "range": true,
@@ -4685,10 +4692,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "sum by(hostname) (irate(node_cpu_guest_seconds_total{hostname=~\"$host\", mode=\"nice\"}[1m])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$host\"}[1m])))",
+              "expr": "sum by(hostname) (irate(node_cpu_guest_seconds_total{hostname=~\"$hostname\", mode=\"nice\"}[$__rate_interval])) / on(hostname) group_left sum by (hostname)((irate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])))",
               "hide": false,
               "legendFormat": "GuestNice - Time spent running a niced guest  (virtual CPU for guest operating system)",
               "range": true,
@@ -4715,6 +4722,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Memory Meminfo",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -4726,8 +4734,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Active / Inactive",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5069,9 +5078,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Inactive_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Inactive_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Inactive - Memory which has been less recently used.  It is more eligible to be reclaimed for other purposes",
@@ -5081,9 +5090,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Active_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Active_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Active - Memory that has been used more recently and usually not reclaimed unless absolutely necessary",
@@ -5097,8 +5106,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Committed",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5459,9 +5469,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Committed_AS_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Committed_AS_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Committed_AS - Amount of memory presently allocated on the system",
@@ -5471,9 +5481,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_CommitLimit_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_CommitLimit_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "CommitLimit - Amount of  memory currently available to be allocated on the system",
@@ -5487,8 +5497,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Active / Inactive Detail",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5830,9 +5841,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Inactive_file_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Inactive_file_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -5843,9 +5854,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Inactive_anon_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Inactive_anon_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -5856,9 +5867,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Active_file_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Active_file_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -5869,9 +5880,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Active_anon_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Active_anon_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -5886,8 +5897,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Writeback and Dirty",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6258,9 +6270,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Writeback_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Writeback_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Writeback - Memory which is actively being written back to disk",
@@ -6270,9 +6282,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_WritebackTmp_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_WritebackTmp_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "WritebackTmp - Memory used by FUSE for temporary writeback buffers",
@@ -6282,9 +6294,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Dirty_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Dirty_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Dirty - Memory which is waiting to get written back to the disk",
@@ -6298,8 +6310,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Shared and Mapped",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6665,9 +6678,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Mapped_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Mapped_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Mapped - Used memory in mapped pages files which have been mapped, such as libraries",
@@ -6677,9 +6690,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Shmem_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Shmem_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Shmem - Used shared memory (shared between several processes, thus including RAM disks)",
@@ -6689,9 +6702,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_ShmemHugePages_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_ShmemHugePages_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -6702,9 +6715,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_ShmemPmdMapped_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_ShmemPmdMapped_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -6719,8 +6732,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Slab",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7091,9 +7105,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_SUnreclaim_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_SUnreclaim_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SUnreclaim - Part of Slab, that cannot be reclaimed on memory pressure",
@@ -7103,9 +7117,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_SReclaimable_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_SReclaimable_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SReclaimable - Part of Slab, that might be reclaimed, such as caches",
@@ -7119,8 +7133,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Vmalloc",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7476,9 +7491,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_VmallocChunk_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_VmallocChunk_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -7489,9 +7504,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_VmallocTotal_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_VmallocTotal_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -7502,9 +7517,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_VmallocUsed_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_VmallocUsed_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -7519,8 +7534,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Bounce",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7862,9 +7878,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Bounce_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Bounce_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Bounce - Memory used for block device bounce buffers",
@@ -7878,8 +7894,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Anonymous",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8247,9 +8264,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_AnonHugePages_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_AnonHugePages_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "AnonHugePages - Memory in anonymous huge pages",
@@ -8259,9 +8276,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_AnonPages_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_AnonPages_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "AnonPages - Memory in user pages not backed by files",
@@ -8275,8 +8292,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Kernel / CPU",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8618,9 +8636,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_KernelStack_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_KernelStack_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "KernelStack - Kernel memory stack. This is not reclaimable",
@@ -8630,9 +8648,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Percpu_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Percpu_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -8647,8 +8665,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory HugePages Counter",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9003,9 +9022,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_HugePages_Free{hostname=~\"$host\"}",
+              "expr": "node_memory_HugePages_Free{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "HugePages_Free - Huge pages in the pool that are not yet allocated",
@@ -9015,9 +9034,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_HugePages_Rsvd{hostname=~\"$host\"}",
+              "expr": "node_memory_HugePages_Rsvd{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "HugePages_Rsvd - Huge pages for which a commitment to allocate from the pool has been made, but no allocation has yet been made",
@@ -9027,9 +9046,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_HugePages_Surp{hostname=~\"$host\"}",
+              "expr": "node_memory_HugePages_Surp{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "HugePages_Surp - Huge pages in the pool above the value in /proc/sys/vm/nr_hugepages",
@@ -9043,8 +9062,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory HugePages Size",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9399,9 +9419,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_HugePages_Total{hostname=~\"$host\"}",
+              "expr": "node_memory_HugePages_Total{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "HugePages - Total size of the pool of huge pages",
@@ -9411,9 +9431,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Hugepagesize_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Hugepagesize_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Hugepagesize - Huge Page size",
@@ -9427,8 +9447,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory DirectMap",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9783,9 +9804,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_DirectMap1G_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_DirectMap1G_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "DirectMap1G - Amount of pages mapped as this size",
@@ -9795,9 +9816,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_DirectMap2M_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_DirectMap2M_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -9808,9 +9829,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_DirectMap4k_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_DirectMap4k_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -9825,8 +9846,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Unevictable and MLocked",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10168,9 +10190,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Unevictable_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Unevictable_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Unevictable - Amount of unevictable memory that can't be swapped out for a variety of reasons",
@@ -10180,9 +10202,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_Mlocked_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_Mlocked_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "MLocked - Size of pages locked to memory using the mlock() system call",
@@ -10196,8 +10218,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory NFS",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10568,9 +10591,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_memory_NFS_Unstable_bytes{hostname=~\"$host\"}",
+              "expr": "node_memory_NFS_Unstable_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NFS Unstable - Memory in NFS pages sent to the server, but not yet committed to the storage",
@@ -10598,6 +10621,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Memory Vmstat",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -10609,8 +10633,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Pages In / Out",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10707,9 +10732,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_vmstat_pgpgin{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_vmstat_pgpgin{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pagesin - Page in operations",
@@ -10719,9 +10744,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_vmstat_pgpgout{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_vmstat_pgpgout{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pagesout - Page out operations",
@@ -10735,8 +10760,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Pages Swap In / Out",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10833,9 +10859,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_vmstat_pswpin{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_vmstat_pswpin{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pswpin - Pages swapped in",
@@ -10845,9 +10871,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_vmstat_pswpout{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_vmstat_pswpout{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pswpout - Pages swapped out",
@@ -10861,8 +10887,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Memory Page Faults",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11223,9 +11250,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_vmstat_pgfault{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_vmstat_pgfault{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgfault - Page major and minor fault operations",
@@ -11235,9 +11262,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_vmstat_pgmajfault{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_vmstat_pgmajfault{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgmajfault - Major page fault operations",
@@ -11247,9 +11274,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_vmstat_pgfault{hostname=~\"$host\"}[$__rate_interval])  - irate(node_vmstat_pgmajfault{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_vmstat_pgfault{hostname=~\"$hostname\"}[$__rate_interval])  - irate(node_vmstat_pgmajfault{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgminfault - Minor page fault operations",
@@ -11263,8 +11290,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "OOM Killer",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11635,9 +11663,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_vmstat_oom_kill{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_vmstat_oom_kill{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -11666,6 +11694,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "System Timesync",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -11677,9 +11706,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Time Synchronized Drift",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11779,9 +11808,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_timex_estimated_error_seconds{hostname=~\"$host\"}",
+              "expr": "node_timex_estimated_error_seconds{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -11793,9 +11822,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_timex_offset_seconds{hostname=~\"$host\"}",
+              "expr": "node_timex_offset_seconds{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -11807,9 +11836,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_timex_maxerror_seconds{hostname=~\"$host\"}",
+              "expr": "node_timex_maxerror_seconds{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -11825,9 +11854,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Time PLL Adjust",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11911,9 +11940,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_timex_loop_time_constant{hostname=~\"$host\"}",
+              "expr": "node_timex_loop_time_constant{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -11928,9 +11957,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Time Synchronized Status",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12030,9 +12059,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_timex_sync_status{hostname=~\"$host\"}",
+              "expr": "node_timex_sync_status{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -12043,9 +12072,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_timex_frequency_adjustment_ratio{hostname=~\"$host\"}",
+              "expr": "node_timex_frequency_adjustment_ratio{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -12060,9 +12089,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Time Misc",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12146,9 +12175,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_timex_tick_seconds{hostname=~\"$host\"}",
+              "expr": "node_timex_tick_seconds{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -12159,9 +12188,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_timex_tai_offset_seconds{hostname=~\"$host\"}",
+              "expr": "node_timex_tai_offset_seconds{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -12190,6 +12219,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "System Processes",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -12201,8 +12231,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Processes Status",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12287,9 +12318,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_procs_blocked{hostname=~\"$host\"}",
+              "expr": "node_procs_blocked{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Processes blocked waiting for I/O to complete",
@@ -12299,9 +12330,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_procs_running{hostname=~\"$host\"}",
+              "expr": "node_procs_running{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Processes in runnable state",
@@ -12315,8 +12346,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Processes State",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12401,9 +12433,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_processes_state{hostname=~\"$host\"}",
+              "expr": "node_processes_state{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -12418,8 +12450,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Processes  Forks",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12504,9 +12537,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_forks_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_forks_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12521,8 +12554,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Processes Memory",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12620,9 +12654,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(process_virtual_memory_bytes{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(process_virtual_memory_bytes{hostname=~\"$hostname\"}[$__rate_interval])",
               "hide": false,
               "interval": "",
               "intervalFactor": 1,
@@ -12633,9 +12667,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "process_resident_memory_max_bytes{hostname=~\"$host\"}",
+              "expr": "process_resident_memory_max_bytes{hostname=~\"$hostname\"}",
               "hide": false,
               "interval": "",
               "intervalFactor": 1,
@@ -12646,9 +12680,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(process_virtual_memory_bytes{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(process_virtual_memory_bytes{hostname=~\"$hostname\"}[$__rate_interval])",
               "hide": false,
               "interval": "",
               "intervalFactor": 1,
@@ -12659,9 +12693,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(process_virtual_memory_max_bytes{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(process_virtual_memory_max_bytes{hostname=~\"$hostname\"}[$__rate_interval])",
               "hide": false,
               "interval": "",
               "intervalFactor": 1,
@@ -12676,8 +12710,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "PIDs Number and Limit",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12782,9 +12817,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_processes_pids{hostname=~\"$host\"}",
+              "expr": "node_processes_pids{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -12795,9 +12830,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_processes_max_processes{hostname=~\"$host\"}",
+              "expr": "node_processes_max_processes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -12812,8 +12847,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Process schedule stats Running / Waiting",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12910,9 +12946,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_schedstat_running_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_schedstat_running_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -12923,9 +12959,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_schedstat_waiting_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_schedstat_waiting_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -12940,8 +12976,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Threads Number and Limit",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13046,9 +13083,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_processes_threads{hostname=~\"$host\"}",
+              "expr": "node_processes_threads{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -13059,9 +13096,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_processes_max_threads{hostname=~\"$host\"}",
+              "expr": "node_processes_max_threads{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -13090,6 +13127,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "System Misc",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -13101,8 +13139,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Context Switches / Interrupts",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13187,9 +13226,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_context_switches_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_context_switches_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Context switches",
@@ -13199,9 +13238,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_intr_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_intr_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -13216,8 +13255,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "System Load",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13302,9 +13342,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_load1{hostname=~\"$host\"}",
+              "expr": "node_load1{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 4,
               "legendFormat": "Load 1m",
@@ -13314,9 +13354,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_load5{hostname=~\"$host\"}",
+              "expr": "node_load5{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 4,
               "legendFormat": "Load 5m",
@@ -13326,9 +13366,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_load15{hostname=~\"$host\"}",
+              "expr": "node_load15{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 4,
               "legendFormat": "Load 15m",
@@ -13342,8 +13382,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "CPU Frequency Scaling",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13503,10 +13544,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "node_cpu_scaling_frequency_hertz{hostname=~\"$host\"}",
+              "expr": "node_cpu_scaling_frequency_hertz{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -13519,10 +13560,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "avg(node_cpu_scaling_frequency_max_hertz{hostname=~\"$host\"})",
+              "expr": "avg(node_cpu_scaling_frequency_max_hertz{hostname=~\"$hostname\"})",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -13535,10 +13576,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "avg(node_cpu_scaling_frequency_min_hertz{hostname=~\"$host\"})",
+              "expr": "avg(node_cpu_scaling_frequency_min_hertz{hostname=~\"$hostname\"})",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -13555,7 +13596,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "description": "https://docs.kernel.org/accounting/psi.html",
           "fieldConfig": {
@@ -13704,10 +13745,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "rate(node_pressure_cpu_waiting_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "rate(node_pressure_cpu_waiting_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "CPU some",
@@ -13718,10 +13759,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "rate(node_pressure_memory_waiting_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "rate(node_pressure_memory_waiting_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -13733,10 +13774,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "rate(node_pressure_memory_stalled_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "rate(node_pressure_memory_stalled_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -13748,10 +13789,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "rate(node_pressure_io_waiting_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "rate(node_pressure_io_waiting_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -13763,10 +13804,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "rate(node_pressure_io_stalled_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "rate(node_pressure_io_stalled_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -13782,8 +13823,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Interrupts Detail",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13907,9 +13949,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_interrupts_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_interrupts_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -13924,8 +13966,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Schedule timeslices executed by each cpu",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -14009,9 +14052,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_schedstat_timeslices_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_schedstat_timeslices_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -14026,8 +14069,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Entropy",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -14112,9 +14156,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_entropy_available_bits{hostname=~\"$host\"}",
+              "expr": "node_entropy_available_bits{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Entropy available to random number generators",
@@ -14128,8 +14172,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "CPU time spent in user and system contexts",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -14213,9 +14258,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(process_cpu_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(process_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -14230,8 +14275,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "File Descriptors",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -14336,9 +14382,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "process_max_fds{hostname=~\"$host\"}",
+              "expr": "process_max_fds{hostname=~\"$hostname\"}",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "Maximum open file descriptors",
@@ -14348,9 +14394,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "process_open_fds{hostname=~\"$host\"}",
+              "expr": "process_open_fds{hostname=~\"$hostname\"}",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "Open file descriptors",
@@ -14378,6 +14424,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Hardware Misc",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -14389,8 +14436,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Hardware temperature monitor",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -14514,9 +14562,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_hwmon_temp_celsius{hostname=~\"$host\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
+              "expr": "node_hwmon_temp_celsius{hostname=~\"$hostname\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -14527,9 +14575,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_hwmon_temp_crit_alarm_celsius{hostname=~\"$host\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
+              "expr": "node_hwmon_temp_crit_alarm_celsius{hostname=~\"$hostname\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
               "format": "time_series",
               "hide": true,
               "interval": "",
@@ -14541,9 +14589,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_hwmon_temp_crit_celsius{hostname=~\"$host\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
+              "expr": "node_hwmon_temp_crit_celsius{hostname=~\"$hostname\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -14554,9 +14602,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_hwmon_temp_crit_hyst_celsius{hostname=~\"$host\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
+              "expr": "node_hwmon_temp_crit_hyst_celsius{hostname=~\"$hostname\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
               "format": "time_series",
               "hide": true,
               "interval": "",
@@ -14568,9 +14616,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_hwmon_temp_max_celsius{hostname=~\"$host\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
+              "expr": "node_hwmon_temp_max_celsius{hostname=~\"$hostname\"} * on(chip) group_left(chip_name) node_hwmon_chip_names",
               "format": "time_series",
               "hide": true,
               "interval": "",
@@ -14586,8 +14634,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Throttle cooling device",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -14691,9 +14740,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_cooling_device_cur_state{hostname=~\"$host\"}",
+              "expr": "node_cooling_device_cur_state{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -14705,9 +14754,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_cooling_device_max_state{hostname=~\"$host\"}",
+              "expr": "node_cooling_device_max_state{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -14722,8 +14771,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Power supply",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -14807,9 +14857,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_power_supply_online{hostname=~\"$host\"}",
+              "expr": "node_power_supply_online{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -14839,6 +14889,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Systemd",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -14850,8 +14901,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Systemd Sockets",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -14936,9 +14988,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_systemd_socket_accepted_connections_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_systemd_socket_accepted_connections_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -14953,8 +15005,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Systemd Units State",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -15114,9 +15167,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_systemd_units{hostname=~\"$host\",state=\"activating\"}",
+              "expr": "node_systemd_units{hostname=~\"$hostname\",state=\"activating\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -15127,9 +15180,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_systemd_units{hostname=~\"$host\",state=\"active\"}",
+              "expr": "node_systemd_units{hostname=~\"$hostname\",state=\"active\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -15140,9 +15193,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_systemd_units{hostname=~\"$host\",state=\"deactivating\"}",
+              "expr": "node_systemd_units{hostname=~\"$hostname\",state=\"deactivating\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -15153,9 +15206,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_systemd_units{hostname=~\"$host\",state=\"failed\"}",
+              "expr": "node_systemd_units{hostname=~\"$hostname\",state=\"failed\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -15166,9 +15219,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_systemd_units{hostname=~\"$host\",state=\"inactive\"}",
+              "expr": "node_systemd_units{hostname=~\"$hostname\",state=\"inactive\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -15197,6 +15250,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Storage Disk",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -15208,7 +15262,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "description": "The number (after merges) of I/O requests completed per second for the device",
           "fieldConfig": {
@@ -15607,9 +15661,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_reads_completed_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_reads_completed_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "intervalFactor": 4,
               "legendFormat": "{{device}} - Reads completed",
               "refId": "A",
@@ -15618,9 +15672,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_writes_completed_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_writes_completed_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Writes completed",
               "refId": "B",
@@ -15633,7 +15687,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "description": "The number of bytes read from or written to the device per second",
           "fieldConfig": {
@@ -16032,9 +16086,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_read_bytes_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_read_bytes_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 4,
               "legendFormat": "{{device}} - Read bytes",
@@ -16044,9 +16098,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_written_bytes_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_written_bytes_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Written bytes",
@@ -16060,7 +16114,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "description": "The average time for requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.",
           "fieldConfig": {
@@ -16459,9 +16513,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_read_time_seconds_total{hostname=~\"$host\"}[$__rate_interval]) / irate(node_disk_reads_completed_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_read_time_seconds_total{hostname=~\"$hostname\"}[$__rate_interval]) / irate(node_disk_reads_completed_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "hide": false,
               "interval": "",
               "intervalFactor": 4,
@@ -16472,9 +16526,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_write_time_seconds_total{hostname=~\"$host\"}[$__rate_interval]) / irate(node_disk_writes_completed_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_write_time_seconds_total{hostname=~\"$hostname\"}[$__rate_interval]) / irate(node_disk_writes_completed_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "hide": false,
               "interval": "",
               "intervalFactor": 1,
@@ -16489,7 +16543,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "description": "The average queue length of the requests that were issued to the device",
           "fieldConfig": {
@@ -16877,9 +16931,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_io_time_weighted_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_io_time_weighted_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "interval": "",
               "intervalFactor": 4,
               "legendFormat": "{{device}}",
@@ -16893,7 +16947,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "description": "The number of read and write requests merged per second that were queued to the device",
           "fieldConfig": {
@@ -17292,9 +17346,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_reads_merged_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_reads_merged_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Read merged",
               "refId": "A",
@@ -17303,9 +17357,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_writes_merged_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_writes_merged_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Write merged",
               "refId": "B",
@@ -17318,7 +17372,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "description": "Percentage of elapsed time during which I/O requests were issued to the device (bandwidth utilization for the device). Device saturation occurs when this value is close to 100% for devices serving requests serially.  But for devices  serving requests in parallel, such as RAID arrays and modern SSDs, this number does not reflect their performance limits.",
           "fieldConfig": {
@@ -17706,9 +17760,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_io_time_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_io_time_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "interval": "",
               "intervalFactor": 4,
               "legendFormat": "{{device}} - IO",
@@ -17718,9 +17772,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_discard_time_seconds_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_discard_time_seconds_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "interval": "",
               "intervalFactor": 4,
               "legendFormat": "{{device}} - discard",
@@ -17734,7 +17788,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "description": "The number of outstanding requests at the instant the sample was taken. Incremented as requests are given to appropriate struct request_queue and decremented as they finish.",
           "fieldConfig": {
@@ -18122,9 +18176,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_disk_io_now{hostname=~\"$host\"}",
+              "expr": "node_disk_io_now{hostname=~\"$hostname\"}",
               "interval": "",
               "intervalFactor": 4,
               "legendFormat": "{{device}} - IO now",
@@ -18138,9 +18192,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Disk IOps Discards completed / merged",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -18525,9 +18579,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_discards_completed_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_discards_completed_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "interval": "",
               "intervalFactor": 4,
               "legendFormat": "{{device}} - Discards completed",
@@ -18537,9 +18591,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_disk_discards_merged_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_disk_discards_merged_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Discards merged",
@@ -18567,6 +18621,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Storage Filesystem",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -18578,9 +18633,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Filesystem space available",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -18665,9 +18720,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filesystem_avail_bytes{hostname=~\"$host\",device!~'rootfs'}",
+              "expr": "node_filesystem_avail_bytes{hostname=~\"$hostname\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18679,9 +18734,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filesystem_free_bytes{hostname=~\"$host\",device!~'rootfs'}",
+              "expr": "node_filesystem_free_bytes{hostname=~\"$hostname\",device!~'rootfs'}",
               "format": "time_series",
               "hide": true,
               "intervalFactor": 1,
@@ -18692,9 +18747,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filesystem_size_bytes{hostname=~\"$host\",device!~'rootfs'}",
+              "expr": "node_filesystem_size_bytes{hostname=~\"$hostname\",device!~'rootfs'}",
               "format": "time_series",
               "hide": true,
               "intervalFactor": 1,
@@ -18709,9 +18764,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "File Nodes Free",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -18796,9 +18851,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filesystem_files_free{hostname=~\"$host\",device!~'rootfs'}",
+              "expr": "node_filesystem_files_free{hostname=~\"$hostname\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18813,9 +18868,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "File Descriptor",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -18900,9 +18955,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filefd_maximum{hostname=~\"$host\"}",
+              "expr": "node_filefd_maximum{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 4,
               "legendFormat": "Max open files",
@@ -18912,9 +18967,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filefd_allocated{hostname=~\"$host\"}",
+              "expr": "node_filefd_allocated{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Open files",
@@ -18928,9 +18983,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "File Nodes Size",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -19015,9 +19070,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filesystem_files{hostname=~\"$host\",device!~'rootfs'}",
+              "expr": "node_filesystem_files{hostname=~\"$hostname\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -19032,9 +19087,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Filesystem in ReadOnly / Error",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -19136,9 +19191,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filesystem_readonly{hostname=~\"$host\",device!~'rootfs'}",
+              "expr": "node_filesystem_readonly{hostname=~\"$hostname\",device!~'rootfs'}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{mountpoint}} - ReadOnly",
@@ -19148,9 +19203,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_filesystem_device_error{hostname=~\"$host\",device!~'rootfs',fstype!~'tmpfs'}",
+              "expr": "node_filesystem_device_error{hostname=~\"$hostname\",device!~'rootfs',fstype!~'tmpfs'}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -19179,6 +19234,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Network Traffic",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -19190,8 +19246,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic by Packets",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -19349,9 +19406,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_receive_packets_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_receive_packets_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -19362,9 +19419,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_transmit_packets_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_transmit_packets_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -19379,8 +19436,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic Errors",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -19478,9 +19536,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_receive_errs_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_receive_errs_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive errors",
@@ -19490,9 +19548,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_transmit_errs_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_transmit_errs_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Rransmit errors",
@@ -19506,8 +19564,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic Drop",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -19605,9 +19664,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_receive_drop_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_receive_drop_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive drop",
@@ -19617,9 +19676,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_transmit_drop_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_transmit_drop_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit drop",
@@ -19633,8 +19692,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic Compressed",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -19732,9 +19792,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_receive_compressed_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_receive_compressed_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive compressed",
@@ -19744,9 +19804,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_transmit_compressed_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_transmit_compressed_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit compressed",
@@ -19760,8 +19820,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic Multicast",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -19859,9 +19920,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_receive_multicast_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_receive_multicast_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive multicast",
@@ -19875,8 +19936,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic Fifo",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -19974,9 +20036,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_receive_fifo_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_receive_fifo_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive fifo",
@@ -19986,9 +20048,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_transmit_fifo_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_transmit_fifo_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit fifo",
@@ -20002,8 +20064,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic Frame",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20101,9 +20164,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_receive_frame_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_receive_frame_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -20118,8 +20181,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic Carrier",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20204,9 +20268,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_transmit_carrier_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_transmit_carrier_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Statistic transmit_carrier",
@@ -20220,8 +20284,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Traffic Colls",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20319,9 +20384,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_network_transmit_colls_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_network_transmit_colls_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit colls",
@@ -20335,8 +20400,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "NF Contrack",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20441,9 +20507,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_nf_conntrack_entries{hostname=~\"$host\"}",
+              "expr": "node_nf_conntrack_entries{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NF conntrack entries",
@@ -20453,9 +20519,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_nf_conntrack_entries_limit{hostname=~\"$host\"}",
+              "expr": "node_nf_conntrack_entries_limit{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NF conntrack limit",
@@ -20469,8 +20535,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "ARP Entries",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20555,9 +20622,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_arp_entries{hostname=~\"$host\"}",
+              "expr": "node_arp_entries{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ device }} - ARP entries",
@@ -20571,8 +20638,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "MTU",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20658,9 +20726,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_network_mtu_bytes{hostname=~\"$host\"}",
+              "expr": "node_network_mtu_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ device }} - Bytes",
@@ -20674,8 +20742,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Speed",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20761,9 +20830,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_network_speed_bytes{hostname=~\"$host\"}",
+              "expr": "node_network_speed_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ device }} - Speed",
@@ -20777,8 +20846,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Queue Length",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20864,9 +20934,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_network_transmit_queue_length{hostname=~\"$host\"}",
+              "expr": "node_network_transmit_queue_length{hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ device }} -   Interface transmit queue length",
@@ -20880,8 +20950,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Softnet Packets",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20979,9 +21050,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_softnet_processed_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_softnet_processed_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -20992,9 +21063,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_softnet_dropped_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_softnet_dropped_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21009,8 +21080,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Softnet Out of Quota",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -21095,9 +21167,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_softnet_times_squeezed_total{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_softnet_times_squeezed_total{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21112,8 +21184,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Network Operational Status",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -21198,9 +21271,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_network_up{operstate=\"up\",hostname=~\"$host\"}",
+              "expr": "node_network_up{operstate=\"up\",hostname=~\"$hostname\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{interface}} - Operational state UP",
@@ -21210,9 +21283,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_network_carrier{hostname=~\"$host\"}",
+              "expr": "node_network_carrier{hostname=~\"$hostname\"}",
               "format": "time_series",
               "instant": false,
               "legendFormat": "{{device}} - Physical link state",
@@ -21239,6 +21312,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Network Sockstat",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -21250,8 +21324,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Sockstat TCP",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -21337,9 +21412,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_TCP_alloc{hostname=~\"$host\"}",
+              "expr": "node_sockstat_TCP_alloc{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21350,9 +21425,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_TCP_inuse{hostname=~\"$host\"}",
+              "expr": "node_sockstat_TCP_inuse{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21363,9 +21438,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_TCP_mem{hostname=~\"$host\"}",
+              "expr": "node_sockstat_TCP_mem{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": true,
               "interval": "",
@@ -21377,9 +21452,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_TCP_orphan{hostname=~\"$host\"}",
+              "expr": "node_sockstat_TCP_orphan{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21390,9 +21465,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_TCP_tw{hostname=~\"$host\"}",
+              "expr": "node_sockstat_TCP_tw{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21407,8 +21482,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Sockstat UDP",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -21494,9 +21570,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_UDPLITE_inuse{hostname=~\"$host\"}",
+              "expr": "node_sockstat_UDPLITE_inuse{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21507,9 +21583,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_UDP_inuse{hostname=~\"$host\"}",
+              "expr": "node_sockstat_UDP_inuse{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21520,9 +21596,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_UDP_mem{hostname=~\"$host\"}",
+              "expr": "node_sockstat_UDP_mem{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21537,8 +21613,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Sockstat FRAG / RAW",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -21624,9 +21701,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_FRAG_inuse{hostname=~\"$host\"}",
+              "expr": "node_sockstat_FRAG_inuse{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21637,9 +21714,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_RAW_inuse{hostname=~\"$host\"}",
+              "expr": "node_sockstat_RAW_inuse{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21654,8 +21731,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Sockstat Memory Size",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -21741,9 +21819,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_TCP_mem_bytes{hostname=~\"$host\"}",
+              "expr": "node_sockstat_TCP_mem_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21754,9 +21832,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_UDP_mem_bytes{hostname=~\"$host\"}",
+              "expr": "node_sockstat_UDP_mem_bytes{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21767,9 +21845,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_FRAG_memory{hostname=~\"$host\"}",
+              "expr": "node_sockstat_FRAG_memory{hostname=~\"$hostname\"}",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "FRAG_memory - Used memory for frag",
@@ -21782,8 +21860,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Sockstat Used",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -21869,9 +21948,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_sockstat_sockets_used{hostname=~\"$host\"}",
+              "expr": "node_sockstat_sockets_used{hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -21900,6 +21979,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Network Netstat",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -21911,8 +21991,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Netstat IP In / Out Octets",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -22010,9 +22091,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_IpExt_InOctets{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_IpExt_InOctets{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22023,9 +22104,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_IpExt_OutOctets{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_IpExt_OutOctets{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutOctets - Sent octets",
@@ -22039,8 +22120,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "Netstat IP Forwarding",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -22126,9 +22208,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Ip_Forwarding{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Ip_Forwarding{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22143,8 +22225,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "ICMP In / Out",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -22241,9 +22324,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Icmp_InMsgs{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Icmp_InMsgs{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22254,9 +22337,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Icmp_OutMsgs{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Icmp_OutMsgs{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22271,8 +22354,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "ICMP Errors",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -22369,9 +22453,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Icmp_InErrors{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Icmp_InErrors{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22386,8 +22470,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "UDP In / Out",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -22496,9 +22581,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Udp_InDatagrams{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Udp_InDatagrams{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22509,9 +22594,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Udp_OutDatagrams{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Udp_OutDatagrams{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22526,8 +22611,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "UDP Errors",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -22611,9 +22697,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Udp_InErrors{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Udp_InErrors{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22624,9 +22710,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Udp_NoPorts{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Udp_NoPorts{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22637,9 +22723,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_UdpLite_InErrors{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_UdpLite_InErrors{hostname=~\"$hostname\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "InErrors Lite - UDPLite Datagrams that could not be delivered to an application",
               "refId": "C"
@@ -22647,9 +22733,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Udp_RcvbufErrors{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Udp_RcvbufErrors{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22660,9 +22746,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Udp_SndbufErrors{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Udp_SndbufErrors{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22677,8 +22763,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "TCP In / Out",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -22787,9 +22874,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Tcp_InSegs{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Tcp_InSegs{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "instant": false,
               "interval": "",
@@ -22801,9 +22888,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Tcp_OutSegs{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Tcp_OutSegs{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22818,9 +22905,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "TCP Errors",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -22905,9 +22992,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_TcpExt_ListenOverflows{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_TcpExt_ListenOverflows{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -22919,9 +23006,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_TcpExt_ListenDrops{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_TcpExt_ListenDrops{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -22933,9 +23020,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_TcpExt_TCPSynRetrans{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_TcpExt_TCPSynRetrans{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -22946,9 +23033,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Tcp_RetransSegs{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Tcp_RetransSegs{hostname=~\"$hostname\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "RetransSegs - Segments retransmitted - that is, the number of TCP segments transmitted containing one or more previously transmitted octets",
               "refId": "D"
@@ -22956,9 +23043,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Tcp_InErrs{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Tcp_InErrs{hostname=~\"$hostname\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "InErrs - Segments received in error (e.g., bad TCP checksums)",
               "refId": "E"
@@ -22966,9 +23053,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Tcp_OutRsts{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Tcp_OutRsts{hostname=~\"$hostname\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "OutRsts - Segments sent with RST flag",
               "refId": "F"
@@ -22980,8 +23067,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "TCP Connections",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -23086,9 +23174,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_netstat_Tcp_CurrEstab{hostname=~\"$host\"}",
+              "expr": "node_netstat_Tcp_CurrEstab{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23100,9 +23188,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_netstat_Tcp_MaxConn{hostname=~\"$host\"}",
+              "expr": "node_netstat_Tcp_MaxConn{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23118,9 +23206,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "TCP SynCookie",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -23217,9 +23305,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_TcpExt_SyncookiesFailed{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_TcpExt_SyncookiesFailed{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23231,9 +23319,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_TcpExt_SyncookiesRecv{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_TcpExt_SyncookiesRecv{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23245,9 +23333,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_TcpExt_SyncookiesSent{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_TcpExt_SyncookiesSent{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23263,8 +23351,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
+          "description": "TCP Direct Transition",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -23349,9 +23438,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Tcp_ActiveOpens{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Tcp_ActiveOpens{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -23362,9 +23451,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "irate(node_netstat_Tcp_PassiveOpens{hostname=~\"$host\"}[$__rate_interval])",
+              "expr": "irate(node_netstat_Tcp_PassiveOpens{hostname=~\"$hostname\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -23379,7 +23468,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "description": "Enable with --collector.tcpstat argument on node-exporter",
           "fieldConfig": {
@@ -23462,10 +23551,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "node_tcp_connection_states{state=\"established\",hostname=~\"$host\"}",
+              "expr": "node_tcp_connection_states{state=\"established\",hostname=~\"$hostname\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -23477,10 +23566,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "node_tcp_connection_states{state=\"fin_wait2\",hostname=~\"$host\"}",
+              "expr": "node_tcp_connection_states{state=\"fin_wait2\",hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23493,10 +23582,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "node_tcp_connection_states{state=\"listen\",hostname=~\"$host\"}",
+              "expr": "node_tcp_connection_states{state=\"listen\",hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23509,10 +23598,10 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
               "editorMode": "code",
-              "expr": "node_tcp_connection_states{state=\"time_wait\",hostname=~\"$host\"}",
+              "expr": "node_tcp_connection_states{state=\"time_wait\",hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23543,6 +23632,7 @@
       "datasource": {
         "type": "prometheus"
       },
+      "description": "Node Exporter",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -23554,9 +23644,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Node Exporter Scrape Time",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -23640,9 +23730,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_scrape_collector_duration_seconds{hostname=~\"$host\"}",
+              "expr": "node_scrape_collector_duration_seconds{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23658,9 +23748,9 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
-          "description": "",
+          "description": "Node Exporter Scrape",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -23767,9 +23857,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_scrape_collector_success{hostname=~\"$host\"}",
+              "expr": "node_scrape_collector_success{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23781,9 +23871,9 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "trixprometheus"
+                "uid": "${prometheus_datasource}"
               },
-              "expr": "node_textfile_scrape_error{hostname=~\"$host\"}",
+              "expr": "node_textfile_scrape_error{hostname=~\"$hostname\"}",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -23822,25 +23912,75 @@
       {
         "current": {
           "selected": false,
-          "text": "ctrl1.cluster",
-          "value": "ctrl1.cluster"
+          "text": "Prometheus",
+          "value": "${prometheus_datasource}"
+        },
+        "description": "Prometheus data source",
+        "hide": 2,
+        "includeAll": false,
+        "label": "Prometheus data source",
+        "multi": false,
+        "name": "prometheus_datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
-        "definition": "label_values(node_uname_info,hostname)",
+        "definition": "label_values(up,luna_group)",
         "hide": 0,
-        "includeAll": false,
-        "label": "Host",
-        "multi": false,
-        "name": "host",
+        "includeAll": true,
+        "label": "Luna Group",
+        "multi": true,
+        "name": "luna_group",
         "options": [],
         "query": {
-          "query": "label_values(node_uname_info,hostname)",
+          "query": "label_values(up,luna_group)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "node001.cluster",
+          "value": "node001.cluster"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus_datasource}"
+        },
+        "definition": "label_values(node_uname_info{luna_group=~\"$luna_group\"},hostname)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Hostname",
+        "multi": false,
+        "name": "hostname",
+        "options": [],
+        "query": {
+          "query": "label_values(node_uname_info{luna_group=~\"$luna_group\"},hostname)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -23882,7 +24022,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
         "definition": "label_values(node_systemd_unit_state,state)",
         "description": "Display services with this state",
@@ -23896,7 +24036,7 @@
           "query": "label_values(node_systemd_unit_state,state)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -23934,7 +24074,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "System Overview",
+  "title": "System",
   "uid": "trixsystem",
   "version": 2,
   "weekStart": ""
