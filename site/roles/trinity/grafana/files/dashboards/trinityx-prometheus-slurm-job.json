@@ -88,20 +88,35 @@
           },
           "unit": "watt"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "used"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-RdYlGr"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 4,
+        "h": 7,
         "w": 3,
         "x": 0,
         "y": 1
       },
       "id": 42,
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "auto",
+        "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
             "mean"
@@ -119,16 +134,84 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "expr": "sum(ipmi_dcmi_power_consumption_watts{hostname=~\"$hostname\"})\r\n/\r\navg(slurm_cpus_total)\r\n*\r\nsum(slurm_job_allocated_cores{jobid=~\"$job_id\",hostname=~\"$hostname\"})\r\n",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "allocated",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
           "expr": "sum(ipmi_dcmi_power_consumption_watts{hostname=~\"$hostname\"})\r\n*\r\nsum(rate(slurm_job_total_cpu_time{jobid=~\"$job_id\",hostname=~\"$hostname\"}[$__rate_interval:]))\r\n/\r\nsum(rate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval:]))",
           "hide": false,
           "instant": false,
-          "legendFormat": "power_consumption",
+          "legendFormat": "used",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(ipmi_dcmi_power_consumption_watts{hostname=~\"$hostname\"})\r\n/\r\navg(slurm_cpus_total)\r\n*\r\nsum(slurm_job_allocated_cores{jobid=~\"$job_id\",hostname=~\"$hostname\"})\r\n",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "allocated_max",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "-sum(ipmi_dcmi_power_consumption_watts{hostname=~\"$hostname\"})\r\n/\r\navg(slurm_cpus_total)\r\n*\r\nsum(slurm_job_allocated_cores{jobid=~\"$job_id\",hostname=~\"$hostname\"})\r\n",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "allocated_min",
+          "range": true,
+          "refId": "D"
         }
       ],
       "title": "Power Consumption",
-      "transformations": [],
+      "transformations": [
+        {
+          "id": "configFromData",
+          "options": {
+            "applyTo": {
+              "id": "byName",
+              "options": "used"
+            },
+            "configRefId": "C",
+            "mappings": [
+              {
+                "fieldName": "allocated_max",
+                "handlerKey": "max"
+              }
+            ]
+          }
+        },
+        {
+          "id": "configFromData",
+          "options": {
+            "configRefId": "D",
+            "mappings": [
+              {
+                "fieldName": "allocated_min",
+                "handlerKey": "min"
+              }
+            ]
+          }
+        }
+      ],
       "type": "stat"
     },
     {
@@ -190,7 +273,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 7,
         "w": 21,
         "x": 3,
         "y": 1
@@ -222,6 +305,19 @@
           "legendFormat": "power_consumption",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(ipmi_dcmi_power_consumption_watts{hostname=~\"$hostname\"})\r\n/\r\navg(slurm_cpus_total)\r\n*\r\nsum(slurm_job_allocated_cores{jobid=~\"$job_id\",hostname=~\"$hostname\"})",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
         }
       ],
       "title": "Power Consumption",
@@ -296,7 +392,7 @@
         "h": 7,
         "w": 3,
         "x": 0,
-        "y": 5
+        "y": 8
       },
       "id": 48,
       "options": {
@@ -458,7 +554,7 @@
         "h": 7,
         "w": 21,
         "x": 3,
-        "y": 5
+        "y": 8
       },
       "id": 31,
       "options": {
@@ -596,7 +692,7 @@
         "h": 7,
         "w": 3,
         "x": 0,
-        "y": 12
+        "y": 15
       },
       "id": 49,
       "options": {
@@ -773,7 +869,7 @@
         "h": 7,
         "w": 21,
         "x": 3,
-        "y": 12
+        "y": 15
       },
       "id": 2,
       "options": {
@@ -883,7 +979,7 @@
         "h": 7,
         "w": 3,
         "x": 0,
-        "y": 19
+        "y": 22
       },
       "id": 54,
       "options": {
@@ -1045,7 +1141,7 @@
         "h": 7,
         "w": 21,
         "x": 3,
-        "y": 19
+        "y": 22
       },
       "id": 47,
       "options": {
@@ -1143,7 +1239,7 @@
         "h": 7,
         "w": 3,
         "x": 0,
-        "y": 26
+        "y": 29
       },
       "id": 53,
       "options": {
@@ -1306,7 +1402,7 @@
         "h": 7,
         "w": 21,
         "x": 3,
-        "y": 26
+        "y": 29
       },
       "id": 52,
       "options": {
@@ -1442,7 +1538,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 33
+        "y": 36
       },
       "id": 3,
       "options": {
@@ -1573,7 +1669,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 36
       },
       "id": 4,
       "options": {
@@ -1658,14 +1754,14 @@
         "name": "prometheus_datasource",
         "options": [],
         "query": "prometheus",
-        "refresh": 2,
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
       },
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -1688,7 +1784,7 @@
           "query": "label_values(up,luna_group)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 2,
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -1696,7 +1792,7 @@
       },
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -1719,7 +1815,7 @@
           "query": "label_values(up{luna_group=~\"$luna_group\"},hostname)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 2,
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -1727,9 +1823,13 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "prometheus",
