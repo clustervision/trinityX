@@ -1,0 +1,111 @@
+---
+# tasks file for luna
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  ignore_errors: true
+
+- name: Install AlertX packages
+  yum:
+    name: '{{ alertx_packages }}'
+    state: present
+    enablerepo: alertx
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Ensure alertx directory exists
+  file:
+    path: '{{ trix_local }}/alertx'
+    state: directory
+
+# ----------------------------------------------------
+
+- name: Get python libdir
+  shell: "echo /trinity/local/python/lib/python*"
+  register: alertx_python_dir
+  changed_when: false
+
+# -- cli
+
+# TODO: better way than below
+- name: Install AlertX cli
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade {{ alertx_noarch_pip_repository }}/cli/{{ alertx_cli_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+  when: alertx_cli_pip is defined
+
+# TODO: better way than below
+- name: Install AlertX cli
+  ansible.builtin.shell: |
+    source /trinity/local/python/bin/activate
+    pip3 install --upgrade -i {{ alertx_noarch_pip_repository }}/cli alertx-cli
+    exit $?
+  args:
+    executable: /bin/bash
+  when: alertx_cli_pip is undefined
+
+- name: create symlink from site-packages/cli to alertx dir
+  file:
+    src: '{{ alertx_python_dir.stdout }}/site-packages/alertx'
+    dest: '{{ trix_local }}/alertx/cli'
+    state: link
+    force: true
+
+# -- we're done with pip
+# ------------------------------------------------
+
+- stat:
+    path: '{{ trix_local }}/alertx/cli/config'
+  register: alertx_cli_config_dir
+
+- name: Remove cli config dir symlink
+  file:
+    path: '{{ trix_local }}/alertx/cli/config'
+    state: absent
+  when: alertx_cli_config_dir.stat.islnk is defined and alertx_cli_config_dir.stat.islnk
+
+- name: Create cli config directory
+  file:
+    path: '{{ trix_local }}/alertx/cli/config/'
+    state: directory
+
+- name: Render alertx luna.ini
+  template:
+    src: 'luna2.ini.j2'
+    dest: '{{ trix_local }}/alertx/cli/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
+
+# ----------------------------------------------------
+
+- name: Render /usr/bin/alertx
+  template:
+    src: 'alertx-cli-wrapper.j2'
+    dest: '/usr/bin/alertx'
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Ensuring bash completion path exists
+  file:
+    path: '/etc/bash_completion.d/'
+    state: directory
+    owner: root
+    group: root
+
+- name: Copy bash completion script
+  copy:
+    remote_src: true
+    src: "{{ trix_local }}/alertx/cli/addons/bash_completion.sh"
+    dest: '/etc/bash_completion.d/alertx.sh' 
+    owner: root
+    group: root
+    mode: 0644
+

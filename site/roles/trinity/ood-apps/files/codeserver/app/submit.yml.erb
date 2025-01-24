@@ -3,5 +3,28 @@ batch_connect:
   template: "basic"
   conn_params:
     - code_server_version
+#  native: # ... array of command line arguments ...
+<% if cluster =~ /TrinityX/ %>
+
+<% @slurm_args = ["--ntasks", bc_num_slots] %>
+
+<% if !cores.blank?  %>
+<% @slurm_args << "--cpus-per-task" %>
+<% @slurm_args << cores %>
+<% end %>
+<% if !memory.blank?  %>
+<% @slurm_args << "--mem-per-cpu" %>
+<% @slurm_args << memory %>
+<% end %>
+<% if !gpus.blank?  %>
+<% @slurm_args << "--gpus-per-task" %>
+<% @slurm_args << "#{gpus}" %>
+<% end %>
+
+
 script:
-  accounting_id: <%= account %>
+  native:
+    <%- @slurm_args.each do |arg| -%>
+    - "<%= arg %>"
+    <%- end -%>
+<% end -%>

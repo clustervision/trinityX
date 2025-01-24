@@ -2,8 +2,9 @@
 
 apiVersion: 1
 
-{% if grafana_prometheus_url | length > 0 %}
+{% if (grafana_prometheus_url | length > 0) or (grafana_alertmanager_url | length > 0) %}
 datasources:
+{% if grafana_prometheus_url | length > 0 %}
   - name: Prometheus
     type: prometheus
     access: proxy
@@ -11,4 +12,36 @@ datasources:
     editable: false
     isDefault: true
     uid: trixprometheus
+{% endif %}
+
+{% if grafana_alertmanager_url | length > 0 %}
+  - name: AlertManager
+    type: alertmanager
+    access: proxy
+    url: {{ grafana_alertmanager_url }}
+    editable: false
+    isDefault: false
+    uid: trixalertmanager
+{% if grafana_alertmanager_basic_auth %}
+    basicAuth: true
+    basicAuthUser: {{ grafana_alertmanager_basic_auth_user }}
+    secureJsonData:
+      basicAuthPassword: {{ grafana_alertmanager_basic_auth_pwd }}
+{% endif %}
+
+  - name: AlertManagerDatasource
+    type: camptocamp-prometheus-alertmanager-datasource
+    access: proxy
+    url: {{ grafana_alertmanager_url }}
+    editable: false
+    isDefault: false
+    uid: trixalertmanagerds
+{% if grafana_alertmanager_basic_auth %}
+    basicAuth: true
+    basicAuthUser: {{ grafana_alertmanager_basic_auth_user }}
+    secureJsonData:
+      basicAuthPassword: {{ grafana_alertmanager_basic_auth_pwd }}
+{% endif %}
+{% endif %}
+
 {% endif %}

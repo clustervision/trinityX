@@ -8,7 +8,11 @@ form:
   - bc_account
   - bc_queue
   - bc_num_hours
+
   - bc_num_slots
+  - cores
+  - memory
+  - gpus
   - bc_email_on_started
 
   - version
@@ -25,12 +29,7 @@ attributes:
     help: "Workload manager queue. This can be left blank most of the time"
   bc_num_hours:
     help: "Number of hours to run the job"
-  bc_num_slots:
-    help: "Number of slots to run the job"
 
-  version:
-    value: "4.8"
-    
   working_dir:
     label: "Working Directory"
     data-filepicker: true
@@ -43,3 +42,32 @@ attributes:
     options:
       - ["4.8", "4.8.3"]
       - ["3.9", "3.9.3"]
+
+  bc_num_slots:
+    widget: "number_field"
+    label: "Number of tasks to run the job"
+    help: "This will populate the --tasks argument in the batch script"
+  cores:
+    widget: "number_field"
+    max: 16
+    min: 1
+    step: 1
+    # value: 1
+    label: "Number of CPUS per task"
+    help: "This will populate the --cpus-per-task argument in the batch script"
+  memory:
+    widget: "number_field"
+    max: 64
+    min: 1
+    step: 1
+    # value: 1
+    label: "Memory per memory per CPU (in GB)"
+    help: "This will populate the --mem-per-cpu argument in the batch script"
+  gpus:
+    widget: "number_field"
+    max: 8
+    min: 1
+    step: 1
+    # value: 1
+    label: "Number of GPUs per task"
+    help: "This will populate the --gpus-per-task argument in the batch script"

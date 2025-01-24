@@ -367,14 +367,26 @@
       tags: prometheus-ha-exporter, prometheus, monitoring, ha
       when: ha | default(False)
 
+    - role: trinity/prometheus-lshw-exporter
+      # Prometheus ipmi exporter
+      prometheus_lshw_exporter_system_user: root
+      prometheus_lshw_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_lshw_exporter.yml"
+      prometheus_lshw_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      tags: prometheus-lshw-exporter, prometheus, monitoring, lshw
+
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"
       enable_ssl: true
       grafana_admin_group: "{{ admin_group }}"
       grafana_prometheus_url: "https://{{ trix_ctrl_local_ip }}:9090"
+      grafana_alertmanager_url: "https://{{ trix_ctrl_local_ip }}:9093"
+      grafana_alertmanager_basic_auth_file: '/etc/trinity/passwords/prometheus/admin.txt'
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       tags: grafana, monitoring
+
+    - role: trinity/alertx
+      tags: monitoring, alertx
 
     - role: trinity/logrotate
       tags: logrotate

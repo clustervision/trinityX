@@ -1,0 +1,30 @@
+---
+- name: Assert usage of systemd as an init system
+  assert:
+    that: ansible_service_mgr == 'systemd'
+    msg: "This role only works with systemd"
+
+- name: Get systemd version
+  command: systemctl --version
+  changed_when: false
+  check_mode: false
+  register: __systemd_version
+
+- name: Set systemd version fact
+  set_fact:
+    prometheus_lshw_exporter_systemd_version: "{{ __systemd_version.stdout_lines[0] | regex_replace('^systemd\\s(\\d+).*$', '\\1') }}"
+
+- name: Ensure that prometheus_lshw_exporter_version is set
+  assert:
+    that:
+      - prometheus_lshw_exporter_version is defined
+      - prometheus_lshw_exporter_version | length > 0
+  tags:
+    - prometheus-lshw-exporter-install
+
+- name: Register prometheus_lshw_exporter binary
+  set_fact:
+    prometheus_lshw_exporter_binary: "prometheus-lshw-exporter-{{ prometheus_lshw_exporter_version }}-{{ system_arch }}"
+  tags:
+    - prometheus-lshw-exporter-install
+

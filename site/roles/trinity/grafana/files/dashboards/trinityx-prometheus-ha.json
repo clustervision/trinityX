@@ -15,10 +15,24 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "dashboard"
+      ],
+      "targetBlank": false,
+      "title": "TrinityX Dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    },
     {
       "asDropdown": false,
       "icon": "external link",
@@ -32,20 +46,6 @@
       "tooltip": "",
       "type": "dashboards",
       "url": ""
-    },
-    {
-      "asDropdown": true,
-      "icon": "external link",
-      "includeVars": true,
-      "keepTime": true,
-      "tags": [
-        "dashboard"
-      ],
-      "targetBlank": false,
-      "title": "TrinityX Dashboards",
-      "tooltip": "",
-      "type": "dashboards",
-      "url": ""
     }
   ],
   "liveNow": false,
@@ -53,8 +53,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Quick view if all the services are up and running",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -136,7 +137,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "expr": "max  (ha_cluster_pacemaker_fail_count)",
@@ -152,8 +153,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Hostname of the controller bearing the floating IP",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -214,7 +216,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -245,8 +247,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of the 'Shoot The Other Node In The Head' feature, allowing to forcefully power off failed nodes, avoiding interferences caused by partial or complex failures",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -325,7 +328,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "expr": "min (ha_cluster_pacemaker_stonith_enabled)",
@@ -341,8 +344,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Expanded view of failing services",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -419,7 +423,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "expr": "max by (resource) (ha_cluster_pacemaker_fail_count)",
@@ -444,14 +448,15 @@
       "panels": [],
       "repeat": "controllers",
       "repeatDirection": "h",
-      "title": "Resources $controllers",
+      "title": "Resources $hostname",
       "type": "row"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of Pacemaker resources on this host",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -538,11 +543,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=~\"$controllers\", group!='Trinity-stack'} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=~\"$hostname\", group!='Trinity-stack'} != 0",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -640,8 +645,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of Pacemaker resources on this host",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -744,11 +750,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=\"$controllers\", group!='Trinity-stack'} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=\"$hostname\", group!='Trinity-stack'} != 0",
           "format": "table",
           "instant": false,
           "legendFormat": "__auto",
@@ -800,8 +806,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of Pacemaker Trinity-stack resources on this host",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -888,11 +895,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=\"$controllers\", group='Trinity-stack'} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=\"$hostname\", group='Trinity-stack'} != 0",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -990,8 +997,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
+      "description": "Status of Pacemaker  Trinity-stack resources on this host",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1094,11 +1102,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=~\"$controllers\", group=\"Trinity-stack\"} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=~\"$hostname\", group=\"Trinity-stack\"} != 0",
           "format": "table",
           "instant": false,
           "legendFormat": "__auto",
@@ -1160,38 +1168,58 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
           "value": [
-            "$__all"
+            "All"
           ]
         },
         "datasource": {
           "type": "prometheus",
           "uid": "trixprometheus"
         },
-        "definition": "label_values(ha_cluster_pacemaker_nodes{job=\"luna_controllers\"},node)",
+        "definition": "label_values(up{luna_group=\"controller\"},hostname)",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
+        "label": "Hostname",
         "multi": true,
-        "name": "controllers",
+        "name": "hostname",
         "options": [],
         "query": {
-          "query": "label_values(ha_cluster_pacemaker_nodes{job=\"luna_controllers\"},node)",
+          "query": "label_values(up{luna_group=\"controller\"},hostname)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "trixprometheus"
+        },
+        "description": "Prometheus data source",
+        "hide": 2,
+        "includeAll": false,
+        "label": "Prometheus data source",
+        "multi": false,
+        "name": "prometheus_datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
       }
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
