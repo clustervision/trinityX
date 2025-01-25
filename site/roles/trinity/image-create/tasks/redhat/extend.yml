@@ -74,11 +74,11 @@
   register: image_major_version
 
 - name: Creating image in luna
-  shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D {{ ansible_os_family|lower }} -R {{ image_major_version.stdout }} -qo \"net.ifnames=0 biosdevname=0\" {{ image_name }}"
+  shell: "luna osimage add --path \"{{ trix_images }}/{{ image_name }}\" --distribution {{ ansible_os_family|lower }} --osrelease {{ image_major_version.stdout }} --quick-kerneloptions \"net.ifnames=0 biosdevname=0\" {{ image_name }}"
   when: redhat_image_in_luna is defined and redhat_image_in_luna.rc|int != 0
 
 - name: Setting release for image
-  shell: "luna osimage change -D {{ ansible_os_family|lower }} -R {{ image_major_version.stdout }} {{ image_name }}"
+  shell: "luna osimage change --distribution {{ ansible_os_family|lower }} --osrelease {{ image_major_version.stdout }} {{ image_name }}"
   when: redhat_image_in_luna is defined and redhat_image_in_luna.rc|int == 0
 
 - name: Kernel version in image
@@ -88,7 +88,7 @@
 
 - name: Set the kernel version for image
   ansible.builtin.shell:
-    cmd: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
+    cmd: "luna osimage change --kernelversion {{ kernel_version.stdout }} {{ image_name }}"
 
 - name: Sync RHEL subscription and entitlements
   shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
