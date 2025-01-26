@@ -18,7 +18,7 @@ In standard configuration TrinityX provides the following services to the cluste
 * OpenLDAP
 * SLURM or OpenPBS
 * Prometheus and Grafana
-* OpenOndemand
+* Open OnDemand
 * Graphical management applications
 * Infrastructure services such as NTP, DNS, DHCP
 * and more
