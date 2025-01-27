@@ -48,7 +48,8 @@ else
     fi 
 fi
 
-HOST=$(hostname|awk -F'.' '{ print $1 }')
+FULLHOST=$(hostname --long)
+HOST=$(echo $FULLHOST|awk -F'.' '{ print $1 }')
 
 # -------------------------------------------------------
 # the actual calls
@@ -76,7 +77,7 @@ function fetch_token {
 
 function call_hook {
     LUNA_TOKEN=$(fetch_token)
-    json='[{ "hostname": "'$HOST'", "force": false}]'
+    json='[{ "hostname": "'$FULLHOST'", "force": false}]'
     curl $INSECURE -X POST -H "x-access-tokens: $LUNA_TOKEN" -H "Content-Type: application/json" -d "$json" -s "${LUNA_URL}/import/prometheus_nhc_rules"
     return $?
 }
