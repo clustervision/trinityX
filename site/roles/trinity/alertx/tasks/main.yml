@@ -6,6 +6,44 @@
     - not compute|default(False)
 
 - block:
+  
+  - name: "Ensure daemon_path directory exists"
+    file:
+      path: "{{ daemon_path }}"
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+  
+  - name: "Install drainer.py"
+    copy:
+      src: 'drainer.py'
+      dest: '{{ daemon_path }}'
+      owner: 'root'
+      group: 'root'
+      mode: '0750'
+
+  - name: Install service file to systemd
+    template:
+      src: 'alertx-drainer.service.j2'
+      dest: '/etc/systemd/system/alertx-drainer.service'
+      owner: 'root'
+      group: 'root'
+      mode: '0644'
+    notify: reload systemd daemon
+
+  - name: Enable alertx-drainer.service
+    systemd:
+      name: alertx-drainer.service
+      enabled: yes
+
+  - name: Start alertx-drainer.service
+    systemd:
+      name: alertx-drainer.service
+      state: started
+
+
+- block:
   - name: Render AlertX hook script
     template:
       src: 'alertx-hook.sh.j2'
