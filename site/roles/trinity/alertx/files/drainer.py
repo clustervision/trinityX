@@ -74,8 +74,6 @@ def node_info_to_json(node_name):
 def listener():
     if request.is_json:
         prometheus_data = request.get_json()
-        with open("/root/drainer/prometheus_data_final.txt", "w") as file:
-            json.dump(prometheus_data, file, indent=4)
         if 'alerts' not in prometheus_data: # This is not being sent from prometheus
             return jsonify({'error': 'Invalid json content'}), 400
         all_nodes_list = get_unique_nodes()
