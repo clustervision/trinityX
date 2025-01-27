@@ -78,10 +78,24 @@ function fetch_token {
 function call_hook {
     LUNA_TOKEN=$(fetch_token)
     json='[{ "hostname": "'$FULLHOST'", "force": false}]'
-    curl $INSECURE -X POST -H "x-access-tokens: $LUNA_TOKEN" -H "Content-Type: application/json" -d "$json" -s "${LUNA_URL}/import/prometheus_nhc_rules"
-    return $?
+    curl $INSECURE -X POST -H "x-access-tokens: $LUNA_TOKEN" -H "Content-Type: application/json" -d "$json" -i -w "%{http_code}" -s "${LUNA_URL}/import/prometheus_nhc_rules" -o /tmp/alertx-hook.out > /tmp/alertx-hook.code
+    RET=$?
+    CODE=$(cat /tmp/alertx-hook.code)
+    echo "$CODE :: $(cat /tmp/alertx-hook.out)"
+    if [ "$CODE" != "200" ] || [ "$(grep 'No data found for query' /tmp/alertx-hook.out)" ]; then
+        return 3
+    fi
+    return $RET
 }
 
-call_hook
+TRY=20
+while ! call_hook; do
+    if [ "$TRY" -lt "0" ]; then
+        echo "--> giving up"
+        exit 2
+    fi
+    TRY=$[TRY-1]
+    sleep $(( ( RANDOM % 10 )  + 4 ))
+done
 exit $?
 
