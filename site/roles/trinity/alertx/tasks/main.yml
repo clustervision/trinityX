@@ -1,0 +1,29 @@
+---
+
+- include_tasks: controller.yml
+  when:
+    - ansible_connection not in 'chroot'
+    - not compute|default(False)
+
+- block:
+  - name: Render AlertX hook script
+    template:
+      src: 'alertx-hook.sh.j2'
+      dest: '/usr/local/sbin/alertx-hook.sh'
+      owner: root
+      group: root
+      mode: 0700
+    
+  - name: Render /etc/systemd/system/alertx-hook.service
+    template:
+      src: 'alertx-hook.systemd.j2'
+      dest: '/etc/systemd/system/alertx-hook.service'
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Enable luna services
+    service:
+      name: 'alertx-hook.service'
+      enabled: true
+  when: ansible_connection in 'chroot' or compute|default(False)

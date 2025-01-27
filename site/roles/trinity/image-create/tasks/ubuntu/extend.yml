@@ -72,7 +72,7 @@
   register: image_major_version
 
 - name: Creating image in luna
-  shell: "luna osimage add -p \"{{ trix_images }}/{{ image_name }}\" -D ubuntu -R {{ image_major_version.stdout }} -qo \"net.ifnames=0 biosdevname=0\" {{ image_name }}"
+  shell: "luna osimage add --path \"{{ trix_images }}/{{ image_name }}\" --distribution ubuntu --osrelease {{ image_major_version.stdout }} --quick-kerneloptions \"net.ifnames=0 biosdevname=0\" {{ image_name }}"
   when: ubuntu_image_in_luna is defined and ubuntu_image_in_luna.rc|int != 0
 
 - block:
@@ -85,7 +85,7 @@
       - post.rd
 
   - name: Creating group in luna
-    shell: "luna group add -o {{ image_name }} -qpart /tmp/part.rd -qpost /tmp/post.rd {{ image_name }}"
+    shell: "luna group add --osimage {{ image_name }} -qpart /tmp/part.rd -qpost /tmp/post.rd {{ image_name }}"
   when: ubuntu_group_in_luna is defined and ubuntu_group_in_luna.rc|int != 0
 
 - name: Kernel version in image
@@ -94,5 +94,5 @@
   changed_when: false
 
 - name: Set the kernel version for image
-  shell: "luna osimage change -ver {{ kernel_version.stdout }} {{ image_name }}"
+  shell: "luna osimage change --kernelversion {{ kernel_version.stdout }} {{ image_name }}"
 

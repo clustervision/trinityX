@@ -1,0 +1,14 @@
+- name: Run desktop task for OOD desktop app
+  when:
+    - ansible_connection not in 'chroot'
+  block:
+
+  - name: Render config file
+    ansible.builtin.template:
+      src: 'desktop/form.yml.j2'
+      dest: /etc/ood/config/apps/bc_desktop/TrinityX.yml
+      owner: root
+      group: root
+      mode: "0755"
+    when:
+      - app.get('override') | default(override, true) | default(('etc/ood/config/apps/bc_desktop/TrinityX.yml') is not exists, true)

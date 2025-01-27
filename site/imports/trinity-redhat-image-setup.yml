@@ -60,6 +60,7 @@
 
   - role: trinity/openhpc
     tags: openhpc
+    when: enable_openhpc
 
   # Moved to site/compute-*.yml playbooks, 
   # as this is only needed on slurm-based compute nodes
@@ -97,6 +98,7 @@
 
   - role: trinity/ood-apps
     tags: ood, ood-apps
+    when: enable_ood
 
   - role: trinity/target
     default_target: "{{ image_default_target | default('multi-user') }}"
@@ -124,6 +126,14 @@
     # Prometheus nvidia exporter
     prometheus_nvidia_exporter_system_user: root
     tags: prometheus-nvidia-exporter, prometheus, monitoring
+
+  - role: trinity/prometheus-lshw-exporter
+    # Prometheus ipmi exporter
+    prometheus_lshw_exporter_system_user: root
+    tags: prometheus-lshw-exporter, prometheus, monitoring, lshw, alertx
+
+  - role: trinity/alertx
+    tags: monitoring, alertx
 
   - role: trinity/cleanup-legacy
     tags: cleanup-legacy

@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# -------------------------------------------------------
+# loading and setting config
+# -------------------------------------------------------
+
+LUNA_INI='/trinity/local/luna/node/config/luna.ini'
+if [ -f $LUNA_INI ]; then
+    while IFS='=' read -ra line; do
+        if [ ! "$(echo $line | grep -E '^(#|;)')" ] && [ "$line" ]; then
+            if [ "$(echo $line | grep '^\[')" ]; then
+                section=$(echo $line | grep -oE "[A-Z]+")
+            else
+                key=$(echo ${line[0]})
+                value=$(echo ${line[1]})
+                declare -x "${section}_${key}"="$value"
+            fi
+        fi
+    done < "$LUNA_INI"
+else
+    >&2 echo "No config file: $LUNA_INI"
+fi
+
+if [ "$API_PROTOCOL" == "" ]; then
+{% if luna_protocol == "https" -%}
+    API_PROTOCOL='https'
+{% else %}
+    API_PROTOCOL='http'
+{% endif %}
+fi
+
+if [ "$API_ENDPOINT" == "" ]; then
+    LUNA_URL=${API_PROTOCOL}://{{ trix_ctrl_ip }}:7050
+else
+    LUNA_URL=${API_PROTOCOL}://${API_ENDPOINT}
+fi
+
+if [ "$API_VERIFY_CERTIFICATE" == "" ]; then
+{% if luna_verify_certificate | bool %}
+    INSECURE=''
+{% else %}
+    INSECURE='--insecure'
+{% endif %}
+else
+    API_VERIFY_CERTIFICATE=$(echo $API_VERIFY_CERTIFICATE | tr 'A-Z' 'a-z')
+    if [ "$API_VERIFY_CERTIFICATE" == "false" ] || [ "$API_VERIFY_CERTIFICATE" == "no" ]; then
+        INSECURE="--insecure"
+    fi 
+fi
+
+FULLHOST=$(hostname --long)
+HOST=$(echo $FULLHOST|awk -F'.' '{ print $1 }')
+
+# -------------------------------------------------------
+# the actual calls
+# -------------------------------------------------------
+
+function fetch_token {
+    export TPM2TOOLS_TCTI="device:/dev/tpm0"
+    ldconfig
+    TPM=$(tpm2_pcrread sha256:0 2> /dev/null | grep '0x' | awk -F' : ' '{ print $2 }')
+    json='{"tpm_sha256":"'$TPM'","username":"'$API_USERNAME'","password":"'$API_PASSWORD'"}'
+    touch /tmp/token.json
+    chmod og-rwx /tmp/token.json
+    curl $INSECURE -X POST -H "Content-Type: application/json" -d "$json" -s "${LUNA_URL}/tpm/${HOST}" > /tmp/token.json
+    valid=$(grep token /tmp/token.json)
+    if [ "$valid" ]; then
+        token=$(cat /tmp/token.json | awk '{ print $2 }' | grep -oE '"(\S+)"')
+        token=$(echo "${token:1:-1}")
+        echo $token
+    else
+        >&2 cat /tmp/token.json
+        >&2 echo
+        echo "None"
+    fi
+}
+
+function call_hook {
+    LUNA_TOKEN=$(fetch_token)
+    json='[{ "hostname": "'$FULLHOST'", "force": false}]'
+    curl $INSECURE -X POST -H "x-access-tokens: $LUNA_TOKEN" -H "Content-Type: application/json" -d "$json" -s "${LUNA_URL}/import/prometheus_nhc_rules"
+    return $?
+}
+
+call_hook
+exit $?
+
