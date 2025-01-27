@@ -22,7 +22,7 @@
         app_path: "{{ ood_apps_path }}/{% if app.type | default(None) %}{{ app.type }}_{% endif %}{{ app.name }}"
     - name: Register override
       set_fact:
-        override: "{{ app.get('override') | default(override) | default(False) }}"
+        override: "{{ app.get('override') | default(override, true) | default(False, true) }}"
 
     - name: Make folder for app {{ app.name }}
       ansible.builtin.file:
@@ -46,6 +46,10 @@
       when: 
         - item.state == 'directory'
         - override | default((app_path + '/' + item.path) is not exists )
+
+    - name: Debug for loop
+      debug:
+        msg: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app', wantlist=True) }}"
 
     - name: Copy files for app {{ app.name }}
       ansible.builtin.copy:
