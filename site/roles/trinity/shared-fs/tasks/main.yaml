@@ -7,6 +7,16 @@
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
   ignore_errors: true    
 
+- name: Ensuring shared fs prefix path location exists
+  file:
+    path: '{{ shared_fs_prefix }}'
+    owner: root
+    group: root
+    state: directory
+  when:
+    - shared_fs_prefix is defined
+    - shared_fs_prefix | length > 1
+
 # --- DRBD disks
 - name: Build DRBD disk list
   set_fact:
