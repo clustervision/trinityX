@@ -228,6 +228,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #       size: '20480M'
 #       fstype: 'ext4'
 #       options: '-b 4096'
+#       xmount: true
 #     - mount: '{{ trix_ohpc }}'
 #       size: '10240M'
 #       fstype: 'ext4'
@@ -240,6 +241,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     device: '/dev/drbd2'
 #     fstype: 'ext4'
 #     options: '-b 4096'
+#     xmount: true
 #
 #   - name: 'LVM2'
 #     type: 'iscsi'
@@ -285,13 +287,26 @@ shared_fs_disks:
     partitions:
     - mount: '{{ trix_home }}'
       options: '-o xattr=sa'
+      xmount: true
     - mount: '{{ trix_shared }}'
       options: '-o xattr=sa'
+      xmount: true
     - mount: '{{ trix_ohpc }}'
       options: '-o xattr=sa'
+      xmount: true
     - mount: '{{ trix_ha }}'
       options: '-o xattr=sa'
     
+
+# shared_fs_prefix is used in combination with xmount: true (cross mount);
+# you want all controllers to be able to mount the shared disks, using NFS,
+# through the shared ip.
+# when xmount is false or shared_fs_prefix is empty, this functionality
+# will be disabled and shared_fs_disks will be mounted like TrinityX 14.x,
+# only on the active controller.
+# Note: this settings only affects drbd, iscsi and direct mounted disks.
+
+shared_fs_prefix: '/real'
 
 
 # -----------------------------------------------------------------------

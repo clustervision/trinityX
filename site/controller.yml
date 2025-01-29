@@ -62,7 +62,10 @@
 
     - role: trinity/nfs-mounts
       nfs_remote_mask: '{{ shared_fs_disks }}'
+      nfs_prefix_path: '{{ shared_fs_prefix }}'
       nfs_mounts: []
+      # nfs_use_mask enforces the mounting of even non nfs shared disks/mount
+      nfs_use_mask: ha | default(False)
       tags: shared-fs,nfs-mounts
 
     - role: trinity/trix-tree
@@ -72,9 +75,6 @@
 
     - role: trinity/cv_support
       tags: cv_support
-
-    # - role: trinity/sensu-client
-    #   tags: monitoring
 
     - role: trinity/tunables
       tags: tunables
@@ -106,6 +106,8 @@
         - path: '/trinity/shared'
           remote: '{{ trix_ctrl_hostname }}:/trinity/shared'
           options: 'defaults,nfsvers=4,ro,retrans=4'
+      nfs_export_mask: '{{ shared_fs_disks }}'
+      nfs_prefix_path: '{{ shared_fs_prefix }}'
       tags: nfs
 
     - role: trinity/ssl-cert

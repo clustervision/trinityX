@@ -16,6 +16,7 @@
              "disk": item.disk,
              "fstype": item.fstype | default(""),
              "options": item.options | default(""),
+             "xmount": item.xmount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'drbd'
@@ -57,6 +58,7 @@
              "node_pass": item.password | default(""),
              "fstype": item.fstype | default(""),
              "options": item.options | default(""),
+             "xmount": item.xmount | default(False),
              "device": "/dev/disk/by-path/ip-"+item.portal+":3260-iscsi-"+item.target+"-lun-0" }] }}'
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'iscsi'
@@ -81,6 +83,7 @@
           [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "fstype": item.fstype | default(""),
              "options": item.options | default(""),
+             "xmount": item.xmount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'direct'

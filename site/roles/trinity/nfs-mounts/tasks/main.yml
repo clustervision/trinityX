@@ -21,6 +21,79 @@
     state: present
   when: ansible_facts['os_family'] == "Debian"
 
+
+#     nfs_mounts:
+#    - path: '{{ trix_shared }}'
+#      remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
+#      options: 'defaults,nfsvers=4,ro,retrans=4,_netdev'
+#    - path: '{{ trix_home }}'
+#      remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
+#      options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
+
+#     partitions:
+#    - mount: '{{ trix_home }}'
+#      options: '-o xattr=sa'
+#      xmount: true
+
+- name: Render alternative nfs mounts based on nfs_remote_mask info
+ set_fact:
+    alternative_nfs_mounts_: "{{ alternative_nfs_mounts_|d([]) + [item|combine({'remote': _remote|from_yaml,'options': _options|from_yaml})] }}"
+    loop: "{{ nfs_mounts }}"
+    vars:
+      _remote: |
+        {% if item.path in nfs_remote_mask | map(attribute="name") or item.path in nfs_remote_mask | map(attribute="mount",default="__undefined__") %}
+          {% for disk in nfs_remote_mask %}
+
+            {% if disk.partitions is defined %}
+
+              {% if nfs_use_mask %}            
+                {% for partition in disk.partitions %}
+                  {% if partition.mount == item.path %}
+                    {% if partition.xmount is defined %}
+                      {% if partition.xmount %}
+                        {% set _details = item.remote.split(':') %}
+                        {{ _details[0]+':'+nfs_prefix_path+_details[1] }}
+                      {% endif %}
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+
+            {% elif disk.name == item.path or (disk.mount is defined and disk.mount == item.path) %}
+              {% if disk["type"] == "nfs" %}
+                {{ disk["remote"] }}
+              {% else %}
+                {% if item.remote is defined %}
+                  {{ item.remote }}
+                {% elif nfs_use_mask %}
+                  {% if disk["xmount"] is defined %}
+                    {% if disk["xmount"] %}
+                      {% set _details = item["remote"].split(':') %}
+                        {{ _details[0]+':'+nfs_prefix_path+'/'+_details[1] }}
+                      {% endif %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endif %}
+
+          {% endfor %}
+        {% else %}
+          {{ item.remote }}
+        {% endif %}
+
+      alternate_nfs_mounts:
+        '{{ alternate_nfs_mounts|default([]) +
+          [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
+             "disk": item.disk,
+             "fstype": item.fstype | default(""),
+             "options": item.options | default(""),
+             "xmount": item.xmount | default(False),
+             "device": item.device }] }}'
+  with_items: "{{ shared_fs_disks }}"
+
+  when: item.type == 'drbd'
+
 - name: Render nfs_mounts based on solely nfs_remote_mask info
   set_fact:
     new_nfs_mounts: "{{ new_nfs_mounts|d([]) + [item|combine({'path': item.mount if item.mount is defined else item.name})] }}"
@@ -44,8 +117,32 @@
               {% if disk["type"] == "nfs" %}
                 {{ disk["remote"] }}
               {% else %}
-                {{ item.remote }}
+                {% if nfs_use_mask %}
+                  {% if disk["xmount"] is defined %}
+                    {% if disk["xmount"] %}
+                      {% set _details = item["remote"].split(':') %}
+                      {{ _details[0]+':'+nfs_prefix_path+_details[1] }}
+                    {% else %}
+                      item.remote
+                    {% endif %}
+                  {% else %}
+                    {{ item.remote }}
+                  {% endif %}
+                {% elif item.remote is defined %}
+                  {{ item.remote }}
+                {% endif %}
               {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% elif nfs_use_mask %}
+          {% for disk in nfs_remote_mask %}
+            {% if disk.partitions is defined %}
+              {% for partition in disk.partitions %}
+                {% if partition["mount"] == item.path %}
+                  {% set _details = item["remote"].split(':') %}
+                  {{ _details[0]+':'+nfs_prefix_path+_details[1] }}
+                {% endif %}
+              {% endfor %}
             {% endif %}
           {% endfor %}
         {% else %}
