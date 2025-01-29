@@ -18,9 +18,58 @@
     path: '{{ nfs_exports_path }}'
     state: directory
 
+- name: Render nfs_exports based on nfs_exports and nfs_export_mask info
+  set_fact:
+    nfs_exports_: "{{ nfs_exports_|d([]) + [item|combine({'path': _path|from_yaml|default(item.path,true)})] }}"
+  loop: "{{ nfs_exports }}"
+  vars:
+      _path: |
+        {% if nfs_use_mask %}
+          {% if item.path in nfs_export_mask | map(attribute="name") or item.path in nfs_export_mask | map(attribute="mount",default="__undefined__") %}
+            {% for disk in nfs_export_mask %}
+              {% if disk.name == item.path or (disk.mount is defined and disk.mount == item.path) %}
+                {% if disk["xmount"] is defined and disk["xmount"] %}
+                  {{ nfs_prefix_path+item.path }}
+                {% else %}
+                  {{ item.path }}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            {% for disk in nfs_export_mask %}
+              {% if disk.partitions is defined %}
+                {% for partition in disk.partitions %}
+                  {% if partition["mount"] == item.path %}
+                    {% if partition["xmount"] is defined and partition["xmount"] %}
+                      {{ nfs_prefix_path+item.path }}
+                    {% else %}
+                      {{ item.path }}
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% else %}
+          {{ item.path }}
+        {% endif %}
+
+- name: Overwrite nfs_mounts fact
+  set_fact:
+    new_nfs_exports: "{{ nfs_exports_ }}"
+  when:
+    - nfs_exports_ | length > 0
+    - nfs_exports | length > 0
+
+- name: Overwrite nfs_exports fact
+  set_fact:
+    new_nfs_exports: "{{ nfs_exports }}"
+  when: nfs_exports_ is not defined or nfs_exports_ | length == 0
+
 - name: Setup NFS exports in {{ nfs_exports_path }}
   template:
-    src: '{{ "HA_exports.j2" if ha == true else "nonHA_exports.j2" }}'
+    #src: '{{ "HA_exports.j2" if ha == true else "nonHA_exports.j2" }}'
+    src: 'exports.j2'
     dest: '{{ nfs_exports_path }}/trinity.exports'
 
 - name: Add link to the exports file in /etc/exports.d

@@ -99,15 +99,18 @@
     - role: trinity/nfs
       nfs_rpccount: 256
       nfs_enable_rdma: false
-      nfs_export_shared: true
-      nfs_export_home: true
       nfs_exports_path: '{{ trix_local }}/etc/exports.d'
-      nfs_mounts:
-        - path: '/trinity/shared'
-          remote: '{{ trix_ctrl_hostname }}:/trinity/shared'
-          options: 'defaults,nfsvers=4,ro,retrans=4'
+      nfs_exports:
+        - path: '{{ trix_shared }}'
+          options: '-rw,sync,no_wdelay,no_root_squash  {{ all_ctrl_hostname | join(' ') }} {{ trix_ctrl_hostname }} *(ro)'
+        - path: '{{ trix_home }}'
+          options: '*(rw,async,no_root_squash)'
+        - path: '{{ trix_sync }}''
+          options: '-ro,async,no_root_squash {{ all_ctrl_hostname | join(' ') }}'
       nfs_export_mask: '{{ shared_fs_disks }}'
       nfs_prefix_path: '{{ shared_fs_prefix }}'
+      # nfs_use_mask overwrites the exported path to match the actual paths for shared disks
+      nfs_use_mask: ha | default(False)
       tags: nfs
 
     - role: trinity/ssl-cert
