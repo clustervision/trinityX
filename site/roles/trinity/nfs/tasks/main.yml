@@ -71,6 +71,9 @@
     path: "{{ item.path }}"
     state: directory
   with_items: "{{ new_nfs_exports }}"
+  when:
+    - item.path is defined 
+    - item.type is defined and item.type != 'manual' and item.type != 'nfs'
 
 - name: Setup NFS exports in {{ nfs_exports_path }}
   template:
