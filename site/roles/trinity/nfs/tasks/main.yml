@@ -66,9 +66,14 @@
     new_nfs_exports: "{{ nfs_exports }}"
   when: nfs_exports_ is not defined or nfs_exports_ | length == 0
 
+- name: Ensure exported paths exist
+  file:
+    path: "{{ item.path }}"
+    state: directory
+  with_items: "{{ new_nfs_exports }}"
+
 - name: Setup NFS exports in {{ nfs_exports_path }}
   template:
-    #src: '{{ "HA_exports.j2" if ha == true else "nonHA_exports.j2" }}'
     src: 'exports.j2'
     dest: '{{ nfs_exports_path }}/trinity.exports'
 
