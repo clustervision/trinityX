@@ -34,7 +34,7 @@
 - block:
   - name: Render nfs_mounts based on nfs_mounts and nfs_remote_mask info
     set_fact:
-      nfs_mounts_: "{{ nfs_mounts_|d([]) + [item|combine({'remote': _remote|from_yaml,'options': _options|from_yaml, 'xmount': _xmount|from_yaml|default(False,true)})] }}"
+      nfs_mounts_: "{{ nfs_mounts_|d([]) + [item|combine({'type': item.type|default('manual'), 'remote': _remote|from_yaml,'options': _options|from_yaml, 'xmount': _xmount|from_yaml|default(False,true)})] }}"
     loop: "{{ nfs_mounts }}"
     vars:
       _remote: |
