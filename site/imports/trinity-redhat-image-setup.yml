@@ -45,7 +45,7 @@
       options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
     nfs_remote_mask: '{{ shared_fs_disks }}'
     nfs_prefix_path: '{{ shared_fs_prefix }}'
-    nfs_use_mask: ha | default(False)
+    nfs_use_mask: "{{ ha | default(False) }}"
     tags: nfs-mounts
 
   - role: trinity/environment-modules
@@ -95,6 +95,8 @@
       remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
       options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
     nfs_remote_mask: '{{ shared_fs_disks }}'
+    nfs_prefix_path: '{{ shared_fs_prefix }}'
+    nfs_use_mask: "{{ ha | default(False) }}"
     when: enable_openhpc == true
     tags: nfs-mounts
 
