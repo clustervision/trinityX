@@ -186,6 +186,24 @@
     - shared_fs_disks | length > 0
 
 
+# when we do not have shared disks
+
+- block:
+  - name: Add pacemaker order constraint - Trinity then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity'
+      resource2: 'Trinity-stack'
+      state: present
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: Trinity
+      state: present
+  when:
+    - shared_fs_disks | length == 0
+
+
 # wrapping things up
 
 - block:

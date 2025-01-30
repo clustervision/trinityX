@@ -136,7 +136,17 @@
       shell: rsync -raW -AX /etc/openldap/slapd.d/* {{ openldap_server_conf_path|quote }}
       args:
         creates: '{{ openldap_server_conf_path }}/cn=config.ldif'
+      register: openldap_copy
+      ignore_errors: true
       when: primary | default(True)
+
+    - name: Copy default configuration to {{ openldap_server_conf_path }} without xattr
+      shell: rsync -raW /etc/openldap/slapd.d/* {{ openldap_server_conf_path|quote }}
+      args:
+        creates: '{{ openldap_server_conf_path }}/cn=config.ldif'
+      when:
+        - primary | default(True)
+        - openldap_copy is failed
 
     - name: Delete default configuration
       file:
