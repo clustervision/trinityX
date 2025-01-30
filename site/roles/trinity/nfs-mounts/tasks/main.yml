@@ -146,7 +146,9 @@
       mode: '0755'
       state: directory
     with_items: '{{ new_nfs_mounts }}'
-    when: (ansible_connection in "chroot" and not nfs_only_xmount) or (nfs_only_xmount and item.xmount)
+    when:
+      - (item.type is defined and item.type != 'manual') or item.type is not defined
+      - (ansible_connection in "chroot" and not nfs_only_xmount) or (nfs_only_xmount and item.xmount)
 
   - name: Setup NFS mounts
     mount:
@@ -158,6 +160,7 @@
     with_items: '{{ new_nfs_mounts }}'
     when: 
       - ansible_facts['os_family'] == "RedHat"
+      - (item.type is defined and item.type != 'manual') or item.type is not defined
       - (ansible_connection in "chroot" and not nfs_only_xmount) or (nfs_only_xmount and item.xmount)
 
   - name: Setup NFS mounts
@@ -170,5 +173,6 @@
     with_items: '{{ new_nfs_mounts }}'
     when: 
       - ansible_facts['os_family'] == "Debian"
+      - (item.type is defined and item.type != 'manual') or item.type is not defined
       - (ansible_connection in "chroot" and not nfs_only_xmount) or (nfs_only_xmount and item.xmount)
   when: new_nfs_mounts is defined

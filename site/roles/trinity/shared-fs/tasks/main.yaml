@@ -163,7 +163,7 @@
 
 # We had to make a lot of magic to make LVM work with drbd or das.
 # We ditch the use_devices parameter, but this _might_ clash with the initrd
-# if we don't vgscan simply ignore lvms completely and failover will not work... sigh...
+# if we don't, vgscan simply ignores lvms completely and failover will not work... sigh...
 
 - block:
   - name: Render lvm exclusion filter fact
@@ -186,7 +186,7 @@
     - shared_fs_disks | length > 0
 
 
-# when we do not have shared disks
+# when we do not have any local shared disks
 
 - block:
   - name: Add pacemaker order constraint - Trinity then Trinity-stack
@@ -201,7 +201,9 @@
       resource2: Trinity
       state: present
   when:
-    - shared_fs_disks | length == 0
+    - drbd_fs_disks | length == 0
+    - direct_fs_disks | length == 0
+    - iscsi_fs_disks  | length == 0
 
 
 # wrapping things up
