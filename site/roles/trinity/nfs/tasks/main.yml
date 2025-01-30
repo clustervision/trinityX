@@ -20,7 +20,7 @@
 
 - name: Render nfs_exports based on nfs_exports and nfs_remote_mask info
   set_fact:
-    nfs_exports_: "{{ nfs_exports_|d([]) + [item|combine({'type': item.type|default('manual'), 'path': _path|from_yaml|default(item.path,true)})] }}"
+    nfs_exports_: "{{ nfs_exports_|d([]) + [item|combine({'type': _type|from_yaml|item.type|default('manual',true), 'path': _path|from_yaml|default(item.path,true)})] }}"
   loop: "{{ nfs_exports }}"
   vars:
       _path: |
@@ -52,6 +52,20 @@
           {% endif %}
         {% else %}
           {{ item.path }}
+        {% endif %}
+      _type: |
+        {% if nfs_use_mask %}
+          {% if item.path in nfs_remote_mask | map(attribute="name") or item.path in nfs_remote_mask | map(attribute="mount",default="__undefined__") %}
+            {% for disk in nfs_remote_mask %}
+              {% if disk.name == item.path or (disk.mount is defined and disk.mount == item.path) %}
+                {% if disk["type"] is defined %}
+                  {{ disk["type"] }}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% else %}
+          {{ item.type }}
         {% endif %}
 
 - name: Overwrite nfs_mounts fact
