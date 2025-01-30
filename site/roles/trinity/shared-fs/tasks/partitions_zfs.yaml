@@ -4,7 +4,7 @@
     msg: "{{ shared_fs_zfs_partitions }}"
 
 - name: Check if disk is already mounted
-  shell: '/usr/bin/mount | grep " {{ shared_fs_prefix+'/'+item.mount if item.xmount else item.mount }} "'
+  shell: '/usr/bin/mount | grep " {{ shared_fs_prefix+item.mount if item.xmount else item.mount }} "'
   register: shared_fs_zfs_partitions_mounted
   changed_when: false
   failed_when: false
@@ -92,7 +92,7 @@
 
   - name: Setting the mountlocation for ZFS Volume
     shell: >
-      zfs set mountpoint={{ shared_fs_prefix+'/'+item.item['mount'] if item.item['xmount'] else item.item['mount'] }} {{ item.item['zpool'] }}/{{ item.item['mount'] | replace("/","_") }}
+      zfs set mountpoint={{ shared_fs_prefix+item.item['mount'] if item.item['xmount'] else item.item['mount'] }} {{ item.item['zpool'] }}/{{ item.item['mount'] | replace("/","_") }}
     loop: "{{ shared_fs_zfs_partitions_zfs.results }}"
     ignore_errors: yes
     when: 
