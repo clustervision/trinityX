@@ -79,15 +79,13 @@
           options: '*(rw,async,no_root_squash)'
         - path: '{{ trix_sync }}'
           options: '-ro,async,no_root_squash {{ all_ctrl_hostname | join(" ") }}'
-      nfs_export_mask: '{{ shared_fs_disks }}'
+      nfs_remote_mask: '{{ shared_fs_disks }}'
       nfs_prefix_path: '{{ shared_fs_prefix }}'
       # nfs_use_mask overwrites the exported path to match the actual paths for shared disks
       nfs_use_mask: "{{ ha | default(False) }}"
       tags: nfs
 
     - role: trinity/nfs-mounts
-      nfs_remote_mask: '{{ shared_fs_disks }}'
-      nfs_prefix_path: '{{ shared_fs_prefix }}'
       nfs_mounts:
       - path: '{{ trix_shared }}'
         remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
@@ -95,6 +93,8 @@
       - path: '{{ trix_home }}'
         remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
         options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
+      nfs_remote_mask: '{{ shared_fs_disks }}'
+      nfs_prefix_path: '{{ shared_fs_prefix }}'
       # nfs_use_mask enforces the mounting of even non nfs shared disks/mount
       nfs_use_mask: "{{ ha | default(False) }}"
       # nfs_only_xmount will only mount the mounts listed in nfs_mounts that are set to be xmount
