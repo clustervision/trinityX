@@ -60,21 +60,49 @@
       tags: ha,shared-fs
       when: ha | default(False)
 
-    - role: trinity/nfs-mounts
-      nfs_remote_mask: '{{ shared_fs_disks }}'
-      nfs_mounts: []
-      tags: shared-fs,nfs-mounts
-
     - role: trinity/trix-tree
       tags: 
         - trix-tree
         - authentication
 
+    - role: trinity/rdma-centos
+      tags: rdma-centos
+
+    - role: trinity/nfs
+      nfs_rpccount: 256
+      nfs_enable_rdma: false
+      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
+      nfs_exports:
+        - path: '{{ trix_shared }}'
+          options: '-rw,sync,no_wdelay,no_root_squash {{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }} *(ro)'
+        - path: '{{ trix_home }}'
+          options: '*(rw,async,no_root_squash)'
+        - path: '{{ trix_sync }}'
+          options: '-ro,async,no_root_squash {{ all_ctrl_hostname | join(" ") }}'
+      nfs_remote_mask: '{{ shared_fs_disks }}'
+      nfs_prefix_path: '{{ shared_fs_prefix }}'
+      # nfs_use_mask overwrites the exported path to match the actual paths for shared disks
+      nfs_use_mask: "{{ ha | default(False) }}"
+      tags: nfs
+
+    - role: trinity/nfs-mounts
+      nfs_mounts:
+      - path: '{{ trix_shared }}'
+        remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
+        options: 'defaults,nfsvers=4,rw,retrans=4,_netdev'
+      - path: '{{ trix_home }}'
+        remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
+        options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
+      nfs_remote_mask: '{{ shared_fs_disks }}'
+      nfs_prefix_path: '{{ shared_fs_prefix }}'
+      # nfs_use_mask enforces the mounting of even non nfs shared disks/mount
+      nfs_use_mask: "{{ ha | default(False) }}"
+      # nfs_only_xmount will only mount the mounts listed in nfs_mounts that are set to be xmount
+      nfs_only_xmount: "{{ ha | default(False) }}"
+      tags: shared-fs,nfs-mounts
+
     - role: trinity/cv_support
       tags: cv_support
-
-    # - role: trinity/sensu-client
-    #   tags: monitoring
 
     - role: trinity/tunables
       tags: tunables
@@ -85,9 +113,6 @@
     - role: trinity/chrony
       tags: chrony
 
-    - role: trinity/rdma-centos
-      tags: rdma-centos
-
     - role: trinity/ssh
       tags: ssh
 
@@ -95,18 +120,6 @@
     # - role: trinity/fail2ban
     #   tags: fail2ban
     # -----
-
-    - role: trinity/nfs
-      nfs_rpccount: 256
-      nfs_enable_rdma: false
-      nfs_export_shared: true
-      nfs_export_home: true
-      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
-      nfs_mounts:
-        - path: '/trinity/shared'
-          remote: '{{ trix_ctrl_hostname }}:/trinity/shared'
-          options: 'defaults,nfsvers=4,ro,retrans=4'
-      tags: nfs
 
     - role: trinity/ssl-cert
       ssl_cert_country: 'NL'

@@ -238,7 +238,7 @@
       resource_class: ocf
       resource_type: Filesystem
       options: 'device={{ item.device }}
-          directory="{{ item.name }}" fstype={{ item.fstype }} 
+          directory="{{ shared_fs_prefix+item.name if item.xmount else item.name }}" fstype={{ item.fstype }} 
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present

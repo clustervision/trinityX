@@ -4,7 +4,7 @@ LVM_CONF=/etc/lvm/lvm.conf
 
 cat << EOF > /tmp/lvm_filter.dat
 {% for disk in shared_lvm_disks %}
-{% if disk['fstype'] == 'lvm' %}
+{% if 'fstype' in disk and disk['fstype'] == 'lvm' %}
 {% if 'disk' in disk %}
 {{ disk['disk'] }}
 {% else %}
@@ -18,7 +18,7 @@ EOF
 
 cat << EOF > /tmp/lvm_volumes.dat
 {% for disk in shared_fs_disks %}
-{% if disk['fstype'] == 'lvm' %}
+{% if 'fstype' in disk and disk['fstype'] == 'lvm' %}
 {{ disk['name'] }}
 {% endif %}
 {% endfor -%}

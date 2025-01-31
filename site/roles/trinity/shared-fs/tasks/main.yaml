@@ -7,6 +7,16 @@
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
   ignore_errors: true    
 
+- name: Ensuring shared fs prefix path location exists
+  file:
+    path: '{{ shared_fs_prefix }}'
+    owner: root
+    group: root
+    state: directory
+  when:
+    - shared_fs_prefix is defined
+    - shared_fs_prefix | length > 1
+
 # --- DRBD disks
 - name: Build DRBD disk list
   set_fact:
@@ -16,6 +26,7 @@
              "disk": item.disk,
              "fstype": item.fstype | default(""),
              "options": item.options | default(""),
+             "xmount": item.xmount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'drbd'
@@ -57,6 +68,7 @@
              "node_pass": item.password | default(""),
              "fstype": item.fstype | default(""),
              "options": item.options | default(""),
+             "xmount": item.xmount | default(False),
              "device": "/dev/disk/by-path/ip-"+item.portal+":3260-iscsi-"+item.target+"-lun-0" }] }}'
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'iscsi'
@@ -81,6 +93,7 @@
           [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "fstype": item.fstype | default(""),
              "options": item.options | default(""),
+             "xmount": item.xmount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"
   when: item.type == 'direct'
@@ -150,7 +163,7 @@
 
 # We had to make a lot of magic to make LVM work with drbd or das.
 # We ditch the use_devices parameter, but this _might_ clash with the initrd
-# if we don't vgscan simply ignore lvms completely and failover will not work... sigh...
+# if we don't, vgscan simply ignores lvms completely and failover will not work... sigh...
 
 - block:
   - name: Render lvm exclusion filter fact
@@ -171,6 +184,26 @@
     shell: '/tmp/fix-lvm-filter.sh'
   when: 
     - shared_fs_disks | length > 0
+
+
+# when we do not have any local shared disks
+
+- block:
+  - name: Add pacemaker order constraint - Trinity then Trinity-stack
+    pcs_constraint_order:
+      resource1: 'Trinity'
+      resource2: 'Trinity-stack'
+      state: present
+
+  - name: Add pacemaker colocation constraint - Trinity-stack with Trinity
+    pcs_constraint_colocation:
+      resource1: 'Trinity-stack'
+      resource2: Trinity
+      state: present
+  when:
+    - drbd_fs_disks | length == 0
+    - direct_fs_disks | length == 0
+    - iscsi_fs_disks  | length == 0
 
 
 # wrapping things up
