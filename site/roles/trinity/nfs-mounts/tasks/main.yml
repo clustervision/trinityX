@@ -34,7 +34,7 @@
 - block:
   - name: Render nfs_mounts based on nfs_mounts and nfs_remote_mask info
     set_fact:
-      nfs_mounts_: "{{ nfs_mounts_|d([]) + [item|combine({'type': _type|from_yaml, 'remote': _remote|from_yaml,'options': _options|from_yaml, 'xmount': _xmount|from_yaml|default(False,true)})] }}"
+      nfs_mounts_: "{{ nfs_mounts_|d([]) + [item|combine({'type': _type|from_yaml, 'remote': _remote|from_yaml|default(item.remote,true) ,'options': _options|from_yaml, 'xmount': _xmount|from_yaml|default(False,true)})] }}"
     loop: "{{ nfs_mounts }}"
     vars:
       _remote: |
@@ -43,17 +43,15 @@
             {% if disk.name == item.path or (disk.mount is defined and disk.mount == item.path) %}
               {% if disk["type"] == "nfs" %}
                 {{ disk["remote"] }}
-              {% else %}
-                {% if nfs_use_mask %}
-                  {% if disk["xmount"] is defined and disk["xmount"] %}
-                    {% set _details = item["remote"].split(':') %}
-                    {{ _details[0]+':'+nfs_prefix_path+_details[1] }}
-                  {% else %}
-                    {{ item.remote }}
-                  {% endif %}
-                {% elif item.remote is defined %}
+              {% if nfs_use_mask %}
+                {% if disk["xmount"] is defined and disk["xmount"] %}
+                  {% set _details = item["remote"].split(':') %}
+                  {{ _details[0]+':'+nfs_prefix_path+_details[1] }}
+                {% else %}
                   {{ item.remote }}
                 {% endif %}
+              {% elif item.remote is defined %}
+                {{ item.remote }}
               {% endif %}
             {% endif %}
           {% endfor %}
