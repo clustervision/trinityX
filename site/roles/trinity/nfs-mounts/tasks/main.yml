@@ -43,7 +43,7 @@
             {% if disk.name == item.path or (disk.mount is defined and disk.mount == item.path) %}
               {% if disk["type"] == "nfs" %}
                 {{ disk["remote"] }}
-              {% if nfs_use_mask %}
+              {% elif nfs_use_mask %}
                 {% if disk["xmount"] is defined and disk["xmount"] %}
                   {% set _details = item["remote"].split(':') %}
                   {{ _details[0]+':'+nfs_prefix_path+_details[1] }}
@@ -161,7 +161,7 @@
       - (item.type is defined and item.type != 'manual') or item.type is not defined
       - (ansible_connection in "chroot" and not nfs_only_xmount) or (nfs_only_xmount and item.xmount)
 
-  - name: Setup NFS mounts
+  - name: Setup NFS mounts for RedHat family
     mount:
       path: '{{ item.path }}'
       src: '{{ item.remote }}'
@@ -174,7 +174,7 @@
       - (item.type is defined and item.type != 'manual') or item.type is not defined
       - (ansible_connection in "chroot" and not nfs_only_xmount) or (nfs_only_xmount and item.xmount)
 
-  - name: Setup NFS mounts
+  - name: Setup NFS mounts for Debian family
     mount:
       path: '{{ item.path }}'
       src: '{{ item.remote }}'
