@@ -39,6 +39,16 @@
     seuser: system_u
   when: primary | default(True)
 
+- name: modify mariadb-server.cnf
+  replace:
+    dest: '/etc/my.cnf.d/mariadb-server.cnf'
+    regexp: '^{{ item }}='
+    replace: '#{{ item }}='
+  with_items:
+    - datadir
+    - socket
+  ignore_errors: true
+
 - name: Render /etc/my.cnf
   template:
     src: 'etc_my.cnf.j2'

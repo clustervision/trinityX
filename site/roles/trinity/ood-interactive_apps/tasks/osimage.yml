@@ -1,0 +1,27 @@
+---
+
+- block:
+  - name: Ensure addons directory exists
+    file:
+      path: "{{ trix_ood }}/{{ ood_portal_version }}/osimage/addons/"
+      state: directory
+
+  - name: Render wrapper addon for lchroot
+    template:
+      src: "osimage/lchroot_wrapper.sh.j2"
+      dest: "{{ trix_ood }}/{{ ood_portal_version }}/osimage/addons/chroot_wrapper.sh"
+      mode: 0755
+      owner: root
+      group: root
+
+  - name: Render sudoers for lchroot
+    template:
+      src: "osimage/sudoers.j2"
+      dest: "/etc/sudoers.d/lchroot"
+      mode: 0755
+      owner: root
+      group: root
+  when: 
+    - on_controller|default(False)
+    - ansible_connection not in 'chroot'
+
