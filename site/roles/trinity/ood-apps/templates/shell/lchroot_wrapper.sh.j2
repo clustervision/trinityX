@@ -27,30 +27,41 @@
 # 
 ####
 
-
-for arg in "$@"; do
-    if [[ "$arg" =~ image= ]]; then
-        OS_IMAGE=$(echo "$arg" | grep -oP 'image=[^,]+' | cut -d= -f2 | tr -d "'")
-    fi
-done
-
-if [[ -n "$OS_IMAGE"  ]]; then
-    if [[ -f /trinity/images/compute/tmp/lchroot.lock ]]; then
+function wait_till_ok {
+    local OS_PATH=$1
+    if [[ -f "${OS_PATH}/tmp/lchroot.lock" ]]; then
         echo "lchroot is already running, waiting for it to finish (press f to force)"
 
-        while [[ -f /trinity/images/compute/tmp/lchroot.lock ]]; do
+        while [[ -f "${OS_PATH}/tmp/lchroot.lock" ]]; do
             read -t 1 -n 1 -s key
             if [[ $key == "f" ]]; then
                 echo ""
-                echo "Forcing lchroot to stop"
-                sudo rm /trinity/images/compute/tmp/lchroot.lock
+                echo "Removing lock file"
+                sudo rm "${OS_PATH}/tmp/lchroot.lock"
                 break
             else
                 echo -n "."
             fi
         done
     fi
+}
 
+
+for arg in "$@"; do
+    if [[ "$arg" =~ image= ]]; then
+        OS_IMAGE=$(echo "$arg" | grep -oP 'image=[^,]+' | cut -d= -f2 | tr -d "'")
+    fi
+    if [[ "$arg" =~ path= ]]; then
+        OS_PATH=$(echo "$arg" | grep -oP 'path=[^,]+' | cut -d= -f2 | tr -d "'")
+    fi
+done
+
+
+if [[ -n "$OS_IMAGE"  ]]; then
+    if [[ ! -n "$OS_PATH"  ]]; then
+        OS_PATH="{{ trix_images }}/${OS_IMAGE}"
+    fi
+    wait_till_ok "${OS_PATH}"
     sudo lchroot $OS_IMAGE
 else
     exec /usr/bin/ssh "$@"
