@@ -15,7 +15,7 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "links": [
@@ -52,7 +52,7 @@
   "panels": [
     {
       "datasource": {
-        "type": "alertmanager",
+        "type": "camptocamp-prometheus-alertmanager-datasource",
         "uid": "${alertmanager}"
       },
       "description": "List of the alerts active in the cluster ( excluding silenced and inhibited )",
@@ -95,21 +95,25 @@
                 "value": [
                   {
                     "options": {
-                      "critical": {
+                      "1": {
                         "color": "red",
-                        "index": 3
+                        "index": 3,
+                        "text": "critical"
                       },
-                      "danger": {
+                      "2": {
                         "color": "orange",
-                        "index": 2
+                        "index": 2,
+                        "text": "danger"
                       },
-                      "info": {
-                        "color": "#7c7e80",
-                        "index": 0
-                      },
-                      "warning": {
+                      "3": {
                         "color": "yellow",
-                        "index": 1
+                        "index": 1,
+                        "text": "warning"
+                      },
+                      "4": {
+                        "color": "#7c7e80",
+                        "index": 0,
+                        "text": "info"
                       }
                     },
                     "type": "value"
@@ -147,6 +151,66 @@
                 "value": 185
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "nhc"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 49
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "false": {
+                        "color": "red",
+                        "index": 1,
+                        "text": "no"
+                      },
+                      "true": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "yes"
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "color": "red",
+                        "index": 2,
+                        "text": "no"
+                      }
+                    },
+                    "type": "special"
+                  },
+                  {
+                    "options": {
+                      "match": "empty",
+                      "result": {
+                        "color": "red",
+                        "index": 3,
+                        "text": "no"
+                      }
+                    },
+                    "type": "special"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
           }
         ]
       },
@@ -167,6 +231,7 @@
           ],
           "show": false
         },
+        "frameIndex": 1,
         "showHeader": true,
         "sortBy": []
       },
@@ -177,7 +242,7 @@
             "type": "alertmanager",
             "uid": "${alertmanager}"
           },
-          "filters": "hostname=~\"$hostname\",luna_group=~\"$luna_group\"",
+          "filters": "hostname=~\"$hostname\",luna_group=~\"$luna_group\",severity=~\"$severity\"",
           "inhibited": false,
           "receiver": "",
           "refId": "A",
@@ -187,38 +252,64 @@
       "title": "Alerts",
       "transformations": [
         {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": false,
+                "field": "SeverityValue"
+              }
+            ]
+          }
+        },
+        {
           "id": "organize",
           "options": {
             "excludeByName": {
-              "SeverityValue": true,
+              "SeverityValue": false,
               "Time": true,
               "alertstatus": true,
               "alertstatus_code": true,
               "cluster": true,
+              "disabled": true,
               "exporter": true,
               "id": true,
               "job": true,
               "name": true,
+              "severity": true,
               "type": true
             },
             "indexByName": {
-              "SeverityValue": 5,
-              "Time": 4,
-              "alertname": 3,
-              "alertstatus": 13,
-              "alertstatus_code": 14,
-              "cluster": 7,
-              "description": 6,
-              "exporter": 8,
-              "hostname": 1,
-              "id": 10,
-              "job": 9,
-              "luna_group": 2,
-              "name": 11,
-              "severity": 0,
-              "type": 12
+              "SeverityValue": 0,
+              "Time": 6,
+              "alertname": 4,
+              "alertstatus": 14,
+              "alertstatus_code": 15,
+              "capacity": 23,
+              "class": 16,
+              "clock": 17,
+              "cluster": 8,
+              "description": 7,
+              "disabled": 18,
+              "exporter": 9,
+              "hostname": 2,
+              "id": 11,
+              "job": 10,
+              "luna_group": 3,
+              "name": 12,
+              "nhc": 5,
+              "path": 19,
+              "product": 20,
+              "serial": 21,
+              "severity": 1,
+              "size": 24,
+              "type": 13,
+              "vendor": 22
             },
-            "renameByName": {}
+            "renameByName": {
+              "SeverityValue": "severity"
+            }
           }
         }
       ],
@@ -255,8 +346,9 @@
         "type": "datasource"
       },
       {
+        "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -286,8 +378,9 @@
         "type": "query"
       },
       {
+        "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -315,6 +408,34 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "trixprometheus"
+        },
+        "definition": "label_values(ALERTS,severity)",
+        "description": "Severity",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Severity",
+        "multi": false,
+        "name": "severity",
+        "options": [],
+        "query": {
+          "query": "label_values(ALERTS,severity)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -326,6 +447,6 @@
   "timezone": "",
   "title": "Alerts",
   "uid": "trixalerts",
-  "version": 5,
+  "version": 13,
   "weekStart": ""
 }
