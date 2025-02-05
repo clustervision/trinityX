@@ -1,29 +1,34 @@
 ---
 batch_connect:
   template: "basic"
+  script_wrapper: |
+    <%- if !modules.blank? -%>
+    # Purge the module environment and run the required modules
+    module purge && module load <%= modules %>  
+    <%- end -%>
+    # Run the script
+    %s
 
-#  native: # ... array of command line arguments ...
-<% if cluster =~ /TrinityX/ %>
-
-<% @slurm_args = ["--ntasks", bc_num_slots] %>
-
-<% if !cores.blank?  %>
-<% @slurm_args << "--cpus-per-task" %>
-<% @slurm_args << cores %>
-<% end %>
-<% if !memory.blank?  %>
-<% @slurm_args << "--mem-per-cpu" %>
-<% @slurm_args << memory %>
-<% end %>
-<% if !gpus.blank?  %>
-<% @slurm_args << "--gpus-per-task" %>
-<% @slurm_args << "#{gpus}" %>
-<% end %>
 
 
 script:
   native:
-    <%- @slurm_args.each do |arg| -%>
+    - "-N"
+    - "<%= bc_num_slots %>"
+    <% if !cores.blank? %>
+    - "--mincpus"
+    - "<%= cores %>"
+    <% end %>
+    <% if !memory.blank? %>
+    - "--mem"
+    - "<%= memory %>"
+    <% end %>
+    <% if !gpus.blank? %>
+    - "--gpus"
+    - "<%= gpus %>"
+    <% end %>
+    <% if !slurm_extra_args.blank? %>
+    <% for arg in slurm_extra_args.split() %>
     - "<%= arg %>"
-    <%- end -%>
-<% end -%>
+    <% end %>
+    <% end %>

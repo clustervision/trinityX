@@ -20,9 +20,6 @@
     - name: Register app path
       set_fact:
         app_path: "{{ ood_apps_path }}/{% if app.type | default(None) %}{{ app.type }}_{% endif %}{{ app.name }}"
-    - name: Register override
-      set_fact:
-        override: "{{ app.get('override') | default(override, true) | default(False, true) }}"
 
     - name: Make folder for app {{ app.name }}
       ansible.builtin.file:
@@ -45,7 +42,7 @@
       loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app', wantlist=True) }}"
       when: 
         - item.state == 'directory'
-        - override | default((app_path + '/' + item.path) is not exists )
+        - app.get('override') | default(override, true) | default((app_path + '/' + item.path) is not exists, true)
 
     - name: Copy files for app {{ app.name }}
       ansible.builtin.copy:
@@ -58,7 +55,7 @@
       loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app', wantlist=True) }}"
       when: 
         - item.state == 'file'
-        - override | default((app_path + '/' + item.path) is not exists )
+        - app.get('override') | default(override, true) | default((app_path + '/' + item.path) is not exists, true)
 
     - name: Render files for app {{ app.name }}
       ansible.builtin.template:
@@ -71,7 +68,7 @@
       loop: "{{ lookup('community.general.filetree', 'templates/{{ app.name }}/app', wantlist=True) }}"
       when: 
         - item.state == 'file'
-        - override | default((app_path + '/' + item.path.replace('.j2', '')) is not exists )
+        - app.get('override') | default(override, true) | default((app_path + '/' + item.path.replace('.j2', '')) is not exists, true)
 
     - name: Render module file for app {{ app.name }}
       ansible.builtin.template:
@@ -83,7 +80,7 @@
       notify: Run update_ood
       when: 
         # - "('templates/' + app.name + '/module.lua.j2') is exists "
-        - override | default((trix_shared + '/modulefiles/ood-' + app.name + '.lua') is not exists )
+        - app.get('override') | default(override, true) | default((trix_shared + '/modulefiles/ood-' + app.name + '.lua') is not exists, true)
       failed_when: false
     
     - name: Include additional tasks for app {{ app.name }}
