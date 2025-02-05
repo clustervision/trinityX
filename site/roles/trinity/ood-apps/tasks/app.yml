@@ -19,13 +19,24 @@
   block:
     - name: Register app path
       set_fact:
-        app_path: "{{ ood_apps_path }}/{% if app.type | default(None) %}{{ app.type }}_{% endif %}{{ app.name }}"
+        app_path: "{{ ood_apps_path }}/{% if app.type | default(None) %}{{ app.type }}_{% endif %}{{ app.name }}"    
+    - name: Register app enabled
+      set_fact:
+        app_enabled: "{{ (app.get('type') != 'bc') or (app.name in ood_enable_interactive_apps) }}"
+
+    - name: Debug app
+      debug:
+        var: app
+
+    - name: Debug app_enabled
+      debug:
+        var: app_enabled
 
     - name: Make folder for app {{ app.name }}
       ansible.builtin.file:
         path: "{{ app_path }}"
         state: directory
-        mode: "{{ '0000' if app.name in (ood_disable_apps | default([])) else (app.mode | default('0755')) }}"
+        mode: "{{ '0000' if (not app_enabled) else (app.mode | default('0755')) }}"
         owner: "{{ app.owner | default('root') }}"
         group: "{{ app.group | default(ood_apps_admin_group) }}"
         follow: true
@@ -34,7 +45,7 @@
 - name: Configure controller for app {{ app.name }}
   when:
     - ansible_connection not in 'chroot'
-    - app.name in (ood_disable_apps | default([]))
+    - app_enabled
   block:
     - name: Make folders for app {{ app.name }}
       ansible.builtin.file:
