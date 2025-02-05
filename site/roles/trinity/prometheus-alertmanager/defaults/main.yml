@@ -60,6 +60,7 @@ prometheus_alertmanager_wechat_corp_id: ''
 
 prometheus_alertmanager_receivers:
 - name: 'null'
+- name: 'enabled'
 - name: 'mail'
   email_configs:
   - to: '{{prometheus_alertmanager_mail}}'
@@ -79,44 +80,55 @@ prometheus_alertmanager_time_intervals: []
 
 
 prometheus_alertmanager_inhibit_rules:
-  # Inhibit alerts with severity level `warning` or lower for critical alerts
+# Inhibit alerts with severity level `warning` or lower for critical alerts
 - equal:
   - cluster
   - hostname
   - alertname
-  source_match:
-    severity: warning
-  target_match:
-    severity: info
+  source_matchers:
+  - severity = warning
+  target_matchers:
+  - severity = info
 - equal:
   - cluster
   - hostname
   - alertname
-  source_match:
-    severity: danger
-  target_match:
-    severity: warning
+  source_matchers:
+  - severity = danger
+  target_matchers:
+  - severity = warning
 - equal:
   - cluster
   - hostname
   - alertname
-  source_match:
-    severity: critical
-  target_match:
-    severity: warning
+  source_matchers:
+  - severity = critical
+  target_matchers:
+  - severity = warning
+  # Inhibit alerts for an exporter if it is down
 - equal:
   - cluster
   - hostname
-  source_match:
-    alertname: ServerDown
-  target_match:
-    alertname: ExporterDown
+  - exporter
+  source_matchers:
+  - alertname = ExporterDown
+  target_matchers:
+  - alertname =~ .*
+# Inhibit alerts for a node if it is down
 - equal:
   - cluster
-  source_match:
-    alertname: MultipleServerDown
-  target_match:
-    alertname: ServerDown
+  - hostname
+  source_matchers:
+  - alertname = ServerDown
+  target_matchers:
+  - alertname =~ .*
+# Inhibit alerts for single node if multiple nodes are down
+- equal:
+  - cluster
+  source_matchers:
+  - alertname = MultipleServerDown
+  target_matchers:
+  - alertname = ServerDown
 
 
 prometheus_alertmanager_route: 
@@ -125,29 +137,36 @@ prometheus_alertmanager_route:
   group_interval: 30s
   repeat_interval: 1h
   receiver: 'null'
+  
   routes:
-    
-  - match:
-      severity: 'warning'
-    group_interval: 4h
-    repeat_interval: 720h
-    receiver: 'mail'
-    continue: true
-  - match:
-      severity: 'danger'
-    group_interval: 30m
-    repeat_interval: 4h
-    receiver: 'mail'
-    continue: true
-  - match:
-      severity: 'critical'
-    group_interval: 30s
-    repeat_interval: 4h
-    receiver: 'mail'
+    - matchers:
+      - disabled != true
+      receiver: 'enabled'
+      continue: true
+      routes:
+      - matchers:
+        - severity = warning
+        group_interval: 4h
+        repeat_interval: 720h
+        receiver: 'mail'
+        continue: true
+      - matchers:
+        - severity = danger
+        group_interval: 30m
+        repeat_interval: 4h
+        receiver: 'mail'
+        continue: true
+      - matchers:
+        - severity = critical
+        group_interval: 30s
+        repeat_interval: 4h
+        receiver: 'mail'
+        continue: true
 
-  - match_re:
-      severity: 'danger|critical'
-    receiver: prometheus-sensu-bridge
+      - matchers:
+        - severity =~ "danger|critical"
+        receiver: prometheus-sensu-bridge
+        continue: true
 
 #   # This routes performs a regular expression match on alert labels to
 #   # catch alerts that are related to a list of services.

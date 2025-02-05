@@ -9,6 +9,24 @@
       dest: /etc/ood/config/apps/bc_desktop/TrinityX.yml
       owner: root
       group: root
-      mode: "0755"
+      mode: "0644"
     when:
       - app.get('override') | default(override, true) | default(('etc/ood/config/apps/bc_desktop/TrinityX.yml') is not exists, true)
+
+  - name: Create submit directory
+    ansible.builtin.file:
+      path: /etc/ood/config/apps/bc_desktop/submit
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Render config file
+    ansible.builtin.template:
+      src: 'desktop/submit.yml.erb.j2'
+      dest: /etc/ood/config/apps/bc_desktop/submit/TrinityX.yml.erb
+      owner: root
+      group: root
+      mode: "0644"
+    when:
+      - app.get('override') | default(override, true) | default(('/etc/ood/config/apps/bc_desktop/submit/TrinityX.yml.erb') is not exists, true)

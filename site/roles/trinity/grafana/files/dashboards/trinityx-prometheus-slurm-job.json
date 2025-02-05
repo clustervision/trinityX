@@ -15,7 +15,7 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "links": [
@@ -118,9 +118,7 @@
         "justifyMode": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": [],
           "fields": "",
           "values": false
         },
@@ -134,11 +132,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(ipmi_dcmi_power_consumption_watts{hostname=~\"$hostname\"})\r\n/\r\navg(slurm_cpus_total)\r\n*\r\nsum(slurm_job_allocated_cores{jobid=~\"$job_id\",hostname=~\"$hostname\"})\r\n",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "allocated",
-          "range": true,
+          "range": false,
           "refId": "A"
         },
         {
@@ -147,11 +146,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(ipmi_dcmi_power_consumption_watts{hostname=~\"$hostname\"})\r\n*\r\nsum(rate(slurm_job_total_cpu_time{jobid=~\"$job_id\",hostname=~\"$hostname\"}[$__rate_interval:]))\r\n/\r\nsum(rate(node_cpu_seconds_total{hostname=~\"$hostname\"}[$__rate_interval:]))",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "used",
-          "range": true,
+          "range": false,
           "refId": "B"
         },
         {
@@ -160,11 +160,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(ipmi_dcmi_power_consumption_watts{hostname=~\"$hostname\"})\r\n/\r\navg(slurm_cpus_total)\r\n*\r\nsum(slurm_job_allocated_cores{jobid=~\"$job_id\",hostname=~\"$hostname\"})\r\n",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "allocated_max",
-          "range": true,
+          "range": false,
           "refId": "C"
         },
         {
@@ -173,11 +174,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "-sum(ipmi_dcmi_power_consumption_watts{hostname=~\"$hostname\"})\r\n/\r\navg(slurm_cpus_total)\r\n*\r\nsum(slurm_job_allocated_cores{jobid=~\"$job_id\",hostname=~\"$hostname\"})\r\n",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "allocated_min",
-          "range": true,
+          "range": false,
           "refId": "D"
         }
       ],
@@ -401,9 +403,7 @@
         "justifyMode": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": [],
           "fields": "",
           "values": false
         },
@@ -417,11 +417,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(slurm_job_allocated_cores{jobid=~\"$job_id\",hostname=~\"$hostname\"})",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "allocated",
-          "range": true,
+          "range": false,
           "refId": "A"
         },
         {
@@ -430,12 +431,13 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(rate(slurm_job_cpu_time{jobid=~\"$job_id\",hostname=~\"$hostname\"}[$__rate_interval:]))",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "interval": "",
           "legendFormat": "used",
-          "range": true,
+          "range": false,
           "refId": "B"
         },
         {
@@ -444,11 +446,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(rate(slurm_job_cpu_time{jobid=~\"$job_id\",hostname=~\"$hostname\"}[$__rate_interval:]))/sum(slurm_job_allocated_cores{jobid=~\"$job_id\",hostname=~\"$hostname\"})",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "used %",
-          "range": true,
+          "range": false,
           "refId": "C"
         }
       ],
@@ -701,9 +704,7 @@
         "justifyMode": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": [],
           "fields": "",
           "values": false
         },
@@ -717,11 +718,12 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(slurm_job_allocated_memory{jobid=~\"$job_id\",hostname=~\"$hostname\"})",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "allocated",
-          "range": true,
+          "range": false,
           "refId": "A"
         },
         {
@@ -730,12 +732,13 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(slurm_job_resident_memory_bytes{jobid=~\"${job_id}\"})",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "interval": "",
           "legendFormat": "used",
-          "range": true,
+          "range": false,
           "refId": "B"
         },
         {
@@ -744,11 +747,12 @@
             "uid": "trixprometheus"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(slurm_job_resident_memory_bytes{jobid=~\"${job_id}\"})/sum(slurm_job_allocated_memory{jobid=~\"$job_id\",hostname=~\"$hostname\"}) ",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "used %",
-          "range": true,
+          "range": false,
           "refId": "C"
         }
       ],
@@ -988,9 +992,7 @@
         "justifyMode": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": [],
           "fields": "",
           "values": false
         },
@@ -1004,11 +1006,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(slurm_job_allocated_gpus{jobid=~\"$job_id\",hostname=~\"$hostname\"})",
+          "exemplar": false,
+          "expr": "sum(slurm_job_allocated_gpus{jobid=~\"$job_id\",hostname=~\"$hostname\"} )",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "allocated",
-          "range": true,
+          "range": false,
           "refId": "A"
         },
         {
@@ -1017,12 +1020,13 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(slurm_job_gpu_streaming_multiprocessor_usage{jobid=~\"${job_id}\"}) / 100\r\n",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "interval": "",
           "legendFormat": "used",
-          "range": true,
+          "range": false,
           "refId": "B"
         },
         {
@@ -1031,11 +1035,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(slurm_job_gpu_streaming_multiprocessor_usage{jobid=~\"${job_id}\"} or\r\n vector(0))/sum(slurm_job_allocated_gpus{jobid=~\"$job_id\",hostname=~\"$hostname\"})",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "used %",
-          "range": true,
+          "range": false,
           "refId": "C"
         }
       ],
@@ -1248,9 +1253,7 @@
         "justifyMode": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": [],
           "fields": "",
           "values": false
         },
@@ -1264,11 +1267,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(slurm_job_allocated_gpu_memory{jobid=~\"$job_id\",hostname=~\"$hostname\"})",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "allocated",
-          "range": true,
+          "range": false,
           "refId": "A"
         },
         {
@@ -1277,12 +1281,13 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(slurm_job_gpu_framebuffer_mem_bytes{jobid=~\"${job_id}\"})",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "interval": "",
           "legendFormat": "used",
-          "range": true,
+          "range": false,
           "refId": "B"
         },
         {
@@ -1291,11 +1296,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(slurm_job_gpu_framebuffer_mem_bytes{jobid=~\"${job_id}\"})/sum(slurm_job_allocated_gpu_memory{jobid=~\"$job_id\",hostname=~\"$hostname\"})",
           "hide": false,
-          "instant": false,
+          "instant": true,
           "legendFormat": "used %",
-          "range": true,
+          "range": false,
           "refId": "C"
         }
       ],
@@ -1761,7 +1767,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -1792,7 +1798,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -1863,6 +1869,6 @@
   "timezone": "",
   "title": "PJS",
   "uid": "dfe8e0f3-30ae-4c5c-b4e3-17cdf8e09fa5",
-  "version": 1,
+  "version": 4,
   "weekStart": ""
 }
