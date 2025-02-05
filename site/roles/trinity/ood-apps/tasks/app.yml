@@ -13,7 +13,7 @@
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
 
-- name: Configure controller for app {{ app.name }}
+- name: Gather variables and setup folder for app {{ app.name }}
   when:
     - ansible_connection not in 'chroot'
   block:
@@ -25,12 +25,17 @@
       ansible.builtin.file:
         path: "{{ app_path }}"
         state: directory
-        mode: "{{ app.mode | default('0755') }}"
+        mode: "{{ '0000' if app.name in (ood_disable_apps | default([])) else (app.mode | default('0755')) }}"
         owner: "{{ app.owner | default('root') }}"
         group: "{{ app.group | default(ood_apps_admin_group) }}"
         follow: true
       notify: Run update_ood
-      
+
+- name: Configure controller for app {{ app.name }}
+  when:
+    - ansible_connection not in 'chroot'
+    - app.name in (ood_disable_apps | default([]))
+  block:
     - name: Make folders for app {{ app.name }}
       ansible.builtin.file:
         path: "{{ app_path }}/{{ item.path }}"
