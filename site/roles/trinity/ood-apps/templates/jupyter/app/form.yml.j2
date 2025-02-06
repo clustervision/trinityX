@@ -29,37 +29,49 @@ attributes:
     help: "Workload manager queue. This can be left blank most of the time"
   bc_num_hours:
     help: "Number of hours to run the job"
-
-  extra_jupyter_args:
-    widget: "text_area"
-    label: "Extra Jupyter notebook arguments"
-    help: "Extra arguments passed to the Jupyter notebook command"
-
   bc_num_slots:
     widget: "number_field"
-    label: "Number of tasks to run the job"
-    help: "This will populate the --tasks argument in the batch script"
+    min: 1
+    step: 1
+    label: "Number of nodes to run the job"
+    help: "This will populate the `-N/--nodes` argument in the batch script"
+  bc_account:
+    help: "Workload manager account. This can be left blank most of the time"
+  bc_queue:
+    help: "Workload manager queue. This can be left blank most of the time"
+  bc_num_hours:
+    help: "Number of hours for the job"
+
+
   cores:
     widget: "number_field"
-    max: 16
     min: 1
     step: 1
-    # value: 1
-    label: "Number of CPUS per task"
-    help: "This will populate the --cpus-per-task argument in the batch script"
+    label: "Number of Cores for the job"
+    help: "This will populate the `--mincpus` argument in the batch script"
   memory:
     widget: "number_field"
-    max: 64
-    min: 1
-    step: 1
-    # value: 1
-    label: "Memory per memory per CPU (in GB)"
-    help: "This will populate the --mem-per-cpu argument in the batch script"
+    min: 1024
+    step: 1024
+    label: "Memory (in MB) for the job"
+    help: "This will populate the `--mem` argument in the batch script"
   gpus:
     widget: "number_field"
-    max: 8
     min: 1
     step: 1
     # value: 1
     label: "Number of GPUs per task"
-    help: "This will populate the --gpus-per-task argument in the batch script"
+    help: "This will populate the `-G/--gpus` argument in the batch script"
+  slurm_extra_args:
+    label: "Extra SLURM arguments"
+    help: "Additional arguments to pass to the SLURM job script"
+
+  modules:
+    value: "ood-jupyter"
+    help: "The Environment modules to load before running the Jupyter notebook"
+
+  jupyter_extra_args:
+    widget: "text_area"
+    label: "Extra Jupyter notebook arguments"
+    help: "Extra arguments passed to the Jupyter notebook command"
+
