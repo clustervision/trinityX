@@ -1,0 +1,10 @@
+[Unit]
+Description=AlertX drainer App Service
+After=network.target
+
+[Service]
+WorkingDirectory={{ alertx_drainer_path }}
+ExecStart=/bin/bash -c "source /trinity/local/python/bin/activate && cd {{ alertx_drainer_daemon_path  }} && exec /trinity/local/python/bin/gunicorn -b :7150 drainer:app"
+
+[Install]
+WantedBy=multi-user.target
