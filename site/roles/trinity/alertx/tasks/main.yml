@@ -1,15 +1,15 @@
 ---
 
-- include_tasks: controller.yml
-  when:
-    - ansible_connection not in 'chroot'
-    - not compute|default(False)
+#- include_tasks: controller.yml
+#  when:
+#    - ansible_connection not in 'chroot'
+#    - not compute|default(False)
 
 - block:
   
-  - name: "Ensure alertX drainer alertx_daemon_path directory exists"
+  - name: "Ensure alertX drainer alertx_drainer_daemon_path directory exists"
     file:
-      path: "{{ alertx_daemon_path }}"
+      path: "{{ alertx_drainer_daemon_path }}"
       state: directory
       owner: root
       group: root
@@ -18,7 +18,7 @@
   - name: "Install drainer.py"
     copy:
       src: 'drainer.py'
-      dest: '{{ alertx_daemon_path }}'
+      dest: '{{ alertx_drainer_daemon_path }}'
       owner: 'root'
       group: 'root'
       mode: '0750'
@@ -31,6 +31,9 @@
       group: 'root'
       mode: '0644'
     notify: reload systemd daemon
+
+  - name: Reload systemd to recognize new service
+    ansible.builtin.command: systemctl daemon-reload
 
   - name: Enable alertx-drainer.service
     systemd:
