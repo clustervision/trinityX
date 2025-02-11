@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import sys
+import signal
 import urllib
 import requests
 import time
@@ -23,7 +24,7 @@ getpubcert   = 1
 ok_chars     = 'a-zA-Z0-9 _,-.+#='
 no_questions = 0
 run_in_loop  = 0
-version      = '1.1.3'
+version      = '1.1.4'
 
 # ---------------------------------------------------------------------------------------------------------
 
@@ -61,7 +62,18 @@ def confirm(msg, default):
         return 1
     return 0
 
+key_name = None
+def signal_handler(sig, frame):
+    print('Stopping...')
+    if key_name:
+        shell("""grep -vw '{}' {} > {}.clean""".format(key_name, auth_key, auth_key))
+        shell("""cat {}.clean > {}""".format(auth_key, auth_key))
+    sys.exit(0)
+
 # ---------------------------------------------------------------------------------------------------------
+
+# catch ctrl-c
+signal.signal(signal.SIGINT, signal_handler)
 
 # remove first element as it is the script name itself
 del sys.argv[0]
@@ -168,7 +180,6 @@ if perr != 0:
     if not confirm('Continue?', 'n'):
         sys.exit(0)
 
-key_name = None
 req = "https://static.clustervision.com/support.pub"
 try:
     readable_trid=str(trid)
@@ -194,14 +205,14 @@ try:
             print('      the root password when contacted by support.\n')
         
     data = dict(pub=pub,info=info,trid=trid)
-    r = requests.post('https://sandbox.clustervision.com/cgi-bin/keys.py',data=data, auth=('trinityx','trinityx'))
-    try:
-        remoteport = int(r.content)
-    except:
-        print(r.content)
-        print('Error: No port assignment could be made')
-        sys.exit(1)
     while True:
+        r = requests.post('https://sandbox.clustervision.com/cgi-bin/keys.py',data=data, auth=('trinityx','trinityx'))
+        try:
+            remoteport = int(r.content)
+        except:
+            print(r.content)
+            print('Error: No port assignment could be made')
+            sys.exit(1)
         print('TrinityID: '+ readable_trid +', Remote port: '+str(remoteport))
 #        subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com | tee tunnel.log'.format(priv_file,remoteport,sandbox),shell=True)
         subprocess.call('ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -i {} -t -R :{}:localhost:22 sandbox@{}.clustervision.com'.format(priv_file,remoteport,sandbox),shell=True)
@@ -209,7 +220,8 @@ try:
         print()
         if not run_in_loop:
             break
-        time.sleep(5)
+        else:
+            time.sleep(5)
     print('Cleaning up..\n')
     # ------ copy the log file ------- Won't work as we cannot copy files accross
     #shell("""scp -v -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {} -P {} tunnel.log sandbox@{}.clustervision.com:{}""".format(priv_file,remoteport,sandbox,logfile_name))
