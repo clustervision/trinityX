@@ -42,9 +42,19 @@ scrape_configs:
     file_sd_configs:
     - files:
       - {{prometheus_server_config_dir}}/file_sd/trix/*.yml
-  - job_name: other_nodess
+    metric_relabel_configs:
+      # Step 1: Check if the `hostname_override` label exists and override `hostname`
+      - source_labels: ['hostname_override']
+        target_label: 'hostname'
+        action: replace
+        regex: '(.+)'
+        replacement: '$1'
+
+      # Step 2: Drop the `hostname_override` label after overriding
+      - action: labeldrop
+        regex: 'hostname_override'
+  - job_name: other_nodes
     file_sd_configs:
     - files:
       - {{prometheus_server_config_dir}}/file_sd/other/*.yml
 {{ prometheus_server_additional_sd | default([]) | to_nice_yaml(indent=2,sort_keys=False) | indent(2, True) }}
-
