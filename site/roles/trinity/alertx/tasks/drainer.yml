@@ -1,0 +1,32 @@
+---
+
+- name: "Ensure alertX drainer alertx_drainer_daemon_path directory exists"
+  file:
+    path: "{{ alertx_drainer_daemon_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+ 
+- name: "Install drainer.py"
+  copy:
+    src: 'drainer.py'
+    dest: '{{ alertx_drainer_daemon_path }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0750'
+
+- name: Install service file to systemd
+  template:
+    src: 'alertx-drainer.service.j2'
+    dest: '/etc/systemd/system/alertx-drainer.service'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+ 
+- name: Reload daemon
+  systemd:
+    name: alertx-drainer.service
+    state: started
+    enabled: true
+    daemon_reload: true
