@@ -84,19 +84,19 @@
       notify:
         - restart prometheus-server
 
-    - name: Propagate official console templates
-      ansible.builtin.copy:
-        remote_src: true
-        src: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/{{ item }}/"
-        dest: "{{ prometheus_server_config_dir }}/{{ item }}/"
-        mode: 0644
-        owner: root
-        group: root
-      with_items:
-        - console_libraries
-        - consoles
-      notify:
-        - restart prometheus-server
+    # - name: Propagate official console templates
+    #   ansible.builtin.copy:
+    #     remote_src: true
+    #     src: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/{{ item }}/"
+    #     dest: "{{ prometheus_server_config_dir }}/{{ item }}/"
+    #     mode: 0644
+    #     owner: root
+    #     group: root
+    #   with_items:
+    #     - console_libraries
+    #     - consoles
+    #   notify:
+    #     - restart prometheus-server
 
 - name: Create systemd service unit
   ansible.builtin.template:
