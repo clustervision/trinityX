@@ -1,0 +1,44 @@
+{{ ansible_managed | comment }}
+
+groups:
+- name: cores
+  rules:
+  - record: node_cores
+    expr: count(count(node_cpu_seconds_total) without (mode)) without (cpu)
+
+- name: power
+  rules:
+  - record: cpu_power_consumption_watts
+    expr: |
+      (
+      sum by (hostname,luna_group) (ipmi_dcmi_power_consumption_watts) 
+      - 
+      sum by (hostname,luna_group) (nvidia_smi_power_draw_watts)
+      )
+      OR
+      sum by (hostname,luna_group) (ipmi_dcmi_power_consumption_watts)
+  - record: gpu_power_consumption_watts
+    expr: |
+      sum by (hostname,luna_group) (nvidia_smi_power_draw_watts)
+
+  - record: cpu_energy_consumption_joules
+    expr: |
+      (
+      sum by (hostname,luna_group) (ipmi_dcmi_energy_consumption_joules) 
+      - 
+      sum by (hostname,luna_group) (nvidia_smi_energy_draw_joules)
+      )
+      OR
+      sum by (hostname,luna_group) (ipmi_dcmi_energy_consumption_joules)
+  - record: gpu_energy_consumption_joules
+    expr: |
+      sum by (hostname,luna_group) (nvidia_smi_energy_draw_joules)
+
+
+  - record: cpu_per_core_power_consumption_watts
+    expr: |
+      cpu_power_consumption_watts / on (hostname,luna_group) node_cores
+  
+  - record: cpu_per_core_energy_consumption_joules
+    expr: |
+      cpu_energy_consumption_joules / on (hostname,luna_group) node_cores
