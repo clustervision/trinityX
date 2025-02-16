@@ -49,3 +49,20 @@
     content: ""
     dest: /etc/trinity/controller.done
     force: false
+
+- name: Backup /etc/trinity to {{ trix_local }}/backup/trinity
+  synchronize:
+    delete: yes
+    src: /etc/trinity
+    dest: "{{ trix_local }}/backup/"
+    recursive: yes
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Backup group_vars to {{ trix_local }}/backup/group_vars
+  copy:
+    src: group_vars/all.yml
+    dest: "{{ trix_local }}/backup/group_vars/"
+    mode: 0600
+    owner: root
+    group: root
+
