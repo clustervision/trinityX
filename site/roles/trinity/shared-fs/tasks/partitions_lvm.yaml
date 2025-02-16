@@ -103,6 +103,8 @@
     synchronize:
       src: '{{ item.item["mount"] }}/'
       dest: '/mnt/{{ item.item["mount"] | replace("/","_") }}-temp/'
+      recursive: yes
+    delegate_to: "{{ inventory_hostname }}"
     loop: "{{ shared_fs_lvm_partitions_mounted.results }}"
     when: item.rc != 0
 

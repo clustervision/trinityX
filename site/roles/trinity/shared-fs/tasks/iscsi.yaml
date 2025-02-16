@@ -152,6 +152,8 @@
         synchronize:
           src: '{{ item.item["name"] }}/'
           dest: '/mnt/{{ item.item["name"] | replace("/","_") }}-temp/'
+          recursive: yes
+        delegate_to: "{{ inventory_hostname }}"
         loop: "{{ iscsi_mounted.results }}"
         when: 
           - item.rc != 0
