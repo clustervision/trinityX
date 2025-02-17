@@ -15,7 +15,7 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "links": [
@@ -446,7 +446,7 @@
       },
       "id": 13,
       "panels": [],
-      "repeat": "controllers",
+      "repeat": "hostname",
       "repeatDirection": "h",
       "title": "Resources $hostname",
       "type": "row"
@@ -754,7 +754,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=\"$hostname\", group!='Trinity-stack'} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=~\"$hostname\", group!='Trinity-stack'} != 0",
           "format": "table",
           "instant": false,
           "legendFormat": "__auto",
@@ -899,7 +899,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "ha_cluster_pacemaker_resources{node=\"$hostname\", group='Trinity-stack'} != 0",
+          "expr": "ha_cluster_pacemaker_resources{node=~\"$hostname\", group='Trinity-stack'} != 0",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1168,12 +1168,12 @@
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
           "value": [
-            "All"
+            "$__all"
           ]
         },
         "datasource": {
@@ -1182,7 +1182,7 @@
         },
         "definition": "label_values(up{luna_group=\"controller\"},hostname)",
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": "Hostname",
         "multi": true,
         "name": "hostname",
@@ -1192,7 +1192,7 @@
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
-        "regex": "",
+        "regex": "/(.*)[.].*/",
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
