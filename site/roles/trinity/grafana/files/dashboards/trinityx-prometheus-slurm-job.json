@@ -78,10 +78,6 @@
                   "color": "red",
                   "index": 2
                 },
-                "PENDING": {
-                  "color": "dark-yellow",
-                  "index": 3
-                },
                 "RUNNING": {
                   "color": "green",
                   "index": 0
@@ -132,13 +128,11 @@
         "cellHeight": "sm",
         "footer": {
           "countRows": false,
-          "fields": [
-            "Value #B (mean)"
-          ],
+          "fields": "",
           "reducer": [
             "sum"
           ],
-          "show": true
+          "show": false
         },
         "showHeader": true
       },
@@ -150,9 +144,9 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "code",
+          "editorMode": "builder",
           "exemplar": false,
-          "expr": "slurm_job_info{jobid=~\"$job_id\", jobstate=~\"$job_state\"}",
+          "expr": "slurm_job_info{jobid=~\"$job_id\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -168,7 +162,7 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "code",
+          "editorMode": "builder",
           "exemplar": false,
           "expr": "slurm_job_allocated_cores{jobid=~\"$job_id\"}",
           "format": "table",
@@ -230,7 +224,7 @@
               },
               "jobstate": {
                 "aggregations": [
-                  "first"
+                  "firstNotNull"
                 ],
                 "operation": "aggregate"
               },
@@ -253,7 +247,8 @@
                 "operation": "aggregate"
               },
               "workdir": {
-                "aggregations": []
+                "aggregations": [],
+                "operation": "aggregate"
               }
             }
           }
@@ -292,7 +287,7 @@
               "command (lastNotNull)": "command",
               "group (lastNotNull)": "group",
               "jobstate": "state",
-              "jobstate (first)": "state",
+              "jobstate (firstNotNull)": "state",
               "jobstate (lastNotNull)": "state",
               "oversubscribe (lastNotNull)": "oversubscribe",
               "partition (lastNotNull)": "partition",
@@ -335,10 +330,6 @@
                 "FAILED": {
                   "color": "red",
                   "index": 2
-                },
-                "PENDING": {
-                  "color": "dark-yellow",
-                  "index": 3
                 },
                 "RUNNING": {
                   "color": "green",
@@ -394,7 +385,7 @@
             "uid": "trixprometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "code",
+          "editorMode": "builder",
           "exemplar": false,
           "expr": "slurm_job_info{jobid=~\"$job_id\"}",
           "format": "table",
@@ -507,7 +498,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "value_and_name"
+        "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -530,7 +521,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"}[$__range:]))\r\n    ) / 3600",
+          "expr": "sum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(slurm_job_allocated_cores{jobid=~\"$job_id\"}[$__range:]))\r\n    ) / 3600",
           "hide": false,
           "instant": false,
           "legendFormat": "energy_allocated",
@@ -645,7 +636,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"}[$__range:]))\r\n    ) / 3600",
+          "expr": "sum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(slurm_job_allocated_cores{jobid=~\"$job_id\"}[$__range:]))\r\n    ) / 3600",
           "hide": false,
           "instant": false,
           "legendFormat": "energy_allocated",
@@ -731,7 +722,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "value_and_name"
+        "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -754,7 +745,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"})\r\n    )",
+          "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\"})\r\n    )",
           "hide": false,
           "instant": false,
           "legendFormat": "power_allocated",
@@ -870,7 +861,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"})\r\n    )",
+          "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\"})\r\n    )",
           "hide": false,
           "instant": false,
           "legendFormat": "power_allocated",
@@ -883,7 +874,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (rate(slurm_job_total_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:]))\r\n    )",
+          "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (avg_over_time(rate(slurm_job_total_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])[$__range:]))\r\n    )",
           "hide": false,
           "instant": false,
           "legendFormat": "power_usage",
@@ -911,8 +902,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -988,7 +978,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "value_and_name"
+        "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -1012,7 +1002,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"})) ",
+          "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\"})) ",
           "hide": false,
           "instant": false,
           "legendFormat": "cpu_allocated",
@@ -1061,7 +1051,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": 3600000,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "normal"
@@ -1075,8 +1065,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1186,10 +1175,9 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"}>0)) ",
+          "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\"})) ",
           "hide": false,
           "instant": false,
-          "interval": "",
           "legendFormat": "cpu_allocated",
           "range": true,
           "refId": "A"
@@ -1200,7 +1188,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_user_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:]) >0 ) ",
+          "expr": "sum(rate(slurm_job_user_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])) ",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -1214,7 +1202,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_system_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:]) >0)",
+          "expr": "sum(rate(slurm_job_system_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:]))",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -1243,8 +1231,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1306,7 +1293,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "value_and_name"
+        "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -1387,8 +1374,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1519,8 +1505,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1626,8 +1611,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1636,44 +1620,7 @@
             ]
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/.*_usage/"
-            },
-            "properties": [
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "group": "A",
-                  "mode": "normal"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/.*_allocated/"
-            },
-            "properties": [
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "group": "A",
-                  "mode": "normal"
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
@@ -1711,19 +1658,6 @@
           "legendFormat": "{{__name__}}",
           "range": true,
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(slurm_job_allocated_gres{gres_type='gpu',jobid=~\"$job_id\",jobstate=\"RUNNING\"})",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "gpus_allocated",
-          "range": true,
-          "refId": "A"
         }
       ],
       "title": "GPU Usage",
@@ -1747,8 +1681,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1853,8 +1786,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1940,7 +1872,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": 3600000,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "normal"
@@ -1954,8 +1886,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2030,7 +1961,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_reads{jobid=~\"$job_id\"}[$__rate_interval:])) > 0",
+          "expr": "sum(rate(slurm_job_reads{jobid=~\"$job_id\"}[$__rate_interval:]))",
           "instant": false,
           "legendFormat": "reads",
           "range": true,
@@ -2042,7 +1973,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_writes{jobid=~\"$job_id\"}[$__rate_interval:])) > 0",
+          "expr": "sum(rate(slurm_job_writes{jobid=~\"$job_id\"}[$__rate_interval:]))",
           "hide": false,
           "instant": false,
           "legendFormat": "writes",
@@ -2086,7 +2017,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": 3600000,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -2100,8 +2031,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2161,7 +2091,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_read_bytes{jobid=~\"$job_id\"}[$__rate_interval:])) >0",
+          "expr": "sum(rate(slurm_job_read_bytes{jobid=~\"$job_id\"}[$__rate_interval:]))",
           "instant": false,
           "legendFormat": "bytes_read",
           "range": true,
@@ -2173,7 +2103,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:])) >0",
+          "expr": "sum(rate(slurm_job_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:]))",
           "hide": false,
           "instant": false,
           "legendFormat": "bytes_written",
@@ -2186,7 +2116,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_cancelled_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:])) >0",
+          "expr": "sum(rate(slurm_job_cancelled_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:]))",
           "hide": false,
           "instant": false,
           "legendFormat": "bytes_write_fail",
@@ -2241,7 +2171,7 @@
           "type": "prometheus",
           "uid": "trixprometheus"
         },
-        "definition": "label_values(slurm_job_info,jobstate)",
+        "definition": "label_values(slurm_job_info_latest,jobstate)",
         "description": "Job State",
         "hide": 0,
         "includeAll": true,
@@ -2250,10 +2180,10 @@
         "name": "job_state",
         "options": [],
         "query": {
-          "query": "label_values(slurm_job_info,jobstate)",
+          "query": "label_values(slurm_job_info_latest,jobstate)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 2,
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -2312,6 +2242,6 @@
   "timezone": "",
   "title": "PJS",
   "uid": "dfe8e0f3-30ae-4c5c-b4e3-17cdf8e09fa5",
-  "version": 10,
+  "version": 11,
   "weekStart": ""
 }

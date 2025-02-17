@@ -1,6 +1,11 @@
 {{ ansible_managed | comment }}
 
 groups:
+- name: job_state
+  rules:
+    - record: slurm_job_info_latest
+      expr: last_over_time(slurm_job_info[365d])
+
 - name: cores
   rules:
   - record: node_cores
