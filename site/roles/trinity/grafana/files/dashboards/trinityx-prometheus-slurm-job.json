@@ -58,7 +58,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "fixed"
+            "mode": "thresholds"
           },
           "custom": {
             "align": "auto",
@@ -476,6 +476,21 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "energy_gpu_usage"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
           }
         ]
       },
@@ -498,7 +513,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -508,10 +523,23 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "expr": "(\r\nsum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(slurm_job_allocated_cores{jobid=~\"$job_id\", jobstate=\"RUNNING\"}[$__range:]))\r\n    ) \r\n+\r\n(sum(\r\n    sum by (hostname)(gpu_energy_consumption_joules - ((gpu_energy_consumption_joules @ start()) or min_over_time(gpu_energy_consumption_joules[$__range])))\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_gres{jobid=~\"$job_id\", jobstate=\"RUNNING\", gres_type=\"gpu\"})\r\n    ) OR vector(0))\r\n) /3600",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "energy_allocated",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
           "expr": "sum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(rate(slurm_job_total_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])[$__range:]))\r\n    ) / 3600",
           "hide": false,
           "instant": false,
-          "legendFormat": "energy_usage",
+          "legendFormat": "energy_cpu_usage",
           "range": true,
           "refId": "A"
         },
@@ -521,12 +549,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(slurm_job_allocated_cores{jobid=~\"$job_id\"}[$__range:]))\r\n    ) / 3600",
+          "expr": "sum(\r\n    sum by (hostname)(gpu_energy_consumption_joules - ((gpu_energy_consumption_joules @ start()) or min_over_time(gpu_energy_consumption_joules[$__range])))\r\n    * on (hostname)\r\n    sum by (hostname) (slurm_job_allocated_gres{jobid=~\"$job_id\", jobstate=\"RUNNING\", gres_type=\"gpu\"})\r\n    ) / 3600",
           "hide": false,
           "instant": false,
-          "legendFormat": "energy_allocated",
+          "legendFormat": "energy_gpu_usage",
           "range": true,
-          "refId": "B"
+          "refId": "C"
         }
       ],
       "title": "Energy Consumption",
@@ -566,8 +594,8 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
-            "spanNulls": false,
+            "showPoints": "never",
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -606,6 +634,36 @@
                 "value": 5
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "energy_gpu_usage"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*_usage/"
+            },
+            "properties": [
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "normal"
+                }
+              }
+            ]
           }
         ]
       },
@@ -636,7 +694,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(slurm_job_allocated_cores{jobid=~\"$job_id\"}[$__range:]))\r\n    ) / 3600",
+          "expr": "(\r\nsum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(slurm_job_allocated_cores{jobid=~\"$job_id\", jobstate=\"RUNNING\"}[$__range:]))\r\n    ) \r\n+\r\n(sum(\r\n    sum by (hostname)(gpu_energy_consumption_joules - ((gpu_energy_consumption_joules @ start()) or min_over_time(gpu_energy_consumption_joules[$__range])))\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_gres{jobid=~\"$job_id\", jobstate=\"RUNNING\", gres_type=\"gpu\"})\r\n    ) OR vector(0))\r\n) /3600",
           "hide": false,
           "instant": false,
           "legendFormat": "energy_allocated",
@@ -652,9 +710,22 @@
           "expr": "sum(\r\n    sum by (hostname)(cpu_per_core_energy_consumption_joules - ((cpu_per_core_energy_consumption_joules @ start()) or min_over_time(cpu_per_core_energy_consumption_joules[$__range])))\r\n    * \r\n    sum by (hostname) (avg_over_time(rate(slurm_job_total_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])[$__range:]))\r\n    ) / 3600",
           "hide": false,
           "instant": false,
-          "legendFormat": "energy_usage",
+          "legendFormat": "energy_cpu_usage",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\r\n    sum by (hostname)(gpu_energy_consumption_joules - ((gpu_energy_consumption_joules @ start()) or min_over_time(gpu_energy_consumption_joules[$__range])))\r\n    *\r\n    sum by (hostname)(label_replace(slurm_job_gpu_streaming_multiprocessor_usage{jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)\") >0)\r\n    ) / 3600",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "energy_gpu_usage",
+          "range": true,
+          "refId": "C"
         }
       ],
       "title": "Energy Consumption",
@@ -700,6 +771,21 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "power_gpu_usage"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
           }
         ]
       },
@@ -722,7 +808,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -732,10 +818,23 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "expr": "(\r\nsum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\", jobstate=\"RUNNING\"})\r\n    )\r\n+\r\n(sum(\r\n    sum by (hostname)(gpu_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_gres{jobid=~\"$job_id\", jobstate=\"RUNNING\", gres_type=\"gpu\"})\r\n    ) OR vector(0))\r\n)",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "power_allocated",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
           "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (avg_over_time(rate(slurm_job_total_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])[$__range:]))\r\n    )",
           "hide": false,
           "instant": false,
-          "legendFormat": "power_usage",
+          "legendFormat": "power_cpu_usage",
           "range": true,
           "refId": "A"
         },
@@ -745,12 +844,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\"})\r\n    )",
+          "expr": "sum(\r\n    sum by (hostname) (gpu_power_consumption_watts)\r\n    *\r\nsum by (hostname)(label_replace({__name__=~\"slurm_job_gpu_streaming_multiprocessor_usage\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)\") >0)\r\n    )",
           "hide": false,
           "instant": false,
-          "legendFormat": "power_allocated",
+          "legendFormat": "power_gpu_usage",
           "range": true,
-          "refId": "B"
+          "refId": "C"
         }
       ],
       "title": "Power Consumption",
@@ -790,8 +889,8 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
-            "spanNulls": false,
+            "showPoints": "never",
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -831,6 +930,35 @@
                 "value": 5
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*_usage/"
+            },
+            "properties": [
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "normal"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "power_gpu_usage"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "palette-classic"
+                }
+              }
+            ]
           }
         ]
       },
@@ -861,7 +989,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\"})\r\n    )",
+          "expr": "(\r\nsum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\", jobstate=\"RUNNING\"})\r\n    )\r\n+\r\n(sum(\r\n    sum by (hostname)(gpu_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (slurm_job_allocated_gres{jobid=~\"$job_id\", jobstate=\"RUNNING\", gres_type=\"gpu\"})\r\n    ) OR vector(0))\r\n)",
           "hide": false,
           "instant": false,
           "legendFormat": "power_allocated",
@@ -877,9 +1005,22 @@
           "expr": "sum(\r\n    sum by (hostname) (cpu_per_core_power_consumption_watts)\r\n    *\r\n    sum by (hostname) (avg_over_time(rate(slurm_job_total_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])[$__range:]))\r\n    )",
           "hide": false,
           "instant": false,
-          "legendFormat": "power_usage",
+          "legendFormat": "power_cpu_usage",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\r\n    sum by (hostname) (gpu_power_consumption_watts)\r\n    *\r\n    sum by (hostname)(label_replace(slurm_job_gpu_streaming_multiprocessor_usage{jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)\") >0)\r\n    )",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "power_gpu_usage",
+          "range": true,
+          "refId": "C"
         }
       ],
       "title": "Power Consumption",
@@ -902,7 +1043,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -978,10 +1120,23 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       },
       "pluginVersion": "10.1.2",
       "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\", jobstate=\"RUNNING\"})) ",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "cpu_allocated",
+          "range": true,
+          "refId": "A"
+        },
         {
           "datasource": {
             "type": "prometheus",
@@ -995,19 +1150,6 @@
           "legendFormat": "cpu_usage",
           "range": true,
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\"})) ",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "cpu_allocated",
-          "range": true,
-          "refId": "A"
         }
       ],
       "title": "CPU Usage",
@@ -1051,7 +1193,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": false,
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "normal"
@@ -1065,7 +1207,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1175,7 +1318,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\"})) ",
+          "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\", jobstate=\"RUNNING\"})) ",
           "hide": false,
           "instant": false,
           "legendFormat": "cpu_allocated",
@@ -1188,7 +1331,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_user_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])) ",
+          "expr": "sum(rate(slurm_job_user_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:]) > 0 ) ",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -1202,7 +1345,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_system_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:]))",
+          "expr": "sum(rate(slurm_job_system_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:]) > 0 )",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -1231,7 +1374,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1293,7 +1437,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -1303,11 +1447,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(slurm_job_memory_bytes{jobid=~\"${job_id}\"})",
+          "expr": "sum(slurm_job_allocated_memory{jobid=~\"${job_id}\", jobstate=\"RUNNING\"} > 0)",
+          "hide": false,
           "instant": false,
-          "legendFormat": "memory",
+          "legendFormat": "memory_allocated",
           "range": true,
-          "refId": "A"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -1315,12 +1460,11 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(slurm_job_allocated_memory{jobid=~\"${job_id}\"} > 0)",
-          "hide": false,
+          "expr": "sum(slurm_job_memory_bytes{jobid=~\"${job_id}\"})",
           "instant": false,
-          "legendFormat": "memory",
+          "legendFormat": "memory_usage",
           "range": true,
-          "refId": "B"
+          "refId": "A"
         }
       ],
       "title": "Memory",
@@ -1374,7 +1518,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1467,7 +1612,7 @@
           "editorMode": "code",
           "expr": "sum(slurm_job_memory_bytes{jobid=~\"${job_id}\"})",
           "instant": false,
-          "legendFormat": "memory",
+          "legendFormat": "memory_usage",
           "range": true,
           "refId": "A"
         },
@@ -1477,10 +1622,10 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(slurm_job_allocated_memory{jobid=~\"${job_id}\"} > 0)",
+          "expr": "sum(slurm_job_allocated_memory{jobid=~\"${job_id}\", jobstate=\"RUNNING\"} > 0)",
           "hide": false,
           "instant": false,
-          "legendFormat": "memory",
+          "legendFormat": "memory_allocated",
           "range": true,
           "refId": "B"
         }
@@ -1505,7 +1650,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1515,7 +1661,37 @@
           },
           "unit": "none"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpus_allocated"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "streaming_multiprocessor_usage"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 7,
@@ -1546,8 +1722,21 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
+          "expr": "sum (slurm_job_allocated_gres{jobid=~\"$job_id\", jobstate=\"RUNNING\", gres_type=\"gpu\"})",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "gpus_allocated",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "label_replace({__name__=~\"slurm_job_gpu_.*_usage\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)\") >0",
+          "expr": "sum by (__name__)(label_replace({__name__=~\"slurm_job_gpu_streaming_multiprocessor_usage\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)\") >0)",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -1611,7 +1800,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1620,7 +1810,41 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpus_allocated"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 5
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "streaming_multiprocessor_usage"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 7,
@@ -1651,13 +1875,26 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "label_replace({__name__=~\"slurm_job_gpu_.*_usage\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)\") >0",
+          "expr": "sum by (__name__) (label_replace({__name__=~\"slurm_job_gpu_.*_usage\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)\") >0)",
           "hide": false,
           "instant": false,
           "interval": "",
           "legendFormat": "{{__name__}}",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum (slurm_job_allocated_gres{jobid=~\"$job_id\", jobstate=\"RUNNING\", gres_type=\"gpu\"})",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "gpus_allocated",
+          "range": true,
+          "refId": "A"
         }
       ],
       "title": "GPU Usage",
@@ -1681,7 +1918,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1723,10 +1961,10 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "label_replace({__name__=~\"slurm_job_gpu_.*_mem_bytes\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)_mem_bytes\") >0\r\n",
+          "expr": "sum by (__name__) (label_replace({__name__=~\"slurm_job_gpu_.*_mem_bytes\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)_mem_bytes\") >0)\r\n",
           "hide": false,
           "instant": false,
-          "legendFormat": "{{__name__}}_memory",
+          "legendFormat": "{{__name__}}_memory_usage",
           "range": true,
           "refId": "A"
         }
@@ -1786,7 +2024,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1826,11 +2065,11 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "label_replace({__name__=~\"slurm_job_gpu_.*_mem_bytes\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)_mem_bytes\") >0\r\n",
+          "expr": "sum by (__name__) (label_replace({__name__=~\"slurm_job_gpu_.*_mem_bytes\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)_mem_bytes\") >0)\r\n",
           "hide": false,
           "instant": false,
           "interval": "",
-          "legendFormat": "{{__name__}}_memory",
+          "legendFormat": "{{__name__}}_memory_usage",
           "range": true,
           "refId": "B"
         }
@@ -1872,7 +2111,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": false,
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "normal"
@@ -1886,7 +2125,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1961,7 +2201,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_reads{jobid=~\"$job_id\"}[$__rate_interval:]))",
+          "expr": "sum(rate(slurm_job_reads{jobid=~\"$job_id\"}[$__rate_interval:]) > 0 )",
           "instant": false,
           "legendFormat": "reads",
           "range": true,
@@ -1973,7 +2213,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_writes{jobid=~\"$job_id\"}[$__rate_interval:]))",
+          "expr": "sum(rate(slurm_job_writes{jobid=~\"$job_id\"}[$__rate_interval:]) > 0 )",
           "hide": false,
           "instant": false,
           "legendFormat": "writes",
@@ -2016,8 +2256,8 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
-            "spanNulls": false,
+            "showPoints": "never",
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -2031,7 +2271,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2091,7 +2332,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_read_bytes{jobid=~\"$job_id\"}[$__rate_interval:]))",
+          "expr": "sum(rate(slurm_job_read_bytes{jobid=~\"$job_id\"}[$__rate_interval:]) > 0 )",
           "instant": false,
           "legendFormat": "bytes_read",
           "range": true,
@@ -2103,7 +2344,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:]))",
+          "expr": "sum(rate(slurm_job_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:]) > 0 )",
           "hide": false,
           "instant": false,
           "legendFormat": "bytes_written",
@@ -2116,7 +2357,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(slurm_job_cancelled_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:]))",
+          "expr": "sum(rate(slurm_job_cancelled_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:]) > 0 )",
           "hide": false,
           "instant": false,
           "legendFormat": "bytes_write_fail",
@@ -2159,7 +2400,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -2235,13 +2476,13 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "PJS",
   "uid": "dfe8e0f3-30ae-4c5c-b4e3-17cdf8e09fa5",
-  "version": 11,
+  "version": 15,
   "weekStart": ""
 }
