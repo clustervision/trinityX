@@ -2,4 +2,58 @@
 
 groups:
 - name: trinityx
-  rules: []
+  rules:
+  - alert: ServiceFailedSystemdGeneric
+    expr: 'node_systemd_unit_state{state="failed"} > 0'
+    for: 10m
+    labels:
+      severity: warning
+      category: service
+    annotations:
+      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
+
+  - alert: ServiceFailedProvisioning
+    expr: 'node_systemd_unit_state{name=~"(dhcpd|named|nginx|luna2-daemon).service", state="failed", job="luna_controllers"} > 0'
+    for: 10m
+    labels:
+      severity: critical
+      category: service
+    annotations:
+      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
+
+  - alert: ServiceFailedSlurm
+    expr: 'node_systemd_unit_state{name=~"(slurmctld|slurmdbd|munge).service", state="failed", job="luna_controllers"} > 0'
+    for: 10m
+    labels:
+      severity: critical
+      category: service
+    annotations:
+      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
+
+  - alert: ServiceFailedAuthentication
+    expr: 'node_systemd_unit_state{name=~"(sssd|slapd).service", state="failed", job="luna_controllers"} > 0'
+    for: 10m
+    labels:
+      severity: critical
+      category: service
+    annotations:
+      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
+
+  - alert: ServiceFailedMisc
+    expr: 'node_systemd_unit_state{name=~"(rsyslogd).service", state="failed", job="luna_controllers"} > 0'
+    for: 10m
+    labels:
+      severity: critical
+      category: service
+    annotations:
+      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
+
+  - alert: ServiceFailedOnNodes
+    expr: 'node_systemd_unit_state{name=~"(rsyslogd|slurmd|sshd|sssd).service", state="failed", job="luna_nodes"} > 0'
+    for: 10m
+    labels:
+      severity: danger
+      category: service
+    annotations:
+      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
+
