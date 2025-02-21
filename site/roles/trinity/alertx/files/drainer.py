@@ -107,7 +107,7 @@ def listener():
                     ## Code to perform "firing" + "nhc" = disable node
                     ## Disable node only if it is enabled
                     ## Drain Node
-                    if "DRAIN" not in "STATE":
+                    if "DRAIN" not in state:
                         nhc_firing_nodes.append(node_name) if node_name not in nhc_firing_nodes else None
                         reason = f"{marker} {alert_name} error triggered, check Grafana/Prometheus to debug"
                         try:
