@@ -3,7 +3,7 @@
 groups:
 - name: trinityx
   rules:
-  - alert: ServiceFailedSystemdGeneric
+  - alert: ServiceFailedSystemdGenericOnController
     expr: 'node_systemd_unit_state{state="failed"} > 0'
     for: 10m
     labels:
@@ -12,7 +12,7 @@ groups:
     annotations:
       description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
 
-  - alert: ServiceFailedProvisioning
+  - alert: ServiceFailedProvisioningOnController
     expr: 'node_systemd_unit_state{name=~"(dhcpd|named|nginx|luna2-daemon).service", state="failed", job="luna_controllers"} > 0'
     for: 10m
     labels:
@@ -21,7 +21,7 @@ groups:
     annotations:
       description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
 
-  - alert: ServiceFailedSlurm
+  - alert: ServiceFailedSlurmOnController
     expr: 'node_systemd_unit_state{name=~"(slurmctld|slurmdbd|munge).service", state="failed", job="luna_controllers"} > 0'
     for: 10m
     labels:
@@ -30,7 +30,7 @@ groups:
     annotations:
       description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
 
-  - alert: ServiceFailedAuthentication
+  - alert: ServiceFailedAuthenticationOnController
     expr: 'node_systemd_unit_state{name=~"(sssd|slapd).service", state="failed", job="luna_controllers"} > 0'
     for: 10m
     labels:
@@ -39,7 +39,7 @@ groups:
     annotations:
       description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
 
-  - alert: ServiceFailedMisc
+  - alert: ServiceFailedMiscOnController
     expr: 'node_systemd_unit_state{name=~"(rsyslogd).service", state="failed", job="luna_controllers"} > 0'
     for: 10m
     labels:
@@ -54,6 +54,7 @@ groups:
     labels:
       severity: danger
       category: service
+      nhc: true
     annotations:
       description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
 
