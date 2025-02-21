@@ -8,6 +8,7 @@ groups:
     expr: 'up == 0'
     labels:
       severity: info
+      category: generic
     annotations:
       description: '{% raw %}Exporter {{$labels.exporter}} down{% endraw %}'
 
@@ -15,6 +16,7 @@ groups:
     expr: 'max by(hostname, luna_group) (up{job="luna_controllers"}) == 0'
     labels:
       severity: critical
+      category: generic
     annotations:
       description: '{% raw %}Controller server down or unreachable{% endraw %}'
 
@@ -22,161 +24,182 @@ groups:
     expr: 'max by(hostname, luna_group) (up{job="luna_nodes"}) == 0'
     labels:
       severity: warning
+      category: generic
     annotations:
       description: '{% raw %}Server down or unreachable{% endraw %}'
 
 
 
-  - alert: MultipleServerDown
+  - alert: MultipleServer10PercentDown
     expr: 'avg(max by(hostname, luna_group) (up{job="luna_nodes"})) < 0.9'
     labels:
       severity: warning
+      category: generic
     annotations:
       description: '{% raw %}More of 10% of the nodes have been down{% endraw %}'
 
-  - alert: MultipleServerDown
+  - alert: MultipleServer20PercentDown
     expr: 'avg(max by(hostname, luna_group) (up{job="luna_nodes"})) < 0.8'
     labels:
       severity: danger
+      category: generic
     annotations:
       description: '{% raw %}More of 20% of the nodes have been down{% endraw %}'
 
-  - alert: MultipleServerDown
+  - alert: MultipleServer50PercentDown
     expr: 'avg(max by(hostname, luna_group) (up{job="luna_nodes"})) < 0.5'
     labels:
       severity: critical
+      category: generic
     annotations:
       description: '{% raw %}More of 50% of the nodes have been down{% endraw %}'
 
 
 
-  - alert: HighSystemTemperature
+  - alert: HighSystemTemperatureAbove70c
     expr: 'ipmi_temperature_celsius{name=~"[Ss]ystem.*[Tt]emp"} > 70'
     for: 15m
     labels:
       severity: danger
+      category: generic
     annotations:
       description: '{% raw %}System temperature detected by BMC board is above 70C (current value: {{ $value }}C){% endraw %}'
 
-  - alert: HighCPUTemperature
+  - alert: HighCPUTemperatureAbove90c
     expr: 'ipmi_temperature_celsius{name=~"[Cc][Pp][Uu].*[Tt]emp"} > 90'
     for: 15m
     labels:
       severity: danger
+      category: generic
     annotations:
       description: '{% raw %}CPU temperature detected by BMC board is above 90C (current value: {{ $value }}C){% endraw %}'
 
 
 
-  - alert: ProcessorFault
+  - alert: ProcessorFaultOnNode
     expr: 'ipmi_sensor_state{type="Processor", job="luna_nodes"} > 0'
     labels:
       severity: warning
+      category: generic
+      nhc: true
     annotations:
       description: '{% raw %}Processor fault detected by BMC board{% endraw %}'
 
-  - alert: ProcessorFault
+  - alert: ProcessorFaultOnController
     expr: 'ipmi_sensor_state{type="Processor", job="luna_controllers"} > 0'
     labels:
       severity: critical
+      category: generic
     annotations:
       description: '{% raw %}Processor fault detected by BMC board{% endraw %}'
 
-  - alert: PowerSupplyFault
+  - alert: PowerSupplyFaultOnNode
     expr: 'ipmi_sensor_state{type="Power Supply", job="luna_nodes"} > 0'
     labels:
       severity: warning
+      category: generic
     annotations:
       description: '{% raw %}Power Supply fault detected by BMC board{% endraw %}'
 
-  - alert: PowerSupplyFaulte
+  - alert: PowerSupplyFaultOnController
     expr: 'ipmi_sensor_state{type="Power Supply", job="luna_controllers"} > 0'
     labels:
       severity: critical
+      category: generic
     annotations:
       description: '{% raw %}Power Supply fault detected by BMC board{% endraw %}'
 
 
 
-  - alert: LocalFilesystemFull
+  - alert: LocalFilesystemFull90PercentOnController
     expr: 'node_filesystem_avail_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} < 0.1'
     labels:
       severity: warning
+      category: generic
     annotations:
       description: '{% raw %}Filesystem {{$labels.mountpoint}} has less than 10% of capacity available {% endraw %}'
 
-  - alert: LocalFilesystemFull
+  - alert: LocalFilesystemFull95PercentOnController
     expr: 'node_filesystem_avail_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} < 0.05'
     labels:
       severity: danger
+      category: generic
     annotations:
       description: '{% raw %}Filesystem {{$labels.mountpoint}} has less than 5% of capacity available {% endraw %}'
 
-  - alert: LocalFilesystemFull
+  - alert: LocalFilesystemFull97PercentOnController
     expr: 'node_filesystem_avail_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} / node_filesystem_size_bytes{job="luna_controllers", fstype=~"xfs|ext2|ext3|ext4|zfs|ntfs|reiserfs|ufs|vfat"} < 0.03'
     labels:
       severity: critical
+      category: generic
     annotations:
       description: '{% raw %}Filesystem {{$labels.mountpoint}} has less than 3% of capacity available {% endraw %}'
 
 
-  - alert: HighCpuLoad
+  - alert: HighCpuLoad50PercentOnController
     expr: '(node_load5{job="luna_controllers"}/count(node_cpu_seconds_total{mode="idle", job="luna_controllers"}) without (cpu,mode)) > 0.5'
     for: 1h
     labels:
       severity: warning
+      category: generic
     annotations:
       description: '{% raw %}High CPU usage on controller for more than 1h{% endraw %}'
 
-  - alert: HighCpuLoad
+  - alert: HighCpuLoad90PercentOnController
     expr: '(node_load5{job="luna_controllers"}/count(node_cpu_seconds_total{mode="idle", job="luna_controllers"}) without (cpu,mode)) > 0.9'
     for: 1h
     labels:
       severity: danger
+      category: generic
     annotations:
       description: '{% raw %}High CPU usage on controller for more than 1h{% endraw %}'
 
-  - alert: HighCpuLoad
+  - alert: HighCpuLoad100PercentOnController
     expr: '(node_load5{job="luna_controllers"}/count(node_cpu_seconds_total{mode="idle", job="luna_controllers"}) without (cpu,mode)) > 1'
     for: 1h
     labels:
       severity: critical
+      category: generic
     annotations:
       description: '{% raw %}High CPU usage on controller for more than 1h{% endraw %}'
 
 
 
-  - alert: HighMemoryUsage
+  - alert: HighMemoryUsage75PercentOnController
     expr: '(node_memory_MemFree_bytes{job="luna_controllers"} + node_memory_Cached_bytes{job="luna_controllers"} + node_memory_Buffers_bytes{job="luna_controllers"}) / node_memory_MemTotal_bytes{job="luna_controllers"} < 0.25'
     for: 1h
     labels:
       severity: warning
+      category: generic
     annotations:
       description: '{% raw %}High memory usage on controller for more than 1h{% endraw %}'
 
-  - alert: HighMemoryUsage
+  - alert: HighMemoryUsage95PercentOnController
     expr: '(node_memory_MemFree_bytes{job="luna_controllers"} + node_memory_Cached_bytes{job="luna_controllers"} + node_memory_Buffers_bytes{job="luna_controllers"}) / node_memory_MemTotal_bytes{job="luna_controllers"} < 0.05'
     for: 1h
     labels:
       severity: danger
+      category: generic
     annotations:
       description: '{% raw %}High memory usage on controller for more than 1h {% endraw %}'
 
 
 
-  - alert: Swapping
+  - alert: SwappingOnController
     expr: '(node_memory_SwapCached_bytes{job="luna_controllers"} / node_memory_SwapTotal_bytes{job="luna_controllers"} > 0.5) or (node_memory_SwapCached_bytes{job="luna_controllers"} > 1e9)'
     for: 15m
     labels:
       severity: critical
+      category: generic
     annotations:
       description: '{% raw %}Swap usage above 50% or 1GB {% endraw %}'
   
-  - alert: Swapping
+  - alert: SwappingOnNodes
     expr: '(node_memory_SwapCached_bytes{job="luna_nodes"} / node_memory_SwapTotal_bytes{job="luna_nodes"} > 0.5) or (node_memory_SwapCached_bytes{job="luna_nodes"} > 1e9)'
     for: 15m
     labels:
       severity: danger
+      category: generic
     annotations:
       description: '{% raw %}Swap usage above 50% or 1GB{% endraw %}'
 
@@ -186,6 +209,7 @@ groups:
     expr: "((node_timex_offset_seconds > 1) or (node_timex_offset_seconds < -1)) > 0"
     labels:
       severity: warning
+      category: generic
     annotations:
       description: '{% raw %}Clock out of sync by more than 1s (current value: {{ $value }}){% endraw %}'
 
@@ -193,31 +217,8 @@ groups:
     expr: 'node_netstat_Tcp_CurrEstab > 1000'
     labels:
       severity: warning
+      category: generic
     annotations:
       description: '{% raw %}Server has more than 1000 established TCP connections (current value: {{ $value }}){% endraw %}'
 
-
-  - alert: ServiceFailed
-    expr: 'node_systemd_unit_state{state="failed"} > 0'
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
-
-  - alert: ServiceFailed
-    expr: 'node_systemd_unit_state{name=~"(dhcpd|named|nginx|luna2-daemon|slurmctld|sssd|slapd|rsyslogd).service", state="failed", job="luna_controllers"} > 0'
-    for: 10m
-    labels:
-      severity: critical
-    annotations:
-      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
-
-  - alert: ServiceFailed
-    expr: 'node_systemd_unit_state{name=~"(rsyslogd|slurmd).service", state="failed", job="luna_nodes"} > 0'
-    for: 10m
-    labels:
-      severity: danger
-    annotations:
-      description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
 
