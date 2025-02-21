@@ -69,6 +69,10 @@ prometheus_alertmanager_receivers:
   webhook_configs:
   - url: 'http://localhost:5555/listener'
     send_resolved: true
+- name: 'alertx-drainer'
+  webhook_configs:
+  - url: 'http://localhost:7150/listener'
+    send_resolved: true
 
 prometheus_alertmanager_time_intervals: []
 # prometheus_alertmanager_time_intervals:
@@ -167,6 +171,10 @@ prometheus_alertmanager_route:
       - matchers:
         - severity =~ "danger|critical"
         receiver: prometheus-sensu-bridge
+        continue: true
+      - matchers:
+        - severity =~ "danger|critical|warning|info"
+        receiver: alertx-drainer
         continue: true
 
 #   # This routes performs a regular expression match on alert labels to
