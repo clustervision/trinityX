@@ -1,16 +1,24 @@
 ---
 
-- name: "Ensure alertX drainer alertx_drainer_daemon_path directory exists"
+- name: "Ensure alertX drainer alertx_drainer_daemon_dir directory exists"
   file:
-    path: "{{ alertx_drainer_daemon_path }}"
+    path: "{{ alertx_drainer_daemon_dir }}"
     state: directory
     owner: root
     group: root
     mode: '0755'
 
-- name: "Ensure alertX drainer ini file alertx_drainer_ini_path directory exists"
+- name: "Ensure alertX drainer ini file alertx_drainer_ini_dir directory exists"
   file:
-    path: "{{ alertx_drainer_ini_path }}"
+    path: "{{ alertx_drainer_ini_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure alertX drainer ini file alertx_drainer_log_dir directory exists
+  file:
+    path: '{{ alertx_drainer_log_dir }}'
     state: directory
     owner: root
     group: root
@@ -19,16 +27,15 @@
 - name: "Install drainer ini file"
   template:
     src: 'drainer.ini.j2'
-    dest: '{{ alertx_drainer_ini_path }}/drainer.ini'
+    dest: '{{ alertx_drainer_ini_dir }}/drainer.ini'
     owner: root
     group: root
     mode: 0750
 
-
 - name: "Install drainer.py"
   copy:
     src: 'drainer.py'
-    dest: '{{ alertx_drainer_daemon_path }}'
+    dest: '{{ alertx_drainer_daemon_dir }}'
     owner: 'root'
     group: 'root'
     mode: '0750'
