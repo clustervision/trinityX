@@ -159,7 +159,8 @@ def listener():
             if alert['status'] == 'firing' and nhc in true_dict:
                 if "DRAIN" not in state:
                     logger.debug(f"Alert with name {alert_name} is firing for {node_name}, this node should drain now")
-                    nhc_firing_nodes.append(node_name)
+                    if node_name not in nhc_firing_nodes:
+                        nhc_firing_nodes.append(node_name)
                     reason = f"{marker} {alert_name} error triggered, check Grafana/Prometheus to debug"
                     try:
                         subprocess.check_call(['scontrol', 'update', f'NodeName={node_name}', 'State=DRAIN', f'Reason={reason}'])
@@ -172,7 +173,8 @@ def listener():
                 reason = node_info.get("Reason", "")
                 if "DRAIN" in state and marker in reason:
                     logger.debug(f"Node {node_name} will potentially be undrained if no other alert is firing for this specific node and AUTO_UNDRAIN is set to True")
-                    nhc_resolved_nodes.append(node_name)
+                    if node_name not in nhc_resolved_nodes:
+                        nhc_resolved_nodes.append(node_name)
                 else:
                     logger.debug(f"Node {node_name} is either already not drained or it wasn't drained by the drainer originally")
                     logger.debug(f"Hence drainer won't undrain this node {node_name}")
