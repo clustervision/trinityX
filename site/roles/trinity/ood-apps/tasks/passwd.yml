@@ -1,0 +1,22 @@
+---
+
+- name: Ensure Dashboard directory exists
+  file:
+    path: /etc/ood/config/apps/dashboard
+    state: directory
+   
+- name: Create env file for passwd
+  copy:
+    dest: /etc/ood/config/apps/dashboard/env
+    content: "OOD_DASHBOARD_PASSWD_URL=/pun/sys/trinity_passwd"
+
+- name: Restart services
+  service:
+    name: "{{ passwd_item }}"
+    state: restarted
+  loop_control:
+    loop_var: passwd_item
+  with_items:
+    - httpd
+    - nginx
+
