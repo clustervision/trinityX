@@ -12,7 +12,7 @@ import configparser
 
 # Setup config
 config = configparser.ConfigParser()
-config.read('/trinity/local/etc/alertx/drainer.ini')
+config.read('/trinity/local/alertx/drainer/config/drainer.ini')
 
 def get_config_option(section, option, default):
     try:
@@ -20,11 +20,11 @@ def get_config_option(section, option, default):
     except (configparser.NoOptionError, ValueError):
         return default
 
-DEBUG_MODE = get_config_option('settings', 'debug', False)
-AUTO_UNDRAIN = get_config_option('settings', 'auto_undrain', True)
+DEBUG_MODE = get_config_option('LOGGING', 'DEBUG_MODE', False)
+AUTO_UNDRAIN = get_config_option('DRAINING', 'AUTO_UNDRAIN', True)
 
 # Setup logging
-log_directory = '/var/log/alertx'
+log_directory = '/var/log/alertx' ## This is a hardcoded path do not change
 log_file = os.path.join(log_directory, 'drainer.log')
 
 os.makedirs(log_directory, exist_ok=True)
@@ -43,19 +43,37 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 marker = "Trix-drainer:"
-true_dict = {"true", "True", "yes", "Yes"}
-false_dict = {"false", "False", "no", "No"}
+true_dict = ["true", "True", "yes", "Yes", True]
+false_dict = ["false", "False", "no", "No", False]
+
+
+if DEBUG_MODE in true_dict:
+    logger.info(f"debug mode is set to {DEBUG_MODE} & that is in true_dict")
+elif DEBUG_MODE in false_dict:
+    logger.info(f"debug mode is set to {DEBUG_MODE} & that is in false_dict")
+else:
+    logger.warning(f"debug mode is set to {DEBUG_MODE} which is faulty")
+
+
+if AUTO_UNDRAIN in true_dict:
+    logger.info(f"auto_undrain is set to {AUTO_UNDRAIN} & that is in true_dict")
+elif AUTO_UNDRAIN in false_dict:
+    logger.info(f"auto_undrain is set to {AUTO_UNDRAIN} & that is in false_dict")
+else:
+    logger.warning(f"auto_undrain is set to {AUTO_UNDRAIN} which is faulty")
+
+
 
 def get_unique_nodes():
     try:
         result = subprocess.run(['scontrol', 'show', 'nodes'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
+            logger.error(f"Error running scontrol: {result.stderr}")
             raise RuntimeError(f"Error running scontrol: {result.stderr}")
 
         node_names = re.findall(r'NodeName=(\S+)', result.stdout)
         unique_nodes = list(set(node_names))
-        if DEBUG_MODE:
-            logger.debug(f"Unique nodes retrieved for this post request: {unique_nodes}")
+        logger.debug(f"Unique nodes retrieved from slurm: {unique_nodes}")
         return unique_nodes
     except Exception as e:
         logger.error(f"An error occurred while retrieving unique nodes: {e}")
@@ -70,8 +88,7 @@ def get_node_info(node_name):
             for key, value in key_value_pairs:
                 node_info[key] = value.strip('"')
 
-        if DEBUG_MODE:
-            logger.debug(f"Getting node info from slurm for {node_name}: {node_info}")
+        logger.debug(f"Getting node info from slurm for {node_name}: {node_info}")
         return node_info
     except subprocess.CalledProcessError as e:
         logger.error(f"Error retrieving state for node {node_name}: {e}")
@@ -105,17 +122,25 @@ def listener():
             alert_name = labels_dict["alertname"]
             hostname = labels_dict.get("hostname", "")
             if not hostname:
+                logger.debug(f"No hostname found for alert with name {alert_name}")
+                logger.debug(f"Skipping alert: {alert_name}........")
                 continue
 
             node_name = hostname.split('.')[0]
             if node_name not in all_nodes_list:
+                logger.debug(f"Node ( {node_name} ) found in the prometheus alert {alert_name}, doesn't exist on slurm: scontrol show nodes")
+                logger.debug(f"Skipping alert: {alert_name}........")
                 continue
 
             if "nhc" not in labels_dict:
+                logger.debug(f"For alert with name: {alert_name} the NHC flag doesn't exist, and so the default is NHC is OFF")
+                logger.debug(f"Skipping alert: {alert_name}........")
                 continue
 
             nhc = labels_dict["nhc"]
             if nhc in false_dict:
+                logger.debug(f"For alert with name: {alert_name} the NHC flag is {nhc} which is not of value ( true )")
+                logger.debug(f"Skipping alert: {alert_name}........")
                 continue
 
             node_info = json.loads(node_info_to_json(node_name))
@@ -123,6 +148,7 @@ def listener():
 
             if alert['status'] == 'firing' and nhc in true_dict:
                 if "DRAIN" not in state:
+                    logger.debug(f"Alert with name {alert_name} is firing for {node_name}, this node should drain now")
                     nhc_firing_nodes.append(node_name)
                     reason = f"{marker} {alert_name} error triggered, check Grafana/Prometheus to debug"
                     try:
@@ -135,11 +161,18 @@ def listener():
             elif alert['status'] == 'resolved' and nhc in true_dict:
                 reason = node_info.get("Reason", "")
                 if "DRAIN" in state and marker in reason:
+                    logger.debug(f"Node {node_name} will potentially be undrained if no other alert is firing for this specific node and AUTO_UNDRAIN is set to True")
                     nhc_resolved_nodes.append(node_name)
+                else:
+                    logger.debug(f"Node {node_name} is either already not drained or it wasn't drained by the drainer originally")
+                    logger.debug(f"Hence drainer won't undrain this node {node_name}")
 
         if AUTO_UNDRAIN:
             for resolve_node in nhc_resolved_nodes:
                 if resolve_node in nhc_firing_nodes:
+                    logger.debug(f"Node {resolve_node} is resloved for at least one rule but also firing for at least one other NHC rule")
+                    logger.debug(f"If node should be undrained then check for other NHC rules that are firing")
+                    logger.debug(f"Node {resolve_node} won't be undrained .... skipping")
                     continue
                 try:
                     subprocess.check_call(['scontrol', 'update', f'NodeName={resolve_node}', 'State=RESUME'])
@@ -147,7 +180,9 @@ def listener():
                     node_resumed = True
                 except subprocess.CalledProcessError as e:
                     logger.error(f"Error resuming node {resolve_node}: {e}")
-
+        else:
+            logger.debug(f"AUTO_UNDRAIN is set to false, drained node(s) will not undrain")
+        
         messages = []
         if node_drained:
             messages.append("node(s) successfully drained")
@@ -155,6 +190,7 @@ def listener():
             messages.append("node(s) successfully resumed")
 
         if not messages:
+            logger.info(f"No changes made during this post request")
             return jsonify({"No content": "No changes made"}), 204
 
         msg = " & ".join(messages)
@@ -167,6 +203,6 @@ def listener():
 
 if __name__ == '__main__':
     logger.info("Starting Flask app on port 7150")
-    app.run(host='0.0.0.0', port=7150)
+    app.run(debug=DEBUG_MODE ,host='0.0.0.0', port=7150)
 
 
