@@ -12,19 +12,29 @@ import configparser
 
 # Setup config
 config = configparser.ConfigParser()
-config.read('/trinity/local/alertx/drainer/config/drainer.ini')
+config.read('/trinity/local/alertx/drainer/config/drainer.ini') #Hardcoded path, do not change
 
-def get_config_option(section, option, default):
+
+def get_config_option(section, option, default, value_type='bool'):
     try:
-        return config.getboolean(section, option)
+        if value_type == 'bool':
+            return config.getboolean(section, option)
+        elif value_type == 'int':
+            return config.getint(section, option)
+        elif value_type == 'float':
+            return config.getfloat(section, option)
+        else:
+            return config.get(section, option)
     except (configparser.NoOptionError, ValueError):
         return default
 
-DEBUG_MODE = get_config_option('LOGGING', 'DEBUG_MODE', False)
+
+DEBUG_MODE = get_config_option('LOGGER', 'DEBUG_MODE', False)
+LOG_DIR = get_config_option('LOGGER', 'LOG_DIR', '/var/log/alertx', 'str')
 AUTO_UNDRAIN = get_config_option('DRAINING', 'AUTO_UNDRAIN', True)
 
 # Setup logging
-log_directory = '/var/log/alertx' ## This is a hardcoded path do not change
+log_directory = LOG_DIR
 log_file = os.path.join(log_directory, 'drainer.log')
 
 os.makedirs(log_directory, exist_ok=True)
