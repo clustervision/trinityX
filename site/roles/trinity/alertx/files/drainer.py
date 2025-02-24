@@ -58,17 +58,17 @@ false_dict = ["false", "False", "no", "No", False]
 
 
 if DEBUG_MODE in true_dict:
-    logger.info(f"debug mode is set to {DEBUG_MODE} & that is in true_dict")
+    logger.info(f"debug mode is set to {DEBUG_MODE}")
 elif DEBUG_MODE in false_dict:
-    logger.info(f"debug mode is set to {DEBUG_MODE} & that is in false_dict")
+    logger.info(f"debug mode is set to {DEBUG_MODE}")
 else:
     logger.warning(f"debug mode is set to {DEBUG_MODE} which is faulty")
 
 
 if AUTO_UNDRAIN in true_dict:
-    logger.info(f"auto_undrain is set to {AUTO_UNDRAIN} & that is in true_dict")
+    logger.info(f"auto_undrain is set to {AUTO_UNDRAIN}")
 elif AUTO_UNDRAIN in false_dict:
-    logger.info(f"auto_undrain is set to {AUTO_UNDRAIN} & that is in false_dict")
+    logger.info(f"auto_undrain is set to {AUTO_UNDRAIN}")
 else:
     logger.warning(f"auto_undrain is set to {AUTO_UNDRAIN} which is faulty")
 
@@ -213,6 +213,6 @@ def listener():
 
 if __name__ == '__main__':
     logger.info("Starting Flask app on port 7150")
-    app.run(debug=DEBUG_MODE ,host='0.0.0.0', port=7150)
+    app.run(host='0.0.0.0', port=7150)
 
 
