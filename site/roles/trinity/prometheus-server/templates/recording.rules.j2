@@ -1,5 +1,3 @@
-{{ ansible_managed | comment }}
-
 groups:
 - name: job_state
   rules:
@@ -9,41 +7,26 @@ groups:
 - name: cores
   rules:
   - record: node_cores
-    expr: count(count(node_cpu_seconds_total) without (mode)) without (cpu)
+    expr: count by (hostname,luna_group) (count(node_cpu_seconds_total) without (mode)) 
 
-- name: power
+  - record: node_gpus
+    expr: count by (hostname,luna_group) (nvidia_smi_name)
+
+- name: power_consumption
   rules:
-  - record: cpu_power_consumption_watts
-    expr: |
-      (
-      sum by (hostname,luna_group) (ipmi_dcmi_power_consumption_watts) 
-      - 
-      sum by (hostname,luna_group) (nvidia_smi_power_draw_watts)
-      )
-      OR
-      sum by (hostname,luna_group) (ipmi_dcmi_power_consumption_watts)
-  - record: gpu_power_consumption_watts
-    expr: |
-      sum by (hostname,luna_group) (nvidia_smi_power_draw_watts)
-
-  - record: cpu_energy_consumption_joules
-    expr: |
-      (
-      sum by (hostname,luna_group) (ipmi_dcmi_energy_consumption_joules) 
-      - 
-      sum by (hostname,luna_group) (nvidia_smi_energy_draw_joules)
-      )
-      OR
-      sum by (hostname,luna_group) (ipmi_dcmi_energy_consumption_joules)
-  - record: gpu_energy_consumption_joules
-    expr: |
-      sum by (hostname,luna_group) (nvidia_smi_energy_draw_joules)
-
-
-  - record: cpu_per_core_power_consumption_watts
-    expr: |
-      cpu_power_consumption_watts / on (hostname,luna_group) node_cores
+  - record: power_consumption_watts
+    expr: sum by (hostname,luna_group) (ipmi_dcmi_power_consumption_watts) 
   
-  - record: cpu_per_core_energy_consumption_joules
-    expr: |
-      cpu_energy_consumption_joules / on (hostname,luna_group) node_cores
+  - record: power_consumption_cpu_watts
+    expr: ( power_consumption_watts - sum by (hostname,luna_group) (nvidia_smi_power_draw_watts) ) OR power_consumption_watts
+
+  - record: power_consumption_gpu_watts
+    expr: sum by (hostname,luna_group) (nvidia_smi_power_draw_watts)
+
+- name: power_consumption_per_unit
+  rules:
+  - record: power_consumption_per_cpu_watts
+    expr: power_consumption_cpu_watts / node_cores
+
+  - record: power_consumption_per_gpu_watts
+    expr: power_consumption_gpu_watts / node_gpus

@@ -9,6 +9,8 @@ import sys
 import logging
 import os
 import configparser
+import signal
+import atexit
 
 # Setup config
 config = configparser.ConfigParser()
@@ -57,6 +59,8 @@ true_dict = ["true", "True", "yes", "Yes", True]
 false_dict = ["false", "False", "no", "No", False]
 
 
+logger.info(f"AlertX-Drainer service started")
+
 if DEBUG_MODE in true_dict:
     logger.info(f"debug mode is set to {DEBUG_MODE}")
 elif DEBUG_MODE in false_dict:
@@ -72,6 +76,11 @@ elif AUTO_UNDRAIN in false_dict:
 else:
     logger.warning(f"auto_undrain is set to {AUTO_UNDRAIN} which is faulty")
 
+
+def log_service_stop():
+    logger.info("Service is stopping...")
+
+atexit.register(log_service_stop)
 
 
 def get_unique_nodes():
