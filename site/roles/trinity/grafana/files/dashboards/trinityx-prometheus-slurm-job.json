@@ -114,6 +114,18 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #C (sum)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
           }
         ]
       },
@@ -150,9 +162,9 @@
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         },
@@ -169,10 +181,48 @@
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "B",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "slurm_job_allocated_memory{jobid=~\"$job_id\"} > 0",
+          "format": "table",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "C",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "trixprometheus"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "exemplar": false,
+          "expr": "slurm_job_allocated_gres{jobid=~\"$job_id\", gres_type=\"gpu\"}",
+          "format": "table",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "D",
           "useBackend": false
         }
       ],
@@ -191,12 +241,19 @@
               },
               "Value #A": {
                 "aggregations": [
-                  "lastNotNull"
-                ]
+                  "sum"
+                ],
+                "operation": "aggregate"
               },
               "Value #B": {
                 "aggregations": [
-                  "mean"
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #C": {
+                "aggregations": [
+                  "sum"
                 ],
                 "operation": "aggregate"
               },
@@ -247,8 +304,7 @@
                 "operation": "aggregate"
               },
               "workdir": {
-                "aggregations": [],
-                "operation": "aggregate"
+                "aggregations": []
               }
             }
           }
@@ -282,7 +338,10 @@
             },
             "renameByName": {
               "Time": "",
+              "Value #A (sum)": "gpus_allocated",
               "Value #B (mean)": "allocated_cores",
+              "Value #B (sum)": "cores_allocated",
+              "Value #C (sum)": "memory_allocated",
               "account (lastNotNull)": "account",
               "command (lastNotNull)": "command",
               "group (lastNotNull)": "group",
@@ -2508,6 +2567,6 @@
   "timezone": "",
   "title": "PJS",
   "uid": "dfe8e0f3-30ae-4c5c-b4e3-17cdf8e09fa5",
-  "version": 6,
+  "version": 8,
   "weekStart": ""
 }
