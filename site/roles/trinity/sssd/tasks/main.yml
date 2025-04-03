@@ -64,11 +64,11 @@
   register: obol_result
   with_items: '{{ sss_allowed_groups }}'
   changed_when: item not in obol_result.stdout
-  when: primary|default(True)
-        and not in_image
-        and not compute|default(False)
-        and sss_allowed_groups is defined
-        and sss_allowed_groups is iterable
+  when: 
+    - primary|default(True)
+    - on_controller   
+    - sss_allowed_groups is defined
+    - sss_allowed_groups is iterable
 
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
