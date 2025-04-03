@@ -35,7 +35,7 @@
     args:
       creates: '{{ ssl_ca_cert }}'
   when: 
-    - primary | default(True) or in_cloud | default(False)
+    - primary | default(True) or in_cloud | default(False) or in_login_image | default(False)
     - on_controller | default(False)
 
 # -- start sync
@@ -117,8 +117,7 @@
       seuser: system_u
       recurse: 'yes'
   when: 
-    - on_controller|default(False)
-    - ansible_connection not in 'chroot'
+    - in_login_image|default(False) or (on_controller|default(False) and ansible_connection not in 'chroot')
 
 # -- start sync
 - block:
@@ -150,7 +149,7 @@
     dest: '/etc/pki/ca-trust/source/anchors/{{ ssl_ca_cert | basename }}'
   register: cert_copy
   when: 
-    - on_controller | default(False)
+    - in_login_image | default(False) or on_controller | default(False)
 
 - name: Update certificate trust store
   shell: update-ca-trust

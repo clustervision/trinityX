@@ -4,6 +4,9 @@
     compute: '{{ True if ansible_connection not in "chroot" else False }}'
   tags: always
 
+- debug:
+    msg: "in_login_image: {{ in_login_image|default(False) }}"
+
 - name: Stop firewalld
   service:
     name: firewalld
@@ -14,6 +17,12 @@
   systemd:
     name: firewalld
     enabled: false
+
+- name: Enable firewalld
+  systemd:
+    name: firewalld
+    enabled: true
+  when: in_login_image|default(False)
 
 - name: Get image name
   set_fact:

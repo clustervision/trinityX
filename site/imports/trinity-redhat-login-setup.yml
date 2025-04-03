@@ -1,6 +1,12 @@
 ---
 - hosts: '{{ hostlist }}'
 
+  pre_tasks:
+  - name: Set in_login_image fact
+    set_fact:
+      in_login_image: '{{ in_login_image }}'
+    tags: always
+
   roles:
   - role: trinity/init-nodes
     tags: init-nodes
@@ -21,6 +27,18 @@
     tags: hostname
 
   - role: trinity/ssl-cert
+    ssl_cert_country: 'NL'
+    ssl_cert_locality: 'Amsterdam'
+    ssl_cert_organization: 'ClusterVision Solutions B.V.'
+    ssl_cert_state: 'Noord Holland'
+    ssl_cert_altname: 
+      - '{{ trix_login_hostname }}.{{ trix_domain }}'
+      - '{{ ansible_fqdn }}'
+      - '{{ trix_external_fqdn }}'
+      - '{{ trix_login_fqdn }}'
+    ssl_cert_altip: 
+      - '{{ trix_login_ip }}'
+    ssl_cert_days: '36500'
     tags: ssl-cert
 
   - role: trinity/chrony
@@ -88,6 +106,12 @@
   - role: trinity/nscd
     tags: nscd
 
+  - role: trinity/slurm
+    slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+    slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+    munge_conf_path: '{{ trix_shared }}/etc/munge'
+    tags: slurm
+
   - role: trinity/nfs-mounts
     nfs_enable_rdma: false
     nfs_mounts:
@@ -99,23 +123,6 @@
     nfs_use_mask: "{{ ha | default(False) }}"
     when: enable_openhpc == true
     tags: nfs-mounts
-
-  - role: trinity/ssl-cert
-    ssl_cert_country: 'NL'
-    ssl_cert_locality: 'Amsterdam'
-    ssl_cert_organization: 'ClusterVision Solutions B.V.'
-    ssl_cert_state: 'Noord Holland'
-    ssl_cert_altname: 
-      - '{{ trix_login_hostname }}.{{ trix_domain }}'
-      - '{{ ansible_fqdn }}'
-      - '{{ trix_external_fqdn }}'
-      - '{{ trix_login_fqdn }}'
-    ssl_cert_altip: 
-      - '{{ trix_login_ip }}'
-    ssl_cert_days: '36500'
-    tags: 
-      - ssl-cert
-      - authentication
 
   - role: trinity/ood
     enable_ssl: true
@@ -129,7 +136,6 @@
     when: enable_ood
 
   - role: trinity/ood-apps
-    ood_apps_build_for_image: True
     ood_apps_admin_group: "{{ admin_group }}"
     tags: ood, ood-apps
     when: enable_ood
@@ -172,6 +178,9 @@
 
   - role: trinity/cleanup-legacy
     tags: cleanup-legacy
+
+  - role: trinity/wrapup-images
+    tags: wrapup-images
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
