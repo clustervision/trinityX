@@ -53,6 +53,11 @@
     set_fact:
       on_controller: '{{ True if "controllers" in group_names else False }}'
 
+  - name: Set in_image variable
+    set_fact:
+      in_image: '{{ True if ansible_connection in "chroot" else False }}'
+    tags: always
+
   - name: Check if i am on real hardware or inside cloud
     shell: dmidecode -s system-manufacturer | grep -iE "microsoft|google|amazon" || true
     register: init_dmidecode
@@ -179,7 +184,7 @@
     when: primary is not defined
 
   - debug:
-      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}"
+      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}, in_image: {{ in_image }}"
   tags: always
 
 

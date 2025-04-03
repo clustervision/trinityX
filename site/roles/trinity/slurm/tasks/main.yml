@@ -165,8 +165,7 @@
     enabled: "{{ not ha|default(True) }}"
   when: not ha|default(False)
         and primary|default(True)
-        and ansible_connection not in 'chroot'
-        and not compute|default(False)
+        and on_controller
   with_items:
     - munge
     - slurmdbd
@@ -206,7 +205,7 @@
         - ['pam-sshd', 'pam-slurm']
         - ['sshd', 'slurm']
       when: enable_slurm_pam
-  when: ansible_connection in 'chroot' or compute|default(False)
+  when: in_image or on_node|default(False)
 
 
 - name: Start slurm compute services
@@ -217,7 +216,7 @@
   with_items:
     - munge
     - slurmd
-  when: compute|default(False)
+  when: on_node|default(False)
 
 
 - block:
@@ -356,17 +355,19 @@
       retries: 10
       delay: 15
 
-  when: primary|default(True)
-        and ansible_connection not in 'chroot'
-        and not compute|default(False)
+  when: 
+    - primary|default(True)
+    - on_controller
 
 
 - name: Enable munge service on passive slurm nodes (portal services etc)
   systemd:
     name: '{{ item }}'
     enabled: true
-  when: not on_controller|bool
-        and not compute|bool
+  when: 
+    - not on_controller
+    - not on_node|default(False)
+    - not in_image
   with_items:
     - munge
 
@@ -374,8 +375,10 @@
   systemd:
     name: '{{ item }}'
     state: started
-  when: not on_controller|bool
-        and not compute|bool
+  when: 
+    - not on_controller
+    - not on_node|default(False)
+    - not in_image
   with_items:
     - munge
   ignore_errors: true
@@ -390,8 +393,7 @@
         group: root
         mode: 0644
       when: enable_slurm_pam
-
-  when: primary|default(True)
-        and ansible_connection not in 'chroot'
-        and not compute|default(False)
+  when: 
+    - primary|default(True)
+    - on_controller
 

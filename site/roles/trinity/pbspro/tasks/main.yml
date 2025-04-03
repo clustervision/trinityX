@@ -24,7 +24,7 @@
     name: openpbs-execution-ohpc
     state: present
   tags: install-only
-  when: compute|default(False)
+  when: on_node|default(False)
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
@@ -39,7 +39,7 @@
     src: mom_priv_config.j2
     dest: /var/spool/pbs/mom_priv/config
   notify: restart pbs
-  when: compute|default(False)
+  when: on_node|default(False)
 
 - name: Enable and start PBS
   systemd:
