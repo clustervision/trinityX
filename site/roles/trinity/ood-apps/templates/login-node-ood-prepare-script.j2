@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# we cannot start/enable firewalld in ansible/lchroot
+systemctl enable firewalld
+systemctl start firewalld
+firewall-cmd --add-port={{ ood_port }}/tcp --permanent 2>&1 | logger
+firewall-cmd --reload 2>&1 | logger
+
 if [ "$(grep __HOSTNAME__ /etc/ood/config/ood_portal.yml)" ] || [ "$(grep __HOSTNAME__ /etc/ood/config/clusters.d/TrinityX.yml)" ]; then
     MYHOSTNAME=$(hostname --short)
     sed -i 's/__HOSTNAME__/'$MYHOSTNAME'/' /etc/ood/config/ood_portal.yml 2>&1 | logger

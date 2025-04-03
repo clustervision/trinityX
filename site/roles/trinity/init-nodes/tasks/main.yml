@@ -11,7 +11,9 @@
   service:
     name: firewalld
     state: stopped
-  when: compute|default(False)
+  when: 
+    - compute|default(False)
+    - not in_login_image | default(False)
 
 - name: Disable firewalld
   systemd:
@@ -22,7 +24,7 @@
   systemd:
     name: firewalld
     enabled: true
-  when: in_login_image|default(False)
+  when: in_login_image | default(False)
 
 - name: Get image name
   set_fact:

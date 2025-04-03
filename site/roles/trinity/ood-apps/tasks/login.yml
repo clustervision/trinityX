@@ -1,6 +1,6 @@
 ---
 - name: Prepare login image for OOD installation
-  when: in_login_image|default(False)|bool == true'
+  when: in_login_image|default(False)
   block:
     - name: Render login-node-ood-prepare script
       template:
@@ -10,7 +10,6 @@
         group: root
         mode: 0750
 
-    - name: Populate service facts
     - name: Render /etc/systemd/system/luna2-daemon.service
       template:
         src: 'login-node-ood-prepare-service.j2'
@@ -28,6 +27,7 @@
         state: enabled
         enabled: true
 
-    - set_fact:
+    - name: Overriding ood_apps_admin_group
+      set_fact:
         ood_apps_admin_group: 'root'
 
