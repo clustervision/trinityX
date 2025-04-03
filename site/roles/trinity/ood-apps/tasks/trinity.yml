@@ -36,8 +36,17 @@
         dest: "{{ trix_ood }}"
       when: 
       - override | default((trix_ood + '/' + ood_luna_apps_version) is not exists)
+      - ansible_connection not in 'chroot'
       register: ood_luna_apps_download
     
+    - name: Copy trinityx-ood custom apps to the ood directory if it does not exist
+      shell: "cp -ar {{ ood_luna_apps_temp.path }}/{{ ood_luna_apps_version }} {{ trix_ood }}"
+      when: 
+      - override | default((trix_ood + '/' + ood_luna_apps_version) is not exists)
+      - ansible_connection in 'chroot'
+      register: ood_luna_apps_download
+    
+
     - name: Symlink to current build
       ansible.builtin.file:
         state: link
