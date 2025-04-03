@@ -1,6 +1,6 @@
 ---
-- name: Configure ood apps on the controller
-  when: ansible_connection not in 'chroot'
+- name: Configure ood apps on the controller or login image
+  when: ood_apps_build_for_image|default(False)|bool == true or ansible_connection not in 'chroot'
   block:
     - name: Create ood directory
       ansible.builtin.file:

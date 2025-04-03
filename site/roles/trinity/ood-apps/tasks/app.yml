@@ -1,7 +1,6 @@
 ---
-- name: Install packages on controller if required
-  when:
-    - ansible_connection not in 'chroot'
+- name: Install packages on controller or login image if required
+  when: ood_apps_build_for_image|default(False)|bool == true or ansible_connection not in 'chroot'
   block:
     - name: Install required yum packages
       ansible.builtin.dnf:
@@ -14,8 +13,7 @@
       delay: "{{ rpm_delay | default(15) }}"
 
 - name: Gather variables and setup folder for app {{ app.name }}
-  when:
-    - ansible_connection not in 'chroot'
+  when: ood_apps_build_for_image|default(False)|bool == true or ansible_connection not in 'chroot'
   block:
     - name: Register app path
       set_fact:
@@ -44,7 +42,7 @@
 
 - name: Configure controller for app {{ app.name }}
   when:
-    - ansible_connection not in 'chroot'
+    - ood_apps_build_for_image|default(False)|bool == true or ansible_connection not in 'chroot'
     - app_enabled
   block:
     - name: Make folders for app {{ app.name }}
@@ -104,7 +102,8 @@
       loop: "{{ app.get('tasks', []) }}"
 
 
-
+# We do install the apps in the login image as it gives freedom and with the
+# scheduler we can deside whether to use the login node or not
 - name: Install packages on node if required
   when:
     - ansible_connection in 'chroot'

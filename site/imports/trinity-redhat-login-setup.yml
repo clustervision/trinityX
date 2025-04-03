@@ -1,0 +1,178 @@
+---
+- hosts: '{{ hostlist }}'
+
+  roles:
+  - role: trinity/init-nodes
+    tags: init-nodes
+
+  - role: trinity/repos
+    tags: repos
+
+  - role: trinity/packages
+    tags: packages
+
+  - role: OndrejHome.pcs-modules-2
+    tags: pcs
+
+  - role: trinity/tunables
+    tags: tunables
+
+  - role: trinity/hostname
+    tags: hostname
+
+  - role: trinity/ssl-cert
+    tags: ssl-cert
+
+  - role: trinity/chrony
+    chrony_upstream_servers:
+    - '{{ trix_ctrl_ip }}'
+    tags: chrony
+
+  - role: trinity/rdma-centos
+    tags: rdma-centos
+
+  - role: trinity/trix-tree
+    tags: trix-tree
+
+  - role: trinity/nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: '{{ trix_shared }}'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
+      options: 'defaults,nfsvers=4,ro,retrans=4,_netdev'
+    - path: '{{ trix_home }}'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
+      options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
+    nfs_remote_mask: '{{ shared_fs_disks }}'
+    nfs_prefix_path: '{{ shared_fs_prefix }}'
+    nfs_use_mask: "{{ ha | default(False) }}"
+    tags: nfs-mounts
+
+  - role: trinity/environment-modules
+    when: enable_openhpc == false
+    tags: environment-modules
+
+  - role: trinity/sssd
+    sss_allowed_groups:
+    - '{{ admin_group }}'
+    sss_ldap_hosts:
+    - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+    sss_filter_enabled: '{{ not enable_slurm_pam }}'
+    tags: sssd
+
+  - role: trinity/openhpc
+    tags: openhpc
+    when: enable_openhpc
+
+  # Moved to site/compute-*.yml playbooks, 
+  # as this is only needed on slurm-based compute nodes
+  # but this playbook is used for kubernetes nodes as well
+   
+  # - role: trinity/slurm
+  #   slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+  #   slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+  #   munge_conf_path: '{{ trix_shared }}/etc/munge'
+  #   tags: slurm
+  #   when:  "{{ 'slurm' in workload_manager }}" 
+
+  - role: trinity/rsyslog
+    syslog_forwarding_rules:
+    - name: default
+      proto: 'tcp'
+      port: 514
+      host: '{{ trix_ctrl_ip }}'
+      facility: '*'
+      level: '*'
+    tags: rsyslog
+
+  - role: trinity/nscd
+    tags: nscd
+
+  - role: trinity/nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: '/opt/ohpc'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+      options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+    nfs_remote_mask: '{{ shared_fs_disks }}'
+    nfs_prefix_path: '{{ shared_fs_prefix }}'
+    nfs_use_mask: "{{ ha | default(False) }}"
+    when: enable_openhpc == true
+    tags: nfs-mounts
+
+  - role: trinity/ssl-cert
+    ssl_cert_country: 'NL'
+    ssl_cert_locality: 'Amsterdam'
+    ssl_cert_organization: 'ClusterVision Solutions B.V.'
+    ssl_cert_state: 'Noord Holland'
+    ssl_cert_altname: 
+      - '{{ trix_login_hostname }}.{{ trix_domain }}'
+      - '{{ ansible_fqdn }}'
+      - '{{ trix_external_fqdn }}'
+      - '{{ trix_login_fqdn }}'
+    ssl_cert_altip: 
+      - '{{ trix_login_ip }}'
+    ssl_cert_days: '36500'
+    tags: 
+      - ssl-cert
+      - authentication
+
+  - role: trinity/ood
+    enable_ssl: true
+    ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
+    ood_ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+    ood_ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+    ood_login_host: "{{ trix_external_fqdn }}"
+    ood_ldap_host: "{{ trix_ctrl_ip }}"
+    ood_admin_group: "{{ admin_group }}"
+    tags: ood, ood-core
+    when: enable_ood
+
+  - role: trinity/ood-apps
+    ood_apps_build_for_image: True
+    ood_apps_admin_group: "{{ admin_group }}"
+    tags: ood, ood-apps
+    when: enable_ood
+
+  - role: trinity/target
+    default_target: "{{ image_default_target | default('multi-user') }}"
+    tags: target
+  
+  - role: trinity/prometheus-node-exporter
+    # Prometheus system exporter
+    tags: prometheus, prometheus-node-exporter, monitoring
+
+  - role: trinity/prometheus-slurm-job-exporter
+    # Prometheus system exporter
+    prometheus_slurm_job_exporter_extra_flags: --no-collect.info
+    tags: prometheus, prometheus-slurm-job-exporter, monitoring
+
+  - role: trinity/prometheus-infiniband-exporter
+    # Prometheus infiniband exporter
+    prometheus_infiniband_exporter_system_user: root
+    tags: prometheus-infiniband-exporter, prometheus, monitoring
+
+  - role: trinity/prometheus-ipmi-exporter
+    # Prometheus ipmi exporter
+    prometheus_ipmi_exporter_system_user: root
+    tags: prometheus-ipmi-exporter, prometheus, monitoring
+  
+  - role: trinity/prometheus-nvidia-exporter
+    # Prometheus nvidia exporter
+    prometheus_nvidia_exporter_system_user: root
+    tags: prometheus-nvidia-exporter, prometheus, monitoring
+
+  - role: trinity/prometheus-lshw-exporter
+    # Prometheus ipmi exporter
+    prometheus_lshw_exporter_system_user: root
+    tags: prometheus-lshw-exporter, prometheus, monitoring, lshw, alertx
+
+  - role: trinity/alertx
+    tags: monitoring, alertx
+
+  - role: trinity/cleanup-legacy
+    tags: cleanup-legacy
+
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"

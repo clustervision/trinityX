@@ -1,0 +1,33 @@
+---
+- name: Prepare login image for OOD installation
+  when: ood_apps_build_for_image|default(False)|bool == true'
+  block:
+    - name: Render login-node-ood-prepare script
+      template:
+        src: 'login-node-ood-prepare-script.j2'
+        dest: '{{ trix_sbin }}/login-node-ood-prepare.sh'
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Populate service facts
+    - name: Render /etc/systemd/system/luna2-daemon.service
+      template:
+        src: 'login-node-ood-prepare-service.j2'
+        dest: '/etc/systemd/system/login-node-ood-prepare.service'
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Populate service facts
+      service_facts:
+
+    - name: Enable post boot login services for OOD preparation 
+      service:
+        name: 'login-node-ood-prepare'
+        state: enabled
+        enabled: true
+
+    - set_fact:
+        ood_apps_admin_group: 'root'
+
