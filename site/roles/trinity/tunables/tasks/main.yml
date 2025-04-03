@@ -38,12 +38,12 @@
 
 - name: Setting compute performance tuned profile
   shell: "tuned-adm profile {{ compute_tuned_profile | default('hpc-compute') }}"
-  when: ansible_connection in 'chroot'
+  when: in_image
   ignore_errors: true
 
 - name: Setting controller performance tuned profile
   shell: "tuned-adm profile {{ controller_tuned_profile | default('throughput-performance') }}"
-  when: ansible_connection not in 'chroot'
+  when: not in_image
   ignore_errors: true
 
 - block:
@@ -57,4 +57,4 @@
       regexp: '^{{ nfs_threads.stdout }}'
       line: 'threads=256'
     when: nfs_threads is defined and nfs_threads.stdout_lines|length == 1
-  when: ansible_connection not in 'chroot' and on_controller
+  when: not in_image and on_controller

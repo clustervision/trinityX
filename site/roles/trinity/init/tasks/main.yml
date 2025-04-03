@@ -194,7 +194,7 @@
     apply:
       tags: always
   tags: always
-  when: ansible_connection not in 'chroot' and on_controller
+  when: not in_image and on_controller
 
 
 - block:
@@ -339,7 +339,7 @@
   - debug:
       msg: "trix_ctrl_local_ip: {{ trix_ctrl_local_ip|default('Undefined') }}"
   tags: always
-  when: ansible_connection not in 'chroot' and on_controller
+  when: not in_image and on_controller
 
 
 - block:
@@ -382,7 +382,7 @@
       - trix_ctrl_external_ip is defined
       - trix_ctrl_external_network is defined
   tags: always
-  when: ansible_connection not in 'chroot' and on_controller
+  when: not in_image and on_controller
 
 
 - block:
@@ -418,13 +418,13 @@
       when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
   tags: always
   when: 
-    - ansible_connection not in 'chroot' and on_controller
+    - not in_image and on_controller
     - (trix_external_fqdn is not defined) or trix_external_fqdn==""
 
 - debug:
     msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
   when: 
-    - ansible_connection not in 'chroot' and on_controller
+    - not in_image and on_controller
     - trix_external_fqdn is defined
 
 
@@ -473,7 +473,7 @@
       - not enable_selinux|default(True)
       - init_selinux_state.stdout is defined
       - init_selinux_state.stdout == 'Enforcing'
-  when: ansible_connection not in 'chroot' and on_controller
+  when: not in_image and on_controller
 
 - name: Toggle selinux state
   selinux:

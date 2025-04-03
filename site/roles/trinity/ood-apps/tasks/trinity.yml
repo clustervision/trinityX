@@ -1,6 +1,6 @@
 ---
 - name: Configure ood apps on the controller or login image
-  when: in_login_image|default(False) or ansible_connection not in 'chroot'
+  when: in_login_image|default(False) or not in_image
   block:
     - name: Create ood directory
       ansible.builtin.file:
@@ -36,14 +36,14 @@
         dest: "{{ trix_ood }}"
       when: 
       - override | default((trix_ood + '/' + ood_luna_apps_version) is not exists)
-      - ansible_connection not in 'chroot'
+      - not in_image
       register: ood_luna_apps_download
     
     - name: Copy trinityx-ood custom apps to the ood directory if it does not exist
       shell: "cp -ar {{ ood_luna_apps_temp.path }}/{{ ood_luna_apps_version }} {{ trix_ood }}"
       when: 
       - override | default((trix_ood + '/' + ood_luna_apps_version) is not exists)
-      - ansible_connection in 'chroot'
+      - in_image
       register: ood_luna_apps_download
     
 
