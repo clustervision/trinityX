@@ -1,5 +1,14 @@
 ---
 - hosts: '{{ hostlist }}'
+  # The below pre-tasks is a bit ugly,
+  # but it's most effective here.
+  # We do not run init for ubuntu playbook.
+  # That might change in the future.
+  pre_tasks:
+    - set_fact:
+        in_image: true
+        on_controller: false
+        primary: false
 
   roles:
   - role: ansible/read_facts
