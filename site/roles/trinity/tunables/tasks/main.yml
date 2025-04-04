@@ -43,7 +43,7 @@
 
 - name: Setting controller performance tuned profile
   shell: "tuned-adm profile {{ controller_tuned_profile | default('throughput-performance') }}"
-  when: not in_image
+  when: on_controller
   ignore_errors: true
 
 - block:
@@ -57,4 +57,4 @@
       regexp: '^{{ nfs_threads.stdout }}'
       line: 'threads=256'
     when: nfs_threads is defined and nfs_threads.stdout_lines|length == 1
-  when: not in_image and on_controller
+  when: on_controller
