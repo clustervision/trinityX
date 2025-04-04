@@ -1,6 +1,6 @@
 ---
 - name: Configure ood apps on the controller or login image
-  when: in_login_image|default(False) or not in_image
+  when: in_login_image|default(False) or on_controller
   block:
     - name: Create ood directory
       ansible.builtin.file:
@@ -9,7 +9,7 @@
         mode: "0755"
         owner: root
         group: root
-    
+
     - name: Create temporary directory to download trinityx-ood custom apps
       ansible.builtin.tempfile:
         state: directory
@@ -30,22 +30,18 @@
       ansible.builtin.set_fact:
         ood_luna_apps_version: "{{ ood_luna_apps_temp_files.files[0] | dirname }}"
 
-    - name: Copy trinityx-ood custom apps to the ood directory if it does not exist
-      ansible.builtin.synchronize:
-        src: "{{ ood_luna_apps_temp.path }}/{{ ood_luna_apps_version }}"
-        dest: "{{ trix_ood }}"
-      when: 
-      - override | default((trix_ood + '/' + ood_luna_apps_version) is not exists)
-      - not in_image
+    - name: Verify if we are using a new version
+      stat:
+        path: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
+      register: ood_luna_apps_new_version
+
+    - name: Move download from temporary location to permanent
+      command: "mv {{ ood_luna_apps_temp.path }}/{{ ood_luna_apps_version }} {{ trix_ood }}/"
+      args:
+        removes: "{{ ood_luna_apps_temp.path }}/{{ ood_luna_apps_version }}"
+        creates: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
       register: ood_luna_apps_download
-    
-    - name: Copy trinityx-ood custom apps to the ood directory if it does not exist
-      shell: "cp -ar {{ ood_luna_apps_temp.path }}/{{ ood_luna_apps_version }} {{ trix_ood }}"
-      when: 
-      - override | default((trix_ood + '/' + ood_luna_apps_version) is not exists)
-      - in_image
-      register: ood_luna_apps_download
-    
+      when: not ood_luna_apps_new_version.stat.exists
 
     - name: Symlink to current build
       ansible.builtin.file:
@@ -53,7 +49,7 @@
         src: "{{ trix_ood }}/{{ ood_luna_apps_version }}"
         dest: "{{ trix_ood }}/3.0"
         force: true
-      when: 
+      when:
       - override | default(ood_luna_apps_download.changed)
 
     - name: Create trinityx-ood luna2 app config directory
