@@ -1,0 +1,11 @@
+---
+
+- name: Verify if legacy rules exist
+  stat:
+    path: "{{ prometheus_server_config_dir }}/rules/trix.rules"
+  register: prometheus_legacy_rules
+
+- name: Disable legacy rules
+  command: "mv {{ prometheus_server_config_dir }}/rules/trix.rules {{ prometheus_server_config_dir }}/rules/trix.rules.disabled"
+  when: prometheus_legacy_rules.stat.exists
+

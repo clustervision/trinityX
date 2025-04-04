@@ -53,6 +53,11 @@
     set_fact:
       on_controller: '{{ True if "controllers" in group_names else False }}'
 
+  - name: Set in_image variable
+    set_fact:
+      in_image: '{{ True if ansible_connection in "chroot" else False }}'
+    tags: always
+
   - name: Check if i am on real hardware or inside cloud
     shell: dmidecode -s system-manufacturer | grep -iE "microsoft|google|amazon" || true
     register: init_dmidecode
@@ -179,7 +184,7 @@
     when: primary is not defined
 
   - debug:
-      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}"
+      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}, in_image: {{ in_image }}"
   tags: always
 
 
@@ -189,7 +194,7 @@
     apply:
       tags: always
   tags: always
-  when: ansible_connection not in 'chroot' and on_controller
+  when: on_controller
 
 
 - block:
@@ -334,7 +339,7 @@
   - debug:
       msg: "trix_ctrl_local_ip: {{ trix_ctrl_local_ip|default('Undefined') }}"
   tags: always
-  when: ansible_connection not in 'chroot' and on_controller
+  when: on_controller
 
 
 - block:
@@ -377,7 +382,7 @@
       - trix_ctrl_external_ip is defined
       - trix_ctrl_external_network is defined
   tags: always
-  when: ansible_connection not in 'chroot' and on_controller
+  when: on_controller
 
 
 - block:
@@ -413,15 +418,27 @@
       when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
   tags: always
   when: 
-    - ansible_connection not in 'chroot' and on_controller
+    - on_controller
     - (trix_external_fqdn is not defined) or trix_external_fqdn==""
 
-- debug:
-    msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
-  when: 
-    - ansible_connection not in 'chroot' and on_controller
-    - trix_external_fqdn is defined
+- block:
+  - debug:
+      msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
+    when: 
+      - on_controller
+      - trix_external_fqdn is defined
 
+  - name: Using replacable name for trix_login_fqdn
+    set_fact:
+      trix_login_fqdn: '__HOSTNAME__'
+    when: (trix_login_fqdn is not defined) or trix_login_fqdn==""
+
+  - debug:
+      msg: "trix_login_fqdn: {{ trix_login_fqdn }}"
+    when: 
+      - in_login_image | default(False)
+      - trix_login_fqdn is defined
+  tags: always
 
 - block:
   - name: Resolve admin group
@@ -468,30 +485,10 @@
       - not enable_selinux|default(True)
       - init_selinux_state.stdout is defined
       - init_selinux_state.stdout == 'Enforcing'
-  when: ansible_connection not in 'chroot' and on_controller
+  when: on_controller
 
 - name: Toggle selinux state
   selinux:
     state: "{{ 'permissive' if enable_selinux else 'disabled' }}"
     policy: 'targeted'
 
-# Workaround the issue where NM is left running in the system
-# after it has been removed
-# - name: Is NetworkManager running?
-#   shell: systemctl status NetworkManager
-#   register: NM_service
-#   failed_when: false
-#   changed_when: false
-#   ignore_errors: true
-
-# - name: Stop NetworkManager
-#   service:
-#     name: NetworkManager
-#     state: stopped
-#   when: NM_service.rc == 0 and
-#         'chroot' not in ansible_connection
-
-# - name: Remove NetworkManager
-#   yum:
-#     name: NetworkManager
-#     state: absent

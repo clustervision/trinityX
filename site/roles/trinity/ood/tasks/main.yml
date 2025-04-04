@@ -129,11 +129,15 @@
     port: "{{ ood_port }}/tcp"
     permanent: "yes"
     immediate: "yes"
+  when: not in_login_image|default(False)
 
 - name: Include auth task
   ansible.builtin.include_tasks: dex-auth.yml
 - name: Include auth task
   ansible.builtin.include_tasks: pam-auth.yml
+- name: Include tasks for login image
+  ansible.builtin.include_tasks: login.yml
+
 - name: Enable OOD webserver on startup
   ansible.builtin.service:
     name: httpd

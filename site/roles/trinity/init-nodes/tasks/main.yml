@@ -1,19 +1,31 @@
 ---
-- name: Set compute variable
+- name: Set on_node variable
   set_fact:
-    compute: '{{ True if ansible_connection not in "chroot" else False }}'
+    on_node: '{{ True if not in_image else False }}'
+  tags: always
+
+- debug:
+    msg: "in_image: {{ in_image }}, in_login_image: {{ in_login_image|default(False) }}, on_node: {{ on_node }}"
   tags: always
 
 - name: Stop firewalld
   service:
     name: firewalld
     state: stopped
-  when: compute|default(False)
+  when: 
+    - on_node|default(False)
+    - not in_login_image | default(False)
 
 - name: Disable firewalld
   systemd:
     name: firewalld
     enabled: false
+
+- name: Enable firewalld
+  systemd:
+    name: firewalld
+    enabled: true
+  when: in_login_image | default(False)
 
 - name: Get image name
   set_fact:

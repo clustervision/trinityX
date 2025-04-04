@@ -7,7 +7,7 @@
     group: root
     state: directory
     mode: '0755'
-  when: ansible_connection not in 'chroot'
+  when: not in_image
 
 - name: Create link so openhpc ends up on /trinity filesystem
   file:
@@ -16,7 +16,7 @@
     owner: root
     group: root
     state: link
-  when: ansible_connection not in 'chroot'
+  when: not in_image
 
 - name: Configure OpenHPC repos
   ansible.builtin.yum_repository:
@@ -41,7 +41,7 @@
     name: ohpc-base
     state: installed
     enablerepo: powertools
-  when: ansible_connection not in 'chroot'
+  when: not in_image
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
@@ -49,7 +49,7 @@
   yum:
     name: ohpc-base-compute
     state: installed
-  when: ansible_connection not in 'chroot'
+  when: not in_image
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
@@ -65,7 +65,7 @@
     file:
       path: /etc/genders
       state: touch
-  when: ansible_connection not in 'chroot'
+  when: not in_image
 
 - name: Install lmod dependencies on non-controller nodes
   yum:
@@ -74,7 +74,7 @@
       - lua-posix
     enablerepo: powertools
     state: installed
-  when: ansible_connection in 'chroot'
+  when: in_image
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
@@ -106,7 +106,7 @@
   template:
     src: OHPC_exports.j2
     dest: '{{ nfs_exports_path }}/ohpc.exports'
-  when: ansible_connection not in 'chroot'
+  when: not in_image
   notify:
     - Export NFS
 
@@ -115,6 +115,6 @@
     dest: '/etc/exports.d/ohpc.exports'
     state: link
     force: "yes"
-  when: ansible_connection not in 'chroot'
+  when: not in_image
   notify:
     - Export NFS

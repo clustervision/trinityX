@@ -1,6 +1,6 @@
 
 - name: Create directories
-  when: ansible_connection != 'chroot'
+  when: not in_image
   block:
 
   - name: "Create certificates and keys directory"
@@ -24,7 +24,7 @@
 
 
 - name: Generate certificates and keys
-  when: ansible_connection != 'chroot'
+  when: not in_image
   block:
 
   - name: Retrieve the certificate and keys from {{trix_sync}}/k3s
@@ -47,7 +47,7 @@
     when: ha and primary | default(True)
 
 - name: Configure database for k3s
-  when: ansible_connection != 'chroot'
+  when: not in_image
   block:
   - name: Ensure k3s mysql password store exists
     file:
@@ -115,7 +115,7 @@
 
 
 - name: "Download and install helm"
-  when: ansible_connection != 'chroot'
+  when: not in_image
   block:
     - name: "Download helm binary"
       ansible.builtin.unarchive:
@@ -157,7 +157,7 @@
 
 
 - name: "Configure k3s server"
-  when: ansible_connection != 'chroot'
+  when: not in_image
   block:
     - name: Render k3s server environment file
       ansible.builtin.template:
@@ -232,7 +232,7 @@
 
 
 - name: "Configure k3s agent"
-  when: ansible_connection in 'chroot'
+  when: in_image
   block:
 
     - name: Render k3s-agent service file
@@ -247,7 +247,7 @@
         enabled: true
 
 # - name: Install kubernetes dashboard
-#   when: ansible_connection != 'chroot'
+#   when: not in_image
 #   block:
 #     - name: "Add kubernetes dashboard chart"
 #       ansible.builtin.shell:
@@ -264,7 +264,7 @@
     - name: Add apiserver port to firewalld
       firewalld:
         port: 6443/tcp
-        immediate: "{{ ansible_connection != 'chroot' }}"
+        immediate: "{{ not in_image }}"
         permanent: yes
         state: enabled
 
@@ -272,7 +272,7 @@
       firewalld:
         source: 10.42.0.0/16
         zone: trusted
-        immediate: "{{ ansible_connection != 'chroot' }}"
+        immediate: "{{ not in_image }}"
         permanent: yes
         state: enabled
 
@@ -280,6 +280,6 @@
       firewalld:
         source: 10.43.0.0/16
         zone: trusted
-        immediate: "{{ ansible_connection != 'chroot' }}"
+        immediate: "{{ not in_image }}"
         permanent: yes
         state: enabled

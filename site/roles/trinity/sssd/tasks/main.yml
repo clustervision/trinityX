@@ -39,7 +39,7 @@
 
 - name: Copy CA certificate
   copy:
-    remote_src: "{{ False if ansible_connection == 'chroot' else True }}"
+    remote_src: "{{ False if in_image else True }}"
     src: "{{ ssl_ca_cert }}"
     dest: "{{ ca_certificate_path }}/{{ ssl_ca_cert | basename }}"
 
@@ -57,18 +57,18 @@
   systemd:
     name: sssd
     state: started
-  when: ansible_connection not in 'chroot'
+  when: not in_image
 
 - name: Adding access controler groups to the system
   shell: '/usr/local/sbin/obol group list | grep {{ item }} || /usr/local/sbin/obol group add {{ item }}'
   register: obol_result
   with_items: '{{ sss_allowed_groups }}'
   changed_when: item not in obol_result.stdout
-  when: primary|default(True)
-        and ansible_connection not in 'chroot'
-        and not compute|default(False)
-        and sss_allowed_groups is defined
-        and sss_allowed_groups is iterable
+  when: 
+    - primary|default(True)
+    - on_controller   
+    - sss_allowed_groups is defined
+    - sss_allowed_groups is iterable
 
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update

@@ -4,9 +4,7 @@
 - block:
   - include_tasks: cli.yml
   - include_tasks: drainer.yml
-  when:
-    - ansible_connection not in 'chroot'
-    - not compute|default(False)
+  when: on_controller
 
 # below for images
 - block:
@@ -30,4 +28,4 @@
     service:
       name: 'alertx-hook.service'
       enabled: true
-  when: ansible_connection in 'chroot' or compute|default(False)
+  when: in_image or on_node|default(False)
