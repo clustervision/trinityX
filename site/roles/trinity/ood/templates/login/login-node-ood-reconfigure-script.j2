@@ -71,7 +71,7 @@ EOF
 
     openssl x509 -subject -ext subjectAltName -noout -in ood-${MYHOSTNAME}.crt
 
-    chgrp {{ ssl_cert_group }} ood-${MYHOSTNAME}.key
+    chgrp {{ ssl_cert_group }} ood-${MYHOSTNAME}.*
     chmod 640 ood-${MYHOSTNAME}.key
     mv ood-${MYHOSTNAME}.* {{ trix_ssl }}/
 
@@ -90,6 +90,6 @@ EOF
     sed -i 's/'$FILTER'/'$MYHOSTNAME'/' /etc/ood/config/ood_portal.yml
     sed -i 's/'$FILTER'/'$MYHOSTNAME'/' /etc/ood/config/clusters.d/TrinityX.yml
     /opt/ood/ood-portal-generator/sbin/update_ood_portal
-    systemctl restart httpd
+    #systemctl restart httpd
 fi
 
