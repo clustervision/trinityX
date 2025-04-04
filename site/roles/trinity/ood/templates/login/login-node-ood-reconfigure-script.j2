@@ -7,6 +7,7 @@ firewall-cmd --add-port={{ ood_port }}/tcp --permanent
 firewall-cmd --reload
 
 MYHOSTNAME=$(hostname --long)
+MYHOSTSHORT=$(hostname --short)
 serial=$(date +%s)
 
 # ----------------------------------------
@@ -37,8 +38,8 @@ subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = ${MYHOSTNAME}
-DNS.2 = {{ trix_external_fqdn }}
-DNS.3 = {{ trix_login_fqdn | default(trix_external_fqdn) }}
+DNS.2 = ${MYHOSTSHORT}
+{{ 'DNS.3 = '+trix_external_fqdn if trix_external_fqdn != '' else '' }}
 IP.1 = {{ trix_login_ip | default('127.0.0.1') }}
 EOF
 
