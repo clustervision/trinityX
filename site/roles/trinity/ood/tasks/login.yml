@@ -1,0 +1,29 @@
+---
+- name: Render reconfigure scripts for login node installation
+  when: in_login_image|default(False)
+  block:
+    - name: Render login-node-ood-reconfigure script
+      template:
+        src: 'login/login-node-ood-reconfigure-script.j2'
+        dest: '{{ trix_sbin }}/login-node-ood-reconfigure.sh'
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Render /etc/systemd/system/login-node-ood-reconfigure.service
+      template:
+        src: 'login/login-node-ood-reconfigure-service.j2'
+        dest: '/etc/systemd/system/login-node-ood-reconfigure.service'
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Populate service facts
+      service_facts:
+
+    - name: Enable post boot login services for OOD preparation 
+      service:
+        name: 'login-node-ood-reconfigure'
+        state: stopped
+        enabled: true
+

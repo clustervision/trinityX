@@ -41,12 +41,11 @@
     ssl_cert_organization: 'ClusterVision Solutions B.V.'
     ssl_cert_state: 'Noord Holland'
     ssl_cert_altname: 
-      - '{{ trix_login_hostname }}.{{ trix_domain }}'
       - '{{ ansible_fqdn }}'
       - '{{ trix_external_fqdn }}'
-      - '{{ trix_login_fqdn | default("trix_external_fqdn") }}'
+      - '{{ trix_login_fqdn }}'
     ssl_cert_altip: 
-      - '{{ trix_login_ip|default("127.0.0.1") }}'
+      - '{{ trix_login_ip | default("127.0.0.1") }}'
     ssl_cert_days: '36500'
     tags: ssl-cert
 
@@ -138,7 +137,7 @@
     ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
     ood_ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
     ood_ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-    ood_login_host: "{{ trix_login_fqdn | default('trix_external_fqdn') }}"
+    ood_login_host: "{{ trix_login_fqdn }}"
     ood_ldap_host: "{{ trix_ctrl_ip }}"
     ood_admin_group: "{{ admin_group }}"
     tags: ood, ood-core

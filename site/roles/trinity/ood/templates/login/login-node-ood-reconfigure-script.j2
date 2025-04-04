@@ -1,0 +1,94 @@
+#!/bin/bash
+
+# we cannot start/enable firewalld in ansible/lchroot
+systemctl enable firewalld
+systemctl start firewalld
+firewall-cmd --add-port={{ ood_port }}/tcp --permanent
+firewall-cmd --reload
+
+MYHOSTNAME=$(hostname --long)
+serial=$(date +%s)
+
+# ----------------------------------------
+
+#if [ "$(grep __HOSTNAME__ /etc/ood/config/ood_portal.yml)" ] || [ "$(grep __HOSTNAME__ /etc/ood/config/clusters.d/TrinityX.yml)" ]; then
+if [ "{{ 'yes' if trix_login_fqdn == '__HOSTNAME__' else '' }}" ]; then
+
+    FILTER={{ trix_login_fqdn }}
+
+    mkdir -p "{{ trix_local }}/certs"
+    cd "{{ trix_local }}/certs"
+
+    # ----------------------------------------
+
+    cat << EOF > san.conf
+[ req ]                   
+distinguished_name = req_distinguished_name         
+req_extensions     = req_ext                        
+[ req_distinguished_name ]                          
+countryName         = Country Name (2 letter code)  
+stateOrProvinceName = State or Province Name (full name)                                                 
+localityName        = Locality Name (eg, city)      
+organizationName    = Organization Name (eg, company)                                                    
+commonName          = Common Name (e.g. server FQDN)                                        
+
+[ req_ext ]               
+subjectAltName = @alt_names                         
+
+[alt_names]
+DNS.1 = ${MYHOSTNAME}
+DNS.2 = {{ trix_external_fqdn }}
+DNS.3 = {{ trix_login_fqdn | default(trix_external_fqdn) }}
+IP.1 = {{ trix_login_ip | default('127.0.0.1') }}
+EOF
+
+    # ----------------------------------------
+
+    LAST_IP=$(grep -w IP san.conf 2> /dev/null | sort -n | tail -n1 | tr '.' ' ' | awk '{ print $2 }' | grep -v "^$" || echo 1)
+    LAST_IP=$[LAST_IP+1]
+    for IP in $(ip a |grep inet| tr '/' ' ' |awk '{ print $2 }'); do
+        echo "IP.${LAST_IP} = ${IP}" >> san.conf
+    done
+
+    rm -f ood-${MYHOSTNAME}.* 2> /dev/null
+
+    openssl req -new -nodes -sha512 \
+        -subj '/C=NL/ST=Noord Holland/L=Amsterdam/O=ClusterVision Solutions B.V./CN='${MYHOSTNAME} \
+        -out 'ood-'${MYHOSTNAME}'.csr' \
+        -keyout 'ood-'${MYHOSTNAME}'.key' \
+        -config 'san.conf'
+
+    openssl x509 -req \
+        -days 3650 \
+        -in 'ood-'${MYHOSTNAME}'.csr' \
+        -CA '{{ trix_ssl }}/cluster-ca.crt' \
+        -CAkey '{{ trix_ssl }}/cluster-ca.key' \
+        -out 'ood-'${MYHOSTNAME}'.crt' \
+        -extensions req_ext \
+        -extfile 'san.conf' \
+        -set_serial $serial \
+
+    openssl x509 -subject -ext subjectAltName -noout -in ood-${MYHOSTNAME}.crt
+
+    chgrp {{ ssl_cert_group }} ood-${MYHOSTNAME}.key
+    chmod 640 ood-${MYHOSTNAME}.key
+    mv ood-${MYHOSTNAME}.* {{ trix_ssl }}/
+
+    # ----------------------------------------
+
+    grep -vE "^ssl:|SSLCertificateFile|SSLCertificateKeyFile" /etc/ood/config/ood_portal.yml > ood_portal.yml
+    cat << EOF >> ood_portal.yml
+
+ssl:
+  - 'SSLCertificateFile "{{ trix_ssl }}/ood-${MYHOSTNAME}.crt"'
+  - 'SSLCertificateKeyFile "{{ trix_ssl }}/ood-${MYHOSTNAME}.key"'
+
+EOF
+    cat ood_portal.yml > /etc/ood/config/ood_portal.yml
+
+    sed -i 's/'$FILTER'/'$MYHOSTNAME'/' /etc/ood/config/ood_portal.yml
+    sed -i 's/'$FILTER'/'$MYHOSTNAME'/' /etc/ood/config/clusters.d/TrinityX.yml
+    /opt/ood/ood-portal-generator/sbin/update_ood_portal
+    systemctl restart httpd
+fi
+
