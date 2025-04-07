@@ -193,6 +193,20 @@
       resource_type: 'ocf:heartbeat:IPaddr2'
       options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Trinity'
       state: present
+
+  - name: Add external floating IP resource
+    pcs_resource:
+      name: 'trinity-ip-external'
+      resource_type: 'ocf:heartbeat:IPaddr2'
+      options: 'ip={{ trix_ctrl_external_floating_ip }} nic={{ trix_ctrl_external_nic }} cidr_netmask={{ trix_ctrl_external_netprefix }} op monitor interval=29s --group Trinity'
+      state: present
+    when:
+      - trix_ctrl_external_floating_ip is defined
+      - trix_ctrl_external_floating_ip != ''
+      - trix_ctrl_external_netprefix is defined
+      - trix_ctrl_external_netprefix != ''
+      - trix_ctrl_external_nic is defined
+      - trix_ctrl_external_nic != ''
   when: primary
 
 # --------------------- fencing ----------------------------
