@@ -26,12 +26,12 @@ project_id: '000000'
 #########################################################################
 #                           Cloud Details                               #
 #########################################################################
-# -----------------------------------------------------------------------
+
 # Which Cloud Providers need to be used for this installation.
 # Currently only azure_cloud is supported.
 azure_cloud: false
 aws_cloud: false
-gcp_cloud: false
+gcp_cloud: false  # gcp not supported yet. keep at false
 
 # Detailed configuration can be found in group_vars/<cloud>.yml
 # Please consider configuring these yml files, before proceeding
@@ -47,7 +47,7 @@ gcp_cloud: false
 #########################################################################
 #                         High Availability                             #
 #########################################################################
-# -----------------------------------------------------------------------
+
 # Do we want HA?
 # Set to 'False' to disable HA, set to 'True' to enable it.
 
@@ -71,10 +71,11 @@ fence_ipmilan_passwd: 'password'
 
 enable_heartbeat_link: true
 
+
+#########################################################################
+#                         Network configuration                         #
 #########################################################################
 
-
-# -----------------------------------------------------------------------
 # A domain name to be assigned to the controller(s) and nodes
 # on the internal network.
 # Luna's provisioning network name will be set to the same value.
@@ -124,6 +125,8 @@ trix_ctrl2_hostname: controller2
 trix_ctrl_ip: 10.141.255.252
 trix_ctrl_hostname: controller
 
+
+# -----------------------------------------------------------------------
 # Optional overrides when defaults do not fullfil what's expected
 # When left undefined or empty, ansible will use the IP/network address
 # assigned to the interface where the default route is defined for.
@@ -131,6 +134,18 @@ trix_ctrl_hostname: controller
 
 # trix_ctrl_external_ip:
 # trix_ctrl_external_network: # w.x.y.z/nn
+
+
+# -----------------------------------------------------------------------
+# HA: Configure a floating ip address on the external interfaces (read:
+# outbound interfaces) as well. The trix_ctrl_external_nic can be set
+# but is optional. TrinityX tries to figure this out based on the default
+# route, which most likely uses the preferred external nic. If netprefix is
+# not given, it'll be tried by looking at trix_ctrl_external_network.
+
+# trix_ctrl_external_nic:         # e.g. ens192
+# trix_ctrl_external_floating_ip: # w.x.y.z
+
 
 # -----------------------------------------------------------------------
 # quasi optional hostname/fqdn to be used for services that are outward facing,
@@ -148,7 +163,7 @@ trix_login_fqdn: ''
 
 
 # -----------------------------------------------------------------------
-# DNS forwarders.
+# DNS forwarders. These should normally point to your organization's DNS servers.
 
 trix_dns_forwarders: 
   - "8.8.8.8"
@@ -164,7 +179,10 @@ trix_dns_forwarders:
 resolv_search_domains: '{{ trix_domain }} __CLOUD__ ib ipmi'
 
 
-# -----------------------------------------------------------------------
+#########################################################################
+#                          Paths configuration                          #
+#########################################################################
+#
 # Path to which the standard TrinityX files will be installed.
 # If not set, it will default to /trinity
 
@@ -205,7 +223,10 @@ trix_examples: '{{ trix_shared }}/examples'
 trix_modulefiles: '{{ trix_shared }}/modulefiles'
 
 
-# -----------------------------------------------------------------------
+#########################################################################
+#                      Shared Disk configuration                        #
+#########################################################################
+
 # Backend type and block device to use for the specified backend.
 # Works in conjunction with H/A. Combinations are supported.
 # 'type' can be: drbd, nfs, iscsi or direct (e.g. multipath).
@@ -321,8 +342,11 @@ shared_fs_disks:
 shared_fs_prefix: '{{ trix_root }}/mounts'
 
 
-# -----------------------------------------------------------------------
-# Luna credentials. These should be changed.
+#########################################################################
+#                     Luna specific configuration                       #
+#########################################################################
+
+# Luna credentials. These SHOULD be changed.
 
 luna_username: luna
 luna_password: luna
@@ -337,7 +361,10 @@ luna_protocol: https
 luna_verify_certificate: false
 
 
-# -----------------------------------------------------------------------
+#########################################################################
+#                        Firewall configuration                         #
+#########################################################################
+
 # Default firewalld configuration
 # Only public tcp/udp ports are allowed on the public interfaces
 # whereas everything is allowed on the trusted interfaces
@@ -353,7 +380,10 @@ firewalld_public_udp_ports: []
 # Open-ondemand: 8080/tcp
 
 
-# -----------------------------------------------------------------------
+#########################################################################
+#                        Groups and certificates                        #
+#########################################################################
+
 # Admin group is used to give privileges to the members of this group.
 # It's used for logins, ood and others.
 
@@ -374,7 +404,6 @@ ssl_cert_group: ssl
 #                           Open Ondemand                               #
 #########################################################################
 
-# -----------------------------------------------------------------------
 # Choose the auth provider for Open OnDemand
 # - pam
 # - dex  ( only openldap is configured for dex )
@@ -393,9 +422,9 @@ ood_enable_interactive_apps:
 
 
 #########################################################################
+#                           Miscellaneous                               #
+#########################################################################
 
-
-# -----------------------------------------------------------------------
 # OpenHPC repositories. commonly used for openhpc and schedulers
 
 # --- for EL8:

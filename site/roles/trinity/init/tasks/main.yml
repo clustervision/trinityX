@@ -373,6 +373,11 @@
         set_fact:
           trix_ctrl_external_network: "{{ init_ctrl_external_network_info['network']+'/'+init_ctrl_external_network_info['prefix'] }}"
         when: trix_ctrl_external_network is not defined or trix_ctrl_external_network == "" 
+
+      - name: Resolving external interface netprefix address
+        set_fact:
+          trix_ctrl_external_netprefix: "{{ init_ctrl_external_network_info['prefix'] }}"
+        when: trix_ctrl_external_netprefix is not defined or trix_ctrl_external_netprefix == "" 
       when: hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv4'] is defined
     when: trix_ctrl_external_nic is defined
 
