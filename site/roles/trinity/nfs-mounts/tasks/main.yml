@@ -178,7 +178,7 @@
       src: '{{ item.remote }}'
       fstype: '{{ item.type | default("nfs") }}'
       opts: '{{ item.options }},proto={{ "rdma" if ((item.type is not defined) or item.type == "nfs") and nfs_enable_rdma else "tcp" }}'
-      state: '{{ "present" if in_image else "mounted" }}'
+      state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
     with_items: '{{ new_nfs_mounts }}'
     when: 
       - ansible_facts['os_family'] == "RedHat"
@@ -191,7 +191,7 @@
       src: '{{ item.remote }}'
       fstype: "{{ item.type | default('nfs') }}"
       opts: '{{ item.options }}'
-      state: '{{ "present" if in_image else "mounted" }}'
+      state: '{{ "present" if ansible_connection in "chroot" else "mounted" }}'
     with_items: '{{ new_nfs_mounts }}'
     when: 
       - ansible_facts['os_family'] == "Debian"
