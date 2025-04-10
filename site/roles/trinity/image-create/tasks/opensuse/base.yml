@@ -3,10 +3,9 @@
   include_vars: "{{ package_arch }}/image-{{ image_create_distribution }}.yaml"
   ignore_errors: true
 
-- name: Install dnf-utils
-  dnf:
-    disable_gpg_check: true
-    name: dnf-utils
+- name: Install required packages
+  yum:
+    name: "{{ required_packages }}"
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
