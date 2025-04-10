@@ -1,0 +1,53 @@
+---
+- hosts: localhost
+  pre_tasks:
+  #
+  # the image name can be set in the below fact.
+  #
+  - name: Set image name
+    set_fact:
+      image_name: "opensuse"
+    tags: always
+
+- import_playbook: imports/trinity-opensuse-image-create.yml
+  vars:
+    image_name: "{{ hostvars['localhost']['image_name'] }}"
+    # The password to set up for the root user in the image.
+    # If empty, it will be generated at random.
+    #
+    image_password:
+    #
+    # Alternative distribution build. Supported are Ubuntu, version 20, 22 and 24
+    # or any docker image, e.g. ubuntu:rolling
+    #alternative_distribution: Ubuntu-22
+    # 
+    # The alternative source can be 'base' or 'docker'
+    #alternative_image_source: 'base'
+
+
+- import_playbook: imports/trinity-opensuse-image-setup.yml
+  vars:
+    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+
+- hosts:
+    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+  roles:
+
+    # Not supported on Ubuntu
+
+    # - role: trinity/slurm
+    #   slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+    #   slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+    #   munge_conf_path: '{{ trix_shared }}/etc/munge'
+    #   tags: slurm
+
+    - role: trinity/wrapup-images
+      tags: wrapup-images
+
+- hosts: controllers
+  roles:
+    - role: trinity/pack-images
+      vars:
+         params:
+            image_name: "{{ hostvars['localhost']['image_name'] }}"
+      tags: pack-images
