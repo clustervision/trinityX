@@ -48,15 +48,28 @@
 #    - /etc/resolv.conf
 #  when: ansible_distribution == "RedHat"
 
+- name: Prepare paths in image
+  file:
+    path: "{{ image_path }}/etc/yum.repos.d"
+    state: directory
+  with_items:
+    - /etc/yum.repos.d
+    - /var/lib/rpm
+    - /etc/pki/rpm-gpg
+
 - name: Configure Suse dnf repositories
   template:
     src: opensuse-repo.j2
     dest: "/etc/yum.repos.d/opensuse.repo"
 
-- name: Prepare rpm DB paths
-  file:
-    path: "{{ image_path }}/var/lib/rpm"
-    state: directory
+- name: Set for image fact
+  set_fact:
+    for_image: true
+
+- name: Configure Suse dnf repositories in image
+  template:
+    src: opensuse-repo.j2
+    dest: "{{ image_path }}/etc/yum.repos.d/opensuse.repo"
 
 - name: Initialize the suse rpm DB
   shell: "rpm --root {{ image_path }} --initdb"
@@ -106,8 +119,23 @@
     - {dev: "ptmx", mo: "666", t: 'c', ma: 5, mi: 2}
     - {dev: "tty", mo: "666", t: 'c', ma: 5, mi: 0}
 
+- name: Copy the rpm gpg key to the image
+  copy:
+    src: /usr/share/distribution-gpg-keys/opensuse/RPM-GPG-KEY-openSUSE
+    dest: "{{ image_path }}/etc/pki/rpm-gpg/"
+
+- name: Prepare zypper to work
+  shell: "chroot {{ image_path }} {{ item }}"
+  with_items:
+    - /usr/sbin/update-ca-certificates
+    - rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openSUSE
+    - zypper rr opensuse
+    - zypper ar /etc/yum.repos.d/opensuse.repo
+    - zypper --gpg-auto-import-keys refresh
+  ignore_errors: true
+
 - name: Create base opensuse OS
-  command: "{{ image_path }}/usr/bin/zypper --root {{ image_path }} --non-interactive in -t pattern base"
+  shell: "chroot {{ image_path }} zypper --non-interactive in -t pattern base"
 
 # commented block not needed? image setup will generate repos and below is using repos on controller - Antoine
 #
@@ -140,7 +168,8 @@
 #  when: local_install | default(False)
 
 - name: Install core packages - @core, kernel and grub2
-  command: "{{ image_path }}/usr/bin/zypper --root {{ image_path }} --non-interactive in {{ item }}"
+  shell: "chroot {{ image_path }} zypper --non-interactive in {{ item }}"
+  #command: "{{ image_path }}/usr/bin/zypper --root {{ image_path }} --non-interactive in {{ item }}"
   with_items: "{{ image_core_packages }}"
 #  dnf:
 #    disable_gpg_check: true
