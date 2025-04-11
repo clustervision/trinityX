@@ -138,6 +138,9 @@ def listener():
 
         for alert in alerts_prometheus:
             labels_dict = alert["labels"]
+            description = "No description"
+            if "annotations" in alert and "description" in alert["annotations"]:
+                description = alert["annotations"]["description"]
             alert_name = labels_dict["alertname"]
             hostname = labels_dict.get("hostname", "")
             if not hostname:
@@ -173,10 +176,15 @@ def listener():
                     reason = f"{marker} {alert_name} error triggered, check Grafana/Prometheus to debug"
                     try:
                         subprocess.check_call(['scontrol', 'update', f'NodeName={node_name}', 'State=DRAIN', f'Reason={reason}'])
-                        logger.info(f"Node {node_name} drained successfully with reason: {reason}")
+                        logger.info(f"Node {node_name} drained successfully with reason: {reason} ... Full description: {description}")
                         node_drained = True
                     except subprocess.CalledProcessError as e:
                         logger.error(f"Error draining node {node_name}: {e}")
+                if "DRAIN" in state:
+                    logger.debug(f"Alert with name {alert_name} is firing again for {node_name}, but the node is already drained")
+                    if node_name not in nhc_firing_nodes:
+                        nhc_firing_nodes.append(node_name)
+                    logger.info(f"Node {node_name} is already drained but another NHC-enabled alert {alert_name} is firing ... Full description: {description}")
 
             elif alert['status'] == 'resolved' and nhc in true_dict:
                 reason = node_info.get("Reason", "")
