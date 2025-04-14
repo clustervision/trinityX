@@ -8,24 +8,24 @@
   ignore_errors: true
 
 - name: Install rsyslog
-  yum:
-    name: rsyslog
+  package:
+    name: "{{ rsyslog_package }}"
     state: installed
-  when: ansible_facts['os_family'] == "RedHat"
+#  when: ansible_facts['os_family'] == "RedHat"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-- name: Install rsyslog
-  apt:
-    name: rsyslog
-    state: present
-  when: ansible_facts['os_family'] == "Debian"
+#- name: Install rsyslog
+#  apt:
+#    name: rsyslog
+#    state: present
+#  when: ansible_facts['os_family'] == "Debian"
 
-- name: Install rsyslog
-  zypper:
-    name: syslog-ng
-    state: present
-  when: ansible_facts['os_family'] == "Suse"
+#- name: Install rsyslog
+#  zypper:
+#    name: syslog-ng
+#    state: present
+#  when: ansible_facts['os_family'] == "Suse"
 
 - name: Configure listeners
   blockinfile:
