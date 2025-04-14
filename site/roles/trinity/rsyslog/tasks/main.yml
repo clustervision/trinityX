@@ -1,6 +1,12 @@
 ---
 # tasks file for rsyslog
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yaml"
+  ignore_errors: true
+
 - name: Install rsyslog
   yum:
     name: rsyslog
@@ -15,9 +21,15 @@
     state: present
   when: ansible_facts['os_family'] == "Debian"
 
+- name: Install rsyslog
+  zypper:
+    name: syslog-ng
+    state: present
+  when: ansible_facts['os_family'] == "Suse"
+
 - name: Configure listeners
   blockinfile:
-    path: '/etc/rsyslog.d/{{ item.proto | lower }}-listeners.conf'
+    path: '{{ rsyslog_config_location }}/{{ item.proto | lower }}-listeners.conf'
     create: true
     owner: root
     group: root
@@ -26,16 +38,18 @@
       ${{ 'Input' if item.proto|lower == 'tcp' else '' }}{{ item.proto | upper }}ServerRun {{ item.port }}
   with_items: '{{ syslog_listeners }}'
   notify: restart rsyslog
+  when: on_controller
 
 - name: Create cluster-messages log directory
   file:
     path: /var/log/cluster-messages
     state: directory
+  when: on_controller
 
 - name: Add template rules
   template:
     src: 'template-rule.conf.j2'
-    dest: '/etc/rsyslog.d/template-rule-{{ item.name }}.conf'
+    dest: '{{ rsyslog_config_location }}/template-rule-{{ item.name }}.conf'
     owner: root
     group: root
   with_items: '{{ syslog_file_template_rules }}'
@@ -44,7 +58,7 @@
 - name: Add forwarding rules
   template:
     src: 'forwarding.conf.j2'
-    dest: '/etc/rsyslog.d/forwarding-{{ item.name }}.conf'
+    dest: '{{ rsyslog_config_location }}/forwarding-{{ item.name }}.conf'
     owner: root
     group: root
   with_items: '{{ syslog_forwarding_rules }}'
@@ -57,16 +71,18 @@
     setype: syslogd_port_t
     state: present
   with_items: '{{ syslog_forwarding_rules }}'
-  when: ansible_selinux.status == "enabled"
+  when: 
+    - on_controller
+    - ansible_selinux.status == "enabled"
   ignore_errors: true
 
 - name: Enable rsyslog service
   systemd:
-    name: rsyslog
+    name: "{{ rsyslog_service }}"
     enabled: true
 
 - name: Start rsyslog daemon
   service:
-    name: rsyslog
+    name: "{{ rsyslog_service }}"
     state: restarted
   when: not in_image
