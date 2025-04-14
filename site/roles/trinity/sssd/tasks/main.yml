@@ -23,6 +23,15 @@
   tags: install-only
   when: ansible_facts['os_family'] == "Debian"
 
+- name: Install sssd packages
+  zypper:
+    name: '{{ sss_packages }}'
+    state: present
+  tags: install-only
+  when: ansible_facts['os_family'] == "Suse"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
 - name: Add configuration file to /etc/sssd/sssd.conf
   template:
     src: 'sssd.conf.j2'
