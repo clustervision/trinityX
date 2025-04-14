@@ -135,16 +135,25 @@
     dest: "{{ image_path }}/etc/pki/rpm-gpg/"
 
 - name: Prepare zypper to work
-  shell: "chroot {{ image_path }} {{ item }}"
-  with_items:
-    - mount proc -t proc /proc
-    - /usr/sbin/update-ca-certificates
-    - rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openSUSE
-    - zypper rr opensuse
-    - zypper ar /etc/yum.repos.d/opensuse.repo
-    - zypper --gpg-auto-import-keys refresh
-    - zypper up --replacefiles --no-confirm
-  ignore_errors: true
+  block:
+  - name: Running shell commands inside image
+    shell: "chroot {{ image_path }} {{ item }}"
+    with_items:
+      - mount proc -t proc /proc
+      - /usr/sbin/update-ca-certificates
+      - rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openSUSE
+      - zypper rr opensuse
+      - zypper ar /etc/yum.repos.d/opensuse.repo
+      - zypper --gpg-auto-import-keys refresh
+      - zypper up --replacefiles --no-confirm
+      - umount /proc
+  rescue:
+  - name: Tasks in image before leaving playbook
+    shell: "chroot {{ image_path }} {{ item }}"
+    with_items:
+      - umount /proc
+    ignore_errors: true
+
 
 - name: Create base opensuse OS
   shell: "chroot {{ image_path }} zypper --non-interactive in -t pattern base"
