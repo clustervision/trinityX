@@ -32,6 +32,14 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+- name: Create symlink for Suse sssd config directory
+  file: 
+    src: /usr/etc/sssd
+    dest: /etc/sssd
+    state: link
+    force: true
+  when: ansible_facts['os_family'] == "Suse"
+
 - name: Add configuration file to /etc/sssd/sssd.conf
   template:
     src: 'sssd.conf.j2'
