@@ -173,7 +173,7 @@ def listener():
                     logger.debug(f"Alert with name {alert_name} is firing for {node_name}, this node should drain now")
                     if node_name not in nhc_firing_nodes:
                         nhc_firing_nodes.append(node_name)
-                    reason = f"{marker} {alert_name} error triggered, check Grafana/Prometheus to debug"
+                    reason = f"{marker} {alert_name} error triggered, check the AlertX dashboard or AlertX logs to debug"
                     try:
                         subprocess.check_call(['scontrol', 'update', f'NodeName={node_name}', 'State=DRAIN', f'Reason={reason}'])
                         logger.info(f"Node {node_name} drained successfully with reason: {reason} ... Full description: {description}")
