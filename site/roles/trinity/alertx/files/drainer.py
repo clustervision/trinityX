@@ -181,7 +181,6 @@ def listener():
                     except subprocess.CalledProcessError as e:
                         logger.error(f"Error draining node {node_name}: {e}")
                 if "DRAIN" in state:
-                    logger.debug(f"Alert with name {alert_name} is firing again for {node_name}, but the node is already drained")
                     if node_name not in nhc_firing_nodes:
                         nhc_firing_nodes.append(node_name)
                     logger.info(f"Node {node_name} is already drained but another NHC-enabled alert {alert_name} is firing ... Full description: {description}")
