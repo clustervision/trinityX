@@ -8,14 +8,18 @@ prometheus_server_config_dir: /etc/prometheus
 prometheus_server_db_dir: /var/lib/prometheus
 prometheus_server_log_dir: /var/log/prometheus
 
+prometheus_server_tls:
+  enabled: false
+
 prometheus_server_web_listen_port: "9090"
 prometheus_server_web_listen_host: "0.0.0.0"
+prometheus_server_web_protocol: "{{ prometheus_server_tls.enabled | ternary('https', 'http') }}"
+prometheus_server_web_external_url: '{{ prometheus_server_web_protocol }}://{{ trix_external_fqdn }}:{{prometheus_server_web_listen_port}}/'
 
 prometheus_server_alert_rules_files:
   - prometheus/rules/*.rules
 
-prometheus_server_tls:
-  enabled: false
+
 
 prometheus_server_system_user: "prometheus-server"
 prometheus_server_system_group: "prometheus"
