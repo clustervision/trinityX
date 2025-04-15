@@ -221,4 +221,11 @@ groups:
     annotations:
       description: '{% raw %}Server has more than 1000 established TCP connections (current value: {{ $value }}){% endraw %}'
 
-
+  - alert: Failover
+    expr: '(max by (node) (ha_cluster_pacemaker_resources{resource="trinity-ip", status="active"})) unless on (node) (max by (node) (ha_cluster_pacemaker_resources{resource="trinity-ip", status="active"} offset 5m))'
+    labels:
+      severity: critical
+      category: generic
+    annotations:
+      description: >
+        {% raw %}The floating IP "trinity-ip" has changed its host node compared to 5 minutes ago. (current host: {{ $labels.node }}).{% endraw %}
