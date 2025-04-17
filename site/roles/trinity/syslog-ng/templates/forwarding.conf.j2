@@ -1,0 +1,14 @@
+
+{% if item.host is string %}
+
+destination remote { network("{{ item.host }}" transport("{{ 'tcp' if item.proto|lower == 'tcp' else 'udp' }}") port({{ item.port }})); };
+
+{% else %}
+{% for host in item.host %}
+
+destination remote { network("{{ host }}" transport("{{ 'tcp' if item.proto|lower == 'tcp' else 'udp' }}") port({{ item.port }})); };
+
+{% endfor %}
+{% endif %}
+
+

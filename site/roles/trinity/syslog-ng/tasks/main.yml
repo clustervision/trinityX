@@ -1,0 +1,66 @@
+---
+# tasks file for syslog-ng
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yaml"
+  ignore_errors: true
+
+- name: Install syslog-ng
+  package:
+    name: "{{ syslogng_package }}"
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+#- name: Configure listeners
+#  blockinfile:
+#    path: '{{ syslogng_config_location }}/{{ item.proto | lower }}-listeners.conf'
+#    create: true
+#    owner: root
+#    group: root
+#    block: |
+#      $ModLoad im{{ item.proto | lower }}
+#      ${{ 'Input' if item.proto|lower == 'tcp' else '' }}{{ item.proto | upper }}ServerRun {{ item.port }}
+#  with_items: '{{ syslog_listeners }}'
+#  notify: restart syslogng
+#  when: on_controller
+
+#- name: Create cluster-messages log directory
+#  file:
+#    path: /var/log/cluster-messages
+#    state: directory
+#  when: on_controller
+
+- name: Add forwarding rules
+  template:
+    src: 'forwarding.conf.j2'
+    dest: '{{ syslogng_config_location }}/forwarding-{{ item.name }}.conf'
+    owner: root
+    group: root
+  with_items: '{{ syslog_forwarding_rules }}'
+  notify: restart syslogng
+
+- name: Add SELinux rules for the forwarding ports
+  seport:
+    ports: '{{ item.port }}'
+    proto: '{{ item.proto }}'
+    setype: syslogd_port_t
+    state: present
+  with_items: '{{ syslog_forwarding_rules }}'
+  when: 
+    - on_controller
+    - ansible_selinux.status == "enabled"
+  ignore_errors: true
+
+- name: Enable syslog-ng service
+  systemd:
+    name: "{{ syslogng_service }}"
+    enabled: true
+
+- name: Start syslog-ng daemon
+  service:
+    name: "{{ syslogng_service }}"
+    state: restarted
+  when: not in_image

@@ -224,3 +224,10 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+- name: Enabling services
+  shell: "chroot {{ image_path }} systemctl enable {{ item }}"
+  with_items:
+    - NetworkManager
+    - sshd
+  ignore_errors: true
+
