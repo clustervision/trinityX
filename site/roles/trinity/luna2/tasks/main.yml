@@ -322,25 +322,25 @@
       state: directory
 
   - block:
-    - name: Download iPXE EFI image to tftpboot
+    - name: Download X86 64-bit iPXE EFI image to tftpboot
       get_url:
-        url: https://boot.ipxe.org/ipxe.efi
+        url: "{{ luna2_x86_64_ipxe_files }}/ipxe.efi"
         dest: "{{ luna2_tftpboot_directory }}/luna_ipxe.efi"
         mode: '0444'
 
     - name: Download iPXE legacy image to tftpboot
       get_url:
-        url: https://boot.ipxe.org/undionly.kpxe
+        url: "{{ luna2_x86_64_ipxe_files }}/undionly.kpxe"
         dest: "{{ luna2_tftpboot_directory }}/luna_undionly.kpxe"
         mode: '0444'
-    when: system_arch == "x86_64"
+    when: system_arch == "x86_64" or luna2_download_all_arch_ipxe_files|default(False)
 
-  - name: Download iPXE EFI image to tftpboot
+  - name: Download ARM 64-bit iPXE EFI image to tftpboot
     get_url:
-      url: "{{ luna2_alternative_ipxe_files }}/ipxe.efi"
-      dest: "{{ luna2_tftpboot_directory }}/luna_ipxe.efi"
+      url: "{{ luna2_aarch64_ipxe_files }}/ipxe.efi"
+      dest: "{{ luna2_tftpboot_directory }}/luna_ipxe_arm64.efi"
       mode: '0444'
-    when: system_arch == "aarch64"
+    when: system_arch == "aarch64" or luna2_download_all_arch_ipxe_files|default(False)
   when: ansible_facts['os_family'] == "RedHat"
 
 #- name: Include luna's DNS zone file in named conf
