@@ -16,10 +16,6 @@
                     {% else %}\
                     {% endif %}"
 
-- name: Gather package facts
-  ansible.builtin.package_facts:
-  when: "not 'packages' in ansible_facts"
-
 - name: Discover latest version
   ansible.builtin.set_fact:
     prometheus_alertmanager_version: "{{ (lookup('url', 'https://api.github.com/repos/{{ _prometheus_alertmanager_repo }}/releases/latest', headers=_github_api_headers,

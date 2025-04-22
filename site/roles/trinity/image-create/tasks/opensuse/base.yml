@@ -1,0 +1,229 @@
+---
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ package_arch }}/image-{{ image_create_distribution }}.yaml"
+  ignore_errors: true
+
+- name: Install required packages
+  yum:
+    name: "{{ required_packages }}"
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+#- name: Check OS release on controller
+#  shell: "rpm -qf /etc/os-release --qf '%{NAME}\n' | sort | uniq | tail -n1"
+#  register: os_release_rpm
+#  changed_when: false
+
+#- name: Copy local dnf.conf
+#  copy:
+#    remote_src: true
+#    src: "/etc/dnf/dnf.conf"
+#    dest: "{{ image_path }}/etc/dnf/"
+
+#- name: Copy local dnf variables
+#  copy:
+#    remote_src: true
+#    src: "/etc/dnf/vars"
+#    dest: "{{ image_path }}/etc/dnf/"
+
+##
+## The new releasever option in the dnf module actually doesn't do anything...
+## Workaround until it's fixed.
+##
+
+##- name: Add releasever variable
+##  copy:
+##   content: "7Server\n"
+##    dest: "{{ image_path }}/etc/dnf/vars/releasever"
+##  when: ansible_distribution == "RedHat"
+
+#- name: Touch config files for RedHat
+#  file:
+#    path: "{{ item }}"
+#    state: touch
+#  with_items:
+#    - /etc/sysconfig/network
+#    - /etc/resolv.conf
+#  when: ansible_distribution == "RedHat"
+
+- name: Prepare paths in image
+  file:
+    path: "{{ image_path }}/{{ item }}"
+    state: directory
+  with_items:
+    - /etc/yum.repos.d
+    - /var/lib/rpm
+    - /etc/pki/rpm-gpg
+    - /dev/pts
+
+- name: Configure Suse dnf repositories
+  template:
+    src: opensuse-repo.j2
+    dest: "/etc/yum.repos.d/opensuse.repo"
+
+- name: Set for image fact
+  set_fact:
+    for_image: true
+
+- name: Configure Suse dnf repositories in image
+  template:
+    src: opensuse-repo.j2
+    dest: "{{ image_path }}/etc/yum.repos.d/opensuse.repo"
+
+- name: Initialize the suse rpm DB
+  shell: "rpm --root {{ image_path }} --initdb"
+
+- name: Install bootstrap packages in {{ image_path }}
+  dnf:
+    disable_gpg_check: true
+    disablerepo: '*'
+    enablerepo: "opensuse"
+    name: "{{ item }}"
+    installroot: "{{ image_path }}"
+    state: present
+  with_items: "{{ image_bootstrap_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install zypper package in {{ image_path }}
+  dnf:
+    disable_gpg_check: true
+    disablerepo: '*'
+    enablerepo: "opensuse"
+    name:
+      - zypper
+    installroot: "{{ image_path }}"
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Create {{ image_path }}/dev
+  file:
+    path: "{{ image_path }}/dev/"
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Create basic /dev files
+  command: "/usr/bin/mknod {{ image_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates={{ image_path }}/dev/{{ item.dev }}"
+  args:
+    creates: "{{ image_path }}/dev/{{ item.dev }}"
+  with_items:
+    - {dev: "null", mo: "666", t: 'c', ma: 1, mi: 3}  # device, mode, type, major, minor
+    - {dev: "zero", mo: "666", t: 'c', ma: 1, mi: 5}
+    - {dev: "random", mo: "666", t: 'c', ma: 1, mi: 8}
+    - {dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9}
+    - {dev: "console", mo: "600", t: 'c', ma: 5, mi: 1}
+    - {dev: "ptmx", mo: "666", t: 'c', ma: 5, mi: 2}
+    - {dev: "tty", mo: "666", t: 'c', ma: 5, mi: 0}
+    - {dev: "pts/0", mo: "620", t: 'c', ma: 136, mi: 0}
+    - {dev: "pts/1", mo: "620", t: 'c', ma: 136, mi: 1}
+    - {dev: "pts/ptmx", mo: "000", t: 'c', ma: 5, mi: 2}
+
+- name: Create /dev/fd
+  file:
+    src: "/proc/self/fd"
+    dest: "{{ image_path }}/dev/fd"
+    force: true
+    state: link
+
+- name: Copy the rpm gpg key to the image
+  copy:
+    src: /usr/share/distribution-gpg-keys/opensuse/RPM-GPG-KEY-openSUSE
+    dest: "{{ image_path }}/etc/pki/rpm-gpg/"
+
+- name: Configure TrinityX repos
+  ansible.builtin.yum_repository:
+    name: "{{ item.name }}"
+    description: "{{ item.name }}"
+    baseurl: "{{ item.repo }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
+    reposdir: "{{ image_path + '/etc/yum.repos.d/' }}"
+  with_items: "{{ trinityx_repositories }}"
+  when: item.name is defined
+
+- name: Collecting repo names for next task
+  set_fact:
+    _repos_inside_image_remove: "{{ _repos_inside_image_remove|default([]) + [ 'zypper rr '+item.name ] }}"
+    _repos_inside_image_add: "{{ _repos_inside_image_add|default([]) + [ 'zypper ar /etc/yum.repos.d/'+item.name+'.repo' ] }}"
+  with_items: "{{ trinityx_repositories }}"
+  when: item.name is defined
+
+- name: Prepare zypper to work
+  block:
+  - name: Running shell commands inside image
+    shell: "chroot {{ image_path }} {{ item }}"
+    with_items:
+      - mount proc -t proc /proc
+      - /usr/sbin/update-ca-certificates
+      - rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openSUSE
+      - zypper rr opensuse
+      - zypper ar /etc/yum.repos.d/opensuse.repo
+      - "{{ _repos_inside_image_remove|default([]) }}"
+      - "{{ _repos_inside_image_add|default([]) }}"
+      - zypper --gpg-auto-import-keys refresh
+      - zypper up --replacefiles --no-confirm
+      - umount /proc
+  rescue:
+  - name: Tasks in image before leaving playbook
+    shell: "chroot {{ image_path }} {{ item }}"
+    with_items:
+      - umount /proc
+
+- name: Create base opensuse OS
+  shell: "chroot {{ image_path }} zypper --non-interactive in -t pattern base"
+
+# commented block not needed? image setup will generate repos and below is using repos on controller - Antoine
+#
+# - name: Include trinity/roles
+#  ansible.builtin.include_role:
+#    name: trinity/repos
+#  vars:
+#    params:
+#       install_root: "{{ image_path }}"
+#  tags: repos
+
+#- block:
+#  - name: Set up local repository
+#    yum_repository:
+#      name: "{{ trix_local_reponame }}"
+#      baseurl: "{{ trix_local_repo_baseurl }}"
+#      description: "{{ trix_local_reponame }}"
+#      gpgcheck: false
+#      enabled: true
+#      reposdir: "{{ image_path }}/etc/yum.repos.d"
+
+#  - name: Disable all repo without '*-local' suffix
+#    shell: >
+#      yum-config-manager --installroot={{ image_path }} \
+#      | sed -n 's/^\[\(.*\)\]$/\1/p' \
+#      | egrep -v "\-local$" \
+#      | xargs yum-config-manager --installroot={{ image_path }} --disable {}
+#    args:
+#      warn: false
+#  when: local_install | default(False)
+
+- name: Install core packages - @core, kernel and grub2
+  shell: "chroot {{ image_path }} zypper --non-interactive in {{ item }}"
+  #command: "{{ image_path }}/usr/bin/zypper --root {{ image_path }} --non-interactive in {{ item }}"
+  with_items: "{{ image_core_packages }}"
+#  dnf:
+#    disable_gpg_check: true
+#    disablerepo: '*'
+#    enablerepo: "opensuse"
+#    name: "{{ image_core_packages }}"
+#    state: present
+#    installroot: "{{ image_path }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Enabling services
+  shell: "chroot {{ image_path }} systemctl enable {{ item }} || true"
+  with_items:
+    - NetworkManager
+    - sshd
+  ignore_errors: true
+

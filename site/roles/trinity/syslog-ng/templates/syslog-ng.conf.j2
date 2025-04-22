@@ -1,0 +1,234 @@
+
+#### RSYSLOG RULES ####
+
+#template(name="NodeMessageFile" type="string" string="{{ rsyslog_cluster_logs_path }}/%HOSTNAME%.messages")
+##$template NodeMessageFile,"/var/log/messages-%HOSTNAME%"
+#if $fromhost-ip startswith '{{ rsyslog_cluster_net.split(".")[:rsyslog_cluster_netprefix//8]|join(".") }}' then  { action(type="omfile" DynaFile="NodeMessageFile") stop }
+#{{ rsyslog_ha_conf }}
+
+###### SYSLOG-NG ######
+
+@version:4.0
+@include "scl.conf"
+
+#
+# /etc/syslog-ng/syslog-ng.conf
+#
+# File format description can be found in syslog-ng.conf(5)
+# and in /usr/share/doc/packages/syslog-ng/syslog-ng.txt.
+#
+# NOTE: The SuSEconfig script and its syslog-ng.conf.in
+#       configuration template aren't used any more.
+#
+#       Feel free to edit this file directly.
+#
+
+#
+# Global options.
+#
+options { chain_hostnames(off); flush_lines(0); perm(0640); stats_freq(3600); threaded(yes); };
+
+#
+# 'src' is our main source definition. you can add
+# more sources driver definitions to it, or define
+# your own sources, i.e.:
+#
+#source my_src { .... };
+#
+source src {
+	#
+	# use system() for local logs
+	#
+	system();
+	#
+	# syslog-ng's internal messages
+	#
+	internal();
+	#
+	# uncomment to process log messages from network:
+	#
+	#udp(ip("0.0.0.0") port(514));
+};
+
+@include "/run/syslog-ng/additional-log-sockets.conf"
+
+#
+# Filter definitions
+#
+filter f_iptables   { facility(kern) and message("IN=") and message("OUT="); };
+
+filter f_console    { level(warn) and facility(kern) and not filter(f_iptables)
+                      or level(err) and not facility(authpriv); };
+
+filter f_newsnotice { level(notice) and facility(news); };
+filter f_newscrit   { level(crit)   and facility(news); };
+filter f_newserr    { level(err)    and facility(news); };
+filter f_news       { facility(news); };
+
+filter f_mailinfo   { level(info)      and facility(mail); };
+filter f_mailwarn   { level(warn)      and facility(mail); };
+filter f_mailerr    { level(err, crit) and facility(mail); };
+filter f_mail       { facility(mail); };
+
+filter f_cron       { facility(cron); };
+
+filter f_local      { facility(local0, local1, local2, local3,
+                               local4, local5, local6, local7); };
+
+#
+# acpid messages
+#
+filter f_acpid_full { program('acpid'); };
+filter f_acpid      { level(emerg..notice) and program('acpid'); };
+
+# this is for the old acpid < 1.0.6
+filter f_acpid_old  { program('^\[acpid\]$'); };
+
+filter f_netmgm     { program('NetworkManager') or program('nm-dispatcher'); };
+
+filter f_messages   { not facility(news, mail) and not filter(f_iptables); };
+filter f_warn       { level(warn, err, crit) and not filter(f_iptables); };
+filter f_alert      { level(alert); };
+
+
+#
+# Enable this and adopt IP to send log messages to a log server.
+#
+#destination logserver { udp("10.10.10.10" port(514)); };
+#log { source(src); destination(logserver); };
+
+#
+# Enable this, if you want to keep all messages in one file:
+# (don't forget to provide logrotation config)
+#
+#destination allmessages { file("/var/log/allmessages"); };
+#log { source(src); destination(allmessages); };
+
+#
+# Most warning and errors on tty10 and on the xconsole pipe:
+#
+destination console  { file("/dev/tty10"    suppress(30) owner(-1) group(-1) perm(-1)); };
+log { source(src); source(chroots); filter(f_console); destination(console); };
+
+destination xconsole { pipe("/dev/xconsole" suppress(30) owner(-1) group(-1) perm(-1)); };
+log { source(src); source(chroots); filter(f_console); destination(xconsole); };
+
+# Enable this, if you want that root is informed immediately,
+# e.g. of logins:
+#
+#destination root { usertty("root"); };
+#log { source(src); source(chroots); filter(f_alert); destination(root); };
+
+
+#
+# News-messages can be stored either in separate files:
+#
+#destination newscrit   { file("/var/log/news/news.crit"
+#    create-dirs(yes) dir-group("news") dir-owner("news") dir-perm(0750)
+#    suppress(30) owner(news) group(news));
+#};
+#log { source(src); source(chroots); filter(f_newscrit); destination(newscrit);};
+#
+#destination newserr    { file("/var/log/news/news.err"
+#    create-dirs(yes) dir-group("news") dir-owner("news") dir-perm(0750)
+#    suppress(30) owner(news) group(news));
+#};
+#log { source(src); source(chroots); filter(f_newserr); destination(newserr); };
+#
+#destination newsnotice { file("/var/log/news/news.notice"
+#    create-dirs(yes) dir-group("news") dir-owner("news") dir-perm(0750)
+#    suppress(30) owner(news) group(news));
+#};
+#log { source(src); source(chroots); filter(f_newsnotice); destination(newsnotice); };
+
+#
+# and optionally also all in one file:
+# (don't forget to provide logrotation config)
+#
+#destination news { file("/var/log/news.all"); };
+#log { source(src); source(chroots); filter(f_news); destination(news); };
+
+
+#
+# Mail-messages in separate files:
+#
+destination mailinfo { file("/var/log/mail.info" suppress(30)); };
+log { source(src); source(chroots); filter(f_mailinfo); destination(mailinfo); };
+
+destination mailwarn { file("/var/log/mail.warn" suppress(30)); };
+log { source(src); source(chroots); filter(f_mailwarn); destination(mailwarn); };
+
+destination mailerr  { file("/var/log/mail.err"  suppress(30) fsync(yes)); };
+log { source(src); source(chroots); filter(f_mailerr);  destination(mailerr); };
+
+#
+# and also all in one file:
+#
+destination mail { file("/var/log/mail" suppress(30)); };
+log { source(src); source(chroots); filter(f_mail); destination(mail); };
+
+
+#
+# acpid messages in one file:
+#
+destination acpid { file("/var/log/acpid" suppress(30)); };
+destination devnull { };
+log { source(src); source(chroots); filter(f_acpid); destination(acpid); flags(final); };
+#
+# if you want more verbose acpid logging, comment the destination(null)
+# line and uncomment the destination(acpid) line
+#
+log { source(src); source(chroots); filter(f_acpid_full); destination(devnull); flags(final); };
+# log { source(src); source(chroots); filter(f_acpid_full); destination(acpid); flags(final); };
+#
+# old acpid < 1.0.6
+log { source(src); source(chroots); filter(f_acpid_old); destination(acpid); flags(final); };
+
+#
+# NetworkManager messages in one file:
+#
+destination netmgm { file("/var/log/NetworkManager" suppress(30)); };
+log { source(src); source(chroots); filter(f_netmgm); destination(netmgm); flags(final); };
+
+
+#
+# Cron-messages in one file:
+# (don't forget to provide logrotation config)
+#
+#destination cron { file("/var/log/cron" suppress(30)); };
+#log { source(src); source(chroots); filter(f_cron); destination(cron); };
+
+
+#
+# Some boot scripts use/require local[1-7]:
+#
+destination localmessages { file("/var/log/localmessages" suppress(30)); };
+log { source(src); source(chroots); filter(f_local); destination(localmessages); };
+
+
+#
+# All messages except iptables and the facilities news and mail:
+#
+destination messages { file("/var/log/messages" suppress(30) owner(-1) group(-1) perm(-1)); };
+log { source(src); source(chroots); filter(f_messages); destination(messages); };
+
+
+#
+# Firewall (iptables) messages in one file:
+#
+destination firewall { file("/var/log/firewall" suppress(30)); };
+log { source(src); source(chroots); filter(f_iptables); destination(firewall); };
+
+
+#
+# Warnings (except iptables) in one file:
+#
+destination warn { file("/var/log/warn" suppress(30) fsync(yes)); };
+log { source(src); source(chroots); filter(f_warn); destination(warn); };
+
+
+###
+# Include all config files in /etc/syslog-ng/conf.d/
+###
+@include "/etc/syslog-ng/conf.d/"
+

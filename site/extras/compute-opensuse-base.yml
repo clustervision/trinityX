@@ -1,0 +1,24 @@
+---
+
+# create an absolute bare minimal image for redistribution
+
+- import_playbook: imports/trinity-opensuse-image-create.yml
+  vars:
+    image_name: "opensuse"
+    # The password to set up for the root user in the image.
+    # If empty, it will be generated at random.
+    #
+    image_password:
+    #
+    image_create_minimal: true
+    image_create_full: false
+    #  
+    # If supplied, the below release will be used. 
+    # 15.6 has a bug in libcurl
+    # 16.0 is missing lbzip2
+    opensuse_release: "leap/15.5"
+
+
+# pack afterwards with e.g.
+# /usr/bin/tar -C /trinity/images/opensuse --one-file-system --xattrs --selinux --acls --checkpoint=100000 --use-compress-program=/usr/bin/lbzip2 -c -f /trinity/images/base-image-OpenSUSE-15.5.tgz .
+
