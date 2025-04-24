@@ -12,6 +12,13 @@
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
 
+  # ansible filetree does a local lookup, not inside image lookup!
+  # prettiest, uggliest way to override this. it's in an image anyways.
+- name: Enforcing override for login image
+  set_fact:
+    override: true
+  when: in_login_image|default(False)
+
 - name: Gather variables and setup folder for app {{ app.name }}
   when: in_login_image|default(False) or on_controller
   block:
