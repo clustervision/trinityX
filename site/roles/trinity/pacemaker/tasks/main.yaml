@@ -86,7 +86,7 @@
 # TODO: better way than below
 - name: Install PCS
   ansible.builtin.shell: |
-    source /trinity/local/python/bin/activate
+    source {{ trix_local }}/python/bin/activate
     pip3 install --upgrade {{ pcs_noarch_pip_repository }}/{{ pcs_pip }}
     exit $?
   args:
@@ -96,7 +96,7 @@
 # TODO: better way than below
 - name: Install PCS
   ansible.builtin.shell: |
-    source /trinity/local/python/bin/activate
+    source {{ trix_local }}/python/bin/activate
     pip3 install --upgrade -i {{ pcs_noarch_pip_repository }}/ pcs
     exit $?
   args:
@@ -104,7 +104,7 @@
   when: pcs_pip is not defined
 
 - name: Get python libdir
-  shell: "echo /trinity/local/python/lib/python*"
+  shell: "echo {{ trix_local }}/python/lib/python*"
   register: luna2_python_dir
   changed_when: false
 
@@ -113,9 +113,9 @@
   ignore_errors: true
 
 - name: Install PCS wrapper
-  copy:
-    src: 'pcs'
-    dest: '/usr/local/sbin/'
+  template:
+    src: 'pcs.j2'
+    dest: '/usr/local/sbin/pcs'
     owner: root
     group: root
     mode: 0755

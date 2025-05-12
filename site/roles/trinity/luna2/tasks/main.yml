@@ -47,7 +47,7 @@
 # ----------------------------------------------------
 
 - name: Get python libdir
-  shell: "echo /trinity/local/python/lib/python*"
+  shell: "echo {{ trix_local }}/python/lib/python*"
   register: luna2_python_dir
   changed_when: false
 
@@ -56,7 +56,7 @@
 # TODO: better way than below
 - name: Install luna2 daemon
   ansible.builtin.shell: |
-    source /trinity/local/python/bin/activate
+    source {{ trix_local }}/python/bin/activate
     pip3 install --upgrade {{ luna2_noarch_pip_repository }}/daemon/{{ luna2_daemon_pip }}
     exit $?
   args:
@@ -66,7 +66,7 @@
 # TODO: better way than below
 - name: Install luna2 daemon
   ansible.builtin.shell: |
-    source /trinity/local/python/bin/activate
+    source {{ trix_local }}/python/bin/activate
     pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/daemon luna2-daemon
     exit $?
   args:
@@ -85,7 +85,7 @@
 # TODO: better way than below
 - name: Install luna2 cli
   ansible.builtin.shell: |
-    source /trinity/local/python/bin/activate
+    source {{ trix_local }}/python/bin/activate
     pip3 install --upgrade {{ luna2_noarch_pip_repository }}/cli/{{ luna2_cli_pip }}
     exit $?
   args:
@@ -95,7 +95,7 @@
 # TODO: better way than below
 - name: Install luna2 cli
   ansible.builtin.shell: |
-    source /trinity/local/python/bin/activate
+    source {{ trix_local }}/python/bin/activate
     pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/cli luna2-cli
     exit $?
   args:
@@ -114,7 +114,7 @@
 # TODO: better way than below
 - name: Install luna2 utils
   ansible.builtin.shell: |
-    source /trinity/local/python/bin/activate
+    source {{ trix_local }}/python/bin/activate
     pip3 install --upgrade {{ luna2_noarch_pip_repository }}/utils/{{ luna2_utils_pip }}
     exit $?
   args:
@@ -124,7 +124,7 @@
 # TODO: better way than below
 - name: Install luna2 utils
   ansible.builtin.shell: |
-    source /trinity/local/python/bin/activate
+    source {{ trix_local }}/python/bin/activate
     pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/utils luna2-utils
     exit $?
   args:
@@ -269,10 +269,10 @@
 - debug:
     msg: "{{ luna2_cluster }}"
 
-- name: Render /trinity/local/luna//daemon/config/bootstrap.ini
+- name: Render /trinity/local/luna/daemon/config/bootstrap.ini
   template:
     src: 'luna2.conf.j2'
-    dest: '/trinity/local/luna/daemon/config/bootstrap.ini'
+    dest: '{{ trix_luna }}/daemon/config/bootstrap.ini'
     owner: root
     group: root
     mode: 0644
