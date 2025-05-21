@@ -1,18 +1,21 @@
 ---
 
+- name: Ensure prometheus password store exists
+  file:
+    path: '{{ prometheus_alertmanager_auth.credentials_file | dirname }}'
+    state: directory
+    mode: 0750
+    group: '{{ prometheus_alertmanager_auth.group_access | default("root") }}'
+
 # -- start sync
 - block:
-  - name: Ensure prometheus password store exists
-    file:
-      path: '{{ prometheus_alertmanager_auth.credentials_file | dirname }}'
-      state: directory
-      mode: 0700
-
   - name: Copy prometheus password from sync
     copy:
       remote_src: true
       src: '{{ trix_sync }}/prometheus/{{ prometheus_alertmanager_auth.credentials_file | basename }}'
       dest: '{{ prometheus_alertmanager_auth.credentials_file }}'
+      mode: 0640
+      group: '{{ prometheus_alertmanager_auth.group_access | default("root") }}'
   when: 
     - not primary | default(False)
     - ha | default(False)
@@ -52,6 +55,7 @@
       src: '{{ prometheus_alertmanager_auth.credentials_file }}'
       dest: '{{ trix_sync }}//prometheus/'
       mode: 0640
+      group: '{{ prometheus_alertmanager_auth.group_access | default("root") }}'
   when:
     - primary | default(True)
     - ha | default(False)
