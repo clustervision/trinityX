@@ -42,6 +42,12 @@
     prometheus_alertmanager_auth_password_hash: "{{ _bcrypt.stdout }}"
   when: prometheus_alertmanager_auth_password is defined
 
+- name: "Set correct permissions on prometheus_alertmanager_auth.credentials_file"
+  file:
+    path: '{{ prometheus_alertmanager_auth.credentials_file }}'
+    mode: 0640
+    group: '{{ prometheus_alertmanager_auth.group_access | default("root") }}'
+
 # -- start sync
 - block:
   - name: Ensure prometheus alertmanager sync directory exists
@@ -54,8 +60,6 @@
       remote_src: true
       src: '{{ prometheus_alertmanager_auth.credentials_file }}'
       dest: '{{ trix_sync }}//prometheus/'
-      mode: 0640
-      group: '{{ prometheus_alertmanager_auth.group_access | default("root") }}'
   when:
     - primary | default(True)
     - ha | default(False)
