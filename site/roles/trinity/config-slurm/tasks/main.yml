@@ -1,0 +1,28 @@
+---
+- name: Install luna2 packages
+  yum:
+    name: '{{ luna2_packages }}'
+    state: present
+    enablerepo: luna2
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+# Install config_blocks pip package inside the Luna2 virtualenv
+- name: Install config_blocks pip package
+  ansible.builtin.pip:
+    name: '{{config_slurm_noarch_pip_repository}}/config-blocks/{{ config_blocks_wheel }}'
+    virtualenv: '{{ trix_local }}/python' 
+    extra_args: "--upgrade"
+
+# Install config_slurm pip package inside the Luna2 virtualenv
+- name: Install config_slurm pip package
+  ansible.builtin.pip:
+    name: '{{config_slurm_noarch_pip_repository}}/config-slurm/{{ config_slurm_wheel }}'
+    virtualenv: '{{ trix_local }}/python' 
+    extra_args: "--upgrade"
+
+# Add the managed block to the managed files
+- name: Fix structure of managed files
+  include_tasks: managed_block.yml
+  loop: "{{ scripts_managed_files }}"
+  

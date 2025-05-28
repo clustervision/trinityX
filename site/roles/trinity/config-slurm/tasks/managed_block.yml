@@ -1,0 +1,109 @@
+- name: "Collect info about file existance"
+  stat: "path={{ item }}"
+  register: item_path
+
+- name: "Collect info about bkp file existance"
+  stat: "path={{ item }}.bkp"
+  register: item_bkp_path
+
+- block:
+  - name: "Collect info about managed block"
+    shell: "cat {{ item }} | grep -E '({{ scripts_managed_block_start_regex }}|{{ scripts_managed_block_end_regex }})'|cat"
+    register: grep_managed_block
+
+  - name: "Collect info about defaults block"
+    shell: "cat {{ item }} | grep -E '({{ scripts_defaults_block_start_regex }}|{{ scripts_defaults_block_end_regex }})'|cat"
+    register: grep_defaults_block
+  when: item_path.stat.exists
+
+- block:
+  - name: "Set is_managed_block_present"
+    set_fact:
+      is_managed_block_present: "{{ grep_managed_block.stdout != '' }}"
+
+  - name: "Set is_defaults_block_present"
+    set_fact:
+      is_defaults_block_present: "{{ grep_defaults_block.stdout != '' }}"
+  when: item_path.stat.exists
+
+- name: "Ensure file is group owned by admins"
+  file:
+    path: "{{ item }}"
+    owner: root
+    group: '{{ cs_admin_group }}'
+    mode: g+rw
+  when: item_path.stat.exists
+
+- name: "Ensure backup file is present"
+  copy:
+    remote_src: true
+    src: "{{ item }}"
+    dest: "{{ item }}.bkp"
+    owner: root
+    group: '{{ cs_admin_group }}'
+    mode: g+rw
+  when: (item_path.stat.exists) and not (item_bkp_path.stat.exists)
+
+# defaults
+- block:
+  - name: "Ensure comments about defaults block is present in (existing) managed files (1)"
+    lineinfile:
+      path: "{{ item }}"
+      line: "{{ scripts_defaults_block_comment1 }}" 
+      regex: "{{ scripts_defaults_block_comment1 }}"
+      state: present
+
+  - name: "Ensure comments about defaults block is present in (existing) managed files (2)"
+    lineinfile:
+      path: "{{ item }}"
+      line: "{{ scripts_defaults_block_comment2 }}" 
+      regex: "{{ scripts_defaults_block_comment2 }}"
+      state: present
+      insertafter: "{{ scripts_defaults_block_comment1 }}"
+  when: item_path.stat.exists
+
+- block:
+  - name: "Ensure defaults block start delimiter is present in (existing) managed files"
+    lineinfile:
+      path: "{{ item }}"
+      line: "{{ scripts_defaults_block_start_delimiter }}"
+      insertafter: "{{ scripts_defaults_block_comment2 }}"
+
+  - name: "Ensure defaults block end delimiter is present in (existing) managed files"
+    lineinfile:
+      path: "{{ item }}"
+      line: "{{ scripts_defaults_block_end_delimiter }}\n\n"
+      insertafter: "{{ scripts_defaults_block_start_delimiter }}"
+  when: item_path.stat.exists and not is_defaults_block_present
+
+# managed block
+- block:
+  - name: "Ensure comments about managed block is present in (existing) managed files (1)"
+    lineinfile:
+      path: "{{ item }}"
+      line: "{{ scripts_managed_block_comment1 }}" 
+      regex: "{{ scripts_managed_block_comment1 }}"
+      state: present
+
+  - name: "Ensure comments about managed block is present in (existing) managed files (2)"
+    lineinfile:
+      path: "{{ item }}"
+      line: "{{ scripts_managed_block_comment2 }}" 
+      regex: "{{ scripts_managed_block_comment2 }}"
+      state: present
+      insertafter: "{{ scripts_managed_block_comment1 }}"
+  when: item_path.stat.exists
+
+- block:
+  - name: "Ensure block start delimiter is present in (existing) managed files"
+    lineinfile:
+      path: "{{ item }}"
+      line: "{{ scripts_managed_block_start_delimiter }}"
+      insertafter: "{{ scripts_managed_block_comment2 }}"
+
+  - name: "Ensure block end delimiter is present in (existing) managed files"
+    lineinfile:
+      path: "{{ item }}"
+      line: "{{ scripts_managed_block_end_delimiter }}\n\n"
+      insertafter: "{{ scripts_managed_block_start_delimiter }}"
+  when: item_path.stat.exists and not is_managed_block_present
