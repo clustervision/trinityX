@@ -1,0 +1,79 @@
+import requests
+import urllib3
+from typing import List, Dict
+from logger import Logger
+from config import PROMETHEUS_USER, PROMETHEUS_PASSWORD, PROMETHEUS_URL
+
+log = Logger.get_logger("TRIX-DRAINER: alert_fetcher")
+
+# Disable insecure HTTPS warnings (since we use --insecure equivalent)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+class AlertFetcher:
+    """
+    Class responsible for querying Prometheus Alertmanager for active alerts.
+    Specifically filters alerts that have the label 'nhc: true'.
+    """
+
+    def __init__(self):
+        self.url = f"{PROMETHEUS_URL.rstrip('/')}/api/v2/alerts"
+        self.auth = (PROMETHEUS_USER, PROMETHEUS_PASSWORD)
+        
+    def _fetch_alerts(self) -> List[Dict]:
+        """
+        Private method to query the Alertmanager API and return the raw list of active alerts.
+        Handles authentication and SSL warnings.
+        """
+        try:
+            response = requests.get(self.url, auth=self.auth, verify=False, timeout=5)
+            response.raise_for_status()
+            alerts = response.json()
+            log.debug(f"Fetched {len(alerts)} total alerts from Alertmanager.")
+            return alerts
+        except requests.RequestException as e:
+            log.error(f"Error fetching alerts from {self.url}: {e}")
+            return []
+
+    def get_nhc_alerts(self) -> List[Dict]:
+        """
+        Method to return all alerts where the label 'nhc' is set to 'true'.
+        Returns a list of alert dictionaries.
+        """
+        alerts = self._fetch_alerts()
+        nhc_alerts = [a for a in alerts if a.get("labels", {}).get("nhc", "").lower() == "true"]
+        log.debug(f"Found {len(nhc_alerts)} active NHC alerts.")
+        return nhc_alerts
+    
+    def map_alerts_to_nodes(self) -> Dict[str, List[str]]:
+        """
+        Converts the list of NHC alerts into a dictionary:
+        {
+            "node001": ["reason 1", "reason 2"],
+            "node002": ["reason A"]
+        }
+        Multiple alerts per node are aggregated.
+        """
+        nhc_alerts = self.get_nhc_alerts()
+        node_reasons = {}
+
+        for alert in nhc_alerts:
+            labels = alert.get("labels", {})
+            node = labels.get("hostname")
+            reason = alert.get("annotations", {}).get("description") or "No reason provided"
+
+            if not node:
+                continue
+            
+            # Normalize node name by stripping domain
+            node = node.split(".")[0]
+
+            if node not in node_reasons:
+                node_reasons[node] = []
+
+            node_reasons[node].append(reason)
+
+        log.debug(f"Mapped NHC alerts to {len(node_reasons)} nodes.")
+        return node_reasons
+
+

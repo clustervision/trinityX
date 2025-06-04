@@ -1,0 +1,107 @@
+import subprocess
+import re
+from typing import List, Tuple
+from logger import Logger
+import config  
+
+log = Logger.get_logger("TRIX-DRAINER: node_utils")
+
+
+class NodeUtils:
+    """
+    Utility class for interacting with Slurm nodes.
+    """
+
+    @staticmethod
+    def get_node_states() -> Tuple[List[str], List[str], List[str]]:
+        """
+        Returns a tuple of 3 lists:
+        - all_nodes: All node names found
+        - not_drained_nodes: Nodes not currently drained
+        - drainer_drained_nodes: Nodes drained by this drainer (based on MARKER in reason)
+        """
+        try:
+            output = subprocess.check_output(['scontrol', 'show', 'nodes'], text=True, timeout=10)
+            all_nodes = []
+            not_drained_nodes = []
+            drainer_drained_nodes = []
+
+            node_blocks = re.split(r"\n\s*\n", output.strip())  # split per-node block
+            for block in node_blocks:
+                name_match = re.search(r"NodeName=(\S+)", block)
+                state_match = re.search(r"State=(\S+)", block)
+                reason_match = re.search(r"Reason=(.*?)(\s\S+=|$)", block)  # ends before next key or end of line
+
+                if name_match and state_match:
+                    name = name_match.group(1)
+                    state = state_match.group(1)
+                    all_nodes.append(name)
+                    
+                    # Ugly code
+                    if "DRAIN" in state or "DRAINED" in state:
+                        reason = reason_match.group(1).strip() if reason_match else ""
+                        if config.MARKER in reason:
+                            drainer_drained_nodes.append(name)
+                    else:
+                        not_drained_nodes.append(name)
+
+            log.debug(f"Found {len(all_nodes)} total nodes, {len(not_drained_nodes)} not drained, "
+                     f"{len(drainer_drained_nodes)} drainer-drained nodes.")
+
+            return all_nodes, not_drained_nodes, drainer_drained_nodes
+
+        except subprocess.CalledProcessError as e:
+            log.error(f"Failed to run 'scontrol show nodes': {e}")
+            return [], [], []
+        except subprocess.TimeoutExpired as e:
+            log.error(f"Timeout exception: {e}")
+        except Exception as e:
+            log.error(f"Exception occured: {e}")
+
+    @staticmethod
+    def drain_node(node_name: str, reason: str) -> None:
+        """
+        Drains a node with a specified reason.
+        """
+        try:
+            full_reason = f"{config.MARKER}{reason}"
+            subprocess.check_call(['scontrol', 'update', f'NodeName={node_name}', 'State=DRAIN', f'Reason={full_reason}'], timeout=10)
+            log.info(f"Node {node_name} drained with reason: {full_reason}")
+        except subprocess.CalledProcessError as e:
+            log.error(f"Failed to drain node {node_name}: {e}")
+        except subprocess.TimeoutExpired as e:
+            log.error(f"Timeout exception: {e}")
+        except Exception as e:
+            log.error(f"Exception occured: {e}")
+
+    @staticmethod
+    def undrain_node(node_name: str) -> None:
+        """
+        Undrains a node (sets it back to RESUME state).
+        """
+        try:
+            subprocess.check_call(['scontrol', 'update', f'NodeName={node_name}', 'State=RESUME'], timeout=10)
+            log.info(f"Node {node_name} resumed successfully.")
+        except subprocess.CalledProcessError as e:
+            log.error(f"Failed to undrain node {node_name}: {e}")
+        except subprocess.TimeoutExpired as e:
+            log.error(f"Timeout exception: {e}")
+        except Exception as e:
+            log.error(f"Exception occured: {e}")
+            
+    @staticmethod
+    def update_drain_reason(node_name: str, new_reason: str) -> None:
+        """
+        Unconditionally updates the drain reason for a node.
+        """
+        try:
+            full_reason = f"{config.MARKER}{new_reason}"
+            subprocess.check_call(['scontrol', 'update', f'NodeName={node_name}', f'Reason={full_reason}'], timeout=10)
+            log.info(f"Set drain reason for {node_name}: '{new_reason}'")
+        except subprocess.CalledProcessError as e:
+            log.error(f"Failed to update reason for node {node_name}: {e}")
+        except subprocess.TimeoutExpired as e:
+            log.error(f"Timeout exception: {e}")
+        except Exception as e:
+            log.error(f"Exception occured: {e}")
+

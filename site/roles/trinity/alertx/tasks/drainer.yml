@@ -32,13 +32,15 @@
     group: root
     mode: 0750
 
-- name: "Install drainer.py"
+- name: "Install all drainer daemon Python templates"
   template:
-    src: 'drainer.py.j2'
-    dest: '{{ alertx_drainer_daemon_dir }}/drainer.py'
-    owner: 'root'
-    group: 'root'
+    src: "{{ item }}"
+    dest: "{{ alertx_drainer_daemon_dir }}/{{ item | basename | regex_replace('\\.j2$', '') }}"
+    owner: root
+    group: root
     mode: '0750'
+  with_fileglob:
+    - "{{ role_path }}/templates/*.py.j2"
 
 - name: Install service file to systemd
   template:
