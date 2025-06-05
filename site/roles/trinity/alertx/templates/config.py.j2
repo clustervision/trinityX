@@ -1,0 +1,33 @@
+import os
+import logging
+import configparser
+
+# File paths
+_PROMETHEUS_PASSWORD_PATH = "/etc/trinity/passwords/prometheus/admin.txt"
+_DRAINER_INI_FILE_PATH = "/trinity/local/alertx/drainer/config/drainer.ini"
+
+# Read Prometheus password
+def _read_prometheus_password():
+    try:
+        with open(_PROMETHEUS_PASSWORD_PATH, "r") as f:
+            return f.read().strip()
+    except Exception as e:
+        logging.warning(f"Could not read Prometheus password from {_PROMETHEUS_PASSWORD_PATH}: {e}")
+        return ""
+
+# Load config from INI
+_config = configparser.ConfigParser()
+_config.read(_DRAINER_INI_FILE_PATH)
+
+DEBUG_MODE = _config.getboolean("LOGGER", "DEBUG_MODE", fallback=False)
+LOG_DIR = _config.get("LOGGER", "LOG_DIR", fallback="/var/log/alertx")
+
+AUTO_UNDRAIN = _config.getboolean("DRAINING", "AUTO_UNDRAIN", fallback=True)
+ALERT_FETCH_INTERVAL = _config.getint("DRAINING", "DRAIN_INTERVAL", fallback=60)
+
+# Constants
+MARKER = "TRIX-DRAINER: "
+PROMETHEUS_URL = "https://localhost:9093"
+PROMETHEUS_USER = "admin"
+PROMETHEUS_PASSWORD = _read_prometheus_password()
+FULL_LOG_DIR = os.path.join(LOG_DIR, "drainer.log")

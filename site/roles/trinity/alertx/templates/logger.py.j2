@@ -1,0 +1,35 @@
+import logging
+import os
+from logging.handlers import RotatingFileHandler
+from config import DEBUG_MODE, FULL_LOG_DIR
+
+
+class Logger:
+    """
+    Logger class to configure and return a logger instance.
+    Logs to both console and rotating file.
+    """
+
+    @staticmethod
+    def get_logger(name: str = "drainer", log_file: str = FULL_LOG_DIR) -> logging.Logger:
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.DEBUG if DEBUG_MODE else logging.INFO)
+
+        if not logger.handlers:
+            # Console Handler
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.INFO)
+            ch_formatter = logging.Formatter('%(levelname)s - %(message)s')
+            ch.setFormatter(ch_formatter)
+
+            # File Handler
+            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+            fh = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=3)
+            fh.setLevel(logging.DEBUG)
+            fh_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            fh.setFormatter(fh_formatter)
+
+            logger.addHandler(ch)
+            logger.addHandler(fh)
+
+        return logger
