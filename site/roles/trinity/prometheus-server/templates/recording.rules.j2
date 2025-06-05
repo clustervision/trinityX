@@ -3,7 +3,14 @@ groups:
   rules:
     # Basic GPU info ‐ add vendor label
     - record: gpu_info
-      expr: rocm_smi_device_info
+      expr: |
+        label_replace(
+          rocm_smi_device_info,
+          "name",
+          "$1",
+          "device_name",
+          "(.*)"
+        )
       labels:
         vendor: "AMD"
 
