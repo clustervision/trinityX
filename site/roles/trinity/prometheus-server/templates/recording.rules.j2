@@ -1,4 +1,132 @@
 groups:
+- name: gpu_metrics_amd
+  rules:
+    # Basic GPU info ‐ add vendor label
+    - record: gpu_info
+      expr: rocm_smi_device_info
+      labels:
+        vendor: "AMD"
+
+    # GPU utilisation (percent → ratio)
+    - record: gpu_utilization_gpu_ratio
+      expr: rocm_smi_utilization_gpu_percent / 100
+
+    - record: gpu_utilization_memory_ratio
+      expr: rocm_smi_utilization_memory_percent / 100
+
+    # GPU temperature (junction)
+    - record: gpu_temperature_gpu
+      expr: rocm_smi_temperature_junction_celsius
+
+    # Graphics clock (MHz → Hz)
+    - record: gpu_clocks_current_graphics_clock_hz
+      expr: rocm_smi_current_gfxclk_mhz * 1000000
+
+    # Memory clock (uclk) (MHz → Hz)
+    - record: gpu_clocks_current_memory_clock_hz
+      expr: rocm_smi_current_uclk_mhz * 1000000
+
+    # Power draw (watts)
+    - record: gpu_power_draw_watts
+      expr: rocm_smi_current_power_watts
+
+    # Power default/limit (use max_power as proxy)
+    - record: gpu_power_default_limit_watts
+      expr: rocm_smi_max_power_watts
+
+    # SM/SOC clock (MHz → Hz)
+    - record: gpu_clocks_current_sm_clock_hz
+      expr: rocm_smi_current_socclk_mhz * 1000000
+
+- name: gpu_metrics_nvidia
+  rules:
+    # Basic GPU info ‐ add vendor label
+    - record: gpu_info
+      expr: nvidia_smi_gpu_info
+      labels:
+        vendor: "NVIDIA"
+
+    # GPU P‐state
+    - record: gpu_pstate
+      expr: nvidia_smi_pstate
+
+    # GPU utilisation (ratio already)
+    - record: gpu_utilization_gpu_ratio
+      expr: nvidia_smi_utilization_gpu_ratio
+
+    - record: gpu_utilization_memory_ratio
+      expr: nvidia_smi_utilization_memory_ratio
+
+    # GPU temperature (core)
+    - record: gpu_temperature_gpu
+      expr: nvidia_smi_temperature_gpu
+
+    # Clocks throttle reasons
+    - record: gpu_clocks_throttle_reasons_gpu_idle
+      expr: nvidia_smi_clocks_throttle_reasons_gpu_idle
+
+    - record: gpu_clocks_throttle_reasons_hw_thermal_slowdown
+      expr: nvidia_smi_clocks_throttle_reasons_hw_thermal_slowdown
+
+    - record: gpu_clocks_throttle_reasons_sw_power_cap
+      expr: nvidia_smi_clocks_throttle_reasons_sw_power_cap
+
+    - record: gpu_clocks_throttle_reasons_applications_clocks_setting
+      expr: nvidia_smi_clocks_throttle_reasons_applications_clocks_setting
+
+    - record: gpu_clocks_throttle_reasons_hw_power_brake_slowdown
+      expr: nvidia_smi_clocks_throttle_reasons_hw_power_brake_slowdown
+
+    - record: gpu_clocks_throttle_reasons_sw_thermal_slowdown
+      expr: nvidia_smi_clocks_throttle_reasons_sw_thermal_slowdown
+
+    - record: gpu_clocks_throttle_reasons_sync_boost
+      expr: nvidia_smi_clocks_throttle_reasons_sync_boost
+
+    # Graphics clock (Hz)
+    - record: gpu_clocks_current_graphics_clock_hz
+      expr: nvidia_smi_clocks_current_graphics_clock_hz
+
+    # Max graphics clock (Hz)
+    - record: gpu_clocks_max_graphics_clock_hz
+      expr: nvidia_smi_clocks_max_graphics_clock_hz
+
+    # Memory clock (Hz)
+    - record: gpu_clocks_current_memory_clock_hz
+      expr: nvidia_smi_clocks_current_memory_clock_hz
+
+    # Max memory clock (Hz)
+    - record: gpu_clocks_max_memory_clock_hz
+      expr: nvidia_smi_clocks_max_memory_clock_hz
+
+    # Fan speed ratio
+    - record: gpu_fan_speed_ratio
+      expr: nvidia_smi_fan_speed_ratio
+
+    # Video clock (Hz)
+    - record: gpu_clocks_current_video_clock_hz
+      expr: nvidia_smi_clocks_current_video_clock_hz
+
+    # Power draw (watts)
+    - record: gpu_power_draw_watts
+      expr: nvidia_smi_power_draw_watts
+
+    # Power default/limit (watts)
+    - record: gpu_power_default_limit_watts
+      expr: nvidia_smi_power_default_limit_watts
+
+    # Memory used (bytes)
+    - record: gpu_memory_used_bytes
+      expr: nvidia_smi_memory_used_bytes
+
+    # Memory total (bytes)
+    - record: gpu_memory_total_bytes
+      expr: nvidia_smi_memory_total_bytes
+
+    # SM clock (Hz)
+    - record: gpu_clocks_current_sm_clock_hz
+      expr: nvidia_smi_clocks_current_sm_clock_hz
+
 - name: job_state
   rules:
     - record: slurm_job_info_latest
