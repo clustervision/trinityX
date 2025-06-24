@@ -15,7 +15,7 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "links": [
@@ -242,8 +242,7 @@
               "Value #A": {
                 "aggregations": [
                   "sum"
-                ],
-                "operation": "aggregate"
+                ]
               },
               "Value #B": {
                 "aggregations": [
@@ -321,7 +320,6 @@
             "excludeByName": {
               "Time": true,
               "Value": true,
-              "Value #A (sum)": true,
               "__name__": true,
               "exporter": true,
               "group": true,
@@ -334,22 +332,18 @@
               "workdir": true
             },
             "indexByName": {
-              "Value #A (sum)": 8,
-              "Value #B (sum)": 9,
-              "Value #C (sum)": 10,
-              "Value #D (sum)": 11,
               "account (lastNotNull)": 3,
               "command (lastNotNull)": 4,
               "group (lastNotNull)": 2,
               "jobid": 0,
-              "jobstate (firstNotNull)": 7,
-              "oversubscribe (lastNotNull)": 5,
-              "partition (lastNotNull)": 6,
+              "jobstate (lastNotNull)": 5,
+              "oversubscribe (lastNotNull)": 6,
+              "partition (lastNotNull)": 7,
               "user (lastNotNull)": 1
             },
             "renameByName": {
               "Time": "",
-              "Value #A (sum)": "",
+              "Value #A (sum)": "gpus_allocated",
               "Value #B (mean)": "allocated_cores",
               "Value #B (sum)": "cores_allocated",
               "Value #C (sum)": "memory_allocated",
@@ -520,7 +514,18 @@
             "fixedColor": "green",
             "mode": "fixed"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            }
+          ],
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -821,7 +826,18 @@
             "fixedColor": "green",
             "mode": "fixed"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            }
+          ],
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -1123,7 +1139,18 @@
             "mode": "fixed"
           },
           "decimals": 2,
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1218,7 +1245,7 @@
           "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\", jobstate=\"RUNNING\"})) ",
           "hide": false,
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "cpu_allocated",
           "range": true,
           "refId": "A"
@@ -1232,7 +1259,7 @@
           "expr": "sum(rate(slurm_job_total_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])  ) ",
           "hide": false,
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "cpu_usage",
           "range": true,
           "refId": "B"
@@ -1408,7 +1435,7 @@
           "expr": "sum(avg by(jobid,hostname) (slurm_job_allocated_cores{jobid=~\"$job_id\", jobstate=\"RUNNING\"})) ",
           "hide": false,
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "cpu_allocated",
           "range": true,
           "refId": "A"
@@ -1422,7 +1449,7 @@
           "expr": "sum(rate(slurm_job_user_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])  ) ",
           "hide": false,
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "cpu_usage_user",
           "range": true,
           "refId": "B"
@@ -1436,7 +1463,7 @@
           "expr": "sum(rate(slurm_job_system_cpu_seconds_total{jobid=~\"$job_id\"}[$__rate_interval:])  )",
           "hide": false,
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "cpu_usage_system",
           "range": true,
           "refId": "D"
@@ -1459,7 +1486,18 @@
             "mode": "fixed"
           },
           "decimals": 2,
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1736,7 +1774,18 @@
             "mode": "palette-classic"
           },
           "decimals": 2,
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1770,7 +1819,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "streaming_multiprocessor_usage"
+              "options": "gpu_usage"
             },
             "properties": [
               {
@@ -1816,7 +1865,7 @@
           "expr": "sum (slurm_job_allocated_gres{jobid=~\"$job_id\", jobstate=\"RUNNING\", gres_type=\"gpu\"})",
           "hide": false,
           "instant": false,
-          "legendFormat": "gpus_allocated",
+          "legendFormat": "gpu_allocated",
           "range": true,
           "refId": "A"
         },
@@ -1827,11 +1876,11 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (__name__) (label_replace({__name__=~\"slurm_job_gpu_.*_usage\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)\") >0)",
+          "expr": "sum(rate(({__name__=~\"slurm_job_gpu_.*_seconds_total\", jobid=~\"$job_id\"}>0)[$__rate_interval:]))",
           "hide": false,
           "instant": false,
-          "interval": "",
-          "legendFormat": "{{__name__}}",
+          "interval": "30s",
+          "legendFormat": "gpu_usage",
           "range": true,
           "refId": "B"
         }
@@ -1923,7 +1972,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "streaming_multiprocessor_usage"
+              "options": "gpu_usage"
             },
             "properties": [
               {
@@ -1968,7 +2017,8 @@
           "expr": "sum (slurm_job_allocated_gres{jobid=~\"$job_id\", jobstate=\"RUNNING\", gres_type=\"gpu\"})",
           "hide": false,
           "instant": false,
-          "legendFormat": "gpus_allocated",
+          "interval": "",
+          "legendFormat": "gpu_allocated",
           "range": true,
           "refId": "A"
         },
@@ -1979,11 +2029,11 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (__name__) (label_replace({__name__=~\"slurm_job_gpu_.*_usage\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)\") >0)",
+          "expr": "sum(rate(({__name__=~\"slurm_job_gpu_.*_seconds_total\", jobid=~\"$job_id\"}>0)[$__rate_interval:]))",
           "hide": false,
           "instant": false,
-          "interval": "",
-          "legendFormat": "{{__name__}}",
+          "interval": "30s",
+          "legendFormat": "gpu_usage",
           "range": true,
           "refId": "B"
         }
@@ -2001,10 +2051,21 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "green",
+            "fixedColor": "blue",
             "mode": "fixed"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "#808080",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -2052,10 +2113,10 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (__name__) (label_replace({__name__=~\"slurm_job_gpu_.*_mem_bytes\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)_mem_bytes\") >0)\r\n",
+          "expr": "sum ({__name__=~\"slurm_job_gpu_.*_mem_bytes\", jobid=~\"$job_id\"}>0)\r\n",
           "hide": false,
           "instant": false,
-          "legendFormat": "{{__name__}}_memory_usage",
+          "legendFormat": "gpu_memory_usage",
           "range": true,
           "refId": "A"
         }
@@ -2073,7 +2134,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "blue",
+            "mode": "fixed"
           },
           "custom": {
             "axisCenteredZero": false,
@@ -2156,11 +2218,11 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by (__name__) (label_replace({__name__=~\"slurm_job_gpu_.*_mem_bytes\", jobid=~\"$job_id\"},\"__name__\",\"$1\",\"__name__\", \"slurm_job_gpu_(.*)_mem_bytes\") >0)\r\n",
+          "expr": "sum ({__name__=~\"slurm_job_gpu_.*_mem_bytes\", jobid=~\"$job_id\"}>0)\r\n",
           "hide": false,
           "instant": false,
           "interval": "",
-          "legendFormat": "{{__name__}}_memory_usage",
+          "legendFormat": "gpu_memory_usage",
           "range": true,
           "refId": "B"
         }
@@ -2216,7 +2278,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2293,7 +2356,7 @@
           "editorMode": "code",
           "expr": "sum(rate(slurm_job_reads{jobid=~\"$job_id\"}[$__rate_interval:]) )",
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "reads",
           "range": true,
           "refId": "A"
@@ -2307,7 +2370,7 @@
           "expr": "sum(rate(slurm_job_writes{jobid=~\"$job_id\"}[$__rate_interval:]) )",
           "hide": false,
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "writes",
           "range": true,
           "refId": "B"
@@ -2363,7 +2426,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2425,7 +2489,7 @@
           "editorMode": "code",
           "expr": "sum(rate(slurm_job_read_bytes{jobid=~\"$job_id\"}[$__rate_interval:])  )",
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "bytes_read",
           "range": true,
           "refId": "A"
@@ -2439,7 +2503,7 @@
           "expr": "sum(rate(slurm_job_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:]))",
           "hide": false,
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "bytes_written",
           "range": true,
           "refId": "B"
@@ -2453,7 +2517,7 @@
           "expr": "sum(rate(slurm_job_cancelled_write_bytes{jobid=~\"$job_id\"}[$__rate_interval:]) )",
           "hide": false,
           "instant": false,
-          "interval": "1m",
+          "interval": "30s",
           "legendFormat": "bytes_write_fail",
           "range": true,
           "refId": "C"
@@ -2463,7 +2527,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "",
+  "refresh": false,
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
@@ -2494,7 +2558,7 @@
       },
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -2570,7 +2634,7 @@
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {},
