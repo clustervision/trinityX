@@ -1,27 +1,9 @@
 ---
-# tasks file for luna
-
-- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
-  include_vars: "{{ item }}"
-  with_first_found:
-    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
-    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
-  ignore_errors: true
-
-- name: Install AlertX packages
-  yum:
-    name: '{{ alertx_packages }}'
-    state: present
-    enablerepo: alertx
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Ensure alertx directory exists
   file:
     path: '{{ trix_local }}/alertx'
     state: directory
-
-# ----------------------------------------------------
 
 - name: Get python libdir
   shell: "echo {{ trix_local }}/python/lib/python*"
