@@ -371,7 +371,7 @@
       tags: prometheus-slurm-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-slurm-job-exporter
-      # Prometheus slurm_job exporter
+      # Prometheus slurm_job/pjs exporter
       prometheus_slurm_job_exporter_system_user: root
       prometheus_slurm_job_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_slurm_job_exporter.yml"
       prometheus_slurm_job_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
@@ -385,14 +385,21 @@
       tags: prometheus-ipmi-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-nvidia-exporter
-      # Prometheus ipmi exporter
+      # Prometheus nvidia gpu exporter
       prometheus_nvidia_exporter_system_user: root
       prometheus_nvidia_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_nvidia_exporter.yml"
       prometheus_nvidia_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-nvidia-exporter, prometheus, monitoring
 
+    - role: trinity/prometheus-amd-exporter
+      # Prometheus amd gpu exporter
+      prometheus_amd_exporter_system_user: root
+      prometheus_amd_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_amd_exporter.yml"
+      prometheus_amd_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      tags: prometheus-amd-exporter, prometheus, monitoring
+
     - role: trinity/prometheus-ha-exporter
-      # Prometheus ipmi exporter
+      # Prometheus ha exporter
       prometheus_ha_exporter_system_user: root
       prometheus_ha_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_ha_exporter.yml"
       prometheus_ha_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
@@ -400,7 +407,7 @@
       when: ha | default(False)
 
     - role: trinity/prometheus-lshw-exporter
-      # Prometheus ipmi exporter
+      # Prometheus lshw exporter
       prometheus_lshw_exporter_system_user: root
       prometheus_lshw_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_lshw_exporter.yml"
       prometheus_lshw_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"

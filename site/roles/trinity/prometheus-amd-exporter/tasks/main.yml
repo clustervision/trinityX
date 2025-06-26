@@ -1,0 +1,25 @@
+---
+- import_tasks: preflight.yml
+  tags:
+    - prometheus-amd-exporter-install
+    - prometheus-amd-exporter-configure
+    - prometheus-amd-exporter-run
+
+- import_tasks: install.yml
+  become: true
+  tags:
+    - prometheus-amd-exporter-install
+
+- import_tasks: configure.yml
+  become: true
+  tags:
+    - prometheus-amd-exporter-configure
+
+- name: Ensure amd Exporter is enabled on boot
+  become: true
+  systemd:
+    name: prometheus-amd-exporter
+    enabled: true
+    state: started
+  tags:
+    - prometheus-amd-exporter-run

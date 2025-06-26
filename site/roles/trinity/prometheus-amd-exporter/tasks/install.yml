@@ -1,0 +1,44 @@
+---
+- name: Create the prometheus_amd_exporter group
+  group:
+    name: "{{ prometheus_amd_exporter_system_group }}"
+    state: present
+    system: true
+  when: prometheus_amd_exporter_system_group != "root"
+
+- name: Create the prometheus_amd_exporter user
+  user:
+    name: "{{ prometheus_amd_exporter_system_user }}"
+    group: "{{ prometheus_amd_exporter_system_group }}"
+    groups: "{{ prometheus_amd_exporter_additional_system_groups }}"
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    createhome: false
+    home: /
+  when: prometheus_amd_exporter_system_user != "root"
+
+- name: Create prometheus_amd_exporter_binary_install_dir
+  file:
+    path: "{{prometheus_amd_exporter_binary_install_dir}}"
+    state: directory
+    mode: 0755
+
+- name: Create log dir if prometheus_amd_exporter_log_dir is defined
+  ansible.builtin.file:
+    path: "{{ prometheus_amd_exporter_log_dir }}"
+    state: directory
+    mode: 0755
+  when:
+    - prometheus_amd_exporter_log_dir is defined
+
+- name: "Download prometheus-amd-exporter binary from {{prometheus_amd_exporter_binary_url}} to local folder"
+  get_url:
+    url: "{{ prometheus_amd_exporter_binary_url }}"
+    dest: "{{prometheus_amd_exporter_binary_install_dir}}/prometheus-amd-exporter"
+    mode: 0755
+    validate_certs: false
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 10
+  delay: 15
