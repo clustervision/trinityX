@@ -18,10 +18,19 @@ groups:
     expr: sum by (hostname,luna_group) (ipmi_dcmi_power_consumption_watts) 
   
   - record: power_consumption_cpu_watts
-    expr: ( power_consumption_watts - sum by (hostname,luna_group) (nvidia_smi_power_draw_watts) ) OR power_consumption_watts
+    #expr: ( power_consumption_watts - sum by (hostname,luna_group) (nvidia_smi_power_draw_watts) ) OR power_consumption_watts
+    expr: |
+      ( power_consumption_watts - sum by (hostname,luna_group) (nvidia_smi_power_draw_watts) - sum by (hostname,luna_group) (rocm_smi_current_power_watts) ) OR
+      ( power_consumption_watts - sum by (hostname,luna_group) (nvidia_smi_power_draw_watts) ) OR
+      ( power_consumption_watts - sum by (hostname,luna_group) (rocm_smi_current_power_watts) ) OR
+      power_consumption_watts
 
   - record: power_consumption_gpu_watts
-    expr: sum by (hostname,luna_group) (nvidia_smi_power_draw_watts)
+    #expr: sum by (hostname,luna_group) (nvidia_smi_power_draw_watts)
+    expr: |
+      ( sum by (hostname,luna_group) (nvidia_smi_power_draw_watts) + sum by (hostname,luna_group) (rocm_smi_current_power_watts) ) OR
+      ( sum by (hostname,luna_group) (nvidia_smi_power_draw_watts) ) OR
+      ( sum by (hostname,luna_group) (rocm_smi_current_power_watts) )
 
 - name: power_consumption_per_unit
   rules:
