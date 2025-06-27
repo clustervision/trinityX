@@ -8,22 +8,6 @@
 
 # below for images
 - block:
-  - name: Install AlertX packages
-    yum:
-      name: '{{ alertx_packages }}'
-      state: present
-    retries: "{{ rpm_retries | default(3) }}"
-    delay: "{{ rpm_delay | default(15) }}"
-    when: ansible_facts['os_family'] == "RedHat"
-
-  - name: Install AlertX packages
-    ansible.builtin.apt:
-      name: '{{ alertx_packages }}'
-      state: present
-    retries: "{{ rpm_retries | default(3) }}"
-    delay: "{{ rpm_delay | default(15) }}"
-    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-
   - name: Render AlertX hook script
     template:
       src: 'alertx-hook.sh.j2'
