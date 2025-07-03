@@ -63,8 +63,12 @@
     group: root
     mode: 0640
 
+- name: Defining group name
+  set_fact:
+    opensuse_group_name: '{{ image_name | regex_replace("^(.*)-image$", "\1-group") }}'
+
 - name: Verify if opensuse group already exists in luna
-  shell: "luna group show {{ image_name }}"
+  shell: "luna group show {{ opensuse_group_name }}"
   register: opensuse_group_in_luna
   ignore_errors: true
 
@@ -105,7 +109,7 @@
       - post.rd
 
   - name: Creating group in luna
-    shell: "luna group add --osimage {{ image_name }} -qpart /tmp/part.rd -qpost /tmp/post.rd {{ image_name }}"
+    shell: "luna group add --osimage {{ image_name }} -qpart /tmp/part.rd -qpost /tmp/post.rd {{ opensuse_group_name }}"
   when: opensuse_group_in_luna is defined and opensuse_group_in_luna.rc|int != 0
 
 - name: Refresh the list of hosts in the inventory

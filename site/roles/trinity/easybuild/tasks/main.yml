@@ -1,0 +1,62 @@
+- block:
+  - name: Get EasyBuild user info
+    ansible.builtin.getent:
+      database: passwd
+      key: '{{ easybuild_user }}'
+    register: easybuild_user_info
+    ignore_errors: true
+    tags: easybuild-prepare
+
+  - block:
+    - name: Generate random password for EasyBuild user
+      set_fact:
+        easybuild_password: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+
+    - name: Ensure EasyBuild user exists
+      shell: '/usr/local/sbin/obol user add -p "{{ easybuild_password }}" "{{ easybuild_user }}"'
+    when: easybuild_user_info['failed']
+    tags: easybuild-prepare
+
+  - name: Wait 5s for user to become
+    wait_for:
+      timeout: 5
+
+  - name: Ensure EasyBuild shared directory exists
+    file:
+      path: "{{ easybuild_home }}"
+      state: directory
+      owner: "{{ easybuild_user }}"
+      mode: "0755"
+    tags: easybuild-prepare
+
+  - name: collecting proxy information
+    set_fact:
+      easybuild_http_proxy: "{{ lookup('ansible.builtin.env', 'http_proxy') }}"
+    tags: easybuild-install
+
+  - name: collecting proxy information
+    set_fact:
+      easybuild_https_proxy: "{{ lookup('ansible.builtin.env', 'https_proxy') }}"
+    tags: easybuild-install
+
+  - name: Install EasyBuild temporarily as user
+    block:
+      - include_tasks: install_as_user.yml
+    become: true
+    become_user: "{{ easybuild_user }}"
+    tags: easybuild-install
+  when: 
+    - on_controller | default(False)
+    - primary | default(False)
+  tags: easybuild-install
+
+- name: Create /etc/profile.d/z_easybuild.sh
+  template:
+    src: z_easybuild.sh.j2
+    dest: /etc/profile.d/z_easybuild.sh
+    owner: root
+    group: root
+    mode: '0644'
+  tags: easybuild-env
+
+
