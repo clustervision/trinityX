@@ -1,0 +1,46 @@
+- name: Create EB_TMPDIR directory
+  file:
+    path: "{{ easybuild_tmpdir }}"
+    state: directory
+    mode: '0755'
+
+- name: Install EasyBuild via pip
+  ansible.builtin.pip:
+    executable: pip3
+    name: easybuild
+    extra_args: "--ignore-installed --prefix {{ easybuild_tmpdir }}"
+  environment:
+    http_proxy: "{{ easybuild_http_proxy if easybuild_http_proxy else '' }}"
+    https_proxy: "{{ easybuild_https_proxy if easybuild_https_proxy else '' }}"
+    HTTP_PROXY: "{{ easybuild_http_proxy if easybuild_http_proxy else '' }}"
+    HTTPS_PROXY: "{{ easybuild_https_proxy if easybuild_https_proxy else '' }}"
+    EB_TMPDIR: "{{ easybuild_tmpdir }}"
+  args:
+    creates: "{{ easybuild_tmpdir }}/bin/eb"
+
+#- name: Install EasyBuild via pip
+#  command: "{{ easybuild_python }} -m pip install --ignore-installed --prefix {{ easybuild_tmpdir }} easybuild"
+#  environment:
+#    EB_TMPDIR: "{{ easybuild_tmpdir }}"
+#  args:
+#    creates: "{{ easybuild_tmpdir }}/bin/eb"
+
+- name: Set EB environment and install EasyBuild release
+  shell: |
+    source /etc/profile
+    source /etc/profile.d/modules.sh || true
+    export EB_TMPDIR="{{ easybuild_tmpdir }}"
+    export PATH="$EB_TMPDIR/bin:$PATH"
+    export PYTHONPATH="$(ls -rd -1 {{ easybuild_tmpdir }}/lib*/python*/site-packages | tail -1):$PYTHONPATH"
+    export EB_PYTHON={{ python_executable }}
+    export EB_HOME={{ easybuild_home }}
+    eb --install-latest-eb-release --prefix $EB_HOME --skip-sanity-check
+  environment:
+    http_proxy: "{{ easybuild_http_proxy if easybuild_http_proxy else '' }}"
+    https_proxy: "{{ easybuild_https_proxy if easybuild_https_proxy else '' }}"
+    HTTP_PROXY: "{{ easybuild_http_proxy if easybuild_http_proxy else '' }}"
+    HTTPS_PROXY: "{{ easybuild_https_proxy if easybuild_https_proxy else '' }}"
+    EB_TMPDIR: "{{ easybuild_tmpdir }}"
+    EB_HOME: "{{ easybuild_home }}"
+  args:
+    executable: /bin/bash
