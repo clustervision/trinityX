@@ -5,6 +5,7 @@
       key: '{{ easybuild_user }}'
     register: easybuild_user_info
     ignore_errors: true
+    tags: easybuild-prepare
 
   - block:
     - name: Generate random password for EasyBuild user
@@ -14,6 +15,11 @@
     - name: Ensure EasyBuild user exists
       shell: '/usr/local/sbin/obol user add -p "{{ easybuild_password }}" "{{ easybuild_user }}"'
     when: easybuild_user_info['failed']
+    tags: easybuild-prepare
+
+  - name: Wait 5s for user to become
+    wait_for:
+      timeout: 5
 
   - name: Ensure EasyBuild shared directory exists
     file:
@@ -26,10 +32,12 @@
   - name: collecting proxy information
     set_fact:
       easybuild_http_proxy: "{{ lookup('ansible.builtin.env', 'http_proxy') }}"
+    tags: easybuild-install
 
   - name: collecting proxy information
     set_fact:
       easybuild_https_proxy: "{{ lookup('ansible.builtin.env', 'https_proxy') }}"
+    tags: easybuild-install
 
   - name: Install EasyBuild temporarily as user
     block:
@@ -40,6 +48,7 @@
   when: 
     - on_controller | default(False)
     - primary | default(False)
+  tags: easybuild-install
 
 - name: Create /etc/profile.d/z_easybuild.sh
   template:

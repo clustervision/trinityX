@@ -15,15 +15,6 @@
     HTTP_PROXY: "{{ easybuild_http_proxy if easybuild_http_proxy else '' }}"
     HTTPS_PROXY: "{{ easybuild_https_proxy if easybuild_https_proxy else '' }}"
     EB_TMPDIR: "{{ easybuild_tmpdir }}"
-  args:
-    creates: "{{ easybuild_tmpdir }}/bin/eb"
-
-#- name: Install EasyBuild via pip
-#  command: "{{ easybuild_python }} -m pip install --ignore-installed --prefix {{ easybuild_tmpdir }} easybuild"
-#  environment:
-#    EB_TMPDIR: "{{ easybuild_tmpdir }}"
-#  args:
-#    creates: "{{ easybuild_tmpdir }}/bin/eb"
 
 - name: Set EB environment and install EasyBuild release
   shell: |
@@ -32,7 +23,7 @@
     export EB_TMPDIR="{{ easybuild_tmpdir }}"
     export PATH="$EB_TMPDIR/bin:$PATH"
     export PYTHONPATH="$(ls -rd -1 {{ easybuild_tmpdir }}/lib*/python*/site-packages | tail -1):$PYTHONPATH"
-    export EB_PYTHON={{ python_executable }}
+    export EB_PYTHON={{ easybuild_python }}
     export EB_HOME={{ easybuild_home }}
     eb --install-latest-eb-release --prefix $EB_HOME --skip-sanity-check
   environment:
