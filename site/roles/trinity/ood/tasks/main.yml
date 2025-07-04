@@ -113,14 +113,38 @@
   tags: branding
 
 - name: Override default 404 page to auto initialize app
-  ansible.builtin.copy:
-    src: branding/TrinityX/overrides/pun_config_view.rb
-    dest: /opt/ood/nginx_stage/lib/nginx_stage/views/pun_config_view.rb
+  ansible.builtin.blockinfile:
+    path: /opt/ood/nginx_stage/lib/nginx_stage/views/pun_config_view.rb
+    marker: "{mark}"
+    marker_begin: "    def restart_confirmation"
+    marker_end: "    end"
+    block: |
+      {% filter indent(width=6, first=true) %}
+      <<-EOF.gsub("'", %q{\\\'})
+        <html>
+        <head>
+        <title>Restart PUN</title>
+        </head>
+        <body>
+          <script>
+          window.location.href = '#{app_init_url}';
+          </script>
+        </body>
+        </html>
+      EOF
+      {% endfilter %}
+    state: present
+  when: ood_brand == "TrinityX"
+  notify: Run update_ood
+  tags: branding
+
+- name: Ensuring correct permissions to pun config view
+  ansible.builtin.file:
+    path: /opt/ood/nginx_stage/lib/nginx_stage/views/pun_config_view.rb
     owner: root
     group: root
     mode: "0644"
   when: ood_brand == "TrinityX"
-  notify: Run update_ood
   tags: branding
 
 - name: Configure firewalld
