@@ -29,6 +29,14 @@
       mode: "0755"
     tags: easybuild-prepare
 
+  - name: Create link so easybuild ends up on /trinity filesystem
+    file:
+      src: '{{ trix_easybuild }}'
+      path: '{{ easybuild_home }}'
+      owner: root
+      group: root
+      state: link
+
   - name: collecting proxy information
     set_fact:
       easybuild_http_proxy: "{{ lookup('ansible.builtin.env', 'http_proxy') }}"
