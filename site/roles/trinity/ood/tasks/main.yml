@@ -155,6 +155,27 @@
     immediate: "yes"
   when: not in_login_image|default(False)
 
+- name: Ensure OOD layout folder exists
+  ansible.builtin.file:
+    path: "{{ ood_footer_dir}}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  when: ood_brand == "TrinityX"
+  tags: branding
+
+- name: Add releaseversion to the OOD footer
+  ansible.builtin.template:
+    src: "{{ ood_footer_file }}.j2"
+    dest: "{{ ood_footer_dir }}/{{ ood_footer_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+  when: ood_brand == "TrinityX"
+  notify: Run update_ood
+  tags: branding
+
 - name: Include auth task
   ansible.builtin.include_tasks: dex-auth.yml
 - name: Include auth task
