@@ -1,4 +1,13 @@
 # EasyBuild environment
+
+{% if easybuild_export == "rw" %}
+# root *should not* import/load anything where nodes have write access to
+# absolute security concern
+if [ "$UID" == "0" ]; then
+    return
+fi
+{% endif %}
+
 export EASYBUILD_PREFIX={{ easybuild_home }}
 export MODULEPATH=${MODULEPATH}:{{ easybuild_home }}/modules/all
 

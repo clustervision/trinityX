@@ -60,6 +60,13 @@
   - role: trinity/trix-tree
     tags: trix-tree
 
+  - role: trinity/sssd
+    sss_allowed_groups:
+    sss_ldap_hosts:
+    - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+    sss_filter_enabled: false
+    tags: sssd
+
   - role: trinity/nfs-mounts
     nfs_enable_rdma: false
     nfs_mounts:
@@ -75,19 +82,41 @@
     tags: nfs-mounts
 
   - role: trinity/environment-modules
-    when: enable_openhpc == false
+    when: not enable_openhpc
     tags: environment-modules
-
-  - role: trinity/sssd
-    sss_allowed_groups:
-    sss_ldap_hosts:
-    - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-    sss_filter_enabled: false
-    tags: sssd
 
   - role: trinity/openhpc
     tags: openhpc
     when: enable_openhpc
+
+  - role: trinity/nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: '/opt/ohpc'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+      options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+    nfs_remote_mask: '{{ shared_fs_disks }}'
+    nfs_prefix_path: '{{ shared_fs_prefix }}'
+    nfs_use_mask: "{{ ha | default(False) }}"
+    when: enable_openhpc
+    tags: nfs-mounts
+
+  - role: trinity/easybuild
+    easybuild_export: "{{ export_easybuild | default('ro') }}"
+    when: enable_easybuild
+    tags: easybuild
+
+  - role: trinity/nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: "/opt/easybuild"
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_easybuild }}'
+      options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+    nfs_remote_mask: '{{ shared_fs_disks }}'
+    nfs_prefix_path: '{{ shared_fs_prefix }}'
+    nfs_use_mask: "{{ ha | default(False) }}"
+    when: enable_easybuild
+    tags: nfs-mounts
 
   # Moved to site/compute-*.yml playbooks, 
   # as this is only needed on slurm-based compute nodes
@@ -99,6 +128,13 @@
   #   munge_conf_path: '{{ trix_shared }}/etc/munge'
   #   tags: slurm
   #   when:  "{{ 'slurm' in workload_manager }}" 
+
+  - role: trinity/slurm
+    slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+    slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+    munge_conf_path: '{{ trix_shared }}/etc/munge'
+    enable_slurm_pam: false
+    tags: slurm
 
   - role: trinity/rsyslog
     syslog_forwarding_rules:
@@ -112,25 +148,6 @@
 
   - role: trinity/nscd
     tags: nscd
-
-  - role: trinity/slurm
-    slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-    slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
-    munge_conf_path: '{{ trix_shared }}/etc/munge'
-    enable_slurm_pam: false
-    tags: slurm
-
-  - role: trinity/nfs-mounts
-    nfs_enable_rdma: false
-    nfs_mounts:
-    - path: '/opt/ohpc'
-      remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
-      options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
-    nfs_remote_mask: '{{ shared_fs_disks }}'
-    nfs_prefix_path: '{{ shared_fs_prefix }}'
-    nfs_use_mask: "{{ ha | default(False) }}"
-    when: enable_openhpc == true
-    tags: nfs-mounts
 
   - role: trinity/ood
     enable_ssl: true
@@ -193,10 +210,6 @@
     logrotate_files:
       - prometheus-on-nodes
     tags: logrotate
-
-  - role: trinity/easybuild
-    when: enable_easybuild
-    tags: easybuild
 
   - role: trinity/cleanup-legacy
     tags: cleanup-legacy

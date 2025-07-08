@@ -23,7 +23,7 @@
 
   - name: Ensure EasyBuild shared directory exists
     file:
-      path: "{{ easybuild_home }}"
+      path: "{{ trix_easybuild }}"
       state: directory
       owner: "{{ easybuild_user }}"
       mode: "0755"
@@ -59,4 +59,27 @@
     mode: '0644'
   tags: easybuild-env
 
+- block:
+  - name: Create link so easybuild ends up on /trinity filesystem
+    file:
+      src: '{{ trix_easybuild }}'
+      path: '{{ easybuild_home }}'
+      owner: root
+      group: root
+      state: link
+
+  - name: Update NFS exports
+    template:
+      src: easybuild_exports.j2
+      dest: '{{ nfs_exports_path }}/easybuild.exports'
+    notify: Export NFS
+
+  - file:
+      src: '{{ nfs_exports_path }}/easybuild.exports'
+      dest: '/etc/exports.d/easybuild.exports'
+      state: link
+      force: "yes"
+    notify: Export NFS
+  when: on_controller | default(False)
+  tags: easybuild-env
 
