@@ -78,6 +78,7 @@
   #   tags: environment-modules
 
   # - role: trinity/openhpc
+  #   openhpc_skiproot: true
   #   when: enable_openhpc
   #   tags: openhpc
 
@@ -94,7 +95,8 @@
 #    tags: nfs-mounts
 
   - role: trinity/easybuild
-    easybuild_export: "{{ export_easybuild | default('ro') }}"
+    easybuild_export: '{{ export_easybuild }}'
+    easybuild_skiproot: true
     when: enable_easybuild
     tags: easybuild
 
@@ -103,7 +105,7 @@
     nfs_mounts:
     - path: "/opt/easybuild"
       remote: '{{ trix_ctrl_hostname }}:{{ trix_easybuild }}'
-      options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+      options: '{{ "ro," if export_easybuild!="rw" else "" }}nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
     nfs_remote_mask: '{{ shared_fs_disks }}'
     nfs_prefix_path: '{{ shared_fs_prefix }}'
     nfs_use_mask: "{{ ha | default(False) }}"

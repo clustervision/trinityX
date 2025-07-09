@@ -176,17 +176,24 @@
       tags: mariadb
 
     - role: trinity/openhpc
+      openhpc_skiproot: true
       nfs_exports_path: '{{ trix_local }}/etc/exports.d'
       when: enable_openhpc
       tags: openhpc
 
+    - role: trinity/easybuild
+      easybuild_user: easybuild
+      easybuild_export: '{{ export_easybuild }}'
+      easybuild_skiproot: true
+      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
+      when: enable_easybuild
+      tags: easybuild
+
     - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'
       slurm_ctrl_ip: '{{ trix_ctrl_ip }}'
-      #slurm_ctrl_list: '{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }}'
       slurm_ctrl_list: '{{ all_ctrl_hostname | join(",") }}'
       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-      #slurm_spool_path: '{{ trix_local }}/var/spool/slurm'
       slurm_spool_path: "{{ trix_ha if ha else trix_local }}/var/spool/slurm"
       munge_conf_path: '{{ trix_shared }}/etc/munge'
       slurmdbd_sql_user: 'slurm_accounting'
@@ -430,13 +437,6 @@
 
     - role: trinity/logrotate
       tags: logrotate
-
-    - role: trinity/easybuild
-      easybuild_user: easybuild
-      easybuild_export: "{{ export_easybuild | default('ro') }}"
-      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
-      when: enable_easybuild
-      tags: easybuild
 
     - role: trinity/cleanup-legacy
       tags: cleanup-legacy
