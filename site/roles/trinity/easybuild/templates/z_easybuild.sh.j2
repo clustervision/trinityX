@@ -1,4 +1,14 @@
+#!/bin/sh
 # EasyBuild environment
-export EASYBUILD_PREFIX={{ easybuild_home }}
-export MODULEPATH=${MODULEPATH}:{{ easybuild_home }}/modules/all
 
+{% if easybuild_export == "rw" or easybuild_skiproot %}
+# root *should not* import/load anything where nodes have write access to
+# absolute security concern
+if [ "$UID" == "0" ]; then
+    return
+fi
+{% endif %}
+
+export EASYBUILD_PREFIX={{ easybuild_home }}
+export MODULEPATH=$MODULEPATH:{{ easybuild_home }}/modules/all
+export XDG_CONFIG_DIRS=$XDG_CONFIG_DIRS:{{ easybuild_home }}

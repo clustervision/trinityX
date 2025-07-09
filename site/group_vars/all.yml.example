@@ -210,6 +210,7 @@ trix_ha: '{{ trix_root }}/ha'
 trix_home: '{{ trix_root }}/home'
 trix_repos: '{{ trix_root }}/repos'
 trix_ohpc: '{{ trix_root }}/ohpc'
+trix_easybuild: '{{ trix_root }}/easybuild'
 trix_licenses: '{{ trix_shared }}/licenses'
 trix_docs: '{{ trix_shared }}/docs'
 trix_examples: '{{ trix_shared }}/examples'
@@ -298,7 +299,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #
 
 # As an absolute bare minimum trix_ha requires a shared disk.
-# For trix_home, trix_shared and trix_ohpc it comes extremely highly
+# For trix_home, trix_shared, trix_easybuild and trix_ohpc it comes extremely highly
 # recommended to have a shared disk as well. Below is what's
 # considered a standard shared disk configuration. Note that /dev/vda
 # needs to be configured to be a real disk which is 100% equal
@@ -318,6 +319,9 @@ shared_fs_disks:
       options: '-o xattr=sa'
       xmount: true
     - mount: '{{ trix_ohpc }}'
+      options: '-o xattr=sa'
+      xmount: true
+    - mount: '{{ trix_easybuild }}'
       options: '-o xattr=sa'
       xmount: true
     - mount: '{{ trix_ha }}'
@@ -496,8 +500,8 @@ enable_slurm_pam: true
 # -----------------------------------------------------------------------
 # Whether we install and prepare the easybuild environment
 
-enable_easybuild: true
-
+enable_easybuild: false
+export_easybuild: 'rw'
 
 # -----------------------------------------------------------------------
 # whether we need to configure our ldap, sssd and other things (true)
