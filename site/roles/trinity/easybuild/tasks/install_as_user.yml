@@ -4,6 +4,12 @@
     state: directory
     mode: '0755'
 
+- name: Create easybuild.d config directory
+  file:
+    path: "{{ easybuild_home }}/easybuild.d"
+    state: directory
+    mode: '0755'
+
 - name: Install EasyBuild via pip
   ansible.builtin.pip:
     executable: pip3
@@ -26,6 +32,7 @@
     export EB_PYTHON={{ easybuild_python }}
     export EB_HOME={{ easybuild_home }}
     eb --install-latest-eb-release --prefix $EB_HOME --skip-sanity-check
+    eb --confighelp > {{ easybuild_home }}/easybuild.d/easybuild.cfg.example
   environment:
     http_proxy: "{{ easybuild_http_proxy if easybuild_http_proxy else '' }}"
     https_proxy: "{{ easybuild_https_proxy if easybuild_https_proxy else '' }}"
