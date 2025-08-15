@@ -143,7 +143,10 @@
   set_fact:
       shared_fs_zfs_partitions:
         '{{ shared_fs_zfs_partitions|default([]) +
-            item.partitions | map("combine",{"zpool": item.name}) }}'
+            item.partitions | 
+              map("combine",{"zpool": item.name}) |
+              map("combine",{"fsoptions": selectattr('item.fsoptions', "defined") | item.options | default("")})
+            }}'
   loop: "{{ shared_fs_disks }}"
   when: 
     - item.partitions is defined
