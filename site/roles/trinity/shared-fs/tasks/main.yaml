@@ -25,7 +25,8 @@
           [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "disk": item.disk,
              "fstype": item.fstype | default(""),
-             "options": item.options | default(""),
+             "fsoptions": item.fsoptions if item.fsoptions is defined else item.options | default(""),
+             "mountoptions": item.mountoptions | default(""),
              "xmount": item.xmount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"
@@ -67,7 +68,8 @@
              "node_user": item.username | default(""),
              "node_pass": item.password | default(""),
              "fstype": item.fstype | default(""),
-             "options": item.options | default(""),
+             "fsoptions": item.fsoptions if item.fsoptions is defined else item.options | default(""),
+             "mountoptions": item.mountoptions | default(""),
              "xmount": item.xmount | default(False),
              "device": "/dev/disk/by-path/ip-"+item.portal+":3260-iscsi-"+item.target+"-lun-0" }] }}'
   with_items: "{{ shared_fs_disks }}"
@@ -92,7 +94,8 @@
         '{{ direct_fs_disks|default([]) +
           [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "fstype": item.fstype | default(""),
-             "options": item.options | default(""),
+             "fsoptions": item.fsoptions if item.fsoptions is defined else item.options | default(""),
+             "mountoptions": item.mountoptions | default(""),
              "xmount": item.xmount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"

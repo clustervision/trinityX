@@ -67,7 +67,7 @@
       fstype: "{{ item.item['fstype'] }}"
       dev: '/dev/{{ item.item["vgroup"] }}/{{ item.item["mount"] | replace("/","_") }}'
       force: yes
-      opts: "{{ item.item['options'] | default('') }}"
+      opts: "{{ item.item['fsoptions'] | default('') }}"
     ignore_errors: yes
     loop: "{{ shared_fs_lvm_partitions_mounted.results }}"
     when: 
@@ -132,6 +132,7 @@
 #      options: 'device=/dev/drbd/by-res/{{ item.mount | replace("/","_") }}
       options: 'device=/dev/{{ item["vgroup"] }}/{{ item["mount"] | replace("/","_") }}
           directory="{{ shared_fs_prefix+item.mount if item.xmount|default(False) else item.mount }}" fstype={{ item.fstype }} 
+          options="{{ item.mountoptions }}"
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.mount | replace("/","_") }}'
       state: present

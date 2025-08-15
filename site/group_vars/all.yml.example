@@ -240,7 +240,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     fstype: 'zfs'
 #     partitions:
 #     - name: '/trinity/other'
-#       options: '-o xattr=sa'
+#       fsoptions: '-o xattr=sa'
 #
 #   - name: 'LVM1'
 #     type: 'drbd'
@@ -251,12 +251,12 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     - mount: '{{ trix_shared }}'
 #       size: '20480M'
 #       fstype: 'ext4'
-#       options: '-b 4096'
+#       fsoptions: '-b 4096'
 #       xmount: true
 #     - mount: '{{ trix_ohpc }}'
 #       size: '10240M'
 #       fstype: 'ext4'
-#       options: '-b 4096'
+#       fsoptions: '-b 4096'
 #
 #   - name: 'Home directories'
 #     mount: '{{ trix_home }}'
@@ -264,7 +264,8 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     disk: '/dev/sda2'
 #     device: '/dev/drbd2'
 #     fstype: 'ext4'
-#     options: '-b 4096'
+#     fsoptions: '-b 4096 -O quota -E quotatype=usrquota:grpquota'
+#     mountoptions: 'quota,usrquota,grpquota'
 #     xmount: true
 #
 #   - name: 'LVM2'
@@ -276,7 +277,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     - mount: '/trinity/ext1'
 #       size: '8192M'
 #       fstype: 'ext4'
-#       options: '-b 4096'
+#       fsoptions: '-b 4096'
 #
 #   - name: 'LVM3'
 #     type: 'direct'
@@ -286,13 +287,13 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     - mount: '/trinity/ext2'
 #       size: '16384M'
 #       fstype: 'ext4'
-#       options: '-b 4096'
+#       fsoptions: '-b 4096'
 #
 #   - name: '{{ trix_home }}'
 #     mount: '{{ trix_home }}'
 #     type: 'nfs'
 #     remote: '192.168.0.1:/homes'
-#     options: 'nfsvers=4,rw,retrans=4,_netdev'
+#     mountoptions: 'nfsvers=4,rw,retrans=4,_netdev'
 #
 #   - name: '{{ trix_home }}'
 #     type: 'manual'
@@ -313,19 +314,19 @@ shared_fs_disks:
     fstype: 'zfs'
     partitions:
     - mount: '{{ trix_home }}'
-      options: '-o xattr=sa'
+      fsoptions: '-o xattr=sa'
       xmount: true
     - mount: '{{ trix_shared }}'
-      options: '-o xattr=sa'
+      fsoptions: '-o xattr=sa'
       xmount: true
     - mount: '{{ trix_ohpc }}'
-      options: '-o xattr=sa'
+      fsoptions: '-o xattr=sa'
       xmount: true
     - mount: '{{ trix_easybuild }}'
-      options: '-o xattr=sa'
+      fsoptions: '-o xattr=sa'
       xmount: true
     - mount: '{{ trix_ha }}'
-      options: '-o xattr=sa'
+      fsoptions: '-o xattr=sa'
     
 
 # shared_fs_prefix is used in combination with xmount: true (cross mount);
