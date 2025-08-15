@@ -25,7 +25,7 @@
           [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "disk": item.disk,
              "fstype": item.fstype | default(""),
-             "fsoptions": item.fsoptions if item.fsoptions is defined else item.options | default(""),
+             "fsoptions": item.fsoptions | default(""),
              "mountoptions": item.mountoptions | default(""),
              "xmount": item.xmount | default(False),
              "device": item.device }] }}'
@@ -68,7 +68,7 @@
              "node_user": item.username | default(""),
              "node_pass": item.password | default(""),
              "fstype": item.fstype | default(""),
-             "fsoptions": item.fsoptions if item.fsoptions is defined else item.options | default(""),
+             "fsoptions": item.fsoptions | default(""),
              "mountoptions": item.mountoptions | default(""),
              "xmount": item.xmount | default(False),
              "device": "/dev/disk/by-path/ip-"+item.portal+":3260-iscsi-"+item.target+"-lun-0" }] }}'
@@ -94,7 +94,7 @@
         '{{ direct_fs_disks|default([]) +
           [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "fstype": item.fstype | default(""),
-             "fsoptions": item.fsoptions if item.fsoptions is defined else item.options | default(""),
+             "fsoptions": item.fsoptions | default(""),
              "mountoptions": item.mountoptions | default(""),
              "xmount": item.xmount | default(False),
              "device": item.device }] }}'
@@ -143,10 +143,7 @@
   set_fact:
       shared_fs_zfs_partitions:
         '{{ shared_fs_zfs_partitions|default([]) +
-            item.partitions | 
-              map("combine",{"zpool": item.name}) |
-              map("combine",{"fsoptions": selectattr('item.fsoptions', "defined") | item.options | default("")})
-            }}'
+            item.partitions | map("combine",{"zpool": item.name}) }}'
   loop: "{{ shared_fs_disks }}"
   when: 
     - item.partitions is defined
