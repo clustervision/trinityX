@@ -132,7 +132,7 @@
 #      options: 'device=/dev/drbd/by-res/{{ item.mount | replace("/","_") }}
       options: 'device=/dev/{{ item["vgroup"] }}/{{ item["mount"] | replace("/","_") }}
           directory="{{ shared_fs_prefix+item.mount if item.xmount|default(False) else item.mount }}" fstype={{ item.fstype }} 
-          options="{{ item.mountoptions }}"
+          options="{{ item.mountoptions | default("defaults") }}"
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.mount | replace("/","_") }}'
       state: present
