@@ -1,0 +1,42 @@
+---
+- name: Copy the luna Exporter systemd service file
+  template:
+    src: prometheus-luna-exporter.service.j2
+    dest: /etc/systemd/system/prometheus-luna-exporter.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart prometheus-luna-exporter
+
+- name: Allow luna Exporter port in SELinux on RedHat OS family
+  seport:
+    ports: "{{ prometheus_luna_exporter_web_listen_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  when:
+    - ansible_version.full is version_compare('2.4', '>=')
+    - ansible_selinux.status == "enabled"
+
+- name: Create prometheus_luna_exporter_sd_file if not exists
+  file:
+    path: "{{ prometheus_luna_exporter_sd_file }}"
+    state: touch
+  when:
+    - prometheus_luna_exporter_sd_file is defined
+
+- name: Configure prometheus luna-exporter if prometheus_luna_exporter_sd_file is defined
+  blockinfile:
+    path: "{{ prometheus_luna_exporter_sd_file }}"
+    block: |
+      {% for target_ip, target_hostname, target_domain in prometheus_luna_exporter_targets %}
+      - targets:
+        - {{ target_ip }}:{{ prometheus_luna_exporter_web_listen_port }}
+        labels:
+          exporter: luna
+          luna_group: controller
+          hostname: {{ target_hostname }}.{{ target_domain }}
+      {% endfor %}
+    marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_luna_exporter)"
+  when:
+    - prometheus_luna_exporter_sd_file is defined

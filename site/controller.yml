@@ -420,6 +420,13 @@
       prometheus_lshw_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-lshw-exporter, prometheus, monitoring, lshw
 
+    - role: trinity/prometheus-luna-exporter
+      # Prometheus luna daemon related exporter
+      prometheus_luna_exporter_system_user: root
+      prometheus_luna_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_luna_exporter.yml"
+      prometheus_luna_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      tags: prometheus-luna-exporter, prometheus, monitoring, luna
+
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"
       enable_ssl: true
