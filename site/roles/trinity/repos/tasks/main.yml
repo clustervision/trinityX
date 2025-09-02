@@ -101,6 +101,13 @@
     with_items: "{{ custom_repositories }}"
     when: item.gpgkey is defined and item.gpgdata is defined
 
+  - name: Disable repos
+    ansible.builtin.shell:
+      cmd: "dnf config-manager --set-disable {{ item }}"
+    with_items: "{{ disable_repositories }}"
+    ignore_errors: true
+    tags: disable_repos
+
   - name: Make caches
     shell: "dnf makecache -y"
     ignore_errors: true
