@@ -85,7 +85,32 @@
      path: "/etc/drbd.d/trinityx.res"
   register: drbd_res_config
 
+- fail:
+    msg: "/etc/drbd.d/trinityx.res config file exists. This means we do not re-create DRBD resources"
+  when:
+    - drbd_res_config.stat.exists
+    - not override | default(False)
+  ignore_errors: true
+
 - block:
+  - debug:
+      msg: "I am about to reconfigure DRBD and re-create its disks. !! This will destroy data !! Waiting 10 seconds before continuing."
+
+  - name: Wait 10s before we continue
+    wait_for:
+      timeout: 10
+  when:
+    - drbd_res_config.stat.exists
+    - override | default(False)
+
+- block:
+  - name: stop DRBD
+    service:
+      name: drbd
+      state: stopped
+    when: override | default(False)
+    ignore_errors: true
+
   - name: Set up DRBD common settings configuration file
     template:
       src: global_common.conf.j2
@@ -99,15 +124,16 @@
       owner: root
       group: root
 
-  - debug:
+  - fail:
       msg: "If next step fails, please make sure to have wiped the disk. Use wipefs and/or dd for that"
+    ignore_errors: true
 
   - name: Initialize DRBD shared resources
     shell: '/usr/sbin/drbdadm create-md --force {{ item.name | replace("/","_") }}'
     loop: "{{ drbd_fs_disks }}"
     ignore_errors: false
     # we wont ignore errors here as we have to make sure this step succeeds before proceeding
-  when: not drbd_res_config.stat.exists
+  when: (not drbd_res_config.stat.exists) or override | default(False)
 
 - block:
   - block:
@@ -211,7 +237,7 @@
           fstype: "{{ item.item['fstype'] }}"
           dev: '/dev/drbd/by-res/{{ item.item["name"] | replace("/","_") }}'
           force: yes
-          opts: "{{ item.item['options'] | default('') }}"
+          opts: "{{ item.item['fsoptions'] | default('') }}"
         ignore_errors: yes
         loop: "{{ drbd_mounted.results }}"
         when: 
@@ -274,7 +300,7 @@
         state: stopped
       when: drbd_started is defined and drbd_started.state == "started"
 
-    when: not drbd_res_config.stat.exists
+    when: (not drbd_res_config.stat.exists) or override | default(False)
 
 
   #--------------------------------------------
@@ -365,6 +391,7 @@
       resource_type: Filesystem
       options: 'device=/dev/drbd/by-res/{{ item.name | replace("/","_") }}
           directory="{{ shared_fs_prefix+item.name if item.xmount else item.name }}" fstype={{ item.fstype }} 
+          options="{{ item.mountoptions | default("defaults") }}"
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present

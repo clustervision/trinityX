@@ -117,7 +117,7 @@
           fstype: "{{ item.item['fstype'] }}"
           dev: '{{ item.item["device"] }}'
           force: yes
-          opts: "{{ item.item['options'] | default('') }}"
+          opts: "{{ item.item['fsoptions'] | default('') }}"
         ignore_errors: yes
         loop: "{{ iscsi_mounted.results }}"
         when: 
@@ -260,6 +260,7 @@
       resource_type: Filesystem
       options: 'device={{ item.device }}
           directory="{{ shared_fs_prefix+item.name if item.xmount else item.name }}" fstype={{ item.fstype }} 
+          options="{{ item.mountoptions | default("defaults") }}"
           run_fsck=force force_unmount=safe op monitor interval=31s op
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.name | replace("/","_") }}'
       state: present

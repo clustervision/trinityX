@@ -31,18 +31,19 @@
     src: '{{ item }}'
     dest: '/etc/logrotate.d/{{ item }}'
     force: "no"
-  with_items: "{{ logrotate_files }}"
+  with_items: "{{ logrotate_files + logrotate_additional }}"
 
 - name: Changing owner and group for logrotate config
   file:
     path: '/etc/logrotate.d/{{ item }}'
     owner: root
     group: root
-  with_items: "{{ logrotate_files }}"
-
+  with_items: "{{ logrotate_files + logrotate_additional }}"
 
 - name: Restart logrotate
   assert: {that: true, quiet: true}
   notify: restart logrotate
   changed_when: true
-  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
+  when: 
+    - ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
+    - not in_image

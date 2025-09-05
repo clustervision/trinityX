@@ -1,0 +1,53 @@
+---
+- name: Install required packages
+  yum:
+    name: '{{ prometheus_luna_exporter_packages }}'
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  when: ansible_facts['os_family'] == "RedHat"
+  tags: install-only
+
+- name: Install required packages
+  ansible.builtin.apt:
+    name: '{{ prometheus_luna_exporter_packages }}'
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  tags: install-only
+
+- name: Install required packages
+  zypper:
+    name: '{{ prometheus_luna_exporter_packages }}'
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  when: ansible_facts['os_family'] == "Suse" or ansible_facts['os_family'] == "SLE"
+  tags: install-only
+
+- import_tasks: preflight.yml
+  tags:
+    - prometheus-luna-exporter-install
+    - prometheus-luna-exporter-configure
+    - prometheus-luna-exporter-run
+
+- import_tasks: install.yml
+  become: true
+  tags:
+    - prometheus-luna-exporter-install
+
+- import_tasks: configure.yml
+  become: true
+  tags:
+    - prometheus-luna-exporter-configure
+
+- name: Ensure luna Exporter is enabled on boot
+  become: true
+  systemd:
+    # daemon_reload: true
+    enabled: true
+    name: prometheus-luna-exporter
+  tags:
+    - prometheus-luna-exporter-run
+  # when: not in_image

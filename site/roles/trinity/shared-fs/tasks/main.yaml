@@ -1,5 +1,28 @@
 ---
 
+- name: Build temporary flat partition list
+  set_fact:
+      shared_fs_flat:
+        '{{ shared_fs_flat|default([]) +
+            item.partitions }}'
+  loop: "{{ shared_fs_disks }}"
+  when: item.partitions is defined
+
+- name: Build temporary flat partition list
+  set_fact:
+      shared_fs_flat:
+        '{{ shared_fs_flat|default([]) +
+            [item] }}'
+  loop: "{{ shared_fs_disks }}"
+  when: item.partitions is not defined
+
+- fail:
+    msg: "shared_fs_disk definition in all.yml for {{ item.name if item.name is defined else item.mount }} contains no longer supported parameters. options has been renamed to fsoptions. mountoptions has been introduced. Please review shared_fs_disks."
+  loop: "{{ shared_fs_flat }}"
+  when: item.options is defined
+
+# ----------------------------------------------------------------
+
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
   include_vars: "{{ item }}"
   with_first_found:
@@ -25,7 +48,8 @@
           [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "disk": item.disk,
              "fstype": item.fstype | default(""),
-             "options": item.options | default(""),
+             "fsoptions": item.fsoptions | default(""),
+             "mountoptions": item.mountoptions | default("defaults"),
              "xmount": item.xmount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"
@@ -67,7 +91,8 @@
              "node_user": item.username | default(""),
              "node_pass": item.password | default(""),
              "fstype": item.fstype | default(""),
-             "options": item.options | default(""),
+             "fsoptions": item.fsoptions | default(""),
+             "mountoptions": item.mountoptions | default("defaults"),
              "xmount": item.xmount | default(False),
              "device": "/dev/disk/by-path/ip-"+item.portal+":3260-iscsi-"+item.target+"-lun-0" }] }}'
   with_items: "{{ shared_fs_disks }}"
@@ -92,7 +117,8 @@
         '{{ direct_fs_disks|default([]) +
           [{ "name": item.mount if (item.mount is defined and item.partitions is not defined) else item.name,
              "fstype": item.fstype | default(""),
-             "options": item.options | default(""),
+             "fsoptions": item.fsoptions | default(""),
+             "mountoptions": item.mountoptions | default("defaults"),
              "xmount": item.xmount | default(False),
              "device": item.device }] }}'
   with_items: "{{ shared_fs_disks }}"
