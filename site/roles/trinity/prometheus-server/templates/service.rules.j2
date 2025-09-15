@@ -58,3 +58,13 @@ groups:
     annotations:
       description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
 
+  - alert: LunaDaemonProblemsOnControllers
+    expr: 'luna_daemon{available="true", state="failed", job="luna_controllers"} > 0'
+    for: 10m
+    labels:
+      severity: warning
+      category: service
+      nhc: false
+    annotations:
+      description: '{% raw %}Luna daemon component {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
+
