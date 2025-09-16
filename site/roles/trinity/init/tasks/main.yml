@@ -239,7 +239,7 @@
     when: trix_this_ctrl_hostname is defined
 
   when: ha | default(False)
-  tags: always,ha
+  tags: always,ha,verify-ip
 
 - name: Verify controller hostname is configured
   fail:
@@ -292,6 +292,35 @@
   when: cloud_install    
   tags: always,cloud
 
+  # we check if networks, subnets and addresses match
+- block:
+  - name: Copy verify-ip.sh script to /tmp
+    copy:
+      src: 'verify-ip.sh'
+      dest: '/tmp/verify-ip.sh'
+      mode: 0755
+
+  - name: Verifying controller IP addresses with network
+    ansible.builtin.shell:
+      cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
+    with_items: "{{ all_ctrl_ip }}"
+
+  - name: Verifying DHCP addresses with network
+    ansible.builtin.shell:
+      cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
+    with_items:
+      - "{{ trix_cluster_dhcp_start }}"
+      - "{{ trix_cluster_dhcp_end }}"
+
+  - name: Verifying BMC IP addresses with network
+    ansible.builtin.shell:
+      cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_bmc_net }}/{{ trix_bmc_netprefix }}"
+    with_items: "{{ all_ctrl_bmcip }}"
+    when: all_ctrl_bmcip is defined
+  tags: always,verify-ip
+  when:
+    - on_controller
+    - not no_checks | default(False)
 
   # checking nic configs and fix if it can
 - block:
