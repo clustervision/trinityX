@@ -23,7 +23,7 @@
 
   - name: Ensure EasyBuild shared directory exists
     file:
-      path: "{{ trix_easybuild }}"
+      path: "{{ shared_fs_prefix if nfs_only_xmount else '' }}{{ trix_easybuild }}"
       state: directory
       owner: "{{ easybuild_user }}"
       mode: "0755"
@@ -31,7 +31,7 @@
 
   - name: Create link so easybuild ends up on /trinity filesystem
     file:
-      src: '{{ trix_easybuild }}'
+      src: '{{ shared_fs_prefix if nfs_only_xmount else '' }}{{ trix_easybuild }}'
       path: '{{ easybuild_home }}'
       state: link
 

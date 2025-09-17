@@ -2,7 +2,7 @@
 
 - name: Create trinity/ohpc dir for opt link to point at
   file:
-    path: '{{ trix_ohpc }}'
+    path: '{{ shared_fs_prefix if nfs_only_xmount else '' }}{{ trix_ohpc }}'
     owner: root
     group: root
     state: directory
@@ -11,7 +11,7 @@
 
 - name: Create link so openhpc ends up on /trinity filesystem
   file:
-    src: '{{ trix_ohpc }}'
+    src: '{{ shared_fs_prefix if nfs_only_xmount else '' }}{{ trix_ohpc }}'
     path: /opt/ohpc
     owner: root
     group: root
