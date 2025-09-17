@@ -1,22 +1,53 @@
 ---
 
-- name: Create trinity/ohpc dir for opt link to point at
-  file:
-    path: "{{ shared_fs_prefix if nfs_only_xmount else '' }}{{ trix_ohpc }}"
-    owner: root
-    group: root
-    state: directory
-    mode: '0755'
-  when: not in_image
+- block:
+  - name: Create trinity/ohpc dir for opt link to point at
+    file:
+      path: "{{ shared_fs_prefix if nfs_only_xmount and not in_image else '' }}{{ trix_ohpc }}"
+      owner: root
+      group: root
+      state: directory
+      mode: '0755'
 
-- name: Create link so openhpc ends up on /trinity filesystem
-  file:
-    src: "{{ shared_fs_prefix if nfs_only_xmount else '' }}{{ trix_ohpc }}"
-    path: /opt/ohpc
-    owner: root
-    group: root
-    state: link
-  when: not in_image
+  - name: Create link so openhpc ends up on /trinity filesystem
+    file:
+      src: "{{ shared_fs_prefix if nfs_only_xmount and not in_image else '' }}{{ trix_ohpc }}"
+      path: '{{ openhpc_home }}'
+      owner: root
+      group: root
+      state: link
+  when: on_controller
+
+- block:
+  - name: Detect openhpc structure
+    stat:
+      path: '{{ openhpc_home }}'
+    register: openhpc_structure
+
+  - name: Remove deprecated openhpc directory
+    file:
+      path: '{{ openhpc_home }}'
+      state: absent
+    when:
+      - openhpc_structure.stat is defined
+      - not openhpc_structure.stat.islnk
+
+  - name: Create trinity/ohpc dir for opt link to point at
+    file:
+      path: '{{ trix_ohpc }}'
+      owner: root
+      group: root
+      state: directory
+      mode: '0755'
+
+  - name: Create link so openhpc ends up on /trinity filesystem
+    file:
+      src: '{{ trix_ohpc }}'
+      path: '{{ openhpc_home }}'
+      owner: root
+      group: root
+      state: link
+  when: in_image
 
 - name: Configure OpenHPC repos
   ansible.builtin.yum_repository:
@@ -81,7 +112,7 @@
 - name: Create symlinks for pdsh and pdcp
   file:
     dest: "/usr/bin/{{ item }}"
-    src: "/opt/ohpc/admin/pdsh/bin/{{ item }}"
+    src: "{{ openhpc_home }}/admin/pdsh/bin/{{ item }}"
     state: link
     force: true
     follow: false
