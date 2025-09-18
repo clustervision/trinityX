@@ -183,6 +183,21 @@
       when: enable_openhpc
       tags: openhpc
 
+    - role: trinity/nfs-mounts
+      nfs_enable_rdma: false
+      nfs_mounts:
+      - path: '{{ trix_ohpc }}'
+        remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+        options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+      nfs_remote_mask: '{{ shared_fs_disks }}'
+      nfs_prefix_path: '{{ shared_fs_prefix }}'
+      nfs_use_mask: true
+      nfs_only_xmount: true
+      when:
+        - ha | default(False)
+        - enable_openhpc | default(False)
+      tags: nfs-mounts
+
     - role: trinity/easybuild
       easybuild_user: easybuild
       easybuild_export: '{{ export_easybuild }}'
@@ -192,6 +207,20 @@
       nfs_only_xmount: "{{ ha | default(False) }}"
       when: enable_easybuild
       tags: easybuild
+
+    - role: trinity/nfs-mounts
+      nfs_enable_rdma: false
+      nfs_mounts:
+      - path: '{{ trix_easybuild }}'
+        remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+        options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+      nfs_remote_mask: '{{ shared_fs_disks }}'
+      nfs_prefix_path: '{{ shared_fs_prefix }}'
+      nfs_use_mask: true
+      nfs_only_xmount: true
+      when:
+        - ha | default(False)
+        - enable_easybuild | default(False)
 
     - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'

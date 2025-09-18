@@ -3,7 +3,7 @@
 - block:
   - name: Create trinity/ohpc dir for opt link to point at
     file:
-      path: "{{ shared_fs_prefix if nfs_only_xmount else '' }}{{ trix_ohpc }}"
+      path: "{{ trix_ohpc }}"
       owner: root
       group: root
       state: directory
@@ -11,7 +11,7 @@
 
   - name: Create link so openhpc ends up on /trinity filesystem
     file:
-      src: "{{ shared_fs_prefix if nfs_only_xmount else '' }}{{ trix_ohpc }}"
+      src: "{{ trix_ohpc }}"
       path: '{{ openhpc_home }}'
       owner: root
       group: root
@@ -52,7 +52,7 @@
     ansible.posix.mount:
       path: '{{ openhpc_home }}'
       state: absent_from_fstab
-  when: in_image or in_login_image
+  when: in_image or in_login_image|default(False)
 
 - name: Configure OpenHPC repos
   ansible.builtin.yum_repository:
