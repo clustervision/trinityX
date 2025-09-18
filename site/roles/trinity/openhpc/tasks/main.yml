@@ -1,5 +1,25 @@
 ---
 
+- block:
+  - name: Detect openhpc structure
+    stat:
+      path: '{{ openhpc_home }}'
+    register: openhpc_structure
+
+  - name: Remove deprecated openhpc directory
+    file:
+      path: '{{ openhpc_home }}'
+      state: absent
+    when:
+      - openhpc_structure.stat.islnk is defined
+      - not openhpc_structure.stat.islnk
+
+  - name: Remove deprecated mount path
+    ansible.posix.mount:
+      path: '{{ openhpc_home }}'
+      state: absent_from_fstab
+  when: in_image
+
 - name: Create trinity/ohpc dir for opt link to point at
   file:
     path: '{{ trix_ohpc }}'
@@ -7,16 +27,14 @@
     group: root
     state: directory
     mode: '0755'
-  when: not in_image
 
 - name: Create link so openhpc ends up on /trinity filesystem
   file:
     src: '{{ trix_ohpc }}'
-    path: /opt/ohpc
+    path: '{{ openhpc_home }}'
     owner: root
     group: root
     state: link
-  when: not in_image
 
 - name: Configure OpenHPC repos
   ansible.builtin.yum_repository:
@@ -41,7 +59,7 @@
     name: ohpc-base
     state: installed
     enablerepo: powertools
-  when: not in_image
+  when: on_controller
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
@@ -49,7 +67,7 @@
   yum:
     name: ohpc-base-compute
     state: installed
-  when: not in_image
+  when: on_controller
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
@@ -65,7 +83,7 @@
     file:
       path: /etc/genders
       state: touch
-  when: not in_image
+  when: on_controller
 
 - name: Install lmod dependencies on non-controller nodes
   yum:
@@ -81,7 +99,7 @@
 - name: Create symlinks for pdsh and pdcp
   file:
     dest: "/usr/bin/{{ item }}"
-    src: "/opt/ohpc/admin/pdsh/bin/{{ item }}"
+    src: "{{ openhpc_home }}/admin/pdsh/bin/{{ item }}"
     state: link
     force: true
     follow: false
@@ -102,19 +120,9 @@
     src: z_trinityx.sh.j2
     dest: /etc/profile.d/z_trinityx.sh
 
-- name: Update NFS exports
-  template:
-    src: OHPC_exports.j2
-    dest: '{{ nfs_exports_path }}/ohpc.exports'
-  when: not in_image
-  notify:
-    - Export NFS
-
-- file:
-    src: '{{ nfs_exports_path }}/ohpc.exports'
-    dest: '/etc/exports.d/ohpc.exports'
-    state: link
-    force: "yes"
-  when: not in_image
-  notify:
-    - Export NFS
+- name: Remove deprecated openhpc export
+  file:
+    path: '/etc/exports.d/ohpc.exports'
+    state: absent
+  notify: Export NFS
+  when: on_controller

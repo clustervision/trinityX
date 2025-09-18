@@ -1,14 +1,19 @@
 # Trinity NFS exports
 
 {% for export in new_nfs_exports %}
-{% if 'path' in export %}
-{% if 'type' in export %}
-{% if export['type'] != 'manual' and export['type'] != 'nfs' %}
-{{ export['path'] }}   {{ export['options']|default('') }}
-{% endif %}
+{% set disabled = export.get('disabled', False) %}
+{% if not disabled and 'path' in export %}
+{% set export_type = export.get('type') %}
+{% if export_type in ['manual', 'nfs'] %}
+{# For manual or nfs type, just output the path and options #}
+{{ export.path }}   {{ export.options | default('') }}
 {% else %}
-{{ export['path'] }}   {{ export['options']|default('') }}
+{# For other types, check for rwhosts #}
+{% if export.get('rwhosts') %}
+{{ export.path }}   {{ nfs_rw_options }} {{ export.rwhosts }} {{ export.options | default('') }}
+{% else %}
+{{ export.path }}   {{ export.options | default('') }}
+{% endif %}
 {% endif %}
 {% endif %}
 {% endfor %}
-

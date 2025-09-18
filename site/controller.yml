@@ -73,12 +73,27 @@
       nfs_enable_rdma: false
       nfs_exports_path: '{{ trix_local }}/etc/exports.d'
       nfs_exports:
+        # trinityX shared ------------------------------------------------------------------
         - path: '{{ trix_shared }}'
-          options: '-rw,sync,no_wdelay,no_root_squash {{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }} *(ro)'
+          options: '*(ro)'
+          rwhosts: '{{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }}'
+        # trinityX home --------------------------------------------------------------------
         - path: '{{ trix_home }}'
           options: '*(rw,async,no_root_squash)'
+        # sync for non-primary controllers to sync once ------------------------------------
         - path: '{{ trix_sync }}'
           options: '-ro,async,no_root_squash {{ all_ctrl_hostname | join(" ") }}'
+        # openhpc --------------------------------------------------------------------------
+        - path: '{{ trix_ohpc }}'
+          options: '*(ro,no_root_squash)'
+          rwhosts: '{{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }}'
+          disabled: '{{ False if enable_openhpc else True }}'
+        # easybuild ------------------------------------------------------------------------
+        - path: '{{ trix_easybuild }}'
+          options: '{{ "*(rw,sync,no_wdelay,no_root_squash)" if export_easybuild == "rw" else "*(ro,no_root_squash)" }}'
+          rwhosts: '{{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }}'
+          disabled: '{{ False if enable_openhpc else True }}'
+        # ----------------------------------------------------------------------------------
       nfs_remote_mask: '{{ shared_fs_disks }}'
       nfs_prefix_path: '{{ shared_fs_prefix }}'
       # nfs_use_mask overwrites the exported path to match the actual paths for shared disks
@@ -87,12 +102,15 @@
 
     - role: trinity/nfs-mounts
       nfs_mounts:
-      - path: '{{ trix_shared }}'
-        remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
-        options: 'defaults,nfsvers=4,rw,retrans=4,_netdev'
-      - path: '{{ trix_home }}'
-        remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
-        options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
+        # trinityX shared ------------------------------------------------------------------
+        - path: '{{ trix_shared }}'
+          remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
+          options: 'defaults,nfsvers=4,rw,retrans=4,_netdev'
+        # trinityX home --------------------------------------------------------------------
+        - path: '{{ trix_home }}'
+          remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
+          options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
+      # ----------------------------------------------------------------------------------
       nfs_remote_mask: '{{ shared_fs_disks }}'
       nfs_prefix_path: '{{ shared_fs_prefix }}'
       # nfs_use_mask enforces the mounting of even non nfs shared disks/mount
@@ -177,17 +195,44 @@
 
     - role: trinity/openhpc
       openhpc_skiproot: true
-      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
       when: enable_openhpc
       tags: openhpc
+
+    - role: trinity/nfs-mounts
+      nfs_enable_rdma: false
+      nfs_mounts:
+      - path: '{{ trix_ohpc }}'
+        remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+        options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+      nfs_remote_mask: '{{ shared_fs_disks }}'
+      nfs_prefix_path: '{{ shared_fs_prefix }}'
+      nfs_use_mask: true
+      nfs_only_xmount: true
+      when:
+        - ha | default(False)
+        - enable_openhpc | default(False)
+      tags: nfs-mounts
 
     - role: trinity/easybuild
       easybuild_user: easybuild
       easybuild_export: '{{ export_easybuild }}'
       easybuild_skiproot: true
-      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
       when: enable_easybuild
       tags: easybuild
+
+    - role: trinity/nfs-mounts
+      nfs_enable_rdma: false
+      nfs_mounts:
+      - path: '{{ trix_easybuild }}'
+        remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+        options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+      nfs_remote_mask: '{{ shared_fs_disks }}'
+      nfs_prefix_path: '{{ shared_fs_prefix }}'
+      nfs_use_mask: true
+      nfs_only_xmount: true
+      when:
+        - ha | default(False)
+        - enable_easybuild | default(False)
 
     - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'
