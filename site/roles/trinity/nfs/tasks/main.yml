@@ -20,7 +20,8 @@
 
 - name: Render nfs_exports based on nfs_exports and nfs_remote_mask info
   set_fact:
-    nfs_exports_: "{{ nfs_exports_|d([]) + [item|combine({'type': _type|from_yaml,
+    nfs_exports_: "{{ nfs_exports_|d([]) + [item|combine({'disabled': item.disabled|default(False),
+                                                          'type': _type|from_yaml,
                                                           'path': _path|from_yaml|default(item.path,true)})] }}"
   loop: "{{ nfs_exports }}"
   vars:

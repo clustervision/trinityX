@@ -120,19 +120,26 @@
     src: z_trinityx.sh.j2
     dest: /etc/profile.d/z_trinityx.sh
 
-- name: Update NFS exports
-  template:
-    src: OHPC_exports.j2
-    dest: '{{ nfs_exports_path }}/ohpc.exports'
-  when: on_controller
-  notify:
-    - Export NFS
+#- name: Update NFS exports
+#  template:
+#    src: OHPC_exports.j2
+#    dest: '{{ nfs_exports_path }}/ohpc.exports'
+#  when: on_controller
+#  notify:
+#    - Export NFS
 
-- file:
-    src: '{{ nfs_exports_path }}/ohpc.exports'
-    dest: '/etc/exports.d/ohpc.exports'
-    state: link
-    force: "yes"
+#- file:
+#    src: '{{ nfs_exports_path }}/ohpc.exports'
+#    dest: '/etc/exports.d/ohpc.exports'
+#    state: link
+#    force: "yes"
+#  when: on_controller
+#  notify:
+#    - Export NFS
+
+- name: Remove deprecated openhpc export
+  file:
+    path: '/etc/exports.d/ohpc.exports'
+    state: absent
+  notify: Export NFS
   when: on_controller
-  notify:
-    - Export NFS

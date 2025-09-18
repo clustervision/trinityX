@@ -1,6 +1,7 @@
 # Trinity NFS exports
 
 {% for export in new_nfs_exports %}
+{% if not disabled|default(False) %}
 {% if 'path' in export %}
 {% if 'type' in export %}
 {% if export['type'] != 'manual' and export['type'] != 'nfs' %}
@@ -8,6 +9,7 @@
 {% endif %}
 {% else %}
 {{ export['path'] }}   {{ export['options']|default('') }}
+{% endif %}
 {% endif %}
 {% endif %}
 {% endfor %}
