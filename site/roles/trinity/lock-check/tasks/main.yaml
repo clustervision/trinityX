@@ -1,0 +1,14 @@
+---
+
+- name: Verify safe run
+  stat:
+    path: /etc/trinity/ansible.lock
+  register: check_lockfile
+
+- fail:
+    msg: 'Lockfile prevents running ansible. You can force a run and accept any consequences by supplying "-e i_decline_support=true" to the ansible command line'
+  when:
+    - check_lockfile.stat.exists is defined
+    - check_lockfile.stat.exists
+    - not i_decline_support|default(False)
+
