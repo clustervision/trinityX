@@ -333,7 +333,7 @@
       tags: aria2c
 
     - role: trinity/ood
-      enable_ssl: true
+      ood_enable_ssl: true
       ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
       ood_ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ood_ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
@@ -344,6 +344,7 @@
       when: enable_ood
 
     - role: trinity/ood-apps
+      ood_enable_ssl: true
       ood_apps_admin_group: "{{ admin_group }}"
       tags: ood, ood-apps
       when: enable_ood
@@ -477,7 +478,7 @@
 
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"
-      enable_ssl: true
+      grafana_enable_ssl: true
       grafana_admin_group: "{{ admin_group }}"
       grafana_prometheus_url: "https://{{ trix_ctrl_local_ip }}:9090"
       grafana_alertmanager_url: "https://{{ trix_ctrl_local_ip }}:9093"
