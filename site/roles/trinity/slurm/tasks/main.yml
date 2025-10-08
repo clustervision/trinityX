@@ -301,14 +301,14 @@
         owner: '{{ item.2 }}'
         force: false
       with_together:
-        - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'slurm-partitions.conf', 'slurm-user.conf']
-        - ['0644', '0600', '0644', '0644', '0644']
-        - ['root', 'slurm', 'root', 'root', 'root']
+        - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'slurm-partitions.conf']
+        - ['0644', '0600', '0644', '0644']
+        - ['root', 'slurm', 'root', 'root']
       notify: restart slurm
 
-    - name: Set UsePAM to 1 in slurm-user.conf
+    - name: Set UsePAM to 1 in slurm.conf
       lineinfile:
-        path: '{{ slurm_conf_path }}/slurm-user.conf'
+        path: '{{ slurm_conf_path }}/slurm.conf'
         line: 'UsePAM=1'
       when: enable_slurm_pam
 
