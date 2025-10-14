@@ -27,9 +27,19 @@
         state: stopped
         enabled: true
 
+    - block:
+      - fail:
+          msg: "warning: root group used as admin group. reasons: either authentication role being disabled or group could not be resolved"
+        ignore_errors: true
+
+      - name: Wait 10s for reading...
+        wait_for:
+          timeout: 10
+      when: ood_apps_admin_group == 'root'
+
     - name: Ensure '{{ ood_apps_admin_group }}' group exists
       group:
         name: '{{ ood_apps_admin_group }}'
         gid: '150'
         system: 'yes'
-
+      when: ood_apps_admin_group != 'root'
