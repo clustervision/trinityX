@@ -242,7 +242,7 @@ class Obol:
 
     def _next_gid(self, _groups):
         idlist = [g["gidNumber"] for g in _groups or []]
-        return self._next_id(idlist, 150, 10000)
+        return self._next_id(idlist, 1050, 10000)
 
     def _user_show_by_uid(self, uid, _users=None):
         """Show system user details"""
