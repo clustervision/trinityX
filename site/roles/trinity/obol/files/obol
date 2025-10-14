@@ -21,9 +21,9 @@
 __author__ = "Diego Sonaglia"
 __copyright__ = ""
 __license__ = "GPL"
-__version__ = "1.7"
-__maintainer__ = "Diego Sonaglia"
-__email__ = "diego.sonaglia@clustervision.com"
+__version__ = "1.7.1"
+__maintainer__ = "Antoine Schonewille"
+__email__ = "development@clustervision.com"
 __status__ = "Development"
 
 
@@ -38,6 +38,7 @@ import configparser
 import secrets
 import logging
 import inspect
+import subprocess
 from getpass import getpass
 from typing import List, Dict, Union
 
@@ -534,6 +535,10 @@ class Obol:
         if not os.path.exists(home):
             os.mkdir(home)
             os.chown(home, int(uid), int(gid))
+            try:
+                subprocess.run(["/bin/su", "-", username, "-c", "true"], check=True)
+            except Exception as exp:
+                print_warning(f"Could not initialize skel due to 'su' error: {exp}")
         else:
             home_folder_uid = int(os.stat(home).st_uid)
             if home_folder_uid != int(uid):
