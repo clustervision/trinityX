@@ -79,10 +79,25 @@
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
 
-  - name: Create empty pdsh genders file
-    file:
-      path: /etc/genders
-      state: touch
+  - name: Get /etc/genders status
+    stat:
+      path: '/etc/genders'
+    register: default_genders_path
+
+  - block:
+    - name: Create empty pdsh genders file
+      file:
+        path: '{{ genders_conf_path }}'
+        state: touch
+
+    - name: Replace default configuration path with symlink to {{ genders_conf_path }}
+      file:
+        src: '{{ genders_conf_path }}'
+        dest: '/etc/genders'
+        state: link
+        force: "yes"
+      when: genders_conf_path != '/etc/genders'
+    when: default_genders_path.stat.exists == false
   when: on_controller
 
 - name: Install lmod dependencies on non-controller nodes
