@@ -85,18 +85,23 @@
     register: default_genders_path
 
   - block:
-    - name: Create empty pdsh genders file
+    - name: Ensure {{ genders_conf_path }} exists
       file:
         path: '{{ genders_conf_path }}'
+        state: directory
+
+    - name: Create empty pdsh genders file
+      file:
+        path: '{{ genders_conf_path }}/genders'
         state: touch
 
     - name: Replace default configuration path with symlink to {{ genders_conf_path }}
       file:
-        src: '{{ genders_conf_path }}'
+        src: '{{ genders_conf_path }}/genders'
         dest: '/etc/genders'
         state: link
         force: "yes"
-      when: genders_conf_path != '/etc/genders'
+      when: genders_conf_path != '/etc'
     when: default_genders_path.stat.exists == false
   when: on_controller
 
