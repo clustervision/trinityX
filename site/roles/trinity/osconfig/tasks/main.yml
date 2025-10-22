@@ -9,3 +9,9 @@
   when: 
     - ansible_facts['os_family'] == "RedHat" or ansible_facts['os_family'] == "Suse" or ansible_facts['os_family'] == "SLE"
     - in_image or on_node|default(False)
+
+- name: Set correct permissions for umad
+  template:
+    src: 'umad-udev.rules.j2'
+    dest: '/etc/udev/rules.d/10-infiniband-umad.rules'
+  when: on_controller or in_login_image|default(False)
