@@ -1,3 +1,5 @@
+__version__     = '15.2.0.0'
+
 import requests
 import urllib3
 from typing import List, Dict
@@ -75,5 +77,23 @@ class AlertFetcher:
 
         log.debug(f"Mapped NHC alerts to {len(node_reasons)} nodes.")
         return node_reasons
+
+    def get_controller_nhc_reasons(self) -> List[str]:
+        """
+        Returns a list of descriptions for alerts where labels:
+            - nhc == "true"
+            - job == "luna_controllers"
+        Used to trigger a global drain (all nodes).
+        """
+        nhc_alerts = self.get_nhc_alerts()
+        reasons = []
+        for a in nhc_alerts:
+            labels = a.get("labels", {})
+            if labels.get("job") == "luna_controllers":
+                desc = a.get("annotations", {}).get("description") or "No reason provided"
+                reasons.append(desc)
+        log.debug(f"Controller NHC alerts found: {len(reasons)}")
+        return reasons
+
 
 

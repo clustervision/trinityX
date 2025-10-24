@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
+__version__     = '15.2.0.0'
+
 import time
 from alert_fetcher import AlertFetcher
 from node_utils import NodeUtils
 from logger import Logger
 from config import AUTO_UNDRAIN, ALERT_FETCH_INTERVAL
 
+
 log = Logger.get_logger("TRIX-DRAINER: drainer")
+
 
 
 class Drainer:
@@ -33,6 +37,33 @@ class Drainer:
         # Step 2: Fetch active NHC alerts as {node: [reasons]}
         nhc_alerts = self.fetcher.map_alerts_to_nodes()
         nhc_nodes_set = set(nhc_alerts.keys())
+
+        # Step 2b: If any controller NHC alert is active -> global drain
+        controller_reasons = self.fetcher.get_controller_nhc_reasons()
+        controller_active = len(controller_reasons) > 0
+        if controller_active:
+            if len(controller_reasons) > 1:
+                controller_reason = "Controller NHC alert(s) active (job=luna_controllers); check AlertX for details"
+            else:
+                controller_reason = f"Controller NHC: {controller_reasons[0]}"
+
+            log.info("Controller NHC alert active → draining ALL nodes")
+            for node in all_nodes_set:
+                is_not_drained = node in not_drained_set
+                is_drainer_drained = node in drainer_drained_set
+
+                if is_not_drained:
+                    self.node_utils.drain_node(node, controller_reason)
+                    self.previous_alert_reasons[node] = controller_reason
+                elif is_drainer_drained:
+                    # keep it drained; update reason if it changed
+                    prev = self.previous_alert_reasons.get(node)
+                    if prev != controller_reason:
+                        self.node_utils.update_drain_reason(node, controller_reason)
+                        self.previous_alert_reasons[node] = controller_reason
+
+            # IMPORTANT: skip the normal logic while controller alert is active, next section takes care of undraining
+            return
 
         for node in all_nodes_set:
             has_alert = node in nhc_nodes_set
