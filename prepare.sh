@@ -184,10 +184,23 @@ fi
 store_config 'WITH_ZFS' $WITH_ZFS
 
 if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
-  yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
-  yes y | dnf -y install zfs zfs-dkms
-  echo "zfs" >> /etc/modules-load.d/zfs.conf
-  modprobe zfs
+  ARCH=$(uname -m)
+  if [ "$ARCH" == "aarch64" ]; then
+    add_message "Automated ZFS support for ARM is limited. To have ZFS support for ARM based systems, please follow the below steps:"
+    add_message "- dns install -y kernel-devel kernel-headers dkms libtirpc-devel libblkid-devel libuuid-devel zlib-devel"
+    add_message "- git clone https://github.com/openzfs/zfs.git"
+    add_message "- cd zfs"
+    add_message "- sh autogen.sh"
+    add_message "- ./configure"
+    add_message "- make -s -j8"
+    add_message "- make install"
+    show_message
+  else
+    yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
+    yes y | dnf -y install zfs zfs-dkms
+    echo "zfs" >> /etc/modules-load.d/zfs.conf
+    modprobe zfs
+  fi
 fi
 
 if [ ! -f site/hosts ]; then
