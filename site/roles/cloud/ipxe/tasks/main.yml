@@ -41,43 +41,43 @@
     state: present
   when: package_manager == 'apt'
   
-- name: Check if the folder /trinity/images/ipxe exists
+- name: Check if the folder images/ipxe exists
   stat:
-    path: /trinity/images/ipxe
+    path: {{ trix_images }}/ipxe
   register: ipxe_folder
 
-- name: Remove the folder /trinity/images/ipxe if it exists
+- name: Remove the folder images/ipxe if it exists
   file:
-    path: /trinity/images/ipxe
+    path: {{ trix_images }}/ipxe
     state: absent
   when: ipxe_folder.stat.exists
   
 - name: Clone iPXE
   git:
     repo: git://git.ipxe.org/ipxe.git
-    dest: /trinity/images/ipxe
+    dest: {{ trix_images }}/ipxe
 
 - block:
   - name: Create File to embed Next Server IP with iPXE
     template:
       src: embed.ipxe.j2
-      dest: /trinity/images/ipxe/src/embed.ipxe
+      dest: {{ trix_images }}/ipxe/src/embed.ipxe
 
   - name: Enable NTFS support
     lineinfile:
-      path: /trinity/images/ipxe/src/config/general.h
+      path: {{ trix_images }}/ipxe/src/config/general.h
       regexp: '^#undef\s+DOWNLOAD_PROTO_NFS'
       line: '#define DOWNLOAD_PROTO_NFS'
 
   - name: Enable PING support
     replace:
-      path: /trinity/images/ipxe/src/config/general.h
+      path: {{ trix_images }}/ipxe/src/config/general.h
       regexp: '^\/\/#define\ (PING_CMD|IPSTAT_CMD|REBOOT_CMD|POWEROFF)'
       replace: '#define \1'
 
   - name: Build iPXE
     command: make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe
     args:
-      chdir: /trinity/images/ipxe/src
+      chdir: {{ trix_images }}/ipxe/src
   when: skip_ipxe_efi_build is not defined or not skip_ipxe_efi_build
 
