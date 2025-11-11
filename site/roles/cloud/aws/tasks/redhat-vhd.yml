@@ -6,24 +6,24 @@
     - name: Create File to embed Next Server IP with iPXE
       template:
         src: embed.ipxe.j2
-        dest: /trinity/images/ipxe/src/embed.ipxe
+        dest: {{ trix_images }}/ipxe/src/embed.ipxe
 
     - name: Enable NTFS support
       lineinfile:
-        path: /trinity/images/ipxe/src/config/general.h
+        path: {{ trix_images }}/ipxe/src/config/general.h
         regexp: '^#undef\s+DOWNLOAD_PROTO_NFS'
         line: '#define DOWNLOAD_PROTO_NFS'
 
     - name: Enable PING support
       replace:
-        path: /trinity/images/ipxe/src/config/general.h
+        path: {{ trix_images }}/ipxe/src/config/general.h
         regexp: '^\/\/#define\ (PING_CMD|IPSTAT_CMD|REBOOT_CMD|POWEROFF)'
         replace: '#define \1'
 
     - name: Build iPXE
       command: make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe
       args:
-        chdir: /trinity/images/ipxe/src
+        chdir: {{ trix_images }}/ipxe/src
     when: include_ipxe_efi_build is defined and include_ipxe_efi_build
 
   - name: Get VHD path
@@ -110,7 +110,7 @@
       src: "{{ ipxe_file.src }}"
       dest: "{{ ipxe_file.dest }}"
     with_items:
-      - { src: "/trinity/images/ipxe/src/bin-x86_64-efi/ipxe.efi", dest: "{{ vhd_path }}/boot/efi/EFI/rocky/ipxe.efi" }
+      - { src: "{{ trix_images }}/ipxe/src/bin-x86_64-efi/ipxe.efi", dest: "{{ vhd_path }}/boot/efi/EFI/rocky/ipxe.efi" }
       - { src: "/usr/share/grub/unicode.pf2", dest: "{{ vhd_path }}/boot/efi/EFI/rocky/fonts/" }
     loop_control:
       loop_var: ipxe_file
