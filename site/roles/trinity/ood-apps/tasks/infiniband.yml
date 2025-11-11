@@ -12,3 +12,13 @@
       group: "{{ ood_apps_admin_group }}"
     when: "'/dev/infiniband/umad0' is exists"
 
+  - name: Render sudoers file
+    ansible.builtin.template:
+      src: 'infiniband/sudoers.j2'
+      dest: /etc/sudoers.d/ibanalyzer
+      owner: root
+      group: root
+      mode: "0755"
+    when: 
+      - override | default(('/etc/sudoers.d/ibanalyzer') is not exists )
+
