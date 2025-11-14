@@ -84,6 +84,14 @@ prometheus_alertmanager_time_intervals: []
 
 
 prometheus_alertmanager_inhibit_rules:
+# Inhibit alerts with disabled=true
+- source_matchers:
+    - disabled != "true"
+  target_matchers:
+    - disabled = "true"
+  equal:
+    - cluster
+    - hostname
 # Inhibit alerts with severity level `warning` or lower for critical alerts
 - equal:
   - cluster
