@@ -170,31 +170,39 @@
     groups: '{{ ssl_cert_group }}'
 
 
+# --------------- destroy existing DB if requested ---------------
 - block:
-  - name: Verifying previous data backup existence
+  - name: Verifying for data existence
     stat:
-      path: '{{ openldap_server_dir_path }}.backup'
-    register: openldap_server_dir_path_backup
+      path: '{{ openldap_server_dir_path }}'
+    register: openldap_server_dir_stat
 
-  - name: Deleting previous data backup
-    file:
-      path: '{{ openldap_server_dir_path }}.backup'
-      state: absent
-    when:
-      - openldap_server_dir_path_backup.stat.isdir is defined
-      - openldap_server_dir_path_backup.stat.isdir
+  - block:
+    - name: Verifying previous data backup existence
+      stat:
+        path: '{{ openldap_server_dir_path }}.backup'
+      register: openldap_server_dir_path_backup
 
-  - name: Stop OpenLDAP service
-    systemd:
-      name: slapd
-      state: stopped
+    - name: Deleting previous data backup
+      file:
+        path: '{{ openldap_server_dir_path }}.backup'
+        state: absent
+      when:
+        - openldap_server_dir_path_backup.stat.isdir is defined
+        - openldap_server_dir_path_backup.stat.isdir
 
-  - name: Moving current data to backup
-    command: 'mv -f {{ openldap_server_dir_path }} {{ openldap_server_dir_path }}.backup'
+    - name: Stop OpenLDAP service
+      systemd:
+        name: slapd
+        state: stopped
+
+    - name: Moving current data to backup
+      command: 'mv -f {{ openldap_server_dir_path }} {{ openldap_server_dir_path }}.backup'
+    when: openldap_server_dir_stat.stat.exists
   when:
     - override | default(False)
     - primary | default(True)
-
+# ---------------------------------------------------------------- 
 
 - name: Enable OpenLDAP service
   systemd:
