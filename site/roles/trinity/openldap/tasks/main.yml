@@ -107,12 +107,6 @@
     path: '/etc/openldap/ldap.conf'
     line: 'TLS_CACERT   /etc/openldap/certs/cluster-ca.crt'
 
-- name: Enable OpenLDAP service
-  systemd:
-    name: slapd
-    enabled: true
-  when: not ha|default(False)
-
 - name: Get /etc/openldap/slapd.d status
   stat:
     path: '/etc/openldap/slapd.d'
@@ -175,6 +169,38 @@
     name: '{{ openldap_default_user }}'
     groups: '{{ ssl_cert_group }}'
 
+
+- block:
+  - name: Verifying previous data backup existence
+    stat:
+      path: '{{ openldap_server_dir_path }}.backup'
+    register: openldap_server_dir_path_backup
+
+  - name: Deleting previous data backup
+    file:
+      path: '{{ openldap_server_dir_path }}.backup'
+      state: absent
+    when:
+      - openldap_server_dir_path_backup.stat.isdir is defined
+      - openldap_server_dir_path_backup.stat.isdir
+
+  - name: Stop OpenLDAP service
+    systemd:
+      name: slapd
+      state: stopped
+
+  - name: Moving current data to backup
+    command: 'mv -f {{ openldap_server_dir_path }} {{ openldap_server_dir_path }}.backup'
+  when:
+    - override | default(False)
+    - primary | default(True)
+
+
+- name: Enable OpenLDAP service
+  systemd:
+    name: slapd
+    enabled: true
+  when: not ha|default(False)
 
 - block:
   - name: Ensure OpenLDAP data directory exists
