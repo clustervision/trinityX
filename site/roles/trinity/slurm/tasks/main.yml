@@ -113,6 +113,37 @@
     - slurmdbd
     - slurmctld
 
+# ----------------- backup current slurm if requested -------------
+
+- block:
+  - name: Verifying for config existence
+    stat:
+      path: '{{ slurm_conf_path }}'
+    register: slurm_conf_path_stat
+
+  - block:
+    - name: Verifying previous config backup existence
+      stat:
+        path: '{{ slurm_conf_path }}.backup'
+      register: slurm_conf_path_backup
+
+    - name: Deleting previous config backup
+      file:
+        path: '{{ slurm_conf_path }}.backup'
+        state: absent
+      when:
+        - slurm_conf_path_backup.stat.isdir is defined
+        - slurm_conf_path_backup.stat.isdir
+
+    - name: Moving current config to backup
+      command: 'mv -f {{ slurm_conf_path }} {{ slurm_conf_path }}.backup'
+    when: slurm_conf_path_stat.stat.exists
+  when:
+    - override | default(False)
+    - primary | default(True)
+
+# -----------------------------------------------------------------
+
 - name: Ensure {{ slurm_log_path }} exists
   file:
     path: '{{ slurm_log_path }}'

@@ -46,6 +46,42 @@
 
 # ----------------------------------------------------
 
+# -------  destroy existing DB if requested ----------
+
+- block:
+  - block:
+    - name: set DB path
+      set_fact:
+        luna_daemon_db_path: '{{ trix_luna }}/daemon/common/luna.db'
+
+    - name: Verifying for data existence
+      stat:
+        path: '{{ luna_daemon_db_path }}'
+      register: luna_daemon_db_file
+
+  - block:
+    - name: Verifying previous data backup existence
+      stat:
+        path: '{{ luna_daemon_db_path }}.backup'
+      register: luna_daemon_db_backup
+
+    - name: Deleting previous data backup
+      file:
+        path: '{{ luna_daemon_db_path }}.backup'
+        state: absent
+      when:
+        - luna_daemon_db_backup.stat.exists
+
+    - name: Moving current data to backup
+      command: 'mv -f {{ luna_daemon_db_path }} {{ luna_daemon_db_path }}.backup'
+    when:
+      - luna_daemon_db_file.stat.exists
+  when:
+    - override | default(False)
+    - primary | default(True)
+
+# ----------------------------------------------------
+
 - name: Get python libdir
   shell: "echo {{ trix_local }}/python/lib/python*"
   register: luna2_python_dir

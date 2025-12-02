@@ -59,6 +59,23 @@
       dest: '{{ ssl_cert_path }}/san.conf'
       mode: '0660'
 
+  - block:
+    - name: Fetch list of existing certificate artifacts
+      find:
+        paths: "{{ ssl_cert_path }}"
+        patterns: '{{ ansible_fqdn }}.*'
+      register: ssl_existing_cert
+
+    - name: Ensure backup directory exists
+      file:
+        path: '{{ ssl_cert_path }}/backup'
+        state: directory
+
+    - name: Backup existing certificate
+      command: 'mv -f {{ item.path }} {{ ssl_cert_path }}/backup/'
+      with_items: "{{ ssl_existing_cert.files }}"
+    when: override | default(False)
+
   - name: Create a certificate request for each controller
     command: >
       openssl req -new -nodes -sha512
