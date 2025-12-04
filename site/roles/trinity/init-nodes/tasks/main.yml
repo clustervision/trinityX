@@ -31,18 +31,29 @@
   set_fact:
     image_name: '{{ inventory_hostname.split(".")|first }}'
 
-- name: Generate salt for the root password
+- name: Ensure python3 and pip are installed
+  package:
+    name: "{{ init_nodes_req }}"
+    state: present
+
+- name: Install passlib with bcrypt support
+  pip:
+    name: "{{ init_nodes_packages }}"
+    state: present
+    executable: pip3
+
+- name: Set root plaintext password
   set_fact:
-    password_salt: "{{ lookup('password',
-                '/etc/trinity/passwords/images/' + image_name + '/root-salt.txt
-                chars=ascii_letters,digits,hexdigits length=16') }}"
+    root_plain: "{{ lookup('password','/etc/trinity/passwords/images/{{ image_name }}/root.txt') }}"
+
+- name: Generate root password hash
+  set_fact:
+    root_password_hash: "{{ root_plain | password_hash('bcrypt') }}"
 
 - name: Setup the root user's password
   user:
     name: root
-    password: '{{ lookup("password","/etc/trinity/passwords/images/" +image_name
-              + "/root.txt")|password_hash("sha512", password_salt) }}'
-
+    password: "{{ root_password_hash }}"
     state: present
 
 - name: Generate host SSH keys
