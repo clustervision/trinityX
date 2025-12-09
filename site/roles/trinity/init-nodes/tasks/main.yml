@@ -31,17 +31,6 @@
   set_fact:
     image_name: '{{ inventory_hostname.split(".")|first }}'
 
-- name: Ensure pip and setuptools are installed
-  package:
-    name: "{{ init_nodes_req }}"
-    state: present
-
-- name: Install passlib with bcrypt support
-  pip:
-    name: "{{ init_nodes_packages }}"
-    state: present
-    executable: pip3
-
 - name: Set root plaintext password
   set_fact:
     root_plain: "{{ lookup('password','/etc/trinity/passwords/images/{{ image_name }}/root.txt') }}"
