@@ -88,6 +88,14 @@
       set_fact:
         tsig_key: "{{ tsig_key_b64['content'] | b64decode }}"
     when: stat_tsig_key.stat.exists
+
+  - name: Set TSIG key secret
+    set_fact:
+      tsig_key_secret: "{{ tsig_key | regex_search('secret') | split() | last | regex_replace('\"', '') | regex_replace(';', '') }}"
+
+  - name: Set TSIG key algo
+    set_fact:
+      tsig_key_algo: "{{ tsig_key | regex_search('algorithm') | split() | last | regex_replace('\"', '') | regex_replace(';', '') }}"
   when:
     - ansible_facts['os_family'] == "RedHat"
     - ansible_facts['distribution_major_version']|int > 9
