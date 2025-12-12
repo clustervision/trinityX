@@ -57,3 +57,46 @@
     when: stat_omapi_key.stat.exists
 
 
+- block:
+  - name: Verify if TSIG vault exists
+    stat:
+      path: "{{ trix_ssl }}/tsig.key"
+    register: stat_tsig_key
+
+  - block:
+    - name: Generate TSIG Key
+      shell: tsig-keygen -a hmac-sha256 tsig-key
+      register: raw_tsig_key
+
+    - name: Set TSIG Key
+      set_fact:
+        tsig_key: "{{ raw_tsig_key.stdout }}"
+
+    - name: Write TSIG key to vault
+      copy:
+        dest: "{{ trix_ssl }}/tsig.key"
+        content: "{{ tsig_key }}"
+    when: not stat_tsig_key.stat.exists
+
+  - block:
+    - name: Import TSIG key
+      slurp:
+        src: "{{ trix_ssl }}/tsig.key"
+      register: tsig_key_b64
+
+    - name: Set TSIG key
+      set_fact:
+        tsig_key: "{{ tsig_key_b64['content'] | b64decode }}"
+    when: stat_tsig_key.stat.exists
+
+  - name: Set TSIG key secret
+    set_fact:
+      tsig_key_secret: "{{ tsig_key | regex_search('secret .*') | split() | last | regex_replace('\"', '') | regex_replace(';', '') }}"
+
+  - name: Set TSIG key algo
+    set_fact:
+      tsig_key_algo: "{{ tsig_key | regex_search('algorithm .*') | split() | last | regex_replace('\"', '') | regex_replace(';', '') }}"
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int > 8
+

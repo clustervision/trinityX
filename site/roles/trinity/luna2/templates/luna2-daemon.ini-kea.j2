@@ -39,14 +39,18 @@ PROTOCOL = http
 ; this section is optional. if not specified, luna falls back to luna defaults.
 
 [SERVICES]
-DHCP = dhcpd
+DHCP = kea-dhcp4
 DNS = named
 CONTROL = systemd
 COOLDOWN = 2s
 COMMAND = /usr/bin/systemctl
 
 [DHCP]
-OMAPIKEY = {{ omapi_key | default() }}
+TSIGKEY = {{ tsig_key_secret | default() }}
+TSIGALGO = {{ tsig_key_algo | default() }}
+TEMPLATE = templ_kea-dhcp4.cfg
+CONFIG_PATH = /etc/kea/kea-dhcp4.conf
+TEST = kea-dhcp4 -t
 
 [BMCCONTROL]
 BMC_BATCH_SIZE = 10
