@@ -1,12 +1,18 @@
 ---
 # tasks file for luna
 
+- name: Load kea variable file
+  include_vars: "kea.yaml"
+  ignore_errors: true
+  when: luna2_use_kea | default(False)
+
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
   include_vars: "{{ item }}"
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
   ignore_errors: true
+  when: not luna2_use_kea | default(False)
 
 - name: Install luna2 packages
   yum:
