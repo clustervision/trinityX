@@ -130,7 +130,7 @@ if [ ! "$GITLAB_CI" ]; then
       dnf -y install wget
   fi
   ARCH=$(uname -m)
-  TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml.example 2> /dev/null | grep -oE '[0-9\.]+' || echo '15.2')
+  TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml.example 2> /dev/null | grep -oE '[0-9\.]+' || echo '15')
   wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
   chmod 755 site/tui_configurator
 fi
@@ -143,12 +143,7 @@ else
 fi
 dnf install curl tar git -y
 
-REDHAT_RELEASE=''
-if  [[ `grep -i "Red Hat Enterprise Linux 8" /etc/os-release` ]]; then
-  REDHAT_RELEASE=8
-elif  [[ `grep -i "Red Hat Enterprise Linux 9" /etc/os-release` ]]; then
-  REDHAT_RELEASE=9
-fi
+REDHAT_RELEASE=$(grep -i "Red Hat Enterprise Linux" /etc/os-release | grep -oE '[0-9]+' | head -n1)
 if [ "$REDHAT_RELEASE" ]; then
   subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-x86_64-rpms
   dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
@@ -156,7 +151,11 @@ if [ "$REDHAT_RELEASE" ]; then
   dnf install ansible -y
 else
   dnf install epel-release -y
-  dnf install ansible -y
+  dnf install ansible -y 2> /dev/null || dnf install ansible-core -y
+  # needed for rocky10
+  dnf install ansible-collection-community-general -y 2> /dev/null
+  dnf install ansible-collection-ansible-posix -y 2> /dev/null
+  ansible-galaxy collection install community.mysql
 fi
 
 ansible-galaxy install OndrejHome.pcs-modules-2

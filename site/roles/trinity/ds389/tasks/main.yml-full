@@ -1,0 +1,336 @@
+---
+# tasks file for 389ds
+
+- debug:
+    msg: "{{ 389ds_server_dir_path }}"
+
+- name: Install dependencies
+  yum:
+    name: python3-policycoreutils
+    state: installed
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+# -- start sync
+- block:
+  - name: Ensure password loction exists
+    file:
+      path: '/etc/trinity/passwords/389ds'
+      state: directory
+      mode: 0700
+
+  - name: Copy 389ds password from sync
+    copy:
+      remote_src: true
+      src: '{{ trix_sync }}/389ds/root.txt'
+      dest: '/etc/trinity/passwords/389ds/'
+  when: 
+    - not primary | default(False)
+    - ha | default(False)
+# -- end sync
+
+- name: Generate 389ds root password and save it to /etc/trinity/passwords
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/389ds/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get 389ds root password from /etc/trinity/passwords
+  set_fact:
+    389ds_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/389ds/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+# sync
+# -- start sync
+- block:
+  - name: Ensure 389ds sync directory exists
+    file:
+      path: '{{ trix_sync }}/389ds'
+      state: directory
+
+  - name: Add 389ds password to sync
+    copy:
+      remote_src: true
+      src: '/etc/trinity/passwords/389ds/root.txt'
+      dest: '{{ trix_sync }}/389ds/'
+      mode: 0640
+  when:
+    - primary | default(True)
+    - ha | default(False)
+# -- end sync
+
+
+- name: Install 389DS packages
+  yum:
+    name: '{{ 389ds_packages }}'
+    state: present
+    enablerepo:
+      - plus
+      - powertools
+      - appstream
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+#- block:
+#  - name: Selinux fcontext on files
+#    sefcontext:
+#      target: "{{ 389ds_server_conf_path }}(/.*)?"
+#      setype: slapd_db_t
+#  when: ansible_selinux.status == "enabled"
+
+# --- Instance Creation ---
+- name: Create 389DS instance configuration file (.inf)
+  template:
+    src: 389ds_instance.inf.j2
+    dest: "/etc/dirsrv/389ds-{{ 389ds_instance_name }}.inf"
+    mode: '0600'
+  when: primary | default(True)
+
+- name: Setup 389DS instance from file
+  command: dscreate from-file /etc/dirsrv/389ds-{{ 389ds_instance_name }}.inf
+  args:
+    creates: "/etc/dirsrv/slapd-{{ 389ds_instance_name }}/dse.ldif"
+  when: primary | default(True)
+
+
+- name: Adjust 389DS server TLS configuration
+  lineinfile:
+    create: true
+    path: '{{ 389ds_server_defaults_file }}'
+    regexp: '^SLAPD_URLS='
+    line: 'SLAPD_URLS="{{ 389ds_endpoints }}"'
+
+- name: Adjust 389DS client TLS configuration
+  lineinfile:
+    path: '/etc/389ds/ldap.conf'
+    line: 'TLS_CACERT   /etc/389ds/certs/cluster-ca.crt'
+
+- name: Get /etc/389ds/slapd.d status
+  stat:
+    path: '/etc/389ds/slapd.d'
+  register: default_389ds_path
+
+# - debug:
+#    msg: "389ds_server_conf_path: {{ 389ds_server_conf_path }}"
+
+- block:
+    - name: Ensure 389DS configuration directory exists
+      file:
+        path: '{{ 389ds_server_conf_path }}'
+        state: directory
+        owner: '{{ 389ds_default_user }}'
+        group: '{{ 389ds_default_group }}'
+        setype: slapd_db_t
+        seuser: system_u
+      when: primary | default(False)
+
+    - name: Copy default configuration to {{ 389ds_server_conf_path }}
+      shell: rsync -raW -AX /etc/389ds/slapd.d/* {{ 389ds_server_conf_path|quote }}
+      args:
+        creates: '{{ 389ds_server_conf_path }}/cn=config.ldif'
+      register: 389ds_copy
+      ignore_errors: true
+      when: primary | default(True)
+
+    - name: Copy default configuration to {{ 389ds_server_conf_path }} without xattr
+      shell: rsync -raW /etc/389ds/slapd.d/* {{ 389ds_server_conf_path|quote }}
+      args:
+        creates: '{{ 389ds_server_conf_path }}/cn=config.ldif'
+      when:
+        - primary | default(True)
+        - 389ds_copy is failed
+
+    - name: Delete default configuration
+      file:
+        path: '/etc/389ds/slapd.d'
+        state: absent
+
+    - name: Replace default configuration path with symlink to {{ 389ds_server_conf_path }}
+      file:
+        src: '{{ 389ds_server_conf_path }}'
+        dest: '/etc/389ds/slapd.d'
+        state: link
+        force: true
+
+  when: 389ds_server_conf_path|string not in '/etc/389ds/slapd.d'
+        and default_389ds_path.stat.isdir
+
+
+- name: Add cluster CA certificate to /etc/389ds/certs
+  copy:
+    remote_src: true
+    src: '{{ 389ds_tls_cacrt }}'
+    dest: '/etc/389ds/certs/'
+
+- name: Ensure 389DS has access to the ssl certificates
+  user:
+    name: '{{ 389ds_default_user }}'
+    groups: '{{ ssl_cert_group }}'
+
+
+# --------------- destroy existing DB if requested ---------------
+- block:
+  - name: Verifying for data existence
+    stat:
+      path: '{{ 389ds_server_dir_path }}'
+    register: 389ds_server_dir_stat
+
+  - block:
+    - name: Verifying previous data backup existence
+      stat:
+        path: '{{ 389ds_server_dir_path }}.backup'
+      register: 389ds_server_dir_path_backup
+
+    - name: Deleting previous data backup
+      file:
+        path: '{{ 389ds_server_dir_path }}.backup'
+        state: absent
+      when:
+        - 389ds_server_dir_path_backup.stat.isdir is defined
+        - 389ds_server_dir_path_backup.stat.isdir
+
+    - name: Stop 389DS service
+      systemd:
+        name: slapd
+        state: stopped
+
+    - name: Moving current data to backup
+      command: 'mv -f {{ 389ds_server_dir_path }} {{ 389ds_server_dir_path }}.backup'
+    when: 389ds_server_dir_stat.stat.exists
+  when:
+    - override | default(False)
+    - primary | default(True)
+# ----------------------------------------------------------------
+
+- name: Enable 389DS service
+  systemd:
+    name: slapd
+    enabled: true
+  when: not ha|default(False)
+
+- block:
+  - name: Ensure 389DS data directory exists
+    file:
+      path: '{{ 389ds_server_dir_path }}'
+      state: directory
+      owner: '{{ 389ds_default_user }}'
+      group: '{{ 389ds_default_group }}'
+      setype: slapd_db_t
+      seuser: system_u
+
+  - name: Start 389DS service
+    systemd:
+      name: slapd
+      state: started
+      enabled: true
+
+  - name: Copy 389DS schemas
+    copy:
+      src: '{{ item }}'
+      dest: '/etc/389ds/schema/'
+      owner: '{{ 389ds_default_user }}'
+      group: '{{ 389ds_default_group }}'
+      mode: '0644'
+    with_items:
+      - rfc2307bis.ldif
+      - autoinc.ldif
+      - local_schema.ldif
+  when: primary | default(True)
+
+# ------------------------------- 389ds 2.5+
+- block:
+#  - name: Load 389DS schemas
+#    command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/389ds/schema/{{ item }}.ldif
+#    args:
+#      creates: '/etc/389ds/slapd.d/cn=config/cn=schema/cn={?}{{ item }}.ldif'
+#    with_items:
+#      - cosine
+#      - inetorgperson
+#      - rfc2307bis
+#      - autoinc
+
+  - name: Render 389DS configuration
+    template:
+      src: '{{ item }}.j2'
+      dest: '/tmp/{{ item }}'
+    with_items:
+      - config.ldif
+      - local.ldif
+      - proxy.ldif
+    changed_when: false
+
+  - name: Copy 389DS overlay configurations
+    copy:
+      src: '{{ item }}'
+      dest: "/tmp/{{ item.split('-') | first }}"
+    with_items:
+      - memberof.ldif-25
+
+  - name: Load 389DS global configuration
+    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
+    args:
+      creates: '/etc/389ds/slapd.d/cn=config.ldif'
+    notify: restart 389ds
+
+  - name: Load 389DS local configuration
+    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
+    args:
+      creates: '/etc/389ds/slapd.d/cn=config/olcDatabase={?}mdb/olcOverlay={0}memberof.ldif'
+    with_items:
+      - config.ldif
+      - local.ldif
+      - proxy.ldif
+      - memberof.ldif
+    notify: restart 389ds
+  
+  - name: Load slapcat data
+    command: "slapcat -n 0"
+    register: slapcat_data
+
+  - block:
+    - name: Load ppolicy module
+      command: "ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyload.ldif"
+
+    - name: Load ppolicy overlay
+      command: "ldapadd -Y EXTERNAL -H ldapi:/// -f {{ role_path }}/files/ppolicyoverlay.ldif"
+    when: "'ppolicy' not in slapcat_data.stdout"
+    ignore_errors: true
+
+  - name: Check local schemas
+    command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
+    register: ldapsearch
+    failed_when: false
+    changed_when: false
+
+  - name: Load 389DS local schema
+    command: >
+      ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ 389ds_root_pwd }}
+                               -f /etc/389ds/schema/local_schema.ldif
+    ignore_errors: true
+    when: ldapsearch.rc == 32
+  when: (primary | default(True)) and (389ds_version is defined and 389ds_version.stdout|int > 24)
+
+# ---------------------
+
+- block:
+  - name: Disable 389DS service for H/A
+    systemd:
+      name: slapd
+      state: "{{ 'started' if primary else 'stopped' }}"
+      enabled: false
+
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: '389ds'
+      resource_class: 'systemd'
+      resource_type: 'systemd:slapd'
+      options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+      state: present
+    when: primary | default(True)
+  when: ha | default(False)
+  tags: pcs
+
+- meta: flush_handlers
