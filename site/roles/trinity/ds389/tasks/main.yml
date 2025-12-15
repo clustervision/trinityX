@@ -59,7 +59,7 @@
 # -- end sync
 
 
-- name: Install 389DS packages
+- name: Install DS389 packages
   yum:
     name: '{{ ds389_packages }}'
     state: present
@@ -73,14 +73,14 @@
 
 
 # --- Instance Creation ---
-- name: Create 389DS instance configuration file (.inf)
+- name: Create DS389 instance configuration file (.inf)
   template:
     src: ds389_instance.inf.j2
     dest: "/etc/dirsrv/ds389-local.inf"
     mode: '0600'
   when: primary | default(True)
 
-- name: Setup 389DS instance from file
+- name: Setup DS389 instance from file
   command: dscreate from-file /etc/dirsrv/ds389-local.inf
   args:
     creates: "/etc/dirsrv/slapd-local/dse.ldif"
@@ -101,7 +101,7 @@
   register: default_ds389_path
 
 - block:
-  - name: Ensure 389DS configuration directory exists
+  - name: Ensure DS389 configuration directory exists
     file:
       path: '{{ ds389_server_conf_path }}'
       state: directory
@@ -149,7 +149,7 @@
   register: default_ds389_data
 
 - block:
-  - name: Ensure 389DS data directory exists
+  - name: Ensure DS389 data directory exists
     file:
       path: '{{ ds389_server_dir_path }}'
       state: directory
@@ -187,7 +187,7 @@
       state: link
       force: true
 
-#  - name: Copy 389DS schemas
+#  - name: Copy DS389 schemas
 #    copy:
 #      src: '{{ item }}'
 #      dest: '/etc/dirsrv/schema/'
@@ -201,7 +201,7 @@
 
 
 # --- certificates
-- name: Ensure 389DS certs directory exists
+- name: Ensure DS389 certs directory exists
   file:
     path: '/etc/dirsrv/certs'
     state: directory
@@ -304,14 +304,14 @@
 
 - meta: flush_handlers
 
-#- name: Start 389DS service
+#- name: Start DS389 service
 #  systemd:
 #    name: slapd
 #    state: started
 #    enabled: true
 #  when: primary | default(True)
 #
-#- name: Enable 389DS service
+#- name: Enable DS389 service
 #  systemd:
 #    name: dirsrv
 #    enabled: true
