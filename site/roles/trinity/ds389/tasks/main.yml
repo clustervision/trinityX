@@ -282,7 +282,7 @@
 
 - block:
   - name: Verify if memberOf plugin is enabled
-    command: dsconf local plugin show "Auto Membership Plugin"
+    shell: dsconf local plugin memberof status
     register: ds389_memberof
     ignore_errors: true
 
@@ -296,10 +296,12 @@
 
     - name: Setting inetUser as a default object to add memberOf attritube to
       command: dsconf local plugin memberof set --autoaddoc inetUser
+      ignore_errors: true
 
     - name: Setting memberOf plugin group attribute
       command: dsconf local plugin memberof set --groupattr uniqueMember
-    when: ds389_memberof.rc|int != 0
+      ignore_errors: true
+    when: ds389_memberof.rc|int != 0 or 'disabled' in ds389_memberof.stdout
   when: primary | default(True)
 
 - meta: flush_handlers
