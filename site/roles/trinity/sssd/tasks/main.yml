@@ -32,6 +32,20 @@
 #  retries: "{{ rpm_retries | default(3) }}"
 #  delay: "{{ rpm_delay | default(15) }}"
 
+- block:
+  - name: Generate ds389 root password and save it to /etc/trinity/passwords
+    set_fact:
+      tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Get ds389 root password from /etc/trinity/passwords
+    set_fact:
+      ds389_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+  when: sss_use_ds389 | default(False)
+
 - name: Add configuration file to /etc/sssd/sssd.conf
   template:
     src: 'sssd.conf.j2'

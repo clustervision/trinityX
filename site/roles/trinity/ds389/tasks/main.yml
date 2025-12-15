@@ -71,6 +71,7 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+
 # --- Instance Creation ---
 - name: Create 389DS instance configuration file (.inf)
   template:
@@ -199,6 +200,109 @@
         and default_ds389_data.stat.isdir
 
 
+# --- certificates
+- name: Ensure 389DS certs directory exists
+  file:
+    path: '/etc/dirsrv/certs'
+    state: directory
+
+- name: Add cluster CA certificate to /etc/dirsrv/certs
+  copy:
+    remote_src: true
+    src: '{{ ds389_tls_cacrt }}'
+    dest: '/etc/dirsrv/certs/'
+
+- name: Ensure DS389 has access to the ssl certificates
+  user:
+    name: '{{ ds389_default_user }}'
+    groups: '{{ ssl_cert_group }}'
+
+- block:
+  - name: Verify whether we have to add cluster-ca
+    command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n cluster-ca'
+    register: ds389_ca_cert
+    ignore_errors: true
+
+  - name: Add cluster CA as a valid DS389 CA
+    command: 'dsconf local security ca-certificate add --file {{ ds389_tls_cacrt }} --name "cluster-ca"'
+    notify: restart ds389
+    when: ds389_ca_cert.rc|int != 0
+
+  - name: Verify whether we have to remove the default cert name
+    command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert'
+    register: ds389_default_cert
+    ignore_errors: true
+
+  - name: Remove default server cert
+    command: certutil -D -d "/etc/dirsrv/slapd-local" -n Server-Cert
+    when: ds389_default_cert.rc|int == 0
+
+  - name: Add controller certificate
+    command: 'dsctl local tls import-server-key-cert {{ ds389_tls_crt }} {{ ds389_tls_key }}'
+
+  - name: Verify whether we have to rename to default cert name
+    command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n controller'
+    register: ds389_controller_cert
+    ignore_errors: true
+
+  - name: Rename controller cert to match DS defaults
+    command: 'certutil -d "/etc/dirsrv/slapd-local" --rename -n "controller" --new-n "Server-Cert"'
+    notify: restart ds389
+    when: ds389_controller_cert.rc|int == 0
+  when: primary | default(True)
+
+
+- block:
+  - name: Copy OpenLDAP schemas
+    copy:
+      src: '{{ item }}'
+      dest: '/etc/dirsrv/schema/'
+      owner: '{{ ds389_default_user }}'
+      group: '{{ ds389_default_group }}'
+      mode: '0644'
+    with_items:
+      - local_schema.ldif
+
+  - name: Check local schemas
+    command: > 
+      ldapsearch -x -H ldap://localhost -D "cn=Directory Manager"
+         -w {{ ds389_root_pwd }} -b "dc=local" "ou=Group,dc=local"
+    register: ds389_ldapsearch
+    failed_when: false
+    changed_when: false
+
+  - name: Load OpenLDAP local schema
+    command: >
+      ldapadd -c -x -H ldap://localhost -D "cn=Directory Manager"
+         -w {{ ds389_root_pwd }}
+         -f /etc/dirsrv/schema/local_schema.ldif
+    when: ds389_ldapsearch.rc|int != 0
+    ignore_errors: true
+  when: primary | default(True)
+
+- block:
+  - name: Verify if memberOf plugin is enabled
+    command: dsconf local plugin show "Auto Membership Plugin"
+    register: ds389_memberof
+    ignore_errors: true
+
+  - block:
+    - name: Enabling dynamic plugins
+      command: dsconf local config replace nsslapd-dynamic-plugins=on
+      notify: restart ds389
+
+    - name: Enabling memberOf plugin
+      command: dsconf local plugin memberof enable
+
+    - name: Setting inetUser as a default object to add memberOf attritube to
+      command: dsconf local plugin memberof set --autoaddoc inetUser
+
+    - name: Setting memberOf plugin group attribute
+      command: dsconf local plugin memberof set --groupattr uniqueMember
+    when: ds389_memberof.rc|int != 0
+  when: primary | default(True)
+
+- meta: flush_handlers
 
 #- name: Start 389DS service
 #  systemd:

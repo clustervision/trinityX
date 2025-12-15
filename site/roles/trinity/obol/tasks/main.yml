@@ -13,21 +13,21 @@
       openldap_root_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/openldap/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
-  when: trix_use_openldap | default(True)
+  when: not obol_use_ds389 | default(True)
 
 - block:
-  - name: Generate openldap root password and save it to /etc/trinity/passwords
+  - name: Generate ds389 root password and save it to /etc/trinity/passwords
     set_fact:
       tmp_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/ds389/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
 
-  - name: Get openldap root password from /etc/trinity/passwords
+  - name: Get ds389 root password from /etc/trinity/passwords
     set_fact:
       ds389_root_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/ds389/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
-  when: trix_use_ds389 | default(False)
+  when: obol_use_ds389 | default(False)
 
 
 - name: Install obol dependency packages
@@ -46,7 +46,7 @@
     owner: 'root'
     group: 'root'
     mode: '0750'
-  when: trix_use_openldap | default(True)
+  when: not obol_use_ds389 | default(True)
 
 - name: Install obol to /usr/local/sbin
   copy:
@@ -55,7 +55,7 @@
     owner: 'root'
     group: 'root'
     mode: '0750'
-  when: trix_use_ds389 | default(False)
+  when: obol_use_ds389 | default(False)
 
 - name: Add default configuration to {{ obol_conf_path }}
   template:
