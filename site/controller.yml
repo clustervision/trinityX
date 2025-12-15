@@ -165,20 +165,33 @@
       bind_dns_forwarders: '{{ trix_dns_forwarders }}'
       tags: bind
 
-#    - role: trinity/openldap
-#      openldap_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/ldap"
-#      openldap_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/openldap/slapd.d"
-#      openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-#      when: enable_authentication|default(True)
-#      tags: 
-#        - openldap
-#        - authentication
+    - role: trinity/ldap-backend-selector
+      when: 
+        - enable_authentication|default(True)
+      tags: 
+        - openldap
+        - ds389
+        - authentication
+        - obol
+
+    - role: trinity/openldap
+      openldap_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/ldap"
+      openldap_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/openldap/slapd.d"
+      openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      when: 
+        - enable_authentication|default(True)
+        - trix_use_openldap | default(True)
+      tags: 
+        - openldap
+        - authentication
 
     - role: trinity/ds389
       ds389_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/dirsrv/slapd-local"
       ds389_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/dirsrv/slapd-local"
       ds389_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-      when: enable_authentication|default(True)
+      when: 
+        - enable_authentication|default(True)
+        - trix_use_ds389 | default(False)
       tags: 
         - ds389
         - authentication

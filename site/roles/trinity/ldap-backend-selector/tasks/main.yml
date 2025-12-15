@@ -1,0 +1,20 @@
+---
+
+- name: Set OpenLDAP as the preferred backend
+  set_fact:
+    trix_use_openldap: true
+  when:
+    - trinity_ldap_backend == 'openldap'
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int < 8
+
+- block:
+  - name: Unset OpenLDAP as the preferred backend
+    set_fact:
+      trix_use_openldap: false
+
+  - name: Set DS389 as the preferred backend
+    set_fact:
+      trix_use_ds389: true
+  when: trinity_ldap_backend == 'ds389' or (ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 9)
+
