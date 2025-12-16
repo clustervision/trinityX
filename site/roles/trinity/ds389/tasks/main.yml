@@ -166,12 +166,12 @@
     creates: "/etc/dirsrv/slapd-local/dse.ldif"
   when: primary | default(True)
 
-#- block:
-#  - name: Selinux fcontext on files
-#    sefcontext:
-#      target: "{{ ds389_server_conf_path }}(/.*)?"
-#      setype: slapd_db_t
-#  when: ansible_selinux.status == "enabled"
+- block:
+  - name: Selinux fcontext on files
+    sefcontext:
+      target: "{{ ds389_server_conf_path }}(/.*)?"
+      setype: dirsrv_config_t
+  when: ansible_selinux.status == "enabled"
 
 # ----------------------------------------------------------------
 
@@ -187,8 +187,8 @@
       state: directory
       owner: '{{ ds389_default_user }}'
       group: '{{ ds389_default_group }}'
-      #setype: slapd_db_t
-      #seuser: system_u
+      setype: dirsrv_config_t
+      seuser: system_u
     when: primary | default(False)
 
   - name: Copy default configuration to {{ ds389_server_conf_path }}
@@ -235,7 +235,7 @@
       state: directory
       owner: '{{ ds389_default_user }}'
       group: '{{ ds389_default_group }}'
-      setype: slapd_db_t
+      setype: dirsrv_config_t
       seuser: system_u
     when: primary | default(True)
 
