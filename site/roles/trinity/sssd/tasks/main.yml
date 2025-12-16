@@ -97,7 +97,16 @@
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
   changed_when: false
-  when: ansible_facts['os_family'] == "RedHat"
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int < 10
+
+- name: Setting up the system to use sssd for authentication
+  command: authselect select sssd with-mkhomedir
+  changed_when: false
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int > 9
 
 - block:
   - name: Configure nsswitch.conf
