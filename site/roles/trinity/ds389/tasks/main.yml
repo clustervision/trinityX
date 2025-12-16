@@ -221,6 +221,7 @@
   - name: Verify whether we have to add cluster-ca
     command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n cluster-ca'
     register: ds389_ca_cert
+    no_log: true
     ignore_errors: true
 
   - name: Add cluster CA as a valid DS389 CA
@@ -229,29 +230,38 @@
     when: ds389_ca_cert.rc|int != 0
 
   - name: Verify whether we have to remove the default cert name
-    command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert'
+    shell: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert | grep "{{ trix_ctrl_hostname }}"'
     register: ds389_default_cert
     ignore_errors: true
 
-  - name: Remove default server cert
-    command: certutil -D -d "/etc/dirsrv/slapd-local" -n Server-Cert
-    when: ds389_default_cert.rc|int == 0
+  - block:
+    - name: Remove default server cert
+      command: certutil -D -d "/etc/dirsrv/slapd-local" -n Server-Cert
 
-  - name: Add controller certificate
-    command: 'dsctl local tls import-server-key-cert {{ ds389_tls_crt }} {{ ds389_tls_key }}'
+    - name: Add controller certificate
+      command: 'dsctl local tls import-server-key-cert {{ ds389_tls_crt }} {{ ds389_tls_key }}'
+      notify: restart ds389
+    when: ds389_default_cert.rc|int != 0 or ds389_default_cert.stdout == '' or ds389_ca_cert.rc|int != 0
+
+  - name: Verify whether we have server cert
+    shell: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert'
+    register: ds389_new_cert
+    ignore_errors: true
 
   - name: Verify whether we have to rename to default cert name
     command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n controller'
-    register: ds389_controller_cert
+    register: ds389_rename_cert
+    when: ds389_new_cert.rc|int != 0
     ignore_errors: true
 
   - name: Rename controller cert to match DS defaults
     command: 'certutil -d "/etc/dirsrv/slapd-local" --rename -n "controller" --new-n "Server-Cert"'
     notify: restart ds389
-    when: ds389_controller_cert.rc|int == 0
+    when: ds389_rename_cert.rc is defined and ds389_rename_cert.rc|int == 0
   when: primary | default(True)
 
 
+# --- schemas
 - block:
   - name: Copy OpenLDAP schemas
     copy:
@@ -280,6 +290,14 @@
     ignore_errors: true
   when: primary | default(True)
 
+- name: Copy trust schema
+  copy:
+    src: /usr/share/dirsrv/schema/60trust.ldif
+    dest: /etc/dirsrv/slapd-local/schema/
+  ignore_errors: true
+
+
+# --- memberOf
 - block:
   - name: Verify if memberOf plugin is enabled
     shell: dsconf local plugin memberof status
