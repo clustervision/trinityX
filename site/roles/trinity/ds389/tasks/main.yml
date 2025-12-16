@@ -9,6 +9,19 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+- name: Install DS389 packages
+  yum:
+    name: '{{ ds389_packages }}'
+    state: present
+    enablerepo:
+      - plus
+      - powertools
+      - appstream
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+
 # -- start sync
 - block:
   - name: Ensure password loction exists
@@ -39,7 +52,6 @@
                           '/etc/trinity/passwords/ds389/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
 
-# sync
 # -- start sync
 - block:
   - name: Ensure ds389 sync directory exists
@@ -59,17 +71,27 @@
 # -- end sync
 
 
-- name: Install DS389 packages
-  yum:
-    name: '{{ ds389_packages }}'
-    state: present
-    enablerepo:
-      - plus
-      - powertools
-      - appstream
-  tags: install-only
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
+# --------------- destroy existing DB if requested ---------------
+
+- block:
+  - name: Destroying local database
+    command: dsctl local remove --do-it
+    ignore_errors: true
+
+  - name: Deleting left overs
+    file:
+      path: '{{ item }}'
+      state: absent
+    with_items:
+      - /var/lib/dirsrv/slapd-local
+      - '{{ ds389_server_conf_path }}'
+      - /etc/dirsrv/slapd-local
+      - '{{ ds389_server_dir_path }}'
+    ignore_errors: true
+    when: item != ''
+  when:
+    - override | default(False)
+    - primary | default(True)
 
 
 # --- Instance Creation ---
@@ -260,6 +282,7 @@
     when: ds389_rename_cert.rc is defined and ds389_rename_cert.rc|int == 0
   when: primary | default(True)
 
+- meta: flush_handlers
 
 # --- schemas
 - block:
@@ -276,10 +299,10 @@
   - name: Check local schemas
     command: > 
       ldapsearch -x -H ldap://localhost -D "cn=Directory Manager"
-         -w {{ ds389_root_pwd }} -b "dc=local" "ou=Group,dc=local"
+         -w {{ ds389_root_pwd }} -b "ou=Group,dc=local"
     register: ds389_ldapsearch
-    failed_when: false
-    changed_when: false
+    no_log: true
+    ignore_errors: true
 
   - name: Load OpenLDAP local schema
     command: >
