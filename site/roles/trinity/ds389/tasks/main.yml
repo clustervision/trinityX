@@ -72,8 +72,65 @@
 
 
 # --------------- destroy existing DB if requested ---------------
-
 - block:
+  - name: Stop DS389 service
+    systemd:
+      name: dirsrv@local
+      state: stopped
+    ignore_errors: true
+
+  - name: Verifying for config existence
+    stat:
+      path: '{{ ds389_server_conf_path }}'
+    register: ds389_server_conf_stat
+
+  - block:
+    - name: Verifying previous config backup existence
+      stat:
+        path: '{{ ds389_server_conf_path }}.backup'
+      register: ds389_server_conf_path_backup
+
+    - name: Deleting previous config backup
+      file:
+        path: '{{ ds389_server_conf_path }}.backup'
+        state: absent
+      when:
+        - ds389_server_conf_path_backup.stat.isdir is defined
+        - ds389_server_conf_path_backup.stat.isdir
+
+    - name: Copying current data to backup
+      copy:
+        src: '{{ ds389_server_conf_path }}'
+        dest: '{{ ds389_server_conf_path }}.backup'
+        remote_src: true
+    when: ds389_server_conf_stat.stat.exists
+    # ---
+  - name: Verifying for data existence
+    stat:
+      path: '{{ ds389_server_dir_path }}'
+    register: ds389_server_dir_stat
+
+  - block:
+    - name: Verifying previous data backup existence
+      stat:
+        path: '{{ ds389_server_dir_path }}.backup'
+      register: ds389_server_dir_path_backup
+
+    - name: Deleting previous data backup
+      file:
+        path: '{{ ds389_server_dir_path }}.backup'
+        state: absent
+      when:
+        - ds389_server_dir_path_backup.stat.isdir is defined
+        - ds389_server_dir_path_backup.stat.isdir
+
+    - name: Copying current data to backup
+      copy:
+        src: '{{ ds389_server_dir_path }}'
+        dest: '{{ ds389_server_dir_path }}.backup'
+        remote_src: true
+    when: ds389_server_dir_stat.stat.exists
+    # ---
   - name: Destroying local database
     command: dsctl local remove --do-it
     ignore_errors: true
@@ -93,6 +150,7 @@
     - override | default(False)
     - primary | default(True)
 
+# ----------------------------------------------------------------
 
 # --- Instance Creation ---
 - name: Create DS389 instance configuration file (.inf)
@@ -347,17 +405,31 @@
 
 - meta: flush_handlers
 
-#- name: Start DS389 service
-#  systemd:
-#    name: slapd
-#    state: started
-#    enabled: true
-#  when: primary | default(True)
-#
-#- name: Enable DS389 service
-#  systemd:
-#    name: dirsrv
-#    enabled: true
-#  when: not ha|default(False)
+# --- HA stuff....
+- name: Start DS389 service
+  systemd:
+    name: dirsrv@local
+    state: started
+    enabled: true
+  when: 
+    - not ha|default(False)
+    - primary | default(True)
 
+- block:
+  - name: Disable DS389 service for H/A
+    systemd:
+      name: dirsrv@local
+      state: "{{ 'started' if primary else 'stopped' }}"
+      enabled: false
+
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'openldap'
+      resource_class: 'systemd'
+      resource_type: 'systemd:dirsrv@local'
+      options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+      state: present
+    when: primary | default(True)
+  when: ha | default(False)
+  tags: pcs
 
