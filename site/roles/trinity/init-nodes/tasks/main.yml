@@ -33,16 +33,20 @@
 
 - name: Set root plaintext password
   set_fact:
-    root_plain: "{{ lookup('password','/etc/trinity/passwords/images/{{ image_name }}/root.txt') }}"
+    root_plain: "{{ lookup('password','/etc/trinity/passwords/images/{{ image_name }}/root.txt') }}" 
 
-- name: Generate root password hash
+- name: Hash the plain password using mkpasswd
   set_fact:
-    root_password_hash: "{{ root_plain | password_hash(hashtype='bcrypt') }}"
+    hashed_pass: >-
+      {{ lookup(
+          'pipe',
+          'printf %s ' ~ (root_plain | quote) ~ ' | mkpasswd --method=SHA-512 --stdin'
+      ) }}
 
 - name: Setup the root user's password
   user:
     name: root
-    password: "{{ root_password_hash }}"
+    password: "{{ hashed_pass }}"
     state: present
 
 - name: Generate host SSH keys
