@@ -1,9 +1,13 @@
 ---
+- name: Create Linbit repository
+  template:
+    src: linbit.repo.j2
+    dest: "/etc/yum.repos.d/linbit.repo"
 
 - name: Install DRBD packages
   yum:
     name: '{{ drbd_packages }}'
-    enablerepo: 'elrepo'
+    enablerepo: 'linbit'
     state: present
   tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
