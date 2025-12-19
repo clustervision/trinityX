@@ -166,6 +166,13 @@
     creates: "/etc/dirsrv/slapd-local/dse.ldif"
   when: primary | default(True)
 
+- name: Create logging path for DS389
+  file:
+    path: /var/log/dirsrv/slapd-local
+    owner: '{{ ds389_default_user }}'
+    group: '{{ ds389_default_group }}'
+  when: not primary | default(False)
+
 - block:
   - name: Selinux fcontext on files
     sefcontext:
