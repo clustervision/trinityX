@@ -1,22 +1,26 @@
 ---
 # Configure nscd daemon
 
-- name: Install nscd
-  yum:
-    name: nscd
-    state: present
-  tags: install-only
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
+- block:
+  - name: Install nscd
+    yum:
+      name: nscd
+      state: present
+    tags: install-only
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
 
-- name: Put config file in place
-  template:
-    src: "nscd.conf.j2"
-    dest: "/etc/nscd.conf"
-  notify:
-    - restart nscd
+  - name: Put config file in place
+    template:
+      src: "nscd.conf.j2"
+      dest: "/etc/nscd.conf"
+    notify:
+      - restart nscd
 
-- name: Enable nscd service
-  service:
-    name: nscd
-    enabled: "yes"
+  - name: Enable nscd service
+    service:
+      name: nscd
+      enabled: "yes"
+  when: 
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int < 10
