@@ -218,8 +218,20 @@
       dest: '/etc/dirsrv/slapd-local'
       state: link
       force: true
-  when: ds389_server_conf_path|string not in '/etc/dirsrv/slapd-local'
-        and default_ds389_path.stat.isdir
+  when:
+    - primary | default(True)
+    - ds389_server_conf_path|string not in '/etc/dirsrv/slapd-local'
+    - default_ds389_path.stat.isdir
+
+- name: Replace default configuration path with symlink to {{ ds389_server_conf_path }}
+  file:
+    src: '{{ ds389_server_conf_path }}'
+    dest: '/etc/dirsrv/slapd-local'
+    state: link
+    force: true
+  when:
+    - ha | default(False)
+    - not primary | default(False)
 
 # ----------------------------------------------------------------
 
@@ -266,8 +278,20 @@
       dest: '/var/lib/dirsrv/slapd-local'
       state: link
       force: true
-  when: ds389_server_dir_path|string not in '/var/lib/dirsrv/slapd-local'
-        and default_ds389_data.stat.isdir
+  when:
+    - primary | default(True)
+    - ds389_server_dir_path|string not in '/var/lib/dirsrv/slapd-local'
+    - default_ds389_data.stat.isdir
+
+- name: Replace default configuration path with symlink to {{ ds389_server_conf_path }}
+  file:
+    src: '{{ ds389_server_dir_path }}'
+    dest: '/var/lib/dirsrv/slapd-local'
+    state: link
+    force: true
+  when:
+    - ha | default(False)
+    - not primary | default(False)
 
 
 # --- certificates
