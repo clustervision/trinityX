@@ -166,12 +166,15 @@
     creates: "/etc/dirsrv/slapd-local/dse.ldif"
   when: primary | default(True)
 
-- name: Create logging path for DS389
+- name: Create paths for DS389
   file:
     path: /var/log/dirsrv/slapd-local
     state: directory
     owner: '{{ ds389_default_user }}'
     group: '{{ ds389_default_group }}'
+  with_items:
+    - /var/log/dirsrv/slapd-local
+    - /run/dirsrv
   when: not primary | default(False)
 
 - block:
