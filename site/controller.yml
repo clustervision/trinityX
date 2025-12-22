@@ -173,6 +173,8 @@
         - ds389
         - authentication
         - obol
+        - ood
+        - ood-core
 
     - role: trinity/openldap
       openldap_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/ldap"
@@ -367,6 +369,7 @@
     - role: trinity/ood
       ood_enable_ssl: true
       ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
+      ood_use_ds389: '{{ trix_use_ds389 | default(False) }}'
       ood_ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ood_ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       ood_login_host: "{{ trix_external_fqdn }}"

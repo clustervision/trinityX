@@ -9,6 +9,22 @@
   no_log: true
   ignore_errors: true
 
+# ---- when using DS389
+- block:
+  - name: Generate ds389 root password and save it to /etc/trinity/passwords
+    set_fact:
+      tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Get ds389 root password from /etc/trinity/passwords
+    set_fact:
+      ds389_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+  when: ood_use_ds389 | default(False)
+# ----
+
 - name: Install required rpms
   ansible.builtin.dnf:
     name: "{{ item.name }}"
