@@ -21,6 +21,10 @@
         - init
         - authentication
 
+    - role: trinity/ldap-backend-selector
+      when: enable_authentication|default(True)
+      tags: always
+
     - role: trinity/hostname
       tags: hostname
 
@@ -164,10 +168,6 @@
       bind_dnssec_enable: "no"
       bind_dns_forwarders: '{{ trix_dns_forwarders }}'
       tags: bind
-
-    - role: trinity/ldap-backend-selector
-      when: enable_authentication|default(True)
-      tags: always
 
     - role: trinity/openldap
       openldap_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/ldap"
