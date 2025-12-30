@@ -41,12 +41,12 @@ It will also set up:
 Steps to install TrinityX
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Install an Enterprise Linux version 8 or 9 (i.e. RHEL, Rocky) on your controller(s). It is recommended to put ``/trinity`` and  ``/trinity/local`` on it's own filesystem. Note the partition configuration must be finalized (i.e. mounted and in fstab) before starting the TrinityX installation.
+1. Install an Enterprise Linux version 8, 9 or 10 (i.e. RHEL, Rocky) on your controller(s). It is recommended to put ``/trinity`` and  ``/trinity/local`` on it's own filesystem. Note the partition configuration must be finalized (i.e. mounted and in fstab) before starting the TrinityX installation.
 
 2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks on the controller(s).
    Ansible uses the interface address to determine the course of the playbook.
 
-3. Configure passwordless authentication to the controller itself or/and for both controllers in the HA case.
+3. Configure passwordless authentication to the controller itself or/and optionally for in between both controllers in the HA case.
 
 4. Clone TrinityX repository into your working directory. Then run ``INSTALL.sh`` to install and be guided through the steps::
 
@@ -54,6 +54,11 @@ Steps to install TrinityX
        # cd trinityX
        # bash INSTALL.sh
 
+--- **OR** ---
+
+4. Download the graphical installer on https://clustervision.com/trinityx/ and let it guide you through the installation.
+
+   Please note that the graphical installer does not enable all features available.
 
 --- **OR** ---
 
@@ -144,6 +149,7 @@ To make HA work properly, services need to understand the HA concept. Many servi
 * {{ trix_home }}
 * {{ trix_shared }}
 * {{ trix_ohpc }} (if OpenHPC is enabled)
+* {{ trix_easybuild }} (if Easybuild is enabled)
 
 LVM and ZFS are supported, where partitions can be made on top of the shared disk. On top of these partitions all regular filesystems, like xfs and ext4 are supported.
 
@@ -168,3 +174,9 @@ To contribute to TrinityX:
 1. Get familiar with our `code guidelines <Guidelines.rst>`_
 2. Clone TrinityX repository
 3. Commit your changes in your repository and create a pull request to the ``dev`` branch in ours.
+
+TrinityX Support
+================
+
+For further products and professional support, please contact us at sales@clustervision.com
+
