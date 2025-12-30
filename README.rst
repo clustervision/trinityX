@@ -50,8 +50,8 @@ Steps to install TrinityX
 
 ----
 
-**GRAPHICAL METHOD**
-~~~~~~~~~~~~~~~~~~~~
+A: ** GRAPHICAL METHOD**
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 4. Download the graphical installer on https://clustervision.com/trinityx/ and let it guide you through the installation.
 
@@ -60,8 +60,8 @@ Steps to install TrinityX
 
 ----
 
-**TEXT BASED METHOD**
-~~~~~~~~~~~~~~~~~~~~~
+B: **TEXT BASED METHOD**
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 4. Clone TrinityX repository into your working directory. Then run ``INSTALL.sh`` to install and be guided through the steps::
 
@@ -71,8 +71,8 @@ Steps to install TrinityX
 
 ----
 
-**MANUAL METHOD**
-~~~~~~~~~~~~~~~~~
+C: **MANUAL METHOD**
+~~~~~~~~~~~~~~~~~~~~
 
 4. Step by step manual configuration and installation
 
