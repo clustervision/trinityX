@@ -60,8 +60,8 @@ A: *GRAPHICAL METHOD*
 
 ----
 
-B: **TEXT BASED METHOD**
-~~~~~~~~~~~~~~~~~~~~~~~~
+B: *TEXT BASED METHOD*
+~~~~~~~~~~~~~~~~~~~~~~
 
 4. Clone TrinityX repository into your working directory. Then run ``INSTALL.sh`` to install and be guided through the steps::
 
@@ -71,8 +71,8 @@ B: **TEXT BASED METHOD**
 
 ----
 
-C: **MANUAL METHOD**
-~~~~~~~~~~~~~~~~~~~~
+C: *MANUAL METHOD*
+~~~~~~~~~~~~~~~~~~
 
 4. Step by step manual configuration and installation
 
