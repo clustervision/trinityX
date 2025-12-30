@@ -150,6 +150,7 @@ dnf install curl tar git -y
 
 REDHAT_RELEASE=$(grep -i "Red Hat Enterprise Linux" /etc/os-release | grep -oE '[0-9]+' | head -n1)
 if [ "$REDHAT_RELEASE" ]; then
+  ARCH=$(uname -m)
   subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-${ARCH}-rpms
   dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
 else
