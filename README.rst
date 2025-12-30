@@ -39,7 +39,7 @@ It will also set up:
 
 
 Steps to install TrinityX
-~~~~~~~~~~~~~~~~~~~~~~~~~
+=========================
 
 1. Install an Enterprise Linux version 8, 9 or 10 (i.e. RHEL, Rocky) on your controller(s). It is recommended to put ``/trinity`` and  ``/trinity/local`` on it's own filesystem. Note the partition configuration must be finalized (i.e. mounted and in fstab) before starting the TrinityX installation.
 
@@ -47,6 +47,8 @@ Steps to install TrinityX
    Ansible uses the interface address to determine the course of the playbook.
 
 3. Configure passwordless authentication to the controller itself or/and optionally for in between both controllers in the HA case.
+
+----
 
 --- **GRAPHICAL METHOD** -----------------------------------------------------------------------------------------------------
 
