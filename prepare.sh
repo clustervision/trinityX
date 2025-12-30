@@ -185,7 +185,9 @@ if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
   ARCH=$(uname -m)
   if [ "$ARCH" == "aarch64" ]; then
     add_message "Automated ZFS support for ARM is limited. To have ZFS support for ARM based systems, please follow the below steps:"
-    add_message "- dns install -y kernel-devel kernel-headers dkms libtirpc-devel libblkid-devel libuuid-devel zlib-devel"
+    add_messgag "- have CRB repo installed and available if applicable"
+    add_message "- dnf install -y kernel-devel kernel-headers dkms libtirpc-devel"
+    add_message "- dnf install -y libblkid-devel libuuid-devel zlib-devel autoconf automake libtool"
     add_message "- git clone https://github.com/openzfs/zfs.git"
     add_message "- cd zfs"
     add_message "- sh autogen.sh"
