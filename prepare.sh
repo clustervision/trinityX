@@ -88,6 +88,8 @@ if [ ! -f TrinityX.pdf ]; then
   exit 1
 fi
 
+# --------------------- SELINUX TASKS ----------------------
+
 SELINUX=$(getenforce)
 if [ "$SELINUX" == "Disabled" ]; then
     add_message "SELinux seems to be disabled on the controller"
@@ -122,6 +124,8 @@ else
   fi
 fi
 
+# --------------------- TUI INSTALL ---------------------
+
 if [ ! "$GITLAB_CI" ]; then
   if [ ! -f site/tui_configurator ]; then
     if [ ! "$(which wget)" ]; then
@@ -142,24 +146,26 @@ else
 fi
 dnf install curl tar git -y
 
+# ------------------- ANSIBLE INSTALL --------------------
+
 REDHAT_RELEASE=$(grep -i "Red Hat Enterprise Linux" /etc/os-release | grep -oE '[0-9]+' | head -n1)
 if [ "$REDHAT_RELEASE" ]; then
-  subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-x86_64-rpms
+  subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-${ARCH}-rpms
   dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
-  dnf install ansible-core -y
-  dnf install ansible -y
 else
   dnf install epel-release -y
-  dnf install ansible -y 2> /dev/null || dnf install ansible-core -y
-  # needed for rocky10
-  dnf install ansible-collection-community-general -y 2> /dev/null
-  dnf install ansible-collection-ansible-posix -y 2> /dev/null
-  ansible-galaxy collection install community.mysql
 fi
 
+dnf install ansible -y 2> /dev/null || true
+dnf install ansible-core -y
+dnf install ansible-collection-community-general -y 2> /dev/null
+dnf install ansible-collection-ansible-posix -y 2> /dev/null
+ansible-galaxy collection install community.mysql
 ansible-galaxy install OndrejHome.pcs-modules-2
 
+# --------------------- KERNEL CHECK ----------------------
 # kernel check. Did we pull in a newer kernel?
+# We might want to reboot before using ZFS...
 CURRENT_KERNEL=$(uname -r)
 LATEST_KERNEL=$(ls -tr /lib/modules/|tail -n1)
 
@@ -172,6 +178,8 @@ if [ "$USE_CURRENT_KERNEL" != "yes" ] && [ "$CURRENT_KERNEL" != "$LATEST_KERNEL"
     exit 1
   fi
 fi
+
+# ---------------------- ZFS INSTALL ----------------------
 
 if [ ! "$WITH_ZFS" ] && [ ! "$GITLAB_CI" ]; then
   add_message "Would you prefer to include ZFS?" 
@@ -202,6 +210,8 @@ if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
     modprobe zfs
   fi
 fi
+
+# ---------------------- MISC TASKS -----------------------
 
 if [ ! -f site/hosts ]; then
   add_message "Please modify the site/hosts.example and save it as site/hosts"  
