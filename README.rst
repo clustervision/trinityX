@@ -50,8 +50,8 @@ Steps to install TrinityX
 
 ----
 
-A: ** GRAPHICAL METHOD**
-~~~~~~~~~~~~~~~~~~~~~~~~
+A: *GRAPHICAL METHOD*
+~~~~~~~~~~~~~~~~~~~~~
 
 4. Download the graphical installer on https://clustervision.com/trinityx/ and let it guide you through the installation.
 
