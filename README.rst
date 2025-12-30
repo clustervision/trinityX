@@ -48,7 +48,6 @@ Steps to install TrinityX
 
 3. Configure passwordless authentication to the controller itself or/and optionally for in between both controllers in the HA case.
 
-----
 --- **GRAPHICAL METHOD** -----------------------------------------------------------------------------------------------------
 
 4. Download the graphical installer on https://clustervision.com/trinityx/ and let it guide you through the installation.
