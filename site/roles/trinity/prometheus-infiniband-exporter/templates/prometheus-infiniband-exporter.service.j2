@@ -11,7 +11,7 @@ User={{ prometheus_infiniband_exporter_system_user }}
 Group={{ prometheus_infiniband_exporter_system_group }}
 ExecStart={{ prometheus_infiniband_exporter_binary_install_dir }}/prometheus-infiniband-exporter \
     --web.listen-address={{ prometheus_infiniband_exporter_web_listen_host }}:{{ prometheus_infiniband_exporter_web_listen_port }} \
-    --collector.hca
+    --collector.hca {% if on_controller or in_login_image|default(False) -%} --collector.switch {%- else -%} --no-collector.switch {%- endif %}
 
 
 SyslogIdentifier=prometheus_infiniband_exporter
