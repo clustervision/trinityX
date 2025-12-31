@@ -1,0 +1,97 @@
+{
+  "DhcpDdns": {
+    "ip-address": "::0",
+    "port": 53001,
+    "dns-server-timeout": 100,
+    "ncr-protocol": "UDP",
+    "ncr-format": "JSON",
+
+    "forward-ddns": {
+      "ddns-domains": [
+        {
+          "name": "cluster.",
+          "key-name": "tsig-key",
+          "dns-servers": [
+            {
+              "ip-address": "127.0.0.1"
+            }
+          ]
+        }
+        {
+          "name": "ipmi.",
+          "key-name": "tsig-key",
+          "dns-servers": [
+            {
+              "ip-address": "127.0.0.1"
+            }
+          ]
+        }
+      ]
+    },
+
+    "reverse-ddns": {
+      "ddns-domains": [
+        {
+          "name": "in-addr.arpa.",
+          "key-name": "tsig-key",
+          "dns-servers": [
+            {
+              "ip-address": "127.0.0.1"
+            }
+          ]
+        }
+      ]
+    },
+
+    "tsig-keys": [
+      {
+        "name": "tsig-key",
+        "algorithm": "{{ tsig_key_algo }}",
+        "secret": "{{ tsig_key_secret }}"
+      }
+    ],
+
+    "loggers": [
+      {
+        // This specifies the logging for D2 (DHCP-DDNS) daemon.
+        "name": "kea-dhcp-ddns",
+        "output-options": [
+            {
+                // Specifies the output file. There are several special values
+                // supported:
+                // - stdout (prints on standard output)
+                // - stderr (prints on standard error)
+                // - syslog (logs to syslog)
+                // - syslog:name (logs to syslog using specified name)
+                // Any other value is considered a name of the file
+                "output": "kea-ddns.log"
+
+                // Shorter log pattern suitable for use with systemd,
+                // avoids redundant information
+                // "pattern": "%-5p %m\n"
+
+                // This governs whether the log output is flushed to disk after
+                // every write.
+                // "flush": false,
+
+                // This specifies the maximum size of the file before it is
+                // rotated.
+                // "maxsize": 1048576,
+
+                // This specifies the maximum number of rotated files to keep.
+                // "maxver": 8
+            }
+        ],
+        // This specifies the severity of log messages to keep. Supported values
+        // are: FATAL, ERROR, WARN, INFO, DEBUG
+        "severity": "INFO",
+
+        // If DEBUG level is specified, this value is used. 0 is least verbose,
+        // 99 is most verbose. Be cautious, Kea can generate lots and lots
+        // of logs if told to do so.
+        "debuglevel": 0
+      }
+    ]
+  }
+}
+

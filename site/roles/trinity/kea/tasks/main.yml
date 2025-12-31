@@ -1,0 +1,18 @@
+---
+# tasks file for kea
+
+- name: Install Kea packages
+  yum:
+    name: '{{ kea_packages }}'
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Render /etc/kea/kea-dhcp-ddns.conf
+  template:
+    src: 'kea-dhcp-ddns.conf.j2'
+    dest: '/etc/kea/kea-dhcp-ddns.conf'
+    owner: root
+    group: root
+    mode: 0640
+

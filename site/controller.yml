@@ -21,6 +21,10 @@
         - init
         - authentication
 
+    - role: trinity/ldap-backend-selector
+      when: enable_authentication|default(True)
+      tags: always
+
     - role: trinity/hostname
       tags: hostname
 
@@ -169,14 +173,28 @@
       openldap_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/ldap"
       openldap_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/openldap/slapd.d"
       openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-      when: enable_authentication|default(True)
+      when: 
+        - enable_authentication|default(True)
+        - trix_use_openldap | default(True)
       tags: 
         - openldap
+        - authentication
+
+    - role: trinity/ds389
+      ds389_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/dirsrv/slapd-local"
+      ds389_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/dirsrv/slapd-local"
+      ds389_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      when: 
+        - enable_authentication|default(True)
+        - trix_use_ds389 | default(False)
+      tags: 
+        - ds389
         - authentication
 
     - role: trinity/obol
       users_home_path: '{{ trix_home }}'
       ldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      obol_use_ds389: '{{ trix_use_ds389 | default(False) }}'
       when: enable_authentication|default(True)
       tags: 
         - obol
@@ -187,6 +205,7 @@
         - '{{ admin_group }}'
       sss_ldap_hosts:
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+      sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
       when: enable_authentication|default(True)
       tags: 
         - sssd
@@ -233,7 +252,7 @@
       nfs_enable_rdma: false
       nfs_mounts:
       - path: '{{ trix_easybuild }}'
-        remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+        remote: '{{ trix_ctrl_hostname }}:{{ trix_easybuild }}'
         options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
       nfs_remote_mask: '{{ shared_fs_disks }}'
       nfs_prefix_path: '{{ shared_fs_prefix }}'
@@ -275,6 +294,12 @@
     - role: trinity/config-manager
       cm_admin_group: "{{ admin_group }}"
       tags: config-manager
+
+      # We added kea for future reference
+      # For now it's here as a reference
+    - role: trinity/kea
+      when: trix_use_kea | default(False)
+      tags: kea
 
     - role: trinity/luna2
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
@@ -342,6 +367,7 @@
     - role: trinity/ood
       ood_enable_ssl: true
       ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
+      ood_use_ds389: '{{ trix_use_ds389 | default(False) }}'
       ood_ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ood_ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       ood_login_host: "{{ trix_external_fqdn }}"

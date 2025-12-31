@@ -1,12 +1,19 @@
 ---
 # tasks file for luna
 
+- name: Load kea variable file
+  include_vars: "kea.yaml"
+  ignore_errors: true
+  when: luna2_use_kea | default(False)
+
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
   include_vars: "{{ item }}"
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  no_log: true
   ignore_errors: true
+  when: not luna2_use_kea | default(False)
 
 - name: Install luna2 packages
   yum:
@@ -238,6 +245,16 @@
     owner: root
     group: root
     mode: 0640
+  when: not luna2_use_kea | default(False)
+
+- name: Render daemon luna.ini
+  template:
+    src: 'luna2-daemon.ini-kea.j2'
+    dest: '{{ trix_luna }}/daemon/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
+  when: luna2_use_kea | default(False)
 
 # ---------------- legacy fixes ------------------
 
@@ -363,12 +380,16 @@
         url: "{{ luna2_x86_64_ipxe_files }}/ipxe.efi"
         dest: "{{ luna2_tftpboot_directory }}/luna_ipxe.efi"
         mode: '0444'
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
 
     - name: Download iPXE legacy image to tftpboot
       get_url:
         url: "{{ luna2_x86_64_ipxe_files }}/undionly.kpxe"
         dest: "{{ luna2_tftpboot_directory }}/luna_undionly.kpxe"
         mode: '0444'
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
     when: system_arch == "x86_64" or luna2_download_all_arch_ipxe_files|default(False)
 
   - name: Download ARM 64-bit iPXE EFI image to tftpboot
@@ -376,6 +397,8 @@
       url: "{{ luna2_aarch64_ipxe_files }}/ipxe.efi"
       dest: "{{ luna2_tftpboot_directory }}/luna_ipxe_arm64.efi"
       mode: '0444'
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
     when: system_arch == "aarch64" or luna2_download_all_arch_ipxe_files|default(False)
   when: ansible_facts['os_family'] == "RedHat"
 

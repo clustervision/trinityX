@@ -1,0 +1,74 @@
+; settings for luna2 daemon
+
+[LOGGER]
+LEVEL = info
+LOGFILE = /var/log/luna/luna2-daemon.log
+; Logging Level Can be one only from -> debug, info, warning, error, critical
+
+[API]
+USERNAME = {{ luna_username }}
+PASSWORD = {{ luna_password }}
+EXPIRY = 1h
+SECRET_KEY = {{ luna_secret_key }}
+ENDPOINT = {{ ansible_hostname }}:7050
+# setting something else is optional:
+#ENDPOINT = {{ trix_ctrl_hostname }}.{{ trix_domain }}:7050
+PROTOCOL = {{ luna_protocol }}
+VERIFY_CERTIFICATE = {{ luna_verify_certificate }}
+
+[DATABASE]
+DRIVER = SQLite3
+DATABASE = {{ trix_luna }}/daemon/common/luna.db
+DBUSER = 
+DBPASSWORD = 
+HOST = 
+PORT = 
+
+[FILES]
+KEYFILE = {{ trix_ssl }}/luna.key
+IMAGE_FILES = {{ trix_luna }}/files
+IMAGE_DIRECTORY = {{ trix_images }}
+TMP_DIRECTORY = {{ trix_luna }}/tmp/files
+MAXPACKAGINGTIME = 10m
+; MAXPACKAGINGTIME Always in Minutes.
+
+[WEBSERVER]
+PORT = 7051
+PROTOCOL = http
+; PORT is meant for nginx or apache to serve raw files.
+; this section is optional. if not specified, luna falls back to luna defaults.
+
+[SERVICES]
+DHCP = kea-dhcp4
+DNS = named
+CONTROL = systemd
+COOLDOWN = 2s
+COMMAND = /usr/bin/systemctl
+
+[DHCP]
+TSIGKEY = {{ tsig_key_secret | default() }}
+TSIGALGO = {{ tsig_key_algo | default() }}
+TEMPLATE = templ_kea-dhcp4.cfg
+CONFIG_PATH = /etc/kea/kea-dhcp4.conf
+TEST = kea-dhcp4 -t
+
+[BMCCONTROL]
+BMC_BATCH_SIZE = 10
+BMC_BATCH_DELAY = 1s
+
+[TEMPLATES]
+TEMPLATE_FILES = {{ trix_luna }}/daemon/templates
+TEMPLATE_LIST = {{ trix_luna }}/daemon/config/tempfiles.json
+TMP_DIRECTORY = {{ trix_luna }}/tmp/templates
+
+[PLUGINS]
+PLUGINS_DIRECTORY = {{ trix_luna }}/daemon/plugins
+; setting for what plugin to load for image_directory activities.
+; plugins/osimage/filesystem/<plugin>
+IMAGE_FILESYSTEM = default
+; which plugins are allowed
+ALLOWED_EXPORTERS = prometheus, zabbix, prometheus_rules, prometheus_hw_rules, prometheus_rules_settings
+ALLOWED_IMPORTERS = prometheus_rules, prometheus_hw_rules, prometheus_rules_settings
+
+[EXTRA]
+VAR1 = value

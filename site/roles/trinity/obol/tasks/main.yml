@@ -1,17 +1,34 @@
 ---
 # tasks file for obol
-
-- name: Generate openldap root password and save it to /etc/trinity/passwords
-  set_fact:
-    tmp_pwd: "{{ lookup('password',
+#
+- block:
+  - name: Generate openldap root password and save it to /etc/trinity/passwords
+    set_fact:
+      tmp_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/openldap/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
 
-- name: Get openldap root password from /etc/trinity/passwords
-  set_fact:
-    openldap_root_pwd: "{{ lookup('password',
+  - name: Get openldap root password from /etc/trinity/passwords
+    set_fact:
+      openldap_root_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/openldap/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
+  when: not obol_use_ds389 | default(True)
+
+- block:
+  - name: Generate ds389 root password and save it to /etc/trinity/passwords
+    set_fact:
+      tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Get ds389 root password from /etc/trinity/passwords
+    set_fact:
+      ds389_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+  when: obol_use_ds389 | default(False)
+
 
 - name: Install obol dependency packages
   become: false
@@ -22,7 +39,6 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-
 - name: Install obol to /usr/local/sbin
   copy:
     src: 'obol'
@@ -30,6 +46,16 @@
     owner: 'root'
     group: 'root'
     mode: '0750'
+  when: not obol_use_ds389 | default(True)
+
+- name: Install obol to /usr/local/sbin
+  copy:
+    src: 'obol-ds389'
+    dest: '/usr/local/sbin/obol'
+    owner: 'root'
+    group: 'root'
+    mode: '0750'
+  when: obol_use_ds389 | default(False)
 
 - name: Add default configuration to {{ obol_conf_path }}
   template:
