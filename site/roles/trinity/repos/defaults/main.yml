@@ -14,7 +14,7 @@ trinityx_repositories:
     gpgcheck: False
 
 external_repository_rpms:
-  - name: https://www.elrepo.org/elrepo-release-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.elrepo.noarch.rpm
+  - name: https://updates.clustervision.com/trinityx/{{ trix_version }}/additional/noarch/rpms/elrepo-release-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.elrepo.noarch.rpm
     file: elrepo-release.rpm
     no_gpgcheck: True
 
@@ -28,3 +28,17 @@ disable_repositories:
   - elrepo-testing
   - elrepo-kernel
   - elrepo-extras
+
+replace_baseurls:
+  - name: elrepo
+    filter_url: 'http://elrepo.org'
+    replace_url: 'http://linux-mirrors.fnal.gov'
+  - name: elrepo-testing
+    filter_url: 'http://elrepo.org'
+    replace_url: 'http://linux-mirrors.fnal.gov'
+  - name: elrepo-kernel
+    filter_url: 'http://elrepo.org'
+    replace_url: 'http://linux-mirrors.fnal.gov'
+  - name: elrepo-extras
+    filter_url: 'http://elrepo.org'
+    replace_url: 'http://linux-mirrors.fnal.gov'

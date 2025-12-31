@@ -1,0 +1,44 @@
+---
+# vars file for openldap
+
+ds389_dependencies:
+  - 389-ds-base-libs
+  - openldap-clients
+  - pam-libs
+  - python3-lib389
+  - lmdb-libs
+  - nss
+  - nss-tools
+  - openssl-libs
+  - rsync
+
+ds389_packages:
+  - 389-ds-base
+
+
+ds389_root_dn: "cn=Directory Manager"
+ds389_base_dn: "dc=local"
+ds389_server_dir_path: "/var/lib/dirsrv/slapd-{{ ds389_instance_name }}"
+ds389_server_conf_path: "/etc/dirsrv/slapd-{{ ds389_instance_name }}"
+ds389_server_defaults_file: "/etc/dirsrv/slapd-{{ ds389_instance_name }}/dse.ldif"
+ds389_ssl_port: 636
+
+ds389_endpoints: ldap://  ldaps://  ldapi:///
+ds389_host: "{{ ansible_fqdn }}"
+
+ds389_default_user: dirsrv
+ds389_default_group: dirsrv
+
+ssl_cert_path: '/etc/ssl/certs'
+ssl_cert_group: '{{ ds389_default_user }}'
+
+ds389_tls_cacrt: '{{ ssl_ca_cert }}'
+ds389_tls_crt: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname if ha else ansible_fqdn }}.crt'
+ds389_tls_key: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname if ha else ansible_fqdn }}.key'
+
+
+
+
+  #      ds389_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/dirsrv"
+  #      ds389_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/dirsrv/slapd.d"
+  #      ds389_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'

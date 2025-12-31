@@ -6,7 +6,12 @@ shell = /bin/bash
 [ldap]
 
 host = ldaps://{{ ldap_host }}
+{% if obol_use_ds389 %}
+bind_dn = cn=Directory Manager
+bind_pass = {{ ds389_root_pwd }}
+{% else %}
 bind_dn = cn=manager,dc=local
 bind_pass = {{ openldap_root_pwd }}
+{% endif %}
 base_dn = dc=local
 

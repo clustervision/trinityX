@@ -1,0 +1,468 @@
+---
+# tasks file for ds389
+
+- name: Install dependencies
+  yum:
+    name: '{{ ds389_dependencies }}'
+    state: installed
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install DS389 packages
+  yum:
+    name: '{{ ds389_packages }}'
+    state: present
+    enablerepo:
+      - plus
+      - powertools
+      - appstream
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+
+# -- start sync
+- block:
+  - name: Ensure password loction exists
+    file:
+      path: '/etc/trinity/passwords/ds389'
+      state: directory
+      mode: 0700
+
+  - name: Copy ds389 password from sync
+    copy:
+      remote_src: true
+      src: '{{ trix_sync }}/ds389/root.txt'
+      dest: '/etc/trinity/passwords/ds389/'
+  when: 
+    - not primary | default(False)
+    - ha | default(False)
+# -- end sync
+
+- name: Generate ds389 root password and save it to /etc/trinity/passwords
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get ds389 root password from /etc/trinity/passwords
+  set_fact:
+    ds389_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+# -- start sync
+- block:
+  - name: Ensure ds389 sync directory exists
+    file:
+      path: '{{ trix_sync }}/ds389'
+      state: directory
+
+  - name: Add ds389 password to sync
+    copy:
+      remote_src: true
+      src: '/etc/trinity/passwords/ds389/root.txt'
+      dest: '{{ trix_sync }}/ds389/'
+      mode: 0640
+  when:
+    - primary | default(True)
+    - ha | default(False)
+# -- end sync
+
+
+# --------------- destroy existing DB if requested ---------------
+- block:
+  - name: Stop DS389 service
+    systemd:
+      name: dirsrv@local
+      state: stopped
+    ignore_errors: true
+
+  - name: Verifying for config existence
+    stat:
+      path: '{{ ds389_server_conf_path }}'
+    register: ds389_server_conf_stat
+
+  - block:
+    - name: Verifying previous config backup existence
+      stat:
+        path: '{{ ds389_server_conf_path }}.backup'
+      register: ds389_server_conf_path_backup
+
+    - name: Deleting previous config backup
+      file:
+        path: '{{ ds389_server_conf_path }}.backup'
+        state: absent
+      when:
+        - ds389_server_conf_path_backup.stat.isdir is defined
+        - ds389_server_conf_path_backup.stat.isdir
+
+    - name: Copying current data to backup
+      copy:
+        src: '{{ ds389_server_conf_path }}'
+        dest: '{{ ds389_server_conf_path }}.backup'
+        remote_src: true
+    when: ds389_server_conf_stat.stat.exists
+    # ---
+  - name: Verifying for data existence
+    stat:
+      path: '{{ ds389_server_dir_path }}'
+    register: ds389_server_dir_stat
+
+  - block:
+    - name: Verifying previous data backup existence
+      stat:
+        path: '{{ ds389_server_dir_path }}.backup'
+      register: ds389_server_dir_path_backup
+
+    - name: Deleting previous data backup
+      file:
+        path: '{{ ds389_server_dir_path }}.backup'
+        state: absent
+      when:
+        - ds389_server_dir_path_backup.stat.isdir is defined
+        - ds389_server_dir_path_backup.stat.isdir
+
+    - name: Copying current data to backup
+      copy:
+        src: '{{ ds389_server_dir_path }}'
+        dest: '{{ ds389_server_dir_path }}.backup'
+        remote_src: true
+    when: ds389_server_dir_stat.stat.exists
+    # ---
+  - name: Destroying local database
+    command: dsctl local remove --do-it
+    ignore_errors: true
+
+  - name: Deleting left overs
+    file:
+      path: '{{ item }}'
+      state: absent
+    with_items:
+      - /var/lib/dirsrv/slapd-local
+      - '{{ ds389_server_conf_path }}'
+      - /etc/dirsrv/slapd-local
+      - '{{ ds389_server_dir_path }}'
+    ignore_errors: true
+    when: item != ''
+  when:
+    - override | default(False)
+    - primary | default(True)
+
+# ----------------------------------------------------------------
+
+# --- Instance Creation ---
+- name: Create DS389 instance configuration file (.inf)
+  template:
+    src: ds389_instance.inf.j2
+    dest: "/etc/dirsrv/ds389-local.inf"
+    mode: '0600'
+  when: primary | default(True)
+
+- name: Setup DS389 instance from file
+  command: dscreate from-file /etc/dirsrv/ds389-local.inf
+  args:
+    creates: "/etc/dirsrv/slapd-local/dse.ldif"
+  when: primary | default(True)
+
+- name: Create paths for DS389
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: '{{ ds389_default_user }}'
+    group: '{{ ds389_default_group }}'
+  with_items:
+    - /var/log/dirsrv/slapd-local
+    - /run/lock/dirsrv/slapd-local
+    - /run/dirsrv
+  when: not primary | default(False)
+
+- block:
+  - name: Selinux fcontext on files
+    sefcontext:
+      target: "{{ ds389_server_conf_path }}(/.*)?"
+      setype: dirsrv_config_t
+  when: ansible_selinux.status == "enabled"
+
+# ----------------------------------------------------------------
+
+- name: Get /etc/dirsrv/slapd status
+  stat:
+    path: '/etc/dirsrv/slapd-local'
+  register: default_ds389_path
+
+- block:
+  - name: Ensure DS389 configuration directory exists
+    file:
+      path: '{{ ds389_server_conf_path }}'
+      state: directory
+      owner: '{{ ds389_default_user }}'
+      group: '{{ ds389_default_group }}'
+      setype: dirsrv_config_t
+      seuser: system_u
+    when: primary | default(False)
+
+  - name: Copy default configuration to {{ ds389_server_conf_path }}
+    shell: rsync -raW -AX /etc/dirsrv/slapd-local/* {{ ds389_server_conf_path|quote }}
+    args:
+      creates: '{{ ds389_server_conf_path }}/dse.ldif'
+    register: dirsrv_copy_conf
+    ignore_errors: true
+    when: primary | default(True)
+
+  - name: Copy default configuration to {{ ds389_server_conf_path }} without xattr
+    shell: rsync -raW /etc/dirsrv/slapd-local/* {{ ds389_server_conf_path|quote }}
+    args:
+      creates: '{{ ds389_server_conf_path }}/dse.ldif'
+    when:
+      - primary | default(True)
+      - dirsrv_copy_conf is failed
+
+  - name: Delete default configuration
+    file:
+      path: '/etc/dirsrv/slapd-local'
+      state: absent
+
+  - name: Replace default configuration path with symlink to {{ ds389_server_conf_path }}
+    file:
+      src: '{{ ds389_server_conf_path }}'
+      dest: '/etc/dirsrv/slapd-local'
+      state: link
+      force: true
+  when:
+    - primary | default(True)
+    - ds389_server_conf_path|string not in '/etc/dirsrv/slapd-local'
+    - default_ds389_path.stat.isdir
+
+- name: Replace default configuration path with symlink to {{ ds389_server_conf_path }}
+  file:
+    src: '{{ ds389_server_conf_path }}'
+    dest: '/etc/dirsrv/slapd-local'
+    state: link
+    force: true
+  when:
+    - ha | default(False)
+    - not primary | default(False)
+
+# ----------------------------------------------------------------
+
+- name: Get /var/lib/dirsrv/slapd status
+  stat:
+    path: '/var/lib/dirsrv/slapd-local'
+  register: default_ds389_data
+
+- block:
+  - name: Ensure DS389 data directory exists
+    file:
+      path: '{{ ds389_server_dir_path }}'
+      state: directory
+      owner: '{{ ds389_default_user }}'
+      group: '{{ ds389_default_group }}'
+      setype: dirsrv_config_t
+      seuser: system_u
+    when: primary | default(True)
+
+  - name: Copy default configuration to {{ ds389_server_conf_path }}
+    shell: rsync -raW -AX /etc/dirsrv/slapd-local/* {{ ds389_server_conf_path|quote }}
+    args:
+      creates: '{{ ds389_server_conf_path }}/db'
+    register: dirsrv_copy_data
+    ignore_errors: true
+    when: primary | default(True)
+
+  - name: Copy default configuration to {{ ds389_server_conf_path }} without xattr
+    shell: rsync -raW /etc/dirsrv/slapd-local/* {{ ds389_server_conf_path|quote }}
+    args:
+      creates: '{{ ds389_server_conf_path }}/db'
+    when:
+      - primary | default(True)
+      - dirsrv_copy_data is failed
+
+  - name: Delete default configuration
+    file:
+      path: '/var/lib/dirsrv/slapd-local'
+      state: absent
+
+  - name: Replace default configuration path with symlink to {{ ds389_server_conf_path }}
+    file:
+      src: '{{ ds389_server_dir_path }}'
+      dest: '/var/lib/dirsrv/slapd-local'
+      state: link
+      force: true
+  when:
+    - primary | default(True)
+    - ds389_server_dir_path|string not in '/var/lib/dirsrv/slapd-local'
+    - default_ds389_data.stat.isdir
+
+- name: Replace default configuration path with symlink to {{ ds389_server_conf_path }}
+  file:
+    src: '{{ ds389_server_dir_path }}'
+    dest: '/var/lib/dirsrv/slapd-local'
+    state: link
+    force: true
+  when:
+    - ha | default(False)
+    - not primary | default(False)
+
+
+# --- certificates
+- name: Ensure DS389 certs directory exists
+  file:
+    path: '/etc/dirsrv/certs'
+    state: directory
+
+- name: Add cluster CA certificate to /etc/dirsrv/certs
+  copy:
+    remote_src: true
+    src: '{{ ds389_tls_cacrt }}'
+    dest: '/etc/dirsrv/certs/'
+
+- name: Ensure DS389 has access to the ssl certificates
+  user:
+    name: '{{ ds389_default_user }}'
+    groups: '{{ ssl_cert_group }}'
+
+- block:
+  - name: Verify whether we have to add cluster-ca
+    command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n cluster-ca'
+    register: ds389_ca_cert
+    no_log: true
+    ignore_errors: true
+
+  - name: Add cluster CA as a valid DS389 CA
+    command: 'dsconf local security ca-certificate add --file {{ ds389_tls_cacrt }} --name "cluster-ca"'
+    notify: restart ds389
+    when: ds389_ca_cert.rc|int != 0
+
+  - name: Verify whether we have to remove the default cert name
+    shell: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert | grep "{{ trix_ctrl_hostname }}"'
+    register: ds389_default_cert
+    ignore_errors: true
+
+  - block:
+    - name: Remove default server cert
+      command: certutil -D -d "/etc/dirsrv/slapd-local" -n Server-Cert
+
+    - name: Add controller certificate
+      command: 'dsctl local tls import-server-key-cert {{ ds389_tls_crt }} {{ ds389_tls_key }}'
+      notify: restart ds389
+    when: ds389_default_cert.rc|int != 0 or ds389_default_cert.stdout == '' or ds389_ca_cert.rc|int != 0
+
+  - name: Verify whether we have server cert
+    shell: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert'
+    register: ds389_new_cert
+    ignore_errors: true
+
+  - name: Verify whether we have to rename to default cert name
+    command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n controller'
+    register: ds389_rename_cert
+    when: ds389_new_cert.rc|int != 0
+    ignore_errors: true
+
+  - name: Rename controller cert to match DS defaults
+    command: 'certutil -d "/etc/dirsrv/slapd-local" --rename -n "controller" --new-n "Server-Cert"'
+    notify: restart ds389
+    when: ds389_rename_cert.rc is defined and ds389_rename_cert.rc|int == 0
+  when: primary | default(True)
+
+- meta: flush_handlers
+
+# --- let's make sure we are running before we continue.
+- name: Start DS389 service
+  systemd:
+    name: dirsrv@local
+    state: started
+  when: primary | default(True)
+
+# --- schemas
+- block:
+  - name: Copy OpenLDAP schemas
+    copy:
+      src: '{{ item }}'
+      dest: '/etc/dirsrv/schema/'
+      owner: '{{ ds389_default_user }}'
+      group: '{{ ds389_default_group }}'
+      mode: '0644'
+    with_items:
+      - local_schema.ldif
+
+  - name: Check local schemas
+    command: > 
+      ldapsearch -x -H ldap://localhost -D "cn=Directory Manager"
+         -w {{ ds389_root_pwd }} -b "ou=Group,dc=local"
+    register: ds389_ldapsearch
+    no_log: true
+    ignore_errors: true
+
+  - name: Load OpenLDAP local schema
+    command: >
+      ldapadd -c -x -H ldap://localhost -D "cn=Directory Manager"
+         -w {{ ds389_root_pwd }}
+         -f /etc/dirsrv/schema/local_schema.ldif
+    when: ds389_ldapsearch.rc|int != 0
+    ignore_errors: true
+
+  - name: Copy trust schema
+    copy:
+      src: /usr/share/dirsrv/schema/60trust.ldif
+      dest: /etc/dirsrv/slapd-local/schema/
+    ignore_errors: true
+  when: primary | default(True)
+
+
+# --- memberOf
+- block:
+  - name: Verify if memberOf plugin is enabled
+    shell: dsconf local plugin memberof status
+    register: ds389_memberof
+    ignore_errors: true
+
+  - block:
+    - name: Enabling dynamic plugins
+      command: dsconf local config replace nsslapd-dynamic-plugins=on
+      notify: restart ds389
+
+    - name: Enabling memberOf plugin
+      command: dsconf local plugin memberof enable
+
+    - name: Setting inetUser as a default object to add memberOf attritube to
+      command: dsconf local plugin memberof set --autoaddoc inetUser
+      ignore_errors: true
+
+    - name: Setting memberOf plugin group attribute
+      command: dsconf local plugin memberof set --groupattr uniqueMember
+      ignore_errors: true
+    when: ds389_memberof.rc|int != 0 or 'disabled' in ds389_memberof.stdout
+  when: primary | default(True)
+
+- meta: flush_handlers
+
+# --- HA stuff....
+- name: Start DS389 service
+  systemd:
+    name: dirsrv@local
+    state: started
+    enabled: true
+  when: 
+    - not ha|default(False)
+    - primary | default(True)
+
+- block:
+  - name: Disable DS389 service for H/A
+    systemd:
+      name: dirsrv@local
+      state: "{{ 'started' if primary else 'stopped' }}"
+      enabled: false
+
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'ds389'
+      resource_class: 'systemd'
+      resource_type: 'systemd:dirsrv@local'
+      options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+      state: present
+    when: primary | default(True)
+  when: ha | default(False)
+  tags: pcs
+

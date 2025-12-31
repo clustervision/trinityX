@@ -1,5 +1,13 @@
 ---
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  no_log: true
+  ignore_errors: true
+
 - name: Include tasks for login image
   ansible.builtin.include_tasks:
     file: login-pre.yml

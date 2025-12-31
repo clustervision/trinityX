@@ -1,0 +1,23 @@
+---
+
+#- debug:
+#    msg: "repo file: {{ item }}"
+#  with_items: "{{ name }}"
+
+- name: extract baseurls for {{ inner_loop_var.name }}
+  shell: "dnf repolist {{ inner_loop_var.name }} -v | sed -e 's/\\s\\+:\\s\\+/=/g' | grep '='"
+  register: repos_temp_repo_details
+  ignore_errors: true
+
+- name: set temporary fact for repo {{ inner_loop_var.name }}
+  set_fact:
+    repos_temp_repo_data: "{{ repos_temp_repo_data|d([]) | combine ( { item.split('=')[0] : item.split('=')[1] } ) }}"
+  with_items: "{{ repos_temp_repo_details.stdout_lines }}"
+  when: repos_temp_repo_details is defined and repos_temp_repo_details.rc|int == 0
+
+- name: Mend repo {{ inner_loop_var.name }}
+  replace:
+    path: "{{ repos_temp_repo_data['Repo-filename'] }}"
+    regexp: "{{ inner_loop_var.filter_url }}"
+    replace: "{{ inner_loop_var.replace_url }}"
+  when: repos_temp_repo_data is defined

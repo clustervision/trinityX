@@ -11,6 +11,7 @@
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  no_log: true
   ignore_errors: true
   when: not luna2_use_kea | default(False)
 
@@ -379,12 +380,16 @@
         url: "{{ luna2_x86_64_ipxe_files }}/ipxe.efi"
         dest: "{{ luna2_tftpboot_directory }}/luna_ipxe.efi"
         mode: '0444'
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
 
     - name: Download iPXE legacy image to tftpboot
       get_url:
         url: "{{ luna2_x86_64_ipxe_files }}/undionly.kpxe"
         dest: "{{ luna2_tftpboot_directory }}/luna_undionly.kpxe"
         mode: '0444'
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
     when: system_arch == "x86_64" or luna2_download_all_arch_ipxe_files|default(False)
 
   - name: Download ARM 64-bit iPXE EFI image to tftpboot
@@ -392,6 +397,8 @@
       url: "{{ luna2_aarch64_ipxe_files }}/ipxe.efi"
       dest: "{{ luna2_tftpboot_directory }}/luna_ipxe_arm64.efi"
       mode: '0444'
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
     when: system_arch == "aarch64" or luna2_download_all_arch_ipxe_files|default(False)
   when: ansible_facts['os_family'] == "RedHat"
 

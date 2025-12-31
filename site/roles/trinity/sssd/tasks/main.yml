@@ -4,7 +4,9 @@
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
   include_vars: "{{ item }}"
   with_first_found:
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}.yaml"
+  no_log: true
   ignore_errors: true
 
 - name: Install sssd packages
@@ -31,6 +33,20 @@
 #  when: ansible_facts['os_family'] == "Suse" or ansible_facts['os_family'] == "SLE"
 #  retries: "{{ rpm_retries | default(3) }}"
 #  delay: "{{ rpm_delay | default(15) }}"
+
+- block:
+  - name: Generate ds389 root password and save it to /etc/trinity/passwords
+    set_fact:
+      tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Get ds389 root password from /etc/trinity/passwords
+    set_fact:
+      ds389_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+  when: sss_use_ds389 | default(False)
 
 - name: Add configuration file to /etc/sssd/sssd.conf
   template:
@@ -82,7 +98,16 @@
 - name: Setting up the system to use sssd for authentication
   command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
   changed_when: false
-  when: ansible_facts['os_family'] == "RedHat"
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int < 10
+
+- name: Setting up the system to use sssd for authentication
+  command: authselect select sssd with-mkhomedir
+  changed_when: false
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int > 9
 
 - block:
   - name: Configure nsswitch.conf

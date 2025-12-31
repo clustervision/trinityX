@@ -88,6 +88,8 @@ if [ ! -f TrinityX.pdf ]; then
   exit 1
 fi
 
+# --------------------- SELINUX TASKS ----------------------
+
 SELINUX=$(getenforce)
 if [ "$SELINUX" == "Disabled" ]; then
     add_message "SELinux seems to be disabled on the controller"
@@ -122,17 +124,18 @@ else
   fi
 fi
 
+# --------------------- TUI INSTALL ---------------------
+
 if [ ! "$GITLAB_CI" ]; then
-  if [ -f site/tui_configurator ]; then
-      rm -f site/tui_configurator
-  fi
-  if [ ! "$(which wget)" ]; then
+  if [ ! -f site/tui_configurator ]; then
+    if [ ! "$(which wget)" ]; then
       dnf -y install wget
+    fi
+    ARCH=$(uname -m)
+    TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml* 2> /dev/null | grep -oE '[0-9\.]+' | sort -n | tail -n1 | grep -v '' || echo '15')
+    wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
+    chmod 755 site/tui_configurator
   fi
-  ARCH=$(uname -m)
-  TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml.example 2> /dev/null | grep -oE '[0-9\.]+' || echo '15.2')
-  wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
-  chmod 755 site/tui_configurator
 fi
 
 # inside a runner (test mode) we do not update the kernel.
@@ -143,25 +146,27 @@ else
 fi
 dnf install curl tar git -y
 
-REDHAT_RELEASE=''
-if  [[ `grep -i "Red Hat Enterprise Linux 8" /etc/os-release` ]]; then
-  REDHAT_RELEASE=8
-elif  [[ `grep -i "Red Hat Enterprise Linux 9" /etc/os-release` ]]; then
-  REDHAT_RELEASE=9
-fi
+# ------------------- ANSIBLE INSTALL --------------------
+
+REDHAT_RELEASE=$(grep -i "Red Hat Enterprise Linux" /etc/os-release | grep -oE '[0-9]+' | head -n1)
 if [ "$REDHAT_RELEASE" ]; then
-  subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-x86_64-rpms
+  ARCH=$(uname -m)
+  subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-${ARCH}-rpms
   dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
-  dnf install ansible-core -y
-  dnf install ansible -y
 else
   dnf install epel-release -y
-  dnf install ansible -y
 fi
 
+dnf install ansible -y 2> /dev/null || true
+dnf install ansible-core -y
+dnf install ansible-collection-community-general -y 2> /dev/null
+dnf install ansible-collection-ansible-posix -y 2> /dev/null
+ansible-galaxy collection install community.mysql
 ansible-galaxy install OndrejHome.pcs-modules-2
 
+# --------------------- KERNEL CHECK ----------------------
 # kernel check. Did we pull in a newer kernel?
+# We might want to reboot before using ZFS...
 CURRENT_KERNEL=$(uname -r)
 LATEST_KERNEL=$(ls -tr /lib/modules/|tail -n1)
 
@@ -175,6 +180,8 @@ if [ "$USE_CURRENT_KERNEL" != "yes" ] && [ "$CURRENT_KERNEL" != "$LATEST_KERNEL"
   fi
 fi
 
+# ---------------------- ZFS INSTALL ----------------------
+
 if [ ! "$WITH_ZFS" ] && [ ! "$GITLAB_CI" ]; then
   add_message "Would you prefer to include ZFS?" 
   add_message "ZFS is supported in the shared_fs_disk/HA role. If you prefer to use ZFS there, please confirm below."
@@ -187,7 +194,9 @@ if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
   ARCH=$(uname -m)
   if [ "$ARCH" == "aarch64" ]; then
     add_message "Automated ZFS support for ARM is limited. To have ZFS support for ARM based systems, please follow the below steps:"
-    add_message "- dns install -y kernel-devel kernel-headers dkms libtirpc-devel libblkid-devel libuuid-devel zlib-devel"
+    add_message "- have CRB repo installed and available if applicable"
+    add_message "- dnf install -y kernel-devel kernel-headers dkms libtirpc-devel"
+    add_message "- dnf install -y libblkid-devel libuuid-devel zlib-devel autoconf automake libtool"
     add_message "- git clone https://github.com/openzfs/zfs.git"
     add_message "- cd zfs"
     add_message "- sh autogen.sh"
@@ -196,12 +205,14 @@ if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
     add_message "- make install"
     show_message
   else
-    yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-2$(rpm --eval "%{dist}").noarch.rpm
+    yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-8$(rpm --eval "%{dist}").noarch.rpm
     yes y | dnf -y install zfs zfs-dkms
     echo "zfs" >> /etc/modules-load.d/zfs.conf
     modprobe zfs
   fi
 fi
+
+# ---------------------- MISC TASKS -----------------------
 
 if [ ! -f site/hosts ]; then
   add_message "Please modify the site/hosts.example and save it as site/hosts"  

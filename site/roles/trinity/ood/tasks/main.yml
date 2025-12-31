@@ -1,14 +1,29 @@
 ---
 ##### New tasks file for ood-portal (3.0 on RockyLinux-8)
 
-- name: Ensure ssl certificate and key exists
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: file
-  with_items:
-    - "{{ ood_ssl_certificate }}"
-    - "{{ ood_ssl_certificate_key }}"
-  when: ood_enable_ssl
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  no_log: true
+  ignore_errors: true
+
+# ---- when using DS389
+- block:
+  - name: Generate ds389 root password and save it to /etc/trinity/passwords
+    set_fact:
+      tmp_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Get ds389 root password from /etc/trinity/passwords
+    set_fact:
+      ds389_root_pwd: "{{ lookup('password',
+                          '/etc/trinity/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+  when: ood_use_ds389 | default(False)
+# ----
 
 - name: Install required rpms
   ansible.builtin.dnf:
@@ -19,6 +34,15 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
   notify: Run update_ood
+
+- name: Ensure ssl certificate and key exists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: file
+  with_items:
+    - "{{ ood_ssl_certificate }}"
+    - "{{ ood_ssl_certificate_key }}"
+  when: ood_enable_ssl
 
 - name: Ensure OOD config paths exist
   ansible.builtin.file:
