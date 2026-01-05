@@ -63,7 +63,7 @@ def print_error(msg, name="Error"):
 
 def print_table(item: Union[List, Dict]):
     """Print a list of dicts as a table, dict as a transposed table"""
-{%- if obol_use_ds389 %}
+{% if obol_use_ds389 %}
     list_fields = ["uid", "cn", "uidNumber", "gidNumber", "uniqueMember", "memberOf"]
 {% else %}
     list_fields = ["uid", "cn", "uidNumber", "gidNumber", "member", "memberOf"]
@@ -224,9 +224,9 @@ class Obol:
     @classmethod
     def _make_secret(cls, password):
         """Encodes the given password as a base64 SSHA hash+salt buffer"""
-{%- raw %}
+{% raw %}
         if password.startswith("{SSHA}"):
-{%- endraw %}
+{% endraw %}
             return password
 
         salt = os.urandom(4)
@@ -236,10 +236,10 @@ class Obol:
         # Create a base64 encoded string of the concatenated digest + salt
         digest_b64 = base64.b64encode(sha.digest() + salt).decode("utf-8")
 
-{%- raw %}
+{% raw %}
         # Tag the digest above with the {SSHA} tag
         tagged_digest = f"{{SSHA}}{digest_b64}"
-{%- endraw %}
+{% endraw %}
 
         return tagged_digest
 
@@ -495,9 +495,9 @@ class Obol:
                     b"person",
                     b"organizationalPerson",
                     b"inetOrgPerson",
-{%- if obol_use_ds389 %}
+{% if obol_use_ds389 %}
                     b"inetUser",
-{%- endif %}
+{% endif %}
                     b"posixAccount",
                     b"shadowAccount",
                 ],
@@ -590,11 +590,11 @@ class Obol:
         # Add group
         group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
         group_record = [
-{%- if obol_use_ds389 %}
+{% if obol_use_ds389 %}
             ("objectclass", [b"top", b"posixGroup", b"groupOfUniqueNames"]),
-{%- else %}
+{% else %}
             ("objectclass", [b"top", b"groupOfMembers", b"posixGroup"]),
-{%- endif %}
+{% endif %}
             ("cn", [groupname.encode("utf-8")]),
             ("gidNumber", [str(gid).encode("utf-8")]),
         ]
