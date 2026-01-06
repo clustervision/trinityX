@@ -19,3 +19,27 @@ ldap_conf: /etc/openldap/ldap.conf
 sssd_config_location: /etc/sssd
 
 sss_use_ds389: false
+
+
+sss_authselect_command:
+  - name: RedHat
+    version: 10
+    command: authselect select sssd with-mkhomedir
+  - name: RedHat
+    version: 9
+    command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
+  - name: RedHat
+    version: 8
+    command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
+  - name: SLE
+    version: 15
+    command: authselect select sssd with-mkhomedir --force
+  - name: Suse
+    command: authselect select sssd with-mkhomedir --force
+    version: 15
+  - name: SLE
+    version: 16
+    command: authselect select sssd with-mkhomedir --force
+  - name: Suse
+    command: authselect select sssd with-mkhomedir --force
+    version: 16

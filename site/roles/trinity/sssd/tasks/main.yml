@@ -100,18 +100,12 @@
     - sss_allowed_groups is iterable
 
 - name: Setting up the system to use sssd for authentication
-  command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
+  command: "{{ item.command }}"
   changed_when: false
+  with_items: "{{ sss_authselect_command }}"
   when:
-    - ansible_facts['os_family'] == "RedHat"
-    - ansible_facts['distribution_major_version']|int < 10
-
-- name: Setting up the system to use sssd for authentication
-  command: authselect select sssd with-mkhomedir
-  changed_when: false
-  when:
-    - ansible_facts['os_family'] == "RedHat"
-    - ansible_facts['distribution_major_version']|int > 9
+    - item.name == ansible_facts['os_family']
+    - item.version == ansible_facts['distribution_major_version']|int
 
 - block:
   - name: Configure nsswitch.conf
