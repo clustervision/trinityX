@@ -162,6 +162,7 @@
     src: '{{ ssl_ca_cert }}'
     dest: '/etc/pki/ca-trust/source/anchors/{{ ssl_ca_cert | basename }}'
   register: cert_copy
+  when: ansible_facts['os_family'] == "RedHat" or ansible_facts['os_family'] == "Suse" or ansible_facts['os_family'] == "SLE"
 
 - name: Update certificate trust store
   shell: update-ca-trust
@@ -171,9 +172,17 @@
 - name: Update certificate trust store
   shell: update-ca-certificates
   changed_when: cert_copy.changed
+  when: ansible_facts['os_family'] == "Suse" or ansible_facts['os_family'] == "SLE"
+
+- block:
+  - name: Add CA certificate to default trust store
+    copy:
+      src: '{{ ssl_ca_cert }}'
+      dest: '/etc/ssl/certs/{{ ssl_ca_cert | basename }}'
+    register: cert_copy
+
+  - name: Update certificate trust store
+    shell: update-ca-certificates
+    changed_when: cert_copy.changed
   when: ansible_facts['os_family'] == "Debian"
 
-- name: Update certificate trust store
-  shell: update-ca-certificates
-  changed_when: cert_copy.changed
-  when: ansible_facts['os_family'] == "Suse" or ansible_facts['os_family'] == "SLE"
