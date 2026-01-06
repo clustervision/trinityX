@@ -67,16 +67,20 @@
     remote_src: "{{ False if in_image else True }}"
     src: "{{ ssl_ca_cert }}"
     dest: "{{ ca_certificate_path }}/{{ ssl_ca_cert | basename }}"
+  notify: restart sssd
+
+- meta: flush_handlers
 
 - name: Adjust OpenLDAP client TLS configuration
   lineinfile:
     path: "{{ ldap_conf }}"
     line: 'TLS_CACERT   {{ ca_certificate_path }}/{{ ssl_ca_cert | basename }}'
+  when: not sss_use_ds389 | default(False)
 
 - name: Enable sssd service
   systemd:
     name: sssd
-    enabled: "yes"
+    enabled: true
 
 - name: Start sssd service
   systemd:

@@ -2,6 +2,9 @@
 - hosts: '{{ hostlist }}'
 
   roles:
+  - role: ansible/read_facts
+    tags: always
+
   - role: trinity/init-nodes
     tags: init-nodes
 
@@ -40,6 +43,7 @@
     sss_ldap_hosts:
     - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
     sss_filter_enabled: '{{ not enable_slurm_pam }}'
+    sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
     tags: sssd
 
   - role: trinity/nfs-mounts

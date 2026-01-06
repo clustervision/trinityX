@@ -26,6 +26,11 @@ __maintainer__ = "Antoine Schonewille"
 __email__ = "development@clustervision.com"
 __status__ = "Development"
 
+{%- if obol_use_ds389 %}
+{%- set member = 'uniqueMember' %}
+{%- else %}
+{%- set member = 'member' %}
+{%- endif %}
 
 import os
 import sys
@@ -58,8 +63,11 @@ def print_error(msg, name="Error"):
 
 def print_table(item: Union[List, Dict]):
     """Print a list of dicts as a table, dict as a transposed table"""
-    #list_fields = ["uid", "cn", "uidNumber", "gidNumber", "member", "memberOf"]
+{% if obol_use_ds389 %}
     list_fields = ["uid", "cn", "uidNumber", "gidNumber", "uniqueMember", "memberOf"]
+{% else %}
+    list_fields = ["uid", "cn", "uidNumber", "gidNumber", "member", "memberOf"]
+{% endif %}
 
     if isinstance(item, list):
         if len(item) == 0:
@@ -138,7 +146,7 @@ class Obol:
         "cn",
         "gid",
         "gidNumber",
-        "uniqueMember"
+        "{{ member }}"
     ]
 
     def default_parser(self, values):
@@ -174,8 +182,7 @@ class Obol:
         self.config = configparser.ConfigParser()
         self.parsers = {
             "memberOf": self.member_of_parser,
-            "member": self.member_parser,
-            "uniqueMember": self.member_parser	
+            "{{ member }}": self.member_parser	
         }
 
 
@@ -217,7 +224,9 @@ class Obol:
     @classmethod
     def _make_secret(cls, password):
         """Encodes the given password as a base64 SSHA hash+salt buffer"""
+{% raw %}
         if password.startswith("{SSHA}"):
+{% endraw %}
             return password
 
         salt = os.urandom(4)
@@ -227,8 +236,10 @@ class Obol:
         # Create a base64 encoded string of the concatenated digest + salt
         digest_b64 = base64.b64encode(sha.digest() + salt).decode("utf-8")
 
+{% raw %}
         # Tag the digest above with the {SSHA} tag
         tagged_digest = f"{{SSHA}}{digest_b64}"
+{% endraw %}
 
         return tagged_digest
 
@@ -484,7 +495,9 @@ class Obol:
                     b"person",
                     b"organizationalPerson",
                     b"inetOrgPerson",
+{% if obol_use_ds389 %}
                     b"inetUser",
+{% endif %}
                     b"posixAccount",
                     b"shadowAccount",
                 ],
@@ -577,7 +590,11 @@ class Obol:
         # Add group
         group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
         group_record = [
+{% if obol_use_ds389 %}
             ("objectclass", [b"top", b"posixGroup", b"groupOfUniqueNames"]),
+{% else %}
+            ("objectclass", [b"top", b"groupOfMembers", b"posixGroup"]),
+{% endif %}
             ("cn", [groupname.encode("utf-8")]),
             ("gidNumber", [str(gid).encode("utf-8")]),
         ]
@@ -603,7 +620,7 @@ class Obol:
         # Delete the default group if it exists and has no other members
         try:
             group = self.group_show(username)
-            if len(group.get("uniqueMember", [])) == 0:
+            if len(group.get("{{ member }}", [])) == 0:
                 group_dn = f"cn={group['cn']},ou=Group,{self.base_dn}"
                 self.conn.delete_s(group_dn)
         except LookupError:
@@ -619,7 +636,7 @@ class Obol:
 
         # Ensure group has no members
         group = self.group_show(groupname)
-        if len(group.get("uniqueMember", [])) > 0:
+        if len(group.get("{{ member }}", [])) > 0:
             raise ValueError(f"Group '{groupname}' has members")
         # Delete the group
         group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
@@ -787,7 +804,7 @@ class Obol:
                     f"Users '{', '.join(incorrect_usernames)}' do not exist"
                 )
 
-            existing_group_usernames = existing_group.get("uniqueMember", [])
+            existing_group_usernames = existing_group.get("{{ member }}", [])
             existing_primary_group_usernames = [
                 u["uid"]
                 for u in existing_users
@@ -796,7 +813,7 @@ class Obol:
             users_to_add = [u for u in users if u not in existing_group_usernames]
             users_to_del = [
                 u
-                for u in existing_group.get("uniqueMember", [])
+                for u in existing_group.get("{{ member }}", [])
                 if (u not in existing_primary_group_usernames)
             ]
 
@@ -833,7 +850,7 @@ class Obol:
 
         # Ensure group exists
         existing_group = self.group_show(groupname)
-        if all(u in existing_group.get("uniqueMember", []) for u in usernames):
+        if all(u in existing_group.get("{{ member }}", []) for u in usernames):
             return
 
         # Ensure users exist
@@ -847,7 +864,7 @@ class Obol:
             mod_attrs.append(
                 (
                     ldap.MOD_ADD,
-                    "uniqueMember",
+                    "{{ member }}",
                     f"uid={name},ou=People,{self.base_dn}".encode("utf-8"),
                 )
             )
@@ -879,7 +896,7 @@ class Obol:
                 mod_attrs.append(
                     (
                         ldap.MOD_DELETE,
-                        "uniqueMember",
+                        "{{ member }}",
                         f"uid={user['uid']},ou=People,{self.base_dn}".encode("utf-8"),
                     )
                 )
