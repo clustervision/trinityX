@@ -19,16 +19,23 @@
     set_fact:
       download_base_image: true
       image_create_minimal: false
-    when: 
+    when:
       - alternative_distribution is defined
       - alternative_distribution != controller_distribution
 
   - name: Ensuring to extend the docker image
     set_fact:
       image_extend_docker: true
-    when: 
+    when:
       - alternative_image_source is defined
       - alternative_image_source == 'docker'
+
+  - name: Ensuring to extend the osgrabbed image
+    set_fact:
+      image_extend_osgrab: true
+    when:
+      - alternative_image_source is defined
+      - alternative_image_source == 'osgrab'
 
   - name:
     debug:

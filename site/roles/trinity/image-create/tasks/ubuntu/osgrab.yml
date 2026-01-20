@@ -1,0 +1,22 @@
+---
+
+- name: Configure repos
+  lineinfile:
+    path: "{{ image_path }}/etc/apt/sources.list"
+    line: "deb http://archive.ubuntu.com/ubuntu {{ ubuntu_distribution_release }} main universe"
+    state: present
+    create: 'yes'
+
+- name: Install core packages - @core, kernel and grub2
+  shell: "chroot {{ image_path }} apt-get -y install {{ item }}"
+  with_items: "{{ image_core_packages }}"
+
+- name: Download luna2-client package
+  get_url:
+    url: "{{ luna2_client_package }}"
+    dest: "{{ image_path }}/tmp/{{ luna2_client_package|split('/')|last }}"
+#    validate_certs: false
+
+- name: install luna2-client package
+  shell: "chroot {{ image_path }} dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
+

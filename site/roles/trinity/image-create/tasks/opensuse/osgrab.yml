@@ -1,0 +1,50 @@
+---
+
+- name: Configure TrinityX repos
+  ansible.builtin.yum_repository:
+    name: "{{ item.name }}"
+    description: "{{ item.name }}"
+    baseurl: "{{ item.repo }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
+    reposdir: "{{ image_path + '/etc/yum.repos.d/' }}"
+  with_items: "{{ trinityx_repositories }}"
+  when: item.name is defined
+
+- name: Collecting repo names for next task
+  set_fact:
+    _repos_inside_image_remove: "{{ _repos_inside_image_remove|default([]) + [ 'zypper rr '+item.name ] }}"
+    _repos_inside_image_add: "{{ _repos_inside_image_add|default([]) + [ 'zypper ar /etc/yum.repos.d/'+item.name+'.repo' ] }}"
+  with_items: "{{ trinityx_repositories }}"
+  when: item.name is defined
+
+- name: Prepare zypper to work
+  block:
+  - name: Running shell commands inside image
+    shell: "chroot {{ image_path }} {{ item }}"
+    with_items:
+      - mount proc -t proc /proc
+      - "{{ _repos_inside_image_remove|default([]) }}"
+      - "{{ _repos_inside_image_add|default([]) }}"
+      - zypper --gpg-auto-import-keys refresh
+      #- zypper up --replacefiles --no-confirm
+      - umount /proc
+  rescue:
+  - name: Tasks in image before leaving playbook
+    shell: "chroot {{ image_path }} {{ item }}"
+    with_items:
+      - umount /proc
+
+- name: Install core packages - @core, kernel and grub2
+  shell: "chroot {{ image_path }} zypper --non-interactive in {{ item }}"
+  with_items: "{{ image_core_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Enabling services
+  shell: "chroot {{ image_path }} systemctl enable {{ item }} || true"
+  with_items:
+    - NetworkManager
+    - sshd
+  ignore_errors: true
+
