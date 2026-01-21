@@ -1,7 +1,15 @@
 ---
 - hosts: controllers
-
   pre_tasks:
+  - fail:
+      msg: "This playbook should only be run on the active controller"
+    when:
+      - ha | default(False)
+      - not primary | default(False)
+
+  - debug:
+      msg: " ------------------------- controller tasks -------------------------"
+
   - name: Filter image name
     set_fact:
       regex_image_name: "{{ image_name | regex_search('^[a-zA-Z0-9\\ \\-\\_\\.]+$') }}"
@@ -22,20 +30,6 @@
     when:
       - alternative_distribution is defined
       - alternative_distribution != controller_distribution
-
-  - name: Ensuring to extend the docker image
-    set_fact:
-      image_extend_docker: true
-    when:
-      - alternative_image_source is defined
-      - alternative_image_source == 'docker'
-
-  - name: Ensuring to extend the osgrabbed image
-    set_fact:
-      image_extend_osgrab: true
-    when:
-      - alternative_image_source is defined
-      - alternative_image_source == 'osgrab'
 
   - name:
     debug:
@@ -58,9 +52,7 @@
     image_download_source: "{{ alternative_image_source|default('base') }}"
     image_architecture: "{{ system_arch }}"
     tags: image-create
-    when:
-      - primary
-      - download_base_image is defined
+    when: download_base_image is defined
 
   - role: ansible/write_facts
     tags: init, always
@@ -68,7 +60,67 @@
   - role: trinity/image-create
     image_create_distribution: "{{ alternative_image_distr|default(ansible_distribution|lower) }}"
     tags: image-create
-    when: primary
+
+  - role: luna/image-create
+    luna_image_path: "{{ trix_images }}/{{ image_name }}"
+    luna_image_name: "{{ image_name }}"
+
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+
+
+- hosts: "{{ image_name }}.osimages.luna"
+  pre_tasks:
+  - debug:
+      msg: " ------------------------- chroot tasks -------------------------"
+
+  - name: Determining controller Distribution
+    set_fact:
+      controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
+
+  - name: Ensuring to extend the docker image
+    set_fact:
+      image_extend_docker: true
+    when:
+      - alternative_image_source is defined
+      - alternative_image_source == 'docker'
+
+  - name: Ensuring to extend the osgrabbed image
+    set_fact:
+      image_extend_osgrab: true
+    when:
+      - alternative_image_source is defined
+      - alternative_image_source == 'osgrab'
+
+  - name: Ensuring to extend the New image
+    set_fact:
+      image_extend_scratch: true
+    when: (alternative_image_source is not defined) or alternative_image_source != 'base'
+
+  roles:
+  - role: trinity/init
+    tags: init
+
+  - role: trinity/ldap-backend-selector
+    when: enable_authentication|default(True)
+    tags: always
+
+  - role: trinity/image-create
+    image_create_distribution: "{{ alternative_image_distr|default(ansible_distribution|lower) }}"
+    image_create_inside_chroot: true
+    tags: image-create
+
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+
+
+- hosts: controllers
+  roles:
+  - role: luna/image-create
+    luna_image_path: "{{ trix_images }}/{{ image_name }}"
+    luna_image_name: "{{ image_name }}"
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"

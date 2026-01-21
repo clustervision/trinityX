@@ -4,20 +4,52 @@
   no_log: true
   ignore_errors: true
 
+- name: Create /dev
+  file:
+    path: "/dev/"
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Create basic /dev files
+  command: "/usr/bin/mknod /dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates=/dev/{{ item.dev }}"
+  args:
+    creates: "/dev/{{ item.dev }}"
+  with_items:
+    - {dev: "null", mo: "666", t: 'c', ma: 1, mi: 3}  # device, mode, type, major, minor
+    - {dev: "zero", mo: "666", t: 'c', ma: 1, mi: 5}
+    - {dev: "random", mo: "666", t: 'c', ma: 1, mi: 8}
+    - {dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9}
+    - {dev: "console", mo: "600", t: 'c', ma: 5, mi: 1}
+    - {dev: "ptmx", mo: "666", t: 'c', ma: 5, mi: 2}
+    - {dev: "tty", mo: "666", t: 'c', ma: 5, mi: 0}
+
+  # seen in the field where /dev/null had wrong permissions for unknown reasons. apt will fail.
+- name: Ensure /dev/null is world writeable
+  file:
+    path: "/dev/null"
+    mode: "0666"
+
 - name: Updating Apt
-  shell: "chroot {{ image_path }} apt-get update"
+  shell: "apt-get update"
   ignore_errors: true
+  when: image_update_packages|default(True)
 
 - name: Install core packages - @core, kernel and grub2
-  shell: "chroot {{ image_path }} apt-get -y install {{ item }}"
+  ansible.builtin.apt:
+    deb: "{{ item }}"
+    state: present
   with_items: "{{ image_core_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Download luna2-client package
   get_url:
     url: "{{ luna2_client_package }}"
-    dest: "{{ image_path }}/tmp/{{ luna2_client_package|split('/')|last }}"
+    dest: "/tmp/{{ luna2_client_package|split('/')|last }}"
 #    validate_certs: false
 
 - name: install luna2-client package
-  shell: "chroot {{ image_path }} dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
+  shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
 

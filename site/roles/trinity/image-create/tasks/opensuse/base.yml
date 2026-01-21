@@ -207,24 +207,3 @@
 #      warn: false
 #  when: local_install | default(False)
 
-- name: Install core packages - @core, kernel and grub2
-  shell: "chroot {{ image_path }} zypper --non-interactive in {{ item }}"
-  #command: "{{ image_path }}/usr/bin/zypper --root {{ image_path }} --non-interactive in {{ item }}"
-  with_items: "{{ image_core_packages }}"
-#  dnf:
-#    disable_gpg_check: true
-#    disablerepo: '*'
-#    enablerepo: "opensuse"
-#    name: "{{ image_core_packages }}"
-#    state: present
-#    installroot: "{{ image_path }}"
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Enabling services
-  shell: "chroot {{ image_path }} systemctl enable {{ item }} || true"
-  with_items:
-    - NetworkManager
-    - sshd
-  ignore_errors: true
-

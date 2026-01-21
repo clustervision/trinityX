@@ -1,22 +1,41 @@
 ---
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ package_arch }}/image-{{ image_create_distribution }}.yaml"
+  no_log: true
+  ignore_errors: true
 
 - name: Configure repos
   lineinfile:
-    path: "{{ image_path }}/etc/apt/sources.list"
+    path: "/etc/apt/sources.list"
     line: "deb http://archive.ubuntu.com/ubuntu {{ ubuntu_distribution_release }} main universe"
     state: present
     create: 'yes'
 
+- name: Updating Apt
+  shell: "apt-get update"
+  ignore_errors: true
+  when: image_update_packages|default(True)
+
 - name: Install core packages - @core, kernel and grub2
-  shell: "chroot {{ image_path }} apt-get -y install {{ item }}"
+  ansible.builtin.apt:
+    deb: "{{ item }}"
+    state: present
   with_items: "{{ image_core_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Download luna2-client package
   get_url:
     url: "{{ luna2_client_package }}"
-    dest: "{{ image_path }}/tmp/{{ luna2_client_package|split('/')|last }}"
+    dest: "/tmp/{{ luna2_client_package|split('/')|last }}"
 #    validate_certs: false
 
 - name: install luna2-client package
-  shell: "chroot {{ image_path }} dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
+  shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
+
+- name: Disable tinysshd if it is there
+  service:
+    name: "{{ item }}"
+    enabled: false
+  ignore_errors: true
 

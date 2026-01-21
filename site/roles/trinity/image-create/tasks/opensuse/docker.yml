@@ -4,7 +4,7 @@
 
 - name: Prepare paths in image
   file:
-    path: "{{ image_path }}/{{ item }}"
+    path: "/{{ item }}"
     state: directory
   with_items:
     - /etc/yum.repos.d
@@ -12,18 +12,18 @@
     - /etc/pki/rpm-gpg
     - /dev/pts
 
-- name: Create {{ image_path }}/dev
+- name: Create /dev
   file:
-    path: "{{ image_path }}/dev/"
+    path: "/dev/"
     state: directory
     mode: 0755
     owner: root
     group: root
 
 - name: Create basic /dev files
-  command: "/usr/bin/mknod {{ image_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates={{ image_path }}/dev/{{ item.dev }}"
+  command: "/usr/bin/mknod /dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates=/dev/{{ item.dev }}"
   args:
-    creates: "{{ image_path }}/dev/{{ item.dev }}"
+    creates: "/dev/{{ item.dev }}"
   with_items:
     - {dev: "null", mo: "666", t: 'c', ma: 1, mi: 3}  # device, mode, type, major, minor
     - {dev: "zero", mo: "666", t: 'c', ma: 1, mi: 5}
@@ -39,14 +39,15 @@
 - name: Create /dev/fd
   file:
     src: "/proc/self/fd"
-    dest: "{{ image_path }}/dev/fd"
+    dest: "/dev/fd"
     force: true
     state: link
 
 - name: Copy the rpm gpg key to the image
   copy:
+    remote_src: false
     src: /usr/share/distribution-gpg-keys/opensuse/RPM-GPG-KEY-openSUSE
-    dest: "{{ image_path }}/etc/pki/rpm-gpg/"
+    dest: "/etc/pki/rpm-gpg/"
 
 - name: Configure TrinityX repos
   ansible.builtin.yum_repository:
@@ -55,7 +56,6 @@
     baseurl: "{{ item.repo }}"
     gpgcheck: "{{ item.gpgcheck | default(False) }}"
     gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
-    reposdir: "{{ image_path + '/etc/yum.repos.d/' }}"
   with_items: "{{ trinityx_repositories }}"
   when: item.name is defined
   tags: repos
@@ -70,9 +70,8 @@
 - name: Prepare zypper to work
   block:
   - name: Running shell commands inside image
-    shell: "chroot {{ image_path }} {{ item }}"
+    shell: "{{ item }}"
     with_items:
-      - mount proc -t proc /proc
 #      - /usr/sbin/update-ca-certificates
 #      - rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openSUSE
 #      - zypper rr opensuse
@@ -81,32 +80,31 @@
       - "{{ _repos_inside_image_add|default([]) }}"
       - zypper --gpg-auto-import-keys refresh
       - zypper up --replacefiles --no-confirm
-      - umount /proc
-  rescue:
-  - name: Tasks in image before leaving playbook
-    shell: "chroot {{ image_path }} {{ item }}"
-    with_items:
-      - umount /proc
 
 - name: Configuring resolv.conf
   copy:
-    dest: "{{ image_path }}/etc/resolv.conf"
+    dest: "/etc/resolv.conf"
     content: "nameserver {{ trix_ctrl_ip }}"
 
 - name: Install core packages - @core, kernel and grub2
-  shell: "chroot {{ image_path }} zypper --non-interactive in {{ item }}"
+  ansible.builtin.zypper:
+    name: "{{ item }}"
   with_items: "{{ image_core_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
 - name: Reinstall packages
-  shell: "chroot {{ image_path }} zypper --force --non-interactive in {{ item }}"
+  ansible.builtin.zypper:
+    name: "{{ item }}"
+    force: true
   with_items: "{{ image_reinstall_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
 - name: Enabling services
-  shell: "chroot {{ image_path }} systemctl enable {{ item }} || true"
+  service:
+    name: "{{ item }}"
+    enabled: true
   with_items:
     - NetworkManager
     - sshd

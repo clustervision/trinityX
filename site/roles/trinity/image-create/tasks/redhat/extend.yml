@@ -63,33 +63,6 @@
     group: root
     mode: 0640
 
-- name: Verify if image already exists in luna
-  shell: "luna osimage show {{ image_name }}"
-  register: redhat_image_in_luna
-  ignore_errors: true
-
-- name: Fetching the distribution version from the image
-  shell: "cat {{ image_path }}/etc/redhat-release | awk -F 'release ' '{ print $2 }' | awk -F '.' '{ print $1 }' | grep '^.\\+$' || echo {{ ansible_distribution_major_version }}"
-  ignore_errors: true
-  register: image_major_version
-
-- name: Creating image in luna
-  shell: "luna osimage add --path \"{{ trix_images }}/{{ image_name }}\" --distribution {{ ansible_os_family|lower }} --osrelease {{ image_major_version.stdout }} --quick-kerneloptions \"net.ifnames=0 biosdevname=0\" {{ image_name }}"
-  when: redhat_image_in_luna is defined and redhat_image_in_luna.rc|int != 0
-
-- name: Setting release for image
-  shell: "luna osimage change --distribution {{ ansible_os_family|lower }} --osrelease {{ image_major_version.stdout }} {{ image_name }}"
-  when: redhat_image_in_luna is defined and redhat_image_in_luna.rc|int == 0
-
-- name: Kernel version in image
-  shell: "ls {{ image_path }}/lib/modules|sort|tail -n1"
-  register: kernel_version
-  changed_when: false
-
-- name: Set the kernel version for image
-  ansible.builtin.shell:
-    cmd: "luna osimage change --kernelversion {{ kernel_version.stdout }} {{ image_name }}"
-
 - name: Sync RHEL subscription and entitlements
   shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
   when: ansible_distribution == "RedHat"
