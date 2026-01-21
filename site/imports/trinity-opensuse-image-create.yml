@@ -63,6 +63,7 @@
   - role: luna/image-create
     luna_image_path: "{{ trix_images }}/{{ image_name }}"
     luna_image_name: "{{ image_name }}"
+    luna_image_distribution: OpenSuse
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
@@ -72,6 +73,12 @@
 
 - hosts: "{{ image_name }}.osimages.luna"
   pre_tasks:
+  - set_fact:
+      in_image: true
+      on_controller: false
+      primary: false
+    tags: always
+
   - name: Ensuring to extend the docker image
     set_fact:
       image_extend_docker: true
@@ -92,11 +99,8 @@
     when: (alternative_image_source is not defined) or alternative_image_source != 'base'
 
   roles:
-  - role: trinity/init
-    tags: init
-
-  - role: trinity/ldap-backend-selector
-    when: enable_authentication|default(True)
+  - role: ansible/read_facts
+    read_facts_cleanup: false
     tags: always
 
   - role: trinity/image-create
@@ -114,6 +118,7 @@
   - role: luna/image-create
     luna_image_path: "{{ trix_images }}/{{ image_name }}"
     luna_image_name: "{{ image_name }}"
+    luna_image_distribution: OpenSuse
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"

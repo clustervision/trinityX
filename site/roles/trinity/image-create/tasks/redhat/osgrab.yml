@@ -16,6 +16,20 @@
 #       install_root: "{{ image_path }}"
 #  tags: repos
 
+- name: Configure TrinityX repos
+  ansible.builtin.yum_repository:
+    name: "{{ item.name }}"
+    description: "{{ item.name }}"
+    baseurl: "{{ item.repo }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
+  with_items: "{{ trinityx_repositories }}"
+  when: item.name is defined
+
+- name: Rebuild RPM DB
+  shell: "rpm --rebuilddb"
+  ignore_errors: true
+
 - name: Install core packages - @core, kernel and grub2
   dnf:
     disable_gpg_check: true

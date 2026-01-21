@@ -1,11 +1,11 @@
 ---
-- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
-  include_vars: "{{ package_arch }}/controller-{{ image_create_distribution }}.yaml"
-  #include_vars: "{{ ansible_distribution }}.yaml"
-  no_log: true
-  ignore_errors: true
-
 - block:
+  - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+    include_vars: "{{ package_arch }}/controller-{{ image_create_distribution }}.yaml"
+    #include_vars: "{{ ansible_distribution }}.yaml"
+    no_log: true
+    ignore_errors: true
+
   - name: Get image path
     set_fact:
       image_path: "{{ trix_images }}/{{ image_name }}"
@@ -33,20 +33,22 @@
   when: not in_image
 
 - block:
-  - debug:
-      msg: " ------------------------- image_create / osgrab -------------------------"
+  - block:
+    - debug:
+        msg: " ------------------------- image_create / osgrab -------------------------"
 
-  - name: Extend osgrabbed image
-    ansible.builtin.include_tasks:
-      file: "{{ image_create_distribution }}/osgrab.yml"
+    - name: Extend osgrabbed image
+      ansible.builtin.include_tasks:
+        file: "{{ image_create_distribution }}/osgrab.yml"
     when: image_extend_osgrab|default(False) or image_extend_scratch|default(False)
 
-  - debug:
-      msg: " ------------------------- image_create / docker -------------------------"
+  - block:
+    - debug:
+        msg: " ------------------------- image_create / docker -------------------------"
 
-  - name: Extending docker image
-    ansible.builtin.include_tasks:
-      file: "{{ image_create_distribution }}/docker.yml"
+    - name: Extending docker image
+      ansible.builtin.include_tasks:
+        file: "{{ image_create_distribution }}/docker.yml"
     when: image_extend_docker|default(False)
   when: in_image
 

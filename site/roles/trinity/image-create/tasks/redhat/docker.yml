@@ -28,12 +28,15 @@
     dest: "/etc/resolv.conf"
     content: "nameserver {{ trix_ctrl_ip }}"
 
-- name: Install Luna2 noarch repository
+- name: Configure TrinityX repos
   ansible.builtin.yum_repository:
-    name: luna2-noarch
-    description: luna2-noarch
-    baseurl: "{{ luna2_noarch_repo_package }}"
-    gpgcheck: false
+    name: "{{ item.name }}"
+    description: "{{ item.name }}"
+    baseurl: "{{ item.repo }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
+  with_items: "{{ trinityx_repositories }}"
+  when: item.name is defined
 
 - name: Rebuild RPM DB
   shell: "rpm --rebuilddb"
