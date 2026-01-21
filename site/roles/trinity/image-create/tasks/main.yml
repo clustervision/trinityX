@@ -36,8 +36,13 @@
   - block:
     - debug:
         msg: " ------------------------- image_create / osgrab -------------------------"
+      when: image_extend_osgrab|default(False)
 
-    - name: Extend osgrabbed image
+    - debug:
+        msg: " ------------------------- image_create / scratch -------------------------"
+      when: image_extend_scratch|default(False)
+
+    - name: Tasks inside image
       ansible.builtin.include_tasks:
         file: "{{ image_create_distribution }}/osgrab.yml"
     when: image_extend_osgrab|default(False) or image_extend_scratch|default(False)
@@ -46,7 +51,7 @@
     - debug:
         msg: " ------------------------- image_create / docker -------------------------"
 
-    - name: Extending docker image
+    - name: Tasks inside image
       ansible.builtin.include_tasks:
         file: "{{ image_create_distribution }}/docker.yml"
     when: image_extend_docker|default(False)

@@ -2,18 +2,18 @@
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
   include_vars: "{{ package_arch }}/docker-{{ image_create_distribution }}.yaml"
 
-- name: Create {{ image_path }}/dev
+- name: Create /dev
   file:
-    path: "{{ image_path }}/dev/"
+    path: "/dev/"
     state: directory
     mode: 0755
     owner: root
     group: root
 
 - name: Create basic /dev files
-  command: "/usr/bin/mknod {{ image_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates={{ image_path }}/dev/{{ item.dev }}"
+  command: "/usr/bin/mknod /dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates=/dev/{{ item.dev }}"
   args:
-    creates: "{{ image_path }}/dev/{{ item.dev }}"
+    creates: "/dev/{{ item.dev }}"
   with_items:
     - {dev: "null", mo: "666", t: 'c', ma: 1, mi: 3}  # device, mode, type, major, minor
     - {dev: "zero", mo: "666", t: 'c', ma: 1, mi: 5}
@@ -25,32 +25,43 @@
 
 - name: Configuring resolv.conf
   copy:
-    dest: "{{ image_path }}/etc/resolv.conf"
+    dest: "/etc/resolv.conf"
     content: "nameserver {{ trix_ctrl_ip }}"
 
-- name: Install Luna2 noarch repository
+- name: Configure TrinityX repos
   ansible.builtin.yum_repository:
-    name: luna2-noarch
-    description: luna2-noarch
-    baseurl: "{{ luna2_noarch_repo_package }}"
-    gpgcheck: false
-    reposdir: "{{ image_path }}/etc/yum.repos.d/"
+    name: "{{ item.name }}"
+    description: "{{ item.name }}"
+    baseurl: "{{ item.repo }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
+  with_items: "{{ trinityx_repositories }}"
+  when: item.name is defined
 
 - name: Rebuild RPM DB
-  shell: "chroot {{ image_path }} rpm --rebuilddb"
+  shell: "rpm --rebuilddb"
   ignore_errors: true
 
 - name: Install core packages - @core, kernel and grub2
-  shell: "chroot {{ image_path }} dnf -y install {{ item }}"
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
   ignore_errors: true
   with_items: "{{ image_core_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Reinstall packages
-  shell: "chroot {{ image_path }} dnf -y reinstall {{ item }}"
+  shell: "dnf -y reinstall {{ item }}"
   ignore_errors: true
   with_items: "{{ image_reinstall_packages }}"
 
 - name: Remove clashing packages
-  shell: "chroot {{ image_path }} rpm -e --nodeps {{ item }}"
+  shell: "rpm -e --nodeps {{ item }}"
   ignore_errors: true
   with_items: "{{ image_remove_packages }}"
+
+- name: Add dracut.conf.d entries
+  template:
+    src: trinity.conf.j2
+    dest: "/etc/dracut.conf.d/trinity.conf"

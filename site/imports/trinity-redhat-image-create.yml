@@ -7,9 +7,6 @@
       - ha | default(False)
       - not primary | default(False)
 
-  - debug:
-      msg: " ------------------------- controller tasks -------------------------"
-
   - name: Filter image name
     set_fact:
       regex_image_name: "{{ image_name | regex_search('^[a-zA-Z0-9\\ \\-\\_\\.]+$') }}"
@@ -73,9 +70,6 @@
 
 - hosts: "{{ image_name }}.osimages.luna"
   pre_tasks:
-  - debug:
-      msg: " ------------------------- chroot tasks -------------------------"
-
   - set_fact:
       in_image: true
       on_controller: false
@@ -124,6 +118,10 @@
   roles:
   - role: luna/image-create
     luna_image_path: "{{ trix_images }}/{{ image_name }}"
+    luna_image_name: "{{ image_name }}"
+    luna_image_distribution: RedHat
+
+  - role: luna/group-create
     luna_image_name: "{{ image_name }}"
     luna_image_distribution: RedHat
 

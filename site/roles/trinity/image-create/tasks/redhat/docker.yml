@@ -45,12 +45,23 @@
 - name: Install core packages - @core, kernel and grub2
   ansible.builtin.dnf:
     name: "{{ item }}"
+    state: present
   ignore_errors: true
   with_items: "{{ image_core_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Reinstall packages
-  ansible.builtin.dnf:
-    name: "{{ item }}"
-    force: true
+  shell: "dnf -y reinstall {{ item }}"
   ignore_errors: true
   with_items: "{{ image_reinstall_packages }}"
+
+- name: Remove clashing packages
+  shell: "rpm -e --nodeps {{ item }}"
+  ignore_errors: true
+  with_items: "{{ image_remove_packages }}"
+
+- name: Add dracut.conf.d entries
+  template:
+    src: trinity.conf.j2
+    dest: "/etc/dracut.conf.d/trinity.conf"
