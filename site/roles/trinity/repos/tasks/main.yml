@@ -55,7 +55,12 @@
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
     with_items: "{{ external_repository_rpms }}"
+    notify: 
+      - Disable repos
+      - Mend repos
     when: item.name is defined
+
+  - meta: flush_handlers
 
   - name: Install external repo Packages
     dnf:
@@ -67,7 +72,12 @@
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
     with_items: "{{ package_based_repositories }}"
+    notify: 
+      - Disable repos
+      - Mend repos
     when: item.name is defined
+
+  - meta: flush_handlers
 
   - block:
     - name: Collect repository information
@@ -83,16 +93,23 @@
     when: use_baseurl_repositories is defined
     ignore_errors: true
 
-  - name: Mend elrepo
-    include_tasks: replacebaseurl.yml
-    vars:
-      name: "{{ item.name }}"
-      filter_url: "{{ item.filter_url }}"
-      replace_url: "{{ item.replace_url }}"
-    with_items: "{{ replace_baseurls }}"
-    loop_control:
-        loop_var: inner_loop_var
-    when: replace_baseurls is defined
+#  - name: Mend repos
+#    include_tasks: replacebaseurl.yml
+#    vars:
+#      name: "{{ item.name }}"
+#      filter_url: "{{ item.filter_url }}"
+#      replace_url: "{{ item.replace_url }}"
+#    with_items: "{{ replace_baseurls }}"
+#    loop_control:
+#        loop_var: inner_loop_var
+#    when: replace_baseurls is defined
+
+#  - name: Disable repos
+#    ansible.builtin.shell:
+#      cmd: "dnf config-manager --set-disable {{ item }}"
+#    with_items: "{{ disable_repositories }}"
+#    ignore_errors: true
+#    tags: disable_repos
 
   - name: Configure custom repos
     ansible.builtin.yum_repository:
@@ -112,13 +129,6 @@
       content: "{{ item.gpgdata }}"
     with_items: "{{ custom_repositories }}"
     when: item.gpgkey is defined and item.gpgdata is defined
-
-  - name: Disable repos
-    ansible.builtin.shell:
-      cmd: "dnf config-manager --set-disable {{ item }}"
-    with_items: "{{ disable_repositories }}"
-    ignore_errors: true
-    tags: disable_repos
 
   - name: Make caches
     shell: "dnf makecache -y"
