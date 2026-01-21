@@ -28,20 +28,6 @@
     dest: "/etc/resolv.conf"
     content: "nameserver {{ trix_ctrl_ip }}"
 
-#- name: Configure TrinityX repos
-#  ansible.builtin.yum_repository:
-#    name: "{{ item.name }}"
-#    description: "{{ item.name }}"
-#    baseurl: "{{ item.repo }}"
-#    gpgcheck: "{{ item.gpgcheck | default(False) }}"
-#    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
-#  with_items: "{{ trinityx_repositories }}"
-#  when: item.name is defined
-#
-#- name: Rebuild RPM DB
-#  shell: "rpm --rebuilddb"
-#  ignore_errors: true
-
 - name: Install core packages - @core, kernel and grub2
   ansible.builtin.dnf:
     name: "{{ item }}"
