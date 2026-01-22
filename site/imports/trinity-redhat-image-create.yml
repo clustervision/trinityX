@@ -104,7 +104,15 @@
   - name: Ensuring to extend the New image
     set_fact:
       image_extend_scratch: true
-    when: (alternative_image_source is not defined) or alternative_image_source != 'base'
+    when:
+      - not image_extend_docker|default(False)
+      - not image_extend_osgrab|default(False)
+
+  - debug:
+      msg: |
+        image_extend_docker: {{ image_extend_docker|default(False) }},
+        image_extend_osgrab: {{ image_extend_osgrab|default(False) }},
+        image_extend_scratch: {{ image_extend_scratch|default(False) }}
 
   roles:
   - role: ansible/read_facts

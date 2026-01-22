@@ -20,7 +20,11 @@
   - name: Wait 5s for user to become
     wait_for:
       timeout: 5
+  when:
+    - on_controller | default(False)
+    - primary | default(False)
 
+- block:
   - name: Ensure EasyBuild shared directory exists
     file:
       path: '{{ trix_easybuild }}'
@@ -29,43 +33,6 @@
       mode: 0755
     tags: easybuild-prepare
 
-  - name: Create link so easybuild ends up on /trinity filesystem
-    file:
-      src: '{{ trix_easybuild }}'
-      path: '{{ easybuild_home }}'
-      state: link
-
-  - name: collecting proxy information
-    set_fact:
-      easybuild_http_proxy: "{{ lookup('ansible.builtin.env', 'http_proxy') }}"
-    tags: easybuild-install
-
-  - name: collecting proxy information
-    set_fact:
-      easybuild_https_proxy: "{{ lookup('ansible.builtin.env', 'https_proxy') }}"
-    tags: easybuild-install
-
-  - name: Install EasyBuild temporarily as user
-    block:
-      - include_tasks: install_as_user.yml
-    become: true
-    become_user: '{{ easybuild_user }}'
-    tags: easybuild-install
-  when: 
-    - on_controller | default(False)
-    - primary | default(False)
-  tags: easybuild-install
-
-- name: Create /etc/profile.d/z_easybuild.sh
-  template:
-    src: z_easybuild.sh.j2
-    dest: /etc/profile.d/z_easybuild.sh
-    owner: root
-    group: root
-    mode: '0644'
-  tags: easybuild-env
-
-- block:
   - name: Create link so easybuild ends up on /trinity filesystem
     file:
       src: '{{ trix_easybuild }}'
@@ -79,7 +46,32 @@
       path: '/etc/exports.d/easybuild.exports'
       state: absent
     notify: Export NFS
+
+  - block:
+    - name: collecting proxy information
+      set_fact:
+        easybuild_http_proxy: "{{ lookup('ansible.builtin.env', 'http_proxy') }}"
+
+    - name: collecting proxy information
+      set_fact:
+        easybuild_https_proxy: "{{ lookup('ansible.builtin.env', 'https_proxy') }}"
+
+    - name: Install EasyBuild temporarily as user
+      block:
+        - include_tasks: install_as_user.yml
+      become: true
+      become_user: '{{ easybuild_user }}'
+    when: primary | default(False)
   when: on_controller | default(False)
+  tags: easybuild-install, easybuild-env
+
+- name: Create /etc/profile.d/z_easybuild.sh
+  template:
+    src: z_easybuild.sh.j2
+    dest: /etc/profile.d/z_easybuild.sh
+    owner: root
+    group: root
+    mode: '0644'
   tags: easybuild-env
 
 - block:

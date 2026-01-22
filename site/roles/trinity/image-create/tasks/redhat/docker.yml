@@ -23,6 +23,11 @@
     - {dev: "ptmx", mo: "666", t: 'c', ma: 5, mi: 2}
     - {dev: "tty", mo: "666", t: 'c', ma: 5, mi: 0}
 
+- name: Remove clashing packages
+  shell: "rpm -e --nodeps {{ item }}"
+  ignore_errors: true
+  with_items: "{{ image_remove_packages }}"
+
 - name: Install core packages - @core, kernel and grub2
   ansible.builtin.dnf:
     name: "{{ item }}"
@@ -36,11 +41,6 @@
   shell: "dnf -y reinstall {{ item }}"
   ignore_errors: true
   with_items: "{{ image_reinstall_packages }}"
-
-- name: Remove clashing packages
-  shell: "rpm -e --nodeps {{ item }}"
-  ignore_errors: true
-  with_items: "{{ image_remove_packages }}"
 
 - name: Add dracut.conf.d entries
   template:
