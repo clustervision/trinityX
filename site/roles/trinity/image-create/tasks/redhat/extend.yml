@@ -52,6 +52,11 @@
     group: root
     mode: 0640
 
+- name: Configuring resolv.conf
+  copy:
+    dest: "{{ image_path }}/etc/resolv.conf"
+    content: "nameserver {{ trix_ctrl_ip }}"
+
 - name: Sync RHEL subscription and entitlements
   shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
   when: ansible_distribution == "RedHat"
