@@ -60,6 +60,7 @@
     notify: 
       - Disable repos
       - Mend repos
+      - Use baseurl
     when: item.name is defined
 
   - meta: flush_handlers
@@ -77,23 +78,24 @@
     notify: 
       - Disable repos
       - Mend repos
+      - Use baseurl
     when: item.name is defined
 
   - meta: flush_handlers
 
-  - block:
-    - name: Collect repository information
-      shell: "rpm -qil {{ item.name }} | grep repos | grep etc"
-      register: repo_files
-      with_items: "{{ use_baseurl_repositories }}"
-
-    - name: Calling baseurl task
-      include_tasks: baseurl.yml
-      with_items: "{{ repo_files.results }}"
-      loop_control:
-          loop_var: inner_loop_var
-    when: use_baseurl_repositories is defined
-    ignore_errors: true
+#  - block:
+#    - name: Collect repository information
+#      shell: "rpm -qil {{ item.name }} | grep repos | grep etc"
+#      register: repo_files
+#      with_items: "{{ use_baseurl_repositories }}"
+#
+#    - name: Calling baseurl task
+#      include_tasks: baseurl.yml
+#      with_items: "{{ repo_files.results }}"
+#      loop_control:
+#          loop_var: inner_loop_var
+#    when: use_baseurl_repositories is defined
+#    ignore_errors: true
 
 #  - name: Mend repos
 #    include_tasks: replacebaseurl.yml

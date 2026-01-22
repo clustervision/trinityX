@@ -57,7 +57,14 @@
     dest: "{{ image_path }}/etc/resolv.conf"
     content: "nameserver {{ trix_ctrl_ip }}"
 
-- name: Sync RHEL subscription and entitlements
-  shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
+- block:
+  - name: Sync repositories
+    copy:
+      src: /etc/yum.repos.d/redhat.repo
+      dest: "{{ image_path }}/etc/yum.repos.d/redhat.repo"
+    ignore_errors: true
+
+  - name: Sync RHEL subscription and entitlements
+    shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
+    ignore_errors: true
   when: ansible_distribution == "RedHat"
-  ignore_errors: true

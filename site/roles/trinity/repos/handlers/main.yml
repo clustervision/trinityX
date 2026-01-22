@@ -2,7 +2,7 @@
 
 - name: Disable repos
   ansible.builtin.shell:
-    cmd: "dnf config-manager --set-disable {{ item }}"
+    cmd: "dnf config-manager --set-disable {{ item.name }}"
   with_items: "{{ disable_repositories }}"
   ignore_errors: true
   tags: disable_repos
@@ -19,3 +19,14 @@
     loop_var: inner_loop_var
   when: replace_baseurls is defined
 
+
+- name: Use baseurl
+  include_tasks: usebaseurl.yml
+#    vars:
+#      name: "{{ item.name }}"
+#      filter_url: "{{ item.filter_url }}"
+#      replace_url: "{{ item.replace_url }}"
+  with_items: "{{ use_baseurl_repositories }}"
+  loop_control:
+      loop_var: outer_loop_var
+  when: use_baseurl_repositories is defined
