@@ -39,14 +39,6 @@
   #   with_items: "{{ trinityx_repositories }}"
   #   ignore_errors: True
 
-  # - name: "Download external repo RPMS"
-  #   get_url:
-  #     url: 
-  #     dest: "/tmp/{{ item.file }}"
-  #   retries: 10
-  #   delay: 15
-  #   with_items: "{{ external_repository_rpms }}"
-
   - name: Install external repo RPMS
     dnf:
       name: "{{ item.name }}"
@@ -83,38 +75,6 @@
 
   - meta: flush_handlers
 
-#  - block:
-#    - name: Collect repository information
-#      shell: "rpm -qil {{ item.name }} | grep repos | grep etc"
-#      register: repo_files
-#      with_items: "{{ use_baseurl_repositories }}"
-#
-#    - name: Calling baseurl task
-#      include_tasks: baseurl.yml
-#      with_items: "{{ repo_files.results }}"
-#      loop_control:
-#          loop_var: inner_loop_var
-#    when: use_baseurl_repositories is defined
-#    ignore_errors: true
-
-#  - name: Mend repos
-#    include_tasks: replacebaseurl.yml
-#    vars:
-#      name: "{{ item.name }}"
-#      filter_url: "{{ item.filter_url }}"
-#      replace_url: "{{ item.replace_url }}"
-#    with_items: "{{ replace_baseurls }}"
-#    loop_control:
-#        loop_var: inner_loop_var
-#    when: replace_baseurls is defined
-
-#  - name: Disable repos
-#    ansible.builtin.shell:
-#      cmd: "dnf config-manager --set-disable {{ item }}"
-#    with_items: "{{ disable_repositories }}"
-#    ignore_errors: true
-#    tags: disable_repos
-
   - name: Configure custom repos
     ansible.builtin.yum_repository:
       name: "{{ item.name }}"
@@ -141,28 +101,3 @@
   when: ansible_facts['os_family'] == "RedHat"
   tags: install-only
 
-# Disable all remote repos (without *-local suffix)
-# If we have local install
-#
-- block:
-
-  # FIXME
-  # Was trying to do it via yum_repos, lineinfile or ini_file
-  # modules. Got monstrous construction at the end.
-  - name: Install yum-utils to make yum-config-manager available
-    yum:
-      name: yum-utils
-      state: installed
-    retries: "{{ rpm_retries | default(3) }}"
-    delay: "{{ rpm_delay | default(15) }}"
-
-  - name: Disable all repo without '*-local' suffix
-    shell: >
-      yum-config-manager  \
-      | sed -n 's/^\[\(.*\)\]$/\1/p' \
-      | egrep -v "\-local$" \
-      | xargs yum-config-manager --disable {}
-
-    args:
-      warn: false
-  when: local_install | default(False)
