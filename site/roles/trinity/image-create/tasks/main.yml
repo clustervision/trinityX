@@ -2,7 +2,6 @@
 - block:
   - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
     include_vars: "{{ package_arch }}/controller-{{ image_create_distribution }}.yaml"
-    #include_vars: "{{ ansible_distribution }}.yaml"
     no_log: true
     ignore_errors: true
 
@@ -50,5 +49,8 @@
       ansible.builtin.include_tasks:
         file: "{{ image_create_distribution }}/docker.yml"
     when: image_extend_docker|default(False)
+
+  - debug:
+      msg: " ------------------------- image_create / finished -------------------------"
   when: in_image
 
