@@ -49,13 +49,17 @@
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
     with_items: "{{ external_repository_rpms }}"
-    notify: 
-      - Disable repos
-      - Mend repos
-      - Use baseurl
     when: item.name is defined
+#    notify:
+#      - Disable repos
+#      - Mend repos
+#      - Use baseurl
+#
+#  - meta: flush_handlers
 
-  - meta: flush_handlers
+  # Notify doesn't work inside chroot.... sigh..
+  - ansible.builtin.include_tasks:
+      file: mangling.yml
 
   - name: Install external repo Packages
     dnf:
@@ -67,13 +71,16 @@
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
     with_items: "{{ package_based_repositories }}"
-    notify: 
-      - Disable repos
-      - Mend repos
-      - Use baseurl
     when: item.name is defined
+#    notify:
+#      - Disable repos
+#      - Mend repos
+#      - Use baseurl
+#
+#  - meta: flush_handlers
 
-  - meta: flush_handlers
+  - ansible.builtin.include_tasks:
+      file: mangling.yml
 
   - name: Configure custom repos
     ansible.builtin.yum_repository:
