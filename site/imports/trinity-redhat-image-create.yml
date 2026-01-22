@@ -20,6 +20,11 @@
     set_fact:
       controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
 
+  - name: Fallback for alternative_image_distr
+    set_fact:
+      alternative_image_distr: "{{ alternative_distribution | lower | regex_search('(rocky|almalinux|redhat|centos)', '\\1') | first }}"
+    when: alternative_image_distr is not defined
+
   - name: Determining if we need to create or download the base image
     set_fact:
       download_base_image: true
