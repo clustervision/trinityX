@@ -27,6 +27,8 @@
     when: 
       - alternative_distribution is defined
       - alternative_distribution != controller_distribution
+      - alternative_image_source is defined
+      - alternative_image_source != 'osgrab'
 
   - name:
     debug:
@@ -38,7 +40,7 @@
     tags: always
 
   - role: trinity/init
-    tags: init
+    tags: always
 
   - role: trinity/ldap-backend-selector
     when: enable_authentication|default(True)
@@ -53,7 +55,7 @@
       - download_base_image is defined
 
   - role: ansible/write_facts
-    tags: init, always
+    tags: always
 
   - role: trinity/image-create
     image_create_distribution: 'opensuse'
@@ -64,6 +66,7 @@
     luna_image_path: "{{ trix_images }}/{{ image_name }}"
     luna_image_name: "{{ image_name }}"
     luna_image_distribution: OpenSuse
+    tags: image-create
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"

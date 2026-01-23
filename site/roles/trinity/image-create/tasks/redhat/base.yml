@@ -59,7 +59,6 @@
   dnf:
     disable_gpg_check: true
     name: "{{ os_release_rpm.stdout }}"
-    # releasever: "{{ ansible_distribution_major_version }}"
     installroot: "{{ image_path }}"
     state: present
   retries: "{{ rpm_retries | default(3) }}"
@@ -76,10 +75,10 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-- synchronize:
-    src: "/etc/pki/"
-    dest: "{{ image_path }}/etc/pki/"
-  when: ansible_distribution == "RedHat"
+#- synchronize:
+#    src: "/etc/pki/"
+#    dest: "{{ image_path }}/etc/pki/"
+#  when: ansible_distribution == "RedHat"
 
 - name: Create {{ image_path }}/dev
   file:

@@ -57,7 +57,32 @@
     dest: "{{ image_path }}/etc/resolv.conf"
     content: "nameserver {{ trix_ctrl_ip }}"
 
-- name: Sync RHEL subscription and entitlements
-  shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
-  ignore_errors: true
+- block:
+  - name: Ensure Certificate path exists
+    file:
+      path: "{{ image_path }}/etc/rhsm/ca/"
+      state: directory
+
+  - name: Sync RHEL subscription certificates
+    copy:
+      src: /etc/rhsm/ca/redhat-uep.pem
+      dest: "{{ image_path }}/etc/rhsm/ca/redhat-uep.pem"
+    ignore_errors: true
+
+  #- name: Sync RHEL subscription and entitlements
+  #  shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
+  #  ignore_errors: true
+
+  - synchronize:
+      src: "/etc/pki/"
+      dest: "{{ image_path }}/etc/pki/"
+    ignore_errors: true
+
+  - name: Fix Certificate locations in repo
+    replace:
+      path: "{{ image_path }}/etc/yum.repos.d/redhat.repo"
+      regexp: '/trinity/images/compute-image'
+      replace: ''
+    ignore_errors: true
   when: ansible_distribution == "RedHat"
+  tags: subscription
