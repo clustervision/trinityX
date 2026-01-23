@@ -12,17 +12,27 @@
       set_fact:
         easybuild_password: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
 
+    - name: Check if we have obol
+      shell: '/usr/local/sbin/obol user list'
+      ignore_errors: true
+      register: easybuild_obol_works
+
     - name: Ensure EasyBuild user exists
       shell: '/usr/local/sbin/obol user add -p "{{ easybuild_password }}" "{{ easybuild_user }}"'
-    when: easybuild_user_info['failed']
-    tags: easybuild-prepare
+      when: easybuild_obol_works.rc|int == 0
 
-  - name: Wait 5s for user to become
-    wait_for:
-      timeout: 5
-  when:
-    - on_controller | default(False)
-    - primary | default(False)
+    - fail:
+        msg: "{{ easybuild_user }} does not exist and i cannot create it with obol"
+      when: easybuild_obol_works.rc|int != 0
+
+    - name: Wait 5s for user to become
+      wait_for:
+        timeout: 5
+    when:
+      - easybuild_user_info['failed']
+      - primary | default(False)
+  when: on_controller | default(False)
+  tags: easybuild-prepare
 
 - block:
   - name: Ensure EasyBuild shared directory exists
@@ -37,8 +47,6 @@
     file:
       src: '{{ trix_easybuild }}'
       path: '{{ easybuild_home }}'
-      owner: root
-      group: root
       state: link
 
   - name: Remove deprecated easybuild export
