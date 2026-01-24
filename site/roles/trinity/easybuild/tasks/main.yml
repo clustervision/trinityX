@@ -12,15 +12,29 @@
       set_fact:
         easybuild_password: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
 
+    - name: Check if we have obol
+      shell: '/usr/local/sbin/obol user list'
+      ignore_errors: true
+      register: easybuild_obol_works
+
     - name: Ensure EasyBuild user exists
       shell: '/usr/local/sbin/obol user add -p "{{ easybuild_password }}" "{{ easybuild_user }}"'
-    when: easybuild_user_info['failed']
-    tags: easybuild-prepare
+      when: easybuild_obol_works.rc|int == 0
 
-  - name: Wait 5s for user to become
-    wait_for:
-      timeout: 5
+    - fail:
+        msg: "{{ easybuild_user }} does not exist and i cannot create it with obol"
+      when: easybuild_obol_works.rc|int != 0
 
+    - name: Wait 5s for user to become
+      wait_for:
+        timeout: 5
+    when:
+      - easybuild_user_info['failed']
+      - primary | default(False)
+  when: on_controller | default(False)
+  tags: easybuild-prepare
+
+- block:
   - name: Ensure EasyBuild shared directory exists
     file:
       path: '{{ trix_easybuild }}'
@@ -35,26 +49,29 @@
       path: '{{ easybuild_home }}'
       state: link
 
-  - name: collecting proxy information
-    set_fact:
-      easybuild_http_proxy: "{{ lookup('ansible.builtin.env', 'http_proxy') }}"
-    tags: easybuild-install
+  - name: Remove deprecated easybuild export
+    file:
+      path: '/etc/exports.d/easybuild.exports'
+      state: absent
+    notify: Export NFS
 
-  - name: collecting proxy information
-    set_fact:
-      easybuild_https_proxy: "{{ lookup('ansible.builtin.env', 'https_proxy') }}"
-    tags: easybuild-install
+  - block:
+    - name: collecting proxy information
+      set_fact:
+        easybuild_http_proxy: "{{ lookup('ansible.builtin.env', 'http_proxy') }}"
 
-  - name: Install EasyBuild temporarily as user
-    block:
-      - include_tasks: install_as_user.yml
-    become: true
-    become_user: '{{ easybuild_user }}'
-    tags: easybuild-install
-  when: 
-    - on_controller | default(False)
-    - primary | default(False)
-  tags: easybuild-install
+    - name: collecting proxy information
+      set_fact:
+        easybuild_https_proxy: "{{ lookup('ansible.builtin.env', 'https_proxy') }}"
+
+    - name: Install EasyBuild temporarily as user
+      block:
+        - include_tasks: install_as_user.yml
+      become: true
+      become_user: '{{ easybuild_user }}'
+    when: primary | default(False)
+  when: on_controller | default(False)
+  tags: easybuild-install, easybuild-env
 
 - name: Create /etc/profile.d/z_easybuild.sh
   template:
@@ -63,23 +80,6 @@
     owner: root
     group: root
     mode: '0644'
-  tags: easybuild-env
-
-- block:
-  - name: Create link so easybuild ends up on /trinity filesystem
-    file:
-      src: '{{ trix_easybuild }}'
-      path: '{{ easybuild_home }}'
-      owner: root
-      group: root
-      state: link
-
-  - name: Remove deprecated easybuild export
-    file:
-      path: '/etc/exports.d/easybuild.exports'
-      state: absent
-    notify: Export NFS
-  when: on_controller | default(False)
   tags: easybuild-env
 
 - block:

@@ -135,23 +135,23 @@
     src: /usr/share/distribution-gpg-keys/opensuse/RPM-GPG-KEY-openSUSE
     dest: "{{ image_path }}/etc/pki/rpm-gpg/"
 
-- name: Configure TrinityX repos
-  ansible.builtin.yum_repository:
-    name: "{{ item.name }}"
-    description: "{{ item.name }}"
-    baseurl: "{{ item.repo }}"
-    gpgcheck: "{{ item.gpgcheck | default(False) }}"
-    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
-    reposdir: "{{ image_path + '/etc/yum.repos.d/' }}"
-  with_items: "{{ trinityx_repositories }}"
-  when: item.name is defined
+#- name: Configure TrinityX repos
+#  ansible.builtin.yum_repository:
+#    name: "{{ item.name }}"
+#    description: "{{ item.name }}"
+#    baseurl: "{{ item.repo }}"
+#    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+#    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
+#    reposdir: "{{ image_path + '/etc/yum.repos.d/' }}"
+#  with_items: "{{ trinityx_repositories }}"
+#  when: item.name is defined
 
-- name: Collecting repo names for next task
-  set_fact:
-    _repos_inside_image_remove: "{{ _repos_inside_image_remove|default([]) + [ 'zypper rr '+item.name ] }}"
-    _repos_inside_image_add: "{{ _repos_inside_image_add|default([]) + [ 'zypper ar /etc/yum.repos.d/'+item.name+'.repo' ] }}"
-  with_items: "{{ trinityx_repositories }}"
-  when: item.name is defined
+#- name: Collecting repo names for next task
+#  set_fact:
+#    _repos_inside_image_remove: "{{ _repos_inside_image_remove|default([]) + [ 'zypper rr '+item.name ] }}"
+#    _repos_inside_image_add: "{{ _repos_inside_image_add|default([]) + [ 'zypper ar /etc/yum.repos.d/'+item.name+'.repo' ] }}"
+#  with_items: "{{ trinityx_repositories }}"
+#  when: item.name is defined
 
 - name: Prepare zypper to work
   block:
@@ -163,8 +163,8 @@
       - rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-openSUSE
       - zypper rr opensuse
       - zypper ar /etc/yum.repos.d/opensuse.repo
-      - "{{ _repos_inside_image_remove|default([]) }}"
-      - "{{ _repos_inside_image_add|default([]) }}"
+#      - "{{ _repos_inside_image_remove|default([]) }}"
+#      - "{{ _repos_inside_image_add|default([]) }}"
       - zypper --gpg-auto-import-keys refresh
       - zypper up --replacefiles --no-confirm
       - umount /proc
@@ -176,55 +176,4 @@
 
 - name: Create base opensuse OS
   shell: "chroot {{ image_path }} zypper --non-interactive in -t pattern base"
-
-# commented block not needed? image setup will generate repos and below is using repos on controller - Antoine
-#
-# - name: Include trinity/roles
-#  ansible.builtin.include_role:
-#    name: trinity/repos
-#  vars:
-#    params:
-#       install_root: "{{ image_path }}"
-#  tags: repos
-
-#- block:
-#  - name: Set up local repository
-#    yum_repository:
-#      name: "{{ trix_local_reponame }}"
-#      baseurl: "{{ trix_local_repo_baseurl }}"
-#      description: "{{ trix_local_reponame }}"
-#      gpgcheck: false
-#      enabled: true
-#      reposdir: "{{ image_path }}/etc/yum.repos.d"
-
-#  - name: Disable all repo without '*-local' suffix
-#    shell: >
-#      yum-config-manager --installroot={{ image_path }} \
-#      | sed -n 's/^\[\(.*\)\]$/\1/p' \
-#      | egrep -v "\-local$" \
-#      | xargs yum-config-manager --installroot={{ image_path }} --disable {}
-#    args:
-#      warn: false
-#  when: local_install | default(False)
-
-- name: Install core packages - @core, kernel and grub2
-  shell: "chroot {{ image_path }} zypper --non-interactive in {{ item }}"
-  #command: "{{ image_path }}/usr/bin/zypper --root {{ image_path }} --non-interactive in {{ item }}"
-  with_items: "{{ image_core_packages }}"
-#  dnf:
-#    disable_gpg_check: true
-#    disablerepo: '*'
-#    enablerepo: "opensuse"
-#    name: "{{ image_core_packages }}"
-#    state: present
-#    installroot: "{{ image_path }}"
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Enabling services
-  shell: "chroot {{ image_path }} systemctl enable {{ item }} || true"
-  with_items:
-    - NetworkManager
-    - sshd
-  ignore_errors: true
 

@@ -1,0 +1,49 @@
+---
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ package_arch }}/image-{{ image_create_distribution }}.yaml"
+  no_log: true
+  ignore_errors: true
+
+- name: Configure TrinityX repos
+  ansible.builtin.yum_repository:
+    name: "{{ item.name }}"
+    description: "{{ item.name }}"
+    baseurl: "{{ item.repo }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
+  with_items: "{{ trinityx_repositories }}"
+  when: item.name is defined
+
+- name: Collecting repo names for next task
+  set_fact:
+    _repos_inside_image_remove: "{{ _repos_inside_image_remove|default([]) + [ 'zypper rr '+item.name ] }}"
+    _repos_inside_image_add: "{{ _repos_inside_image_add|default([]) + [ 'zypper ar /etc/yum.repos.d/'+item.name+'.repo' ] }}"
+  with_items: "{{ trinityx_repositories }}"
+  when: item.name is defined
+
+- name: Prepare zypper to work
+  block:
+  - name: Running shell commands inside image
+    shell: "{{ item }}"
+    with_items:
+      - "{{ _repos_inside_image_remove|default([]) }}"
+      - "{{ _repos_inside_image_add|default([]) }}"
+      - zypper --gpg-auto-import-keys refresh
+      #- zypper up --replacefiles --no-confirm
+
+- name: Install core packages - @core, kernel and grub2
+  ansible.builtin.zypper:
+    name: "{{ item }}"
+  with_items: "{{ image_core_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Enabling services
+  service:
+    name: "{{ item }}"
+    enabled: true
+  with_items:
+    - NetworkManager
+    - sshd
+  ignore_errors: true
+

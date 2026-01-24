@@ -1,7 +1,12 @@
 ---
 - hosts: controllers
-
   pre_tasks:
+  - fail:
+      msg: "This playbook should only be run on the active controller"
+    when:
+      - ha | default(False)
+      - not primary | default(False)
+
   - name: Filter image name
     set_fact:
       regex_image_name: "{{ image_name | regex_search('^[a-zA-Z0-9\\ \\-\\_\\.]+$') }}"
@@ -15,20 +20,22 @@
     set_fact:
       controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
 
+  - name: Fallback for alternative_image_distr
+    set_fact:
+      alternative_image_distr: "{{ alternative_distribution | lower | regex_search('(rocky|almalinux|redhat|centos)', '\\1') | first }}"
+    when:
+      - alternative_distribution is defined
+      - alternative_image_distr is not defined
+
   - name: Determining if we need to create or download the base image
     set_fact:
       download_base_image: true
       image_create_minimal: false
-    when: 
+    when:
       - alternative_distribution is defined
       - alternative_distribution != controller_distribution
-
-  - name: Ensuring to extend the docker image
-    set_fact:
-      image_extend_docker: true
-    when: 
       - alternative_image_source is defined
-      - alternative_image_source == 'docker'
+      - alternative_image_source != 'osgrab'
 
   - name:
     debug:
@@ -40,7 +47,7 @@
     tags: always
 
   - role: trinity/init
-    tags: init
+    tags: always
 
   - role: trinity/ldap-backend-selector
     when: enable_authentication|default(True)
@@ -51,17 +58,95 @@
     image_download_source: "{{ alternative_image_source|default('base') }}"
     image_architecture: "{{ system_arch }}"
     tags: image-create
-    when:
-      - primary
-      - download_base_image is defined
+    when: download_base_image is defined
 
   - role: ansible/write_facts
-    tags: init, always
+    tags: always
 
   - role: trinity/image-create
     image_create_distribution: "{{ alternative_image_distr|default(ansible_distribution|lower) }}"
     tags: image-create
-    when: primary
+
+  - role: luna/osimage-create
+    luna_image_path: "{{ trix_images }}/{{ image_name }}"
+    luna_image_name: "{{ image_name }}"
+    luna_image_distribution: RedHat
+    tags: image-create
+
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+  tags: image-create-ctrl
+
+
+- hosts: "{{ image_name }}.osimages.luna"
+  pre_tasks:
+  - set_fact:
+      in_image: true
+      on_controller: false
+      primary: false
+    tags: always
+
+  - name: Determining controller Distribution
+    set_fact:
+      controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
+
+  - name: Ensuring to extend the docker image
+    set_fact:
+      image_extend_docker: true
+    when:
+      - alternative_image_source is defined
+      - alternative_image_source == 'docker'
+
+  - name: Ensuring to extend the osgrabbed image
+    set_fact:
+      image_extend_osgrab: true
+    when:
+      - alternative_image_source is defined
+      - alternative_image_source == 'osgrab'
+
+  - name: Ensuring to extend the New image
+    set_fact:
+      image_extend_scratch: true
+    when:
+      - not image_extend_docker|default(False)
+      - not image_extend_osgrab|default(False)
+
+  - debug:
+      msg: >-
+        image_extend_docker: {{ image_extend_docker|default(False) }},
+        image_extend_osgrab: {{ image_extend_osgrab|default(False) }},
+        image_extend_scratch: {{ image_extend_scratch|default(False) }}
+
+  roles:
+  - role: ansible/read_facts
+    read_facts_cleanup: false
+    tags: always
+
+  - role: trinity/repos
+    tags: repos
+
+  - role: trinity/image-create
+    image_create_distribution: "{{ alternative_image_distr|default(ansible_distribution|lower) }}"
+    image_create_inside_chroot: true
+    tags: image-create
+
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+  tags: image-create-chroot
+
+
+- hosts: controllers
+  roles:
+  - role: luna/osimage-create
+    luna_image_path: "{{ trix_images }}/{{ image_name }}"
+    luna_image_name: "{{ image_name }}"
+    luna_image_distribution: RedHat
+
+  - role: luna/group-create
+    luna_image_name: "{{ image_name }}"
+    luna_image_distribution: RedHat
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"

@@ -1,0 +1,14 @@
+---
+- block:
+  - name: Collect repository information
+    shell: "rpm -qil {{ outer_loop_var.name }} | grep '\\.repo$' | grep etc || true"
+    register: repo_files
+    with_items: "{{ outer_loop_var }}"
+
+  - name: Calling baseurl task
+    include_tasks: usebaseurlinc.yml
+    with_items: "{{ repo_files.results }}"
+    loop_control:
+      loop_var: inner_loop_var
+    ignore_errors: true
+  when: outer_loop_var is defined

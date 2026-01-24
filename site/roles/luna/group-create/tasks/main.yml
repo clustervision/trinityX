@@ -1,0 +1,51 @@
+---
+- name: Defining group name
+  set_fact:
+    luna_group_name: '{{ luna_image_name | regex_replace("^(.*)-image$", "\1-group") }}'
+  when: 
+    - luna_group_name is not defined
+    - luna_image_name is defined
+
+- name: Defining image name
+  set_fact:
+    luna_image_name: '{{ luna_group_name | regex_replace("^(.*)-group$", "\1-image") }}'
+  when: 
+    - luna_group_name is defined
+    - luna_image_name is not defined
+
+- name: Defining distribution
+  set_fact:
+    luna_image_distribution: ansible_facts['os_family']
+  when: luna_image_distribution is not defined
+
+
+- name: Verify if group already exists in luna
+  shell: "luna group show {{ luna_group_name }}"
+  register: luna_group_in_luna
+  ignore_errors: true
+  no_log: true
+
+
+- block:
+  - set_fact:
+      luna_image_distri: "{{ item.distribution }}"
+    with_items: "{{ luna_image_distribution_detect }}"
+    when: item.name == luna_image_distribution
+
+  - name: preparing part/post script
+    copy:
+      src: "{{ luna_image_distri }}/{{ item }}"
+      dest: "/tmp/{{ item }}"
+    with_items:
+      - part.rd
+      - post.rd
+
+  - name: Creating group in luna
+    shell: "luna group add --osimage {{ luna_image_name }} -qpart /tmp/part.rd -qpost /tmp/post.rd {{ luna_group_name }}"
+    when: luna_image_distri is defined
+
+  - name: Creating group in luna
+    shell: "luna group add --osimage {{ luna_image_name }} {{ luna_group_name }}"
+    when: luna_image_distri is not defined
+  when: luna_group_in_luna is defined and luna_group_in_luna.rc|int != 0
+

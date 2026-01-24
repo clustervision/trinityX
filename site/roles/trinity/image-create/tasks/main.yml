@@ -1,33 +1,56 @@
 ---
-- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
-  include_vars: "{{ package_arch }}/controller-{{ image_create_distribution }}.yaml"
-  #include_vars: "{{ ansible_distribution }}.yaml"
-  no_log: true
-  ignore_errors: true
+- block:
+  - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+    include_vars: "{{ package_arch }}/controller-{{ image_create_distribution }}.yaml"
+    no_log: true
+    ignore_errors: true
 
-- name: Get image path
-  set_fact:
-    image_path: "{{ trix_images }}/{{ image_name }}"
+  - name: Get image path
+    set_fact:
+      image_path: "{{ trix_images }}/{{ image_name }}"
 
-- name: Create dir for compute image
-  file:
-    name: "{{ image_path }}"
-    state: directory
+  - name: Create dir for compute image
+    file:
+      name: "{{ image_path }}"
+      state: directory
 
-- name: Creating base image
-  ansible.builtin.include_tasks:
-    file: "{{ image_create_distribution }}/base.yml"
-  when: image_create_minimal|default(True)
+  - debug:
+      msg: " ------------------------- image_create / base -------------------------"
 
-- name: Extending docker image
-  ansible.builtin.include_tasks:
-    file: "{{ image_create_distribution }}/docker.yml"
-  when: image_extend_docker|default(False)
+  - name: Creating base image
+    ansible.builtin.include_tasks:
+      file: "{{ image_create_distribution }}/base.yml"
+    when: image_create_minimal|default(True)
 
-- name: Extending base image
-  ansible.builtin.include_tasks:
-    file: "{{ image_create_distribution }}/extend.yml"
-  when: image_create_full|default(True)
+  - debug:
+      msg: " ------------------------- image_create / extend -------------------------"
 
-- name: Refresh the list of hosts in the inventory
-  meta: refresh_inventory
+  - name: Extending base image
+    ansible.builtin.include_tasks:
+      file: "{{ image_create_distribution }}/extend.yml"
+    when: image_create_full|default(True)
+  when: not in_image
+
+- block:
+  - block:
+    - debug:
+        msg: " ------------------------- image_create / from scratch or osgrab -------------------------"
+
+    - name: Tasks inside image
+      ansible.builtin.include_tasks:
+        file: "{{ image_create_distribution }}/osgrab.yml"
+    when: image_extend_osgrab|default(False) or image_extend_scratch|default(False)
+
+  - block:
+    - debug:
+        msg: " ------------------------- image_create / docker -------------------------"
+
+    - name: Tasks inside image
+      ansible.builtin.include_tasks:
+        file: "{{ image_create_distribution }}/docker.yml"
+    when: image_extend_docker|default(False)
+
+  - debug:
+      msg: " ------------------------- image_create / finished -------------------------"
+  when: in_image
+

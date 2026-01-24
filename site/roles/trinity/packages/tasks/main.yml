@@ -11,12 +11,13 @@
 
 - name: Install additional packages
   yum:
-    name: "{{ install_packages }}"
+    name: "{{ item }}"
     state: present
     enablerepo: 
       - powertools
       - crb
     disable_gpg_check: true
+  with_items: "{{ install_packages }}"
   tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"

@@ -1,0 +1,46 @@
+---
+- name: Defining distribution
+  set_fact:
+    luna_image_distribution: ansible_facts['os_family']
+  when: luna_image_distribution is not defined
+
+- name: Verify if image already exists in luna
+  shell: "luna osimage show {{ luna_image_name }}"
+  register: luna_image_in_luna
+  ignore_errors: true
+  no_log: true
+
+- name: Setting command for getting distribution version from the image
+  set_fact:
+    luna_image_detect_major_version_command: "{{ item.command }}"
+  with_items: "{{ luna_image_detect_major_version }}"
+  when: item.name == luna_image_distribution
+
+- name: Fetching the distribution version from the image
+  shell: "{{ luna_image_detect_major_version_command }}"
+  ignore_errors: true
+  register: luna_image_major_version
+
+- name: Creating image in luna
+  shell: "luna osimage add --path \"{{ luna_image_path }}\" --distribution {{ luna_image_distribution|lower }} --osrelease {{ luna_image_major_version.stdout }} --quick-kerneloptions \"net.ifnames=0 biosdevname=0\" {{ luna_image_name }}"
+  when: luna_image_in_luna is defined and luna_image_in_luna.rc|int != 0
+
+- name: Setting release for image
+  shell: "luna osimage change --distribution {{ luna_image_distribution|lower }} --osrelease {{ luna_image_major_version.stdout }} {{ luna_image_name }}"
+  when: luna_image_in_luna is defined and luna_image_in_luna.rc|int == 0
+
+- name: Kernel version in image
+  shell: "ls {{ luna_image_path }}/lib/modules|sort|tail -n1"
+  register: kernel_version
+  changed_when: false
+
+- name: Set the kernel version for image
+  ansible.builtin.shell:
+    cmd: "luna osimage change --kernelversion {{ kernel_version.stdout }} {{ luna_image_name }}"
+  when:
+    - kernel_version is defined
+    - kernel_version.rc|int == 0
+    - kernel_version.stdout_lines|length > 0
+
+- name: Refresh the list of hosts in the inventory
+  meta: refresh_inventory

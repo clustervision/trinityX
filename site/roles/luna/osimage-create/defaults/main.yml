@@ -1,0 +1,18 @@
+---
+
+luna_image_path: /trinity/images/nonexistent
+
+luna_image_detect_major_version:
+  - name: RedHat
+    command: "cat {{ luna_image_path }}/etc/redhat-release | awk -F 'release ' '{ print $2 }' | awk -F '.' '{ print $1 }' |  grep -oE '[0-9]+' | grep '^.\\+$' || echo {{ ansible_distribution_major_version }}"
+  - name: Ubuntu
+    command: "grep DISTRIB_RELEASE {{ luna_image_path }}/etc/lsb-release | awk -F'=' '{ print $2 }' | awk -F '.' '{ print $1 }' | grep '^.\\+$' || echo '22'"
+  - name: Debian
+    command: "grep DISTRIB_RELEASE {{ luna_image_path }}/etc/lsb-release | awk -F'=' '{ print $2 }' | awk -F '.' '{ print $1 }' | grep '^.\\+$' || echo '22'"
+  - name: OpenSuse
+    command: "grep VERSION {{ luna_image_path }}/etc/SUSE-brand | awk -F' = ' '{ print $2 }' || echo 15"
+  - name: Suse
+    command: "grep VERSION {{ luna_image_path }}/etc/SUSE-brand | awk -F' = ' '{ print $2 }' || echo 15"
+  - name: SLE
+    command: "grep VERSION {{ luna_image_path }}/etc/SUSE-brand | awk -F' = ' '{ print $2 }' || echo 15"
+
