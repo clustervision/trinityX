@@ -58,6 +58,11 @@
     content: "nameserver {{ trix_ctrl_ip }}"
 
 - block:
+  - synchronize:
+      src: "/etc/yum.repos.d/redhat.repo"
+      dest: "{{ image_path }}/etc/yum.repos.d/redhat.repo"
+    ignore_errors: true
+
   - name: Ensure Certificate path exists
     file:
       path: "{{ image_path }}/etc/rhsm/ca/"
