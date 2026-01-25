@@ -19,9 +19,12 @@
 
 - name: Install core packages - @core, kernel and grub2
   dnf:
-    disable_gpg_check: true
     name: "{{ item }}"
     state: present
+    enablerepo:
+      - powertools
+      - crb
+    disable_gpg_check: true
   with_items: "{{ image_core_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
