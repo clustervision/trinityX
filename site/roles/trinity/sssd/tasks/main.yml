@@ -88,6 +88,32 @@
     state: started
   when: not in_image
 
+  # the below block is there to let sssd start a little later as
+  # on slower hardware sssd might fail with 'Providers did not start in time'
+  # in the logs. EL10 affected only.
+- block:
+  - name: Add delay for sssd.service
+    copy:
+      src: sssd.timer
+      dest: /usr/lib/systemd/system/sssd.timer
+
+  - name: Populate service facts
+      service_facts:
+
+  - name: Disable sssd service
+    systemd:
+      name: sssd.service
+      enabled: false
+
+  - name: Enable sssd timer
+    systemd:
+      name: sssd.timer
+      enabled: true
+  when:
+    - in_image
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int > 9
+
 - name: Adding access controler groups to the system
   shell: '/usr/local/sbin/obol group list | grep {{ item }} || /usr/local/sbin/obol group add {{ item }}'
   register: obol_result
