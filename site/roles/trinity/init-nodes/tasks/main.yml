@@ -8,21 +8,3 @@
     msg: "in_image: {{ in_image }}, in_login_image: {{ in_login_image|default(False) }}, on_node: {{ on_node }}"
   tags: always
 
-- name: Use the controller as default gateway
-  lineinfile:
-    path: "/etc/sysconfig/network"
-    line: "GATEWAY={{ trix_ctrl_ip }}"
-    state: present
-    create: true
-
-- name: Get the controller's timezone
-  stat:
-    path: "/etc/localtime"
-  register: tz
-  delegate_to: localhost
-
-- name: Set the image/node's timezone
-  file:
-    src: "{{ tz.stat.lnk_source }}"
-    dest: "/etc/localtime"
-    state: link
