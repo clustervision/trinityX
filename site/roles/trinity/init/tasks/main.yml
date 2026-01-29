@@ -56,7 +56,6 @@
   - name: Set in_image variable
     set_fact:
       in_image: '{{ True if ansible_connection in "chroot" else False }}'
-    tags: always
 
   - name: Check if i am on real hardware or inside cloud
     shell: dmidecode -s system-manufacturer | grep -iE "microsoft|google|amazon" || true
@@ -94,7 +93,7 @@
         resolv_search_domains:
           "{{ resolv_search_domains | replace('__CLOUD__', vars[item + '_domain'] | default() + ' __CLOUD__') }}"
       loop: "{{ vars.cloud_support }}"
-      when: 
+      when:
         - '"__CLOUD__" in resolv_search_domains'
         - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
     when: cloud_install 
@@ -174,7 +173,7 @@
     set_fact:
       primary: '{{ True if pcs_primary.stdout == ansible_hostname else False }}'
       on_controller: true
-    when: 
+    when:
       - pcs_primary is defined 
       - pcs_primary.stdout != "not_available"
 
@@ -237,7 +236,6 @@
   - debug:
       msg: 'Using {{ trix_this_ctrl_hostname }} as configured hostname'
     when: trix_this_ctrl_hostname is defined
-
   when: ha | default(False)
   tags: always,ha,verify-ip
 
@@ -247,14 +245,14 @@
   when:
     - not ha | default(False)
     - trix_ctrl_hostname != ansible_hostname
-  tags: always
+  #tags: always
 
 - block:
   - name: Adding cloud controllers hostnames
     set_fact:
       cloud_ctrl_hostname: "{{ cloud_ctrl_hostname | default([]) + [ lookup('vars', item + '_ctrl_hostname') ] }}"
     loop: "{{ vars.cloud_support }}"
-    when: 
+    when:
       - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
       - vars[item + '_controller'] | default(False)
       - vars[item + '_ctrl_hostname'] is defined
@@ -263,7 +261,7 @@
     set_fact:
       cloud_ctrl_ip: "{{ cloud_ctrl_ip | default([]) + [ lookup('vars', item + '_ctrl_ip') ] }}"
     loop: "{{ vars.cloud_support }}"
-    when: 
+    when:
       - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
       - vars[item + '_controller'] | default(False)
       - vars[item + '_ctrl_ip'] is defined
@@ -317,7 +315,8 @@
       cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_bmc_net }}/{{ trix_bmc_netprefix }}"
     with_items: "{{ all_ctrl_bmcip }}"
     when: all_ctrl_bmcip is defined
-  tags: always,verify-ip
+  #tags: always,verify-ip
+  tags: luna,verify-ip
   when:
     - on_controller
     - not no_checks | default(False)
@@ -367,8 +366,13 @@
 
   - debug:
       msg: "trix_ctrl_local_ip: {{ trix_ctrl_local_ip|default('Undefined') }}"
-  tags: always
+  #tags: always
   when: on_controller
+
+- name: Collect number of controllers
+  set_fact:
+    num_ctrl: "{{ all_ctrl_ip | length }}"
+  tags: always
 
 
 - block:
@@ -412,7 +416,7 @@
 
   - debug:
       msg: "trix_ctrl_external_ip: {{ trix_ctrl_external_ip }}, trix_ctrl_external_network: {{ trix_ctrl_external_network }}"
-    when: 
+    when:
       - trix_ctrl_external_ip is defined
       - trix_ctrl_external_network is defined
   tags: always
@@ -451,14 +455,14 @@
       ignore_errors: true
       when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
   tags: always
-  when: 
+  when:
     - on_controller
     - (trix_external_fqdn is not defined) or trix_external_fqdn==""
 
 - block:
   - debug:
       msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
-    when: 
+    when:
       - on_controller
       - trix_external_fqdn is defined
 
@@ -469,7 +473,7 @@
 
   - debug:
       msg: "trix_login_fqdn: {{ trix_login_fqdn }}"
-    when: 
+    when:
       - in_login_image | default(False)
       - trix_login_fqdn is defined
   tags: always
@@ -489,14 +493,11 @@
 
   - debug:
       msg: "admin_group: {{ admin_group }}"
-  when: not enable_authentication|default(False)
+  when:
+    - on_controller
+    - not enable_authentication|default(False)
   tags: always
 
-
-- name: Collect number of controllers
-  set_fact:
-    num_ctrl: "{{ all_ctrl_ip | length }}"
-  tags: always
 
 - block:
   - name: Fetch selinux state

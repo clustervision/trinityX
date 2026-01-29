@@ -1,0 +1,20 @@
+---
+
+- name: Stop firewalld
+  service:
+    name: firewalld
+    state: stopped
+  when: 
+    - on_node|default(False)
+    - not in_login_image | default(False)
+
+- name: Disable firewalld
+  systemd:
+    name: firewalld
+    enabled: false
+
+- name: Enable firewalld
+  systemd:
+    name: firewalld
+    enabled: true
+  when: in_login_image | default(False)

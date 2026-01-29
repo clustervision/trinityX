@@ -1,60 +1,16 @@
 ---
-- name: Make .ssh root directory
-  file:
-    path: "{{ image_path }}/root/.ssh"
-    mode: 0700
-    owner: root
-    group: root
-    state: directory
+- name: Include password tasks
+  include_role:
+    name: trinity/password
+  tags: mytest
 
-- name: Ensure /etc/trinity/passwords/images/{{ image_name }} exists
-  file:
-    path: '/etc/trinity/passwords/images/{{ image_name }}'
-    state: directory
+- name: Include ssh tasks
+  include_role: 
+    name: trinity/ssh
 
-- name: Store root password if defined
-  template:
-    src: root.txt
-    dest: '/etc/trinity/passwords/images/{{ image_name }}/root.txt'
-  when: image_password|default([])
-
-- name: Disable tinysshd if it is there
-  shell: "chroot {{ image_path }} systemctl disable tinysshd.socket"
-  ignore_errors: true
-
-- name: Generate SSH keys
-  user:
-    name: root
-    generate_ssh_key: true
-    ssh_key_file: "{{ image_path }}/root/.ssh/id_rsa"
-
-- name: Add controller's key to authorized keys
-  authorized_key:
-    user: root
-    state: present
-    key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
-    path: "{{ image_path }}/root/.ssh/authorized_keys"
-
-- name: Add cluster key to authorized keys
-  authorized_key:
-    user: root
-    state: present
-    key: '{{ lookup("file", "/root/.ssh/id_cluster_rsa.pub") }}'
-    path: "{{ image_path }}/root/.ssh/authorized_keys"
-  when: ha | default(False)
-
-- name: Create node config directory
-  file:
-    path: '{{ image_path }}/{{ trix_luna }}/node/config/'
-    state: directory
-
-- name: Render node luna.ini
-  template:
-    src: 'luna2.ini.j2'
-    dest: '{{ image_path }}/{{ trix_luna }}/node/config/luna.ini'
-    owner: root
-    group: root
-    mode: 0640
+- name: Include luna2 tasks
+  include_role: 
+    name: trinity/luna2
 
 - name: Configuring resolv.conf
   copy:

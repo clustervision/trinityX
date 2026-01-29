@@ -1,0 +1,36 @@
+---
+
+- block:
+  - name: Create node config directory
+    file:
+      path: '{{ image_path }}/{{ trix_luna }}/node/config/'
+      state: directory
+
+  - name: Render node luna.ini
+    template:
+      src: 'luna2.ini.j2'
+      dest: '{{ image_path }}/{{ trix_luna }}/node/config/luna.ini'
+      owner: root
+      group: root
+      mode: 0640
+  when:
+    - on_controller | default(False)
+    - image_path is defined
+    - trix_luna is defined
+
+- block:
+  - name: Create node config directory
+    file:
+      path: '{{ trix_luna }}/node/config/'
+      state: directory
+
+  - name: Render node luna.ini
+    template:
+      src: 'luna2.ini.j2'
+      dest: '{{ trix_luna }}/node/config/luna.ini'
+      owner: root
+      group: root
+      mode: 0640
+  when:
+    - in_image | default(False) or on_node | default(False)
+    - trix_luna is defined

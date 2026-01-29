@@ -1,0 +1,77 @@
+---
+
+- block:
+  - name: Make .ssh root directory
+    file:
+      path: "/root/.ssh"
+      mode: 0700
+      owner: root
+      group: root
+      state: directory
+
+  - name: Generate RSA SSH key
+    user:
+      name: root
+      generate_ssh_key: true
+      ssh_key_bits: 4096
+      ssh_key_type: rsa
+      ssh_key_file: "/root/.ssh/id_rsa"
+  
+  - name: Generate host SSH keys
+    shell: ssh-keygen -A
+    args:
+      creates: /etc/ssh/ssh_host_rsa_key
+  
+  - name: Disable host key check between nodes
+    blockinfile:
+      path: "/etc/ssh/ssh_config"
+      block: |
+        # Names without domain, such as node001
+        host  * !*.*
+                ForwardX11 yes
+                CheckHostIP no
+                HostbasedAuthentication no
+                StrictHostKeyChecking no
+                UserKnownHostsFile /dev/null
+  
+        # Our local domains
+        Host  *.cluster *.ib
+                ForwardX11 yes
+                CheckHostIP no
+                HostbasedAuthentication no
+                StrictHostKeyChecking no
+                UserKnownHostsFile /dev/null
+  
+  - name: Start and enable sshd daemon
+    service:
+      name: sshd
+      enabled: true
+  when: in_image | default(False) or on_node | default(False)  
+
+- block:
+  - name: Make .ssh root directory
+    file:
+      path: "{{ image_path }}/root/.ssh"
+      mode: 0700
+      owner: root
+      group: root
+      state: directory
+
+  - name: Add controller's key to authorized keys
+    authorized_key:
+      user: root
+      state: present
+      key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
+      path: "{{ image_path }}/root/.ssh/authorized_keys"
+  
+  - name: Add cluster key to authorized keys
+    authorized_key:
+      user: root
+      state: present
+      key: '{{ lookup("file", "/root/.ssh/id_cluster_rsa.pub") }}'
+      path: "{{ image_path }}/root/.ssh/authorized_keys"
+    when: ha | default(False)
+  when:
+    - on_controller
+    - extend_image | default(False)
+    - image_path is defined

@@ -1,0 +1,552 @@
+---
+# tasks file for luna
+
+- name: Load kea variable file
+  include_vars: "kea.yaml"
+  ignore_errors: true
+  when: luna2_use_kea | default(False)
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  no_log: true
+  ignore_errors: true
+  when: not luna2_use_kea | default(False)
+
+- name: Install luna2 packages
+  yum:
+    name: '{{ luna2_packages }}'
+    state: present
+    enablerepo: luna2
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install required packages
+  yum:
+    name: '{{ required_packages }}'
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Ensure /var/log/luna exists
+  file:
+    path: '/var/log/luna'
+    state: directory
+
+- name: Ensure files directory exists
+  file:
+    path: '{{ trix_luna }}/files'
+    state: directory
+
+# ----------------- stop if we exist -----------------
+
+- name: Populate service facts
+  service_facts:
+
+- name: Stop luna daemon
+  service:
+    name: luna2-daemon
+    state: stopped
+  when: ansible_facts.services['luna2-daemon.service'] is defined and ansible_facts.services['luna2-daemon.service'].status != 'not-found'
+
+# ----------------------------------------------------
+
+# -------  destroy existing DB if requested ----------
+
+- block:
+  - block:
+    - name: set DB path
+      set_fact:
+        luna_daemon_db_path: '{{ trix_luna }}/daemon/common/luna.db'
+
+    - name: Verifying for data existence
+      stat:
+        path: '{{ luna_daemon_db_path }}'
+      register: luna_daemon_db_file
+
+  - block:
+    - name: Verifying previous data backup existence
+      stat:
+        path: '{{ luna_daemon_db_path }}.backup'
+      register: luna_daemon_db_backup
+
+    - name: Deleting previous data backup
+      file:
+        path: '{{ luna_daemon_db_path }}.backup'
+        state: absent
+      when:
+        - luna_daemon_db_backup.stat.exists
+
+    - name: Moving current data to backup
+      command: 'mv -f {{ luna_daemon_db_path }} {{ luna_daemon_db_path }}.backup'
+    when:
+      - luna_daemon_db_file.stat.exists
+  when:
+    - override | default(False)
+    - primary | default(True)
+
+# ----------------------------------------------------
+
+- name: Get python libdir
+  shell: "echo {{ trix_local }}/python/lib/python*"
+  register: luna2_python_dir
+  changed_when: false
+
+# -- daemon
+
+# TODO: better way than below
+- name: Install luna2 daemon
+  ansible.builtin.shell: |
+    source {{ trix_local }}/python/bin/activate
+    pip3 install --upgrade {{ luna2_noarch_pip_repository }}/daemon/{{ luna2_daemon_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_daemon_pip is defined
+
+# TODO: better way than below
+- name: Install luna2 daemon
+  ansible.builtin.shell: |
+    source {{ trix_local }}/python/bin/activate
+    pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/daemon luna2-daemon
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_daemon_pip is undefined
+
+- name: create symlink from site-packages/daemon to luna2 dir
+  file:
+    src: '{{ luna2_python_dir.stdout }}/site-packages/daemon'
+    dest: '{{ trix_luna }}/daemon'
+    state: link
+    force: true
+
+# -- cli
+
+# TODO: better way than below
+- name: Install luna2 cli
+  ansible.builtin.shell: |
+    source {{ trix_local }}/python/bin/activate
+    pip3 install --upgrade {{ luna2_noarch_pip_repository }}/cli/{{ luna2_cli_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_cli_pip is defined
+
+# TODO: better way than below
+- name: Install luna2 cli
+  ansible.builtin.shell: |
+    source {{ trix_local }}/python/bin/activate
+    pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/cli luna2-cli
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_cli_pip is undefined
+
+- name: create symlink from site-packages/cli to luna2 dir
+  file:
+    src: '{{ luna2_python_dir.stdout }}/site-packages/luna'
+    dest: '{{ trix_luna }}/cli'
+    state: link
+    force: true
+
+# -- utils
+
+# TODO: better way than below
+- name: Install luna2 utils
+  ansible.builtin.shell: |
+    source {{ trix_local }}/python/bin/activate
+    pip3 install --upgrade {{ luna2_noarch_pip_repository }}/utils/{{ luna2_utils_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_utils_pip is defined
+
+# TODO: better way than below
+- name: Install luna2 utils
+  ansible.builtin.shell: |
+    source {{ trix_local }}/python/bin/activate
+    pip3 install --upgrade -i {{ luna2_noarch_pip_repository }}/utils luna2-utils
+    exit $?
+  args:
+    executable: /bin/bash
+  when: luna2_utils_pip is undefined
+
+- name: Prepare utils file names
+  set_fact:
+     luna2_utils_grep: "{{ luna2_utils | join('|') }}"
+
+- name: Collect utils file names
+  shell: "ls {{ luna2_python_dir.stdout }}/site-packages/utils/ | grep -E '{{ luna2_utils_grep }}' | grep -E '^([a-zA-Z0-9\\-]+|.+\\.py|.+\\.sh)$'"
+  register: luna2_utils_names
+  changed_when: false
+  when: luna2_utils_grep is defined
+
+- name: Ensuring luna utils files are unix
+  shell: "dos2unix {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+  with_items:
+    - "{{ luna2_utils_names.stdout_lines }}"
+  when: luna2_utils_names is defined
+
+- name: Ensuring luna utils files are executable
+  ansible.builtin.file:
+    path: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+    owner: root
+    group: root
+    mode: '0755'
+  with_items:
+    - "{{ luna2_utils_names.stdout_lines }}"
+  when: luna2_utils_names is defined
+
+- name: Create symlink from site-pacakges/utils to /usr/sbin
+  file:
+    src: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+    dest: "/usr/sbin/{{ 'trix-diag' if item == 'trinity_diagnosis.py' else item.split('.') | first }}"
+    state: link
+    force: true
+  with_items:
+    - "{{ luna2_utils_names.stdout_lines }}"
+  when: luna2_utils_names is defined
+
+#  shell: "ln -s {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }} /usr/local/bin/{{ item.split('.') | first }}"
+#  with_items:
+#    - "{{ luna2_utils_names.stdout_lines }}"
+#  when: luna2_utils_names is defined
+
+
+# -- we're done with pip
+
+- name: Render /etc/systemd/system/luna2-daemon.service
+  template:
+    src: 'luna2-daemon-service.j2'
+    dest: '/etc/systemd/system/luna2-daemon.service'
+    owner: root
+    group: root
+    mode: 0644
+
+# ------------------- luna.ini ---------------------
+
+# moved to init
+# - name: Generate Luna Secret Key
+#  set_fact:
+#    luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
+
+- name: Create daemon config directory
+  file:
+    path: '{{ trix_luna }}/daemon/config/'
+    state: directory
+
+- name: Render daemon luna.ini
+  template:
+    src: 'luna2-daemon.ini.j2'
+    dest: '{{ trix_luna }}/daemon/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
+  when: not luna2_use_kea | default(False)
+
+- name: Render daemon luna.ini
+  template:
+    src: 'luna2-daemon.ini-kea.j2'
+    dest: '{{ trix_luna }}/daemon/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
+  when: luna2_use_kea | default(False)
+
+# ---------------- legacy fixes ------------------
+
+- name: Perform legacy fixes for existing daemon luna.ini config file
+  import_tasks: legacy_fixes.yml
+  when: false
+
+# ------------------------------------------------
+
+- stat:
+    path: '{{ trix_luna }}/cli/config'
+  register: cli_config_dir
+
+- name: Remove cli config dir symlink
+  file:
+    path: '{{ trix_luna }}/cli/config'
+    state: absent
+  when: cli_config_dir.stat.islnk is defined and cli_config_dir.stat.islnk
+
+- name: Create cli config directory
+  file:
+    path: '{{ trix_luna }}/cli/config/'
+    state: directory
+
+- name: Render cli luna.ini
+  template:
+    src: 'luna2.ini.j2'
+    dest: '{{ trix_luna }}/cli/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
+
+- name: Create utils config directory
+  file:
+    path: '{{ trix_luna }}/utils/config/'
+    state: directory
+
+- name: Render utils luna.ini
+  template:
+    src: 'luna2.ini.j2'
+    dest: '{{ trix_luna }}/utils/config/luna.ini'
+    owner: root
+    group: root
+    mode: 0640
+
+
+# ------------------ gunicorn config ----------------
+
+- name: Render gunicorn config file
+  template:
+    src: 'gunicorn.py.j2'
+    dest: "{{ trix_luna }}/daemon/config/gunicorn.py"
+    owner: root
+    group: root
+    mode: 0644
+
+
+# ----------------------------------------------------
+
+- name: Create luna.key
+  copy:
+    dest: "{{ trix_ssl }}/luna.key"
+    content: "{{ luna2_key }}"
+
+- debug:
+    msg: "{{ luna2_cluster }}"
+
+- name: Render /trinity/local/luna/daemon/config/bootstrap.ini
+  template:
+    src: 'luna2.conf.j2'
+    dest: '{{ trix_luna }}/daemon/config/bootstrap.ini'
+    owner: root
+    group: root
+    mode: 0644
+#  notify: restart luna2-daemon
+
+# ----------------------------------------------------
+
+- name: Render /usr/bin/luna
+  template:
+    src: 'luna2-cli-wrapper.j2'
+    dest: '/usr/bin/luna'
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Ensuring bash completion path exists
+  file:
+    path: '/etc/bash_completion.d/'
+    state: directory
+    owner: root
+    group: root
+
+- name: Copy bash completion script
+  copy:
+    remote_src: true
+    src: "{{ trix_luna }}/cli/addons/bash_completion.sh"
+    dest: '/etc/bash_completion.d/luna.sh' 
+    owner: root
+    group: root
+    mode: 0644
+
+- block:
+  - name: Copy tftp configuration to /etc/xinetd.d
+    copy:
+      src: 'tftp'
+      dest: '/etc/xinetd.d/tftp'
+    notify: restart xinetd
+    when: ansible_facts['distribution_major_version']|int < 9
+
+  - name: Determine tftpboot directory
+    set_fact:
+      luna2_tftpboot_directory: "{{ '/var/lib/tftpboot' if ansible_facts['distribution_major_version']|int > 8 else '/tftpboot' }}"
+
+  - name: Ensure tftpboot directory exists
+    file:
+      path: "{{ luna2_tftpboot_directory }}"
+      state: directory
+
+  - block:
+    - name: Download X86 64-bit iPXE EFI image to tftpboot
+      get_url:
+        url: "{{ luna2_x86_64_ipxe_files }}/ipxe.efi"
+        dest: "{{ luna2_tftpboot_directory }}/luna_ipxe.efi"
+        mode: '0444'
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
+
+    - name: Download iPXE legacy image to tftpboot
+      get_url:
+        url: "{{ luna2_x86_64_ipxe_files }}/undionly.kpxe"
+        dest: "{{ luna2_tftpboot_directory }}/luna_undionly.kpxe"
+        mode: '0444'
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
+    when: system_arch == "x86_64" or luna2_download_all_arch_ipxe_files|default(False)
+
+  - name: Download ARM 64-bit iPXE EFI image to tftpboot
+    get_url:
+      url: "{{ luna2_aarch64_ipxe_files }}/ipxe.efi"
+      dest: "{{ luna2_tftpboot_directory }}/luna_ipxe_arm64.efi"
+      mode: '0444'
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
+    when: system_arch == "aarch64" or luna2_download_all_arch_ipxe_files|default(False)
+  when: ansible_facts['os_family'] == "RedHat"
+
+#- name: Include luna's DNS zone file in named conf
+#  lineinfile:
+#    path: '/etc/named.conf'
+#    line: 'include "{{ luna2_named_include_file }}";'
+#  notify: restart named
+
+- name: Stop nginx
+  service:
+    name: nginx
+    state: stopped
+
+- name: Add luna's server configuration to nginx
+  template:
+    src: 'nginx-luna2.conf.j2'
+    dest: '/etc/nginx/conf.d/nginx-luna2.conf'
+#  notify: restart nginx
+# this notify is being ignored. trust me. Antoine
+
+- name: Copy libluna-fakeuname to lib64
+  copy:
+    src: '{{ system_arch }}/libluna-fakeuname.so'
+    dest: '/usr/lib64'
+
+
+## Some PXE ROMs in some NICs do not send tftp replies using the FIP
+## of the controllers. This workaround ensures that we SNAT those replies.
+## TODO: delete workaround when no longer required.
+# - name: Get provisioning interface name
+#  shell: "ip -o addr show to {{ trix_cluster_net }}/{{ trix_cluster_netprefix }} | awk '{ print $2 }' | head -1"
+#  register: luna_prov_nic
+#  changed_when: False
+
+# TODO
+# - name: Workaround PXE boot issue when doing HA and masquerading is enabled
+#  template:
+#    src: 'firewalld_direct.xml.j2'
+#    dest: '/etc/firewalld/direct.xml'
+#    owner: 'root'
+#    group: 'root'
+#    mode: '0644'
+#  when: ha|default(False)
+#  notify: reload firewalld
+# ##
+
+- name: Selinux fcontext on files
+  sefcontext:
+    target: "/etc/named.luna.zones"
+    setype: named_zone_t
+  when: ansible_selinux.status == "enabled"
+
+- name: Check File exists or not
+  stat:
+    path: '/etc/named.luna.zones'
+  register: luna_dns_placeholder
+
+- name: Add a placeholder for luna's DNS zone file
+  file:
+    path: '/etc/named.luna.zones'
+    setype: named_zone_t
+    group: named
+    state: touch
+  when: luna_dns_placeholder.stat.exists == false
+
+- name: Enable luna services
+  service:
+    name: '{{ item }}'
+    enabled: true
+  with_items:
+    - "{{ enable_services }}"
+
+- name: Start luna daemon
+  service:
+    name: 'luna2-daemon'
+    state: started
+    enabled: true
+
+- name: Wait 10s for daemon to settle
+  wait_for:
+    timeout: 10
+
+- name: Start other luna services
+  service:
+    name: '{{ item }}'
+    state: started
+  with_items:
+    - "{{ start_services }}"
+  when: not in_cloud | default(False)
+
+- name: Start other luna services for controller in cloud
+  service:
+    name: '{{ item }}'
+    state: started
+  with_items:
+    - "{{ start_services }}"
+  ignore_errors: true
+  when: in_cloud | default(False)
+
+- name: Setting permissions on database
+  file:
+    path: '{{ luna2_python_dir.stdout }}/site-packages/daemon/common/luna.db'
+    owner: root
+    group: root
+    mode: '0600'
+  ignore_errors: true
+
+# -------------- H/A stuff ------------------
+
+- name: Render /etc/systemd/system/luna2-master.service
+  copy:
+    src: 'luna2-master.service'
+    dest: '/etc/systemd/system/luna2-master.service'
+    owner: root
+    group: root
+    mode: 0644
+  when: ha | default(False) or cloud_install | default(False)
+
+- block:
+  - name: Populate service facts
+    service_facts:
+
+  - name: Enable /etc/systemd/system/luna2-master.service
+    service:
+      name: 'luna2-master'
+      state: restarted
+      enabled: true
+  when:
+    - not ha | default(False)
+    - cloud_install | default(False)
+    - not in_cloud | default(False)
+
+- block:
+  - name: Set me as Luna master
+    shell: "/usr/sbin/lmaster -s"
+    ignore_errors: true
+
+  - name: Add luna2 master systemd service
+    pcs_resource:
+      name: 'luna2-master'
+      resource_type: 'systemd:luna2-master.service'
+      options: 'op monitor interval=29s --group Trinity-stack'
+      state: present
+    tags: pcs
+  when:
+    - ha | default(False)
+    - primary | default(True)
+
+# ------------------------------------------
+
