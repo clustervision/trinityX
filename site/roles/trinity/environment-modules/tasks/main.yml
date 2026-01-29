@@ -1,69 +1,26 @@
 ---
 # tasks file for environment-modules
 
-# An example of the structure of shared modules:
-# envmodules_files_path/
-#  ├── groups
-#  │   └── userspace
-#  │       ├── all          - Loads all the installed versions
-#  │       └── tr17.10      - Loads a particular version
-#  └── tr17.10
-#      └── x86_64
-#          ├── compiler
-#          │   ├── gcc
-#          │   ├── python2
-#          │   └── python3
-#          └── libraries
-#              └── intel-runtime
-
-- name: Install environment-modules packages
+- name: Install environment module packages
   yum:
     name: '{{ envmodules_packages }}'
     state: present
+    enablerepo:
+      - powertools
   tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-- name: Add the group paths to the default configuration
-  blockinfile:
-    path: /usr/share/Modules/init/.modulespath
-    block: |
-      {% for dir in envmodules_files_subdirs -%}
-      {{ envmodules_files_path }}/{{ dir }}
-      {% endfor %}
-    state: present
+- name: Install profile for modules
+  template:
+    src: z_modules.sh.j2
+    dest: /etc/profile.d/z_modules.sh
   tags: install-only
 
-- name: Get a list of dependencies
-  shell: >
-    repoquery --requires --resolve --qf="%{NAME}" {{ envmodules_list | join( ' ') }} |
-    sort -u | grep -v {{ envmodules_version }}
-  register: repoquery
-  changed_when: false
-
-- name: Install dependencies on controller(s)
-  yum:
-    name: '{{ repoquery.stdout_lines }}'
-    state: present
-    disablerepo: userspace-shared-*
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Reuse local /etc/yum.conf
-  copy:
-    remote_src: true
-    src: /etc/yum.conf
-    dest: /tmp/yum.conf
-
-- name: Patch /tmp/yum.conf to use tsflags=justdb on passive controllers or node/image
-  lineinfile:
-    path: /tmp/yum.conf
-    line: tsflags=justdb
-  when: not primary
-
-- name: Install environment modules
-  yum:
-    conf_file: /tmp/yum.conf
-    name: "{{ envmodules_list }}"
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
+- name: Install dummy module
+  template:
+    src: dummy-module.lua.j2
+    dest: "{{ trix_modulefiles }}/dummy-module.lua"
+  when:
+    - on_controller
+    - primary | default(True)
