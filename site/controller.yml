@@ -105,7 +105,7 @@
       nfs_prefix_path: '{{ shared_fs_prefix }}'
       # nfs_use_mask overwrites the exported path to match the actual paths for shared disks
       nfs_use_mask: "{{ ha | default(False) }}"
-      tags: nfs
+      tags: nfs,nfs-mounts
 
     - role: trinity/nfs-mounts
       nfs_mounts:
@@ -218,12 +218,6 @@
       when: not enable_openhpc
       tags: environment-modules
 
-    - role: trinity/openhpc
-      openhpc_skiproot: true
-      genders_conf_path: '{{ trix_shared }}/etc'
-      when: enable_openhpc
-      tags: openhpc
-
     - role: trinity/nfs-mounts
       nfs_enable_rdma: false
       nfs_mounts:
@@ -239,12 +233,11 @@
         - enable_openhpc | default(False)
       tags: nfs-mounts
 
-    - role: trinity/easybuild
-      easybuild_user: easybuild
-      easybuild_export: '{{ export_easybuild }}'
-      easybuild_skiproot: true
-      when: enable_easybuild
-      tags: easybuild
+    - role: trinity/openhpc
+      openhpc_skiproot: true
+      genders_conf_path: '{{ trix_shared }}/etc'
+      when: enable_openhpc
+      tags: openhpc
 
     - role: trinity/nfs-mounts
       nfs_enable_rdma: false
@@ -259,6 +252,14 @@
       when:
         - ha | default(False)
         - enable_easybuild | default(False)
+      tags: nfs-mounts
+
+    - role: trinity/easybuild
+      easybuild_user: easybuild
+      easybuild_export: '{{ export_easybuild }}'
+      easybuild_skiproot: true
+      when: enable_easybuild
+      tags: easybuild
 
     - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'

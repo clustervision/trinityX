@@ -1,95 +1,11 @@
 ---
-# tasks file for ssh
 
-- name: Generate ssh keys on the controller
-  user:
-    name: root
-    generate_ssh_key: true
-    ssh_key_bits: 4096
-    ssh_key_type: rsa
-
-- block:
-  - name: Generate ssh cluster keys on the primary controller
-    user:
-      name: root
-      generate_ssh_key: true
-      ssh_key_bits: 4096
-      ssh_key_type: rsa
-      ssh_key_file: "/root/.ssh/id_cluster_rsa"
-
-  # -- start sync
-  - name: Ensure ssh keys sync directory exists
-    file:
-      path: '{{ trix_sync }}/ssh'
-      state: directory
-
-  - name: Add cluster ssh key to sync
-    copy:
-      remote_src: true
-      src: '/root/.ssh/{{ item }}'
-      dest: '{{ trix_sync }}/ssh/{{ item }}'
-      mode: 0640
-    with_items:
-      - id_cluster_rsa
-      - id_cluster_rsa.pub
+- name: Loading controller ssh role
+  include_tasks: "controller.yml"
   when: 
-    - primary | default(True)
-    - ha | default(False)
-  # -- end sync
+    - on_controller
+    - not extend_image | default(False)
 
-- block:
-  # -- start sync
-  - name: Copy cluster ssh keys from sync
-    copy:
-      remote_src: true
-      src: '{{ trix_sync }}/ssh/{{ item.0 }}'
-      dest: '/root/.ssh/'
-      mode: '{{ item.1 }}'
-    with_together:
-      - ['id_cluster_rsa', 'id_cluster_rsa.pub']
-      - ['0600','0644']
-  # -- end sync
+- name: Loading ssh role for nodes, image and extend
+  include_tasks: "nodes.yml"
 
-  - name: Update ssh and sshd configuration files
-    copy:
-      src: 'ssh_cluster_config'
-      dest: '/root/.ssh/config'
-      mode: '0644'
-      owner: root
-      group: root
-  when: 
-    - not primary | default(False)
-    - ha | default(False)
-
-
-  # we only add our own key. if the admin prefers to have cross
-  # controller ssh ability, he has to add these across, or add 
-  # the cluster key to authorized keys
-- name: Set authorized key
-  authorized_key:
-    user: root
-    state: present
-    key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
-
-- name: Update ssh and sshd configuration files
-  copy:
-    src: '{{ item.0 }}'
-    dest: '/etc/ssh/{{ item.0 }}'
-    mode: '{{ item.1 }}'
-    owner: root
-    group: root
-  with_together:
-    - ['sshd_config', 'ssh_config']
-    - ['0600', '0644']
-  notify: restart sshd
-
-- name: Start and enable sshd daemon
-  service:
-    name: sshd
-    state: started
-    enabled: true
-
-- name: Automatic SSH key creation for user
-  copy:
-    src: "ssh.sh"
-    dest: "/etc/profile.d/ssh.sh"

@@ -1,4 +1,12 @@
 ---
+  # below is needed to enforce gathering facts
+- hosts: controllers, localhost
+  tasks:
+    - debug:
+        msg: "Initializing all involved hosts"
+  tags: always
+
+
 - hosts: controllers
   pre_tasks:
   - fail:
@@ -77,6 +85,14 @@
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
     NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
   tags: image-create-ctrl
+
+
+  # below is needed to enforce gathering facts
+- hosts: "{{ image_name }}.osimages.luna"
+  tasks:
+    - debug:
+        msg: "Initializing {{ image_name }} run..."
+  tags: always
 
 
 - hosts: "{{ image_name }}.osimages.luna"

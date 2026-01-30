@@ -1,0 +1,98 @@
+---
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_distribution }}.yaml"
+    - "{{ ansible_os_family }}.yaml"
+  no_log: true
+  ignore_errors: true
+
+- name: Install required packages
+  yum:
+    name: '{{ password_packages }}'
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install required packages
+  apt:
+    name: '{{ password_packages }}'
+    state: present
+  tags: install-only
+  when: ansible_facts['os_family'] == "Debian"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install required packages
+  zypper:
+    name: '{{ password_packages }}'
+    state: present
+  tags: install-only
+  when: ansible_facts['os_family'] == "Suse" or ansible_facts['os_family'] == "SLE"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+# ---
+
+- name: Get image name
+  set_fact:
+    image_name: '{{ inventory_hostname.split(".")|first }}'
+
+- block:
+  - name: Generate salt for the root password
+    set_fact:
+      password_salt: "{{ lookup('password',
+                  '/etc/trinity/passwords/images/' + image_name + '/root-salt.txt
+                  chars=ascii_letters,digits,hexdigits length=16') }}"
+
+  - name: Setup the root user's password
+    user:
+      name: root
+      password: '{{ lookup("password","/etc/trinity/passwords/images/" +image_name
+                + "/root.txt")|password_hash("sha512", password_salt) }}'
+      state: present
+  when:
+    - ansible_facts['os_family'] != "RedHat"
+
+- block:
+  - name: Generate salt for the root password
+    set_fact:
+      password_salt: "{{ lookup('password',
+                  '/etc/trinity/passwords/images/' + image_name + '/root-salt.txt
+                  chars=ascii_letters,digits,hexdigits length=16') }}"
+
+  - name: Setup the root user's password
+    user:
+      name: root
+      password: '{{ lookup("password","/etc/trinity/passwords/images/" +image_name
+                + "/root.txt")|password_hash("sha512", password_salt) }}'
+      state: present
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int < 9
+
+- block:
+  - name: Set root plaintext password
+    set_fact:
+      root_plain: "{{ lookup('password','/etc/trinity/passwords/images/{{ image_name }}/root.txt') }}"
+
+  - name: Hash the plain password using mkpasswd
+    set_fact:
+      hashed_pass: >-
+        {{ lookup(
+            'pipe',
+            'printf %s ' ~ (root_plain | quote) ~ ' | mkpasswd --method=SHA-512 --stdin'
+        ) }}
+
+  - name: Setup the root user's password
+    user:
+      name: root
+      password: "{{ hashed_pass }}"
+      state: present
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int > 8

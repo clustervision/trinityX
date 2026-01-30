@@ -1,131 +1,15 @@
 ---
-# tasks file for firewalld
 
-- name: Verify if interfaces in firewalld_trusted_interfaces exist
-  fail:
-    msg: "NOTE: interface {{ item }} defined in trusted zone but it does not exist"
-  when: hostvars[inventory_hostname]['ansible_'+item] is not defined
-  with_items: '{{ firewalld_trusted_interfaces }}'
-  ignore_errors: true
+- name: Loading controller firewall role
+  include_tasks: "controller.yml"
+  when: on_controller
 
-- name: Verify if interfaces in firewalld_public_interfaces exist
-  fail:
-    msg: "NOTE: interface {{ item }} defined in public zone but it does not exist"
-  when: hostvars[inventory_hostname]['ansible_'+item] is not defined
-  with_items: '{{ firewalld_public_interfaces }}'
-  ignore_errors: true
+- name: Loading node and images firewall role
+  include_tasks: "nodes.yml"
+  when:
+    - in_image | default(False)
+    - not in_login_image | default(False)
 
-  # https://github.com/ansible-collections/ansible.posix/issues/75
-- name: Render interface and zone mismatches fix script
-  template:
-    src: 'fix-firewalld-zones.sh.j2'
-    dest: '/tmp/fix-firewalld-zones.sh'
-    mode: 0750
-
-- name: Install firewalld packages
-  yum:
-    name: '{{ firewalld_packages }}'
-    state: present
-  tags: install-only
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Start and enable firewalld service
-  service:
-    name: firewalld
-    state: started
-    enabled: 'yes'
-
-- name: Assign interfaces to the public zone
-  firewalld:
-    zone: public
-    interface: '{{ item }}'
-    state: enabled
-    permanent: true
-    immediate: true
-  notify: reload firewalld
-  with_items: '{{ firewalld_public_interfaces }}'
-
-- name: Update ifcfg files for interfaces '{{ firewalld_public_interfaces }}'
-  lineinfile:
-    path: '/etc/sysconfig/network-scripts/ifcfg-{{ item }}'
-    regexp: '^ZONE='
-    line: 'ZONE=public'
-    create: true
-  with_items: '{{ firewalld_public_interfaces }}'
-  when: firewalld_update_ifcfg_files
-
-- name: Add controller internal interface to trusted zone
-  set_fact:
-     firewalld_trusted_interfaces: "{{ [trix_ctrl_interface] + firewalld_trusted_interfaces }}"
-  when: trix_ctrl_interface is defined and trix_ctrl_interface != ""
-
-- name: Assign interfaces to the trusted zone
-  firewalld:
-    zone: trusted
-    interface: '{{ item }}'
-    state: enabled
-    permanent: true
-    immediate: true
-  notify: reload firewalld
-  with_items: '{{ firewalld_trusted_interfaces|unique }}'
-
-- name: Update ifcfg files for interfaces '{{ firewalld_trusted_interfaces|unique }}'
-  lineinfile:
-    path: '/etc/sysconfig/network-scripts/ifcfg-{{ item }}'
-    regexp: '^ZONE='
-    line: 'ZONE=trusted'
-    create: true
-  with_items: '{{ firewalld_trusted_interfaces|unique }}'
-  when: firewalld_update_ifcfg_files
-
-# Disabled as latest EL8(.7+?) causes interfaces not to come back after reboot
-#- name: Disable NetworkManager for public and trusted interfaces
-#  lineinfile:
-#    path: '/etc/sysconfig/network-scripts/ifcfg-{{ item }}'
-#    regexp: '^NM_CONTROLLED='
-#    line: 'NM_CONTROLLED=no'
-#  with_flattened:
-#    - '{{ firewalld_public_interfaces }}'
-#    - '{{ firewalld_trusted_interfaces|unique }}'
-#  when: firewalld_update_ifcfg_files
-
-- name: Enable masquerading on the '{{ firewalld_masquerade_zone }}' zone
-  firewalld:
-    zone: '{{ firewalld_masquerade_zone }}'
-    masquerade: 'yes'
-    state: enabled
-    permanent: true
-    immediate: true
-  when: firewalld_masquerade_zone is defined
-
-- name: Configure open TCP ports on the public zone
-  firewalld:
-    zone: public
-    port: '{{ item }}/tcp'
-    state: enabled
-    permanent: true
-    immediate: true
-  with_items: '{{ firewalld_public_tcp_ports }}'
-
-- name: Configure open UDP ports on the public zone
-  firewalld:
-    zone: public
-    port: '{{ item }}/udp'
-    state: enabled
-    permanent: true
-    immediate: true
-  with_items: '{{ firewalld_public_udp_ports }}'
-
-- name: Add direct rules
-  template:
-    src: 'direct-rules.xml.j2'
-    dest: '/etc/firewalld/direct.xml'
-  when: firewalld_direct_rules is defined
-  notify: reload firewalld
-
-#- name: Run interface and zone mismatch fix script
-#  shell: '/tmp/fix-firewalld-zones.sh'
-#  ignore_errors: true
-
-- meta: flush_handlers
+- name: Loading login node and image firewall role
+  include_tasks: "login.yml"
+  when: in_login_image | default(False)
