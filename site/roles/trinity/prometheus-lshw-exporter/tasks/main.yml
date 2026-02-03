@@ -1,29 +1,10 @@
 ---
 - name: Install required packages
-  yum:
+  package:
     name: '{{ prometheus_lshw_exporter_packages }}'
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
-  when: ansible_facts['os_family'] == "RedHat"
-  tags: install-only
-
-- name: Install required packages
-  ansible.builtin.apt:
-    name: '{{ prometheus_lshw_exporter_packages }}'
-    state: present
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-  tags: install-only
-
-- name: Install required packages
-  zypper:
-    name: '{{ prometheus_lshw_exporter_packages }}'
-    state: present
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-  when: ansible_facts['os_family'] == "Suse" or ansible_facts['os_family'] == "SLE"
   tags: install-only
 
 - import_tasks: preflight.yml
