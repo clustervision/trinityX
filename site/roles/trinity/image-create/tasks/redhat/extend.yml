@@ -15,6 +15,18 @@
   vars:
     extend_image: true
 
+- name: Removing existing local disk mounts
+  lineinfile:
+    dest: "{{ image_path }}/etc/fstab"
+    state: absent
+    regexp: ' {{ item }} '
+  with_items:
+    - '/'
+    - 'swap'
+    - '/tmp'
+    - '/boot.*'
+    - '/var.*'
+
 - name: Configuring resolv.conf
   copy:
     dest: "{{ image_path }}/etc/resolv.conf"
