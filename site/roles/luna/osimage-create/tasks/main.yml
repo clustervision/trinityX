@@ -30,7 +30,7 @@
   when: luna_image_in_luna is defined and luna_image_in_luna.rc|int == 0
 
 - name: Kernel version in image
-  shell: "ls {{ luna_image_path }}/lib/modules|sort|tail -n1"
+  shell: "find {{ luna_image_path }}/lib/modules -name modules.dep | awk -F 'modules/' '{ print $2 }' | awk -F '/modules' '{ print $1 }' | sort | tail -n1 | grep -v '^$' || ls {{ luna_image_path }}/lib/modules | sort | tail -n1"
   register: kernel_version
   changed_when: false
 
