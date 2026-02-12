@@ -147,6 +147,7 @@
     slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
     munge_conf_path: '{{ trix_shared }}/etc/munge'
     enable_slurm_pam: false
+    when: "'slurm' in workload_manager "
     tags: slurm
 
   - role: trinity/rsyslog
@@ -191,6 +192,7 @@
   - role: trinity/prometheus-slurm-job-exporter
     # Prometheus system exporter
     prometheus_slurm_job_exporter_extra_flags: --no-collect.info
+    when: "'slurm' in workload_manager "
     tags: prometheus, prometheus-slurm-job-exporter, monitoring
 
   - role: trinity/prometheus-infiniband-exporter
