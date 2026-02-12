@@ -9,24 +9,33 @@
 
 - hosts: controllers
   pre_tasks:
+  - name: Kick off with init
+    include_role:
+      name: trinity/init
+    tags: always
+
   - fail:
       msg: "This playbook should only be run on the active controller"
     when:
       - ha | default(False)
       - not primary | default(False)
+    tags: always
 
   - name: Filter image name
     set_fact:
       regex_image_name: "{{ image_name | regex_search('^[a-zA-Z0-9\\ \\-\\_\\.]+$') }}"
+    tags: always
 
   - name: Verify image name compliancy
     fail:
       msg: "Image name {{ image_name }} is not compliant. Supported is a-z A-Z 0-9 'space' '-' '_' '.'"
     when: regex_image_name != image_name
+    tags: always
 
   - name: Determining controller Distribution
     set_fact:
       controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
+    tags: always
 
   - name: Determining if we need to create or download the base image
     set_fact:
@@ -37,17 +46,16 @@
       - alternative_distribution != controller_distribution
       - alternative_image_source is defined
       - alternative_image_source != 'osgrab'
+    tags: always
 
   - name:
     debug:
       msg: "Downloading for {{ alternative_distribution }} using {{ alternative_image_source|default('base') }}"
     when: download_base_image is defined
+    tags: always
 
   roles:
   - role: trinity/lock-check
-    tags: always
-
-  - role: trinity/init
     tags: always
 
   - role: trinity/ldap-backend-selector
