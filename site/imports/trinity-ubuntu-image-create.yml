@@ -35,7 +35,6 @@
   - name: Determining controller Distribution
     set_fact:
       controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
-    tags: always
 
   - name: Determining if we need to create or download the base image
     set_fact:
@@ -46,13 +45,11 @@
       - alternative_distribution != controller_distribution
       - alternative_image_source is defined
       - alternative_image_source != 'osgrab'
-    tags: always
 
   - name:
     debug:
       msg: "Downloading for {{ alternative_distribution }} using {{ alternative_image_source|default('base') }}"
     when: download_base_image is defined
-    tags: always
 
   roles:
   - role: trinity/lock-check
@@ -65,8 +62,8 @@
   - role: trinity/image-download
     image_download_distribution: "{{ alternative_distribution }}"
     image_download_source: "{{ alternative_image_source|default('base') }}"
-    tags: image-create
     when: download_base_image is defined
+    tags: image-create
 
   - role: ansible/write_facts
     tags: always
