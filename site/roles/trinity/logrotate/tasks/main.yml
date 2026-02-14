@@ -15,41 +15,39 @@
       owner: root
       group: root
       force: false
-    with_items: "{{ logrotate_files + logrotate_additional }}"
+    with_items: "{{ logrotate_files }}"
   when: logrotate_component is not defined
 
 - block:
-  - name: Set logrotate component template fact
-    set_fact:
-      logrotate_template: "{{ logrotate_component }}.j2"
-    when: lookup('file', role_path + '/templates/' + logrotate_component + '.j2', errors='ignore')
+  - name: See if we have a template
+    stat:
+      path: "{{ role_path }}/templates/{{ logrotate_component }}.j2"
+    register: logrotate_template_check
 
-  - name: Set logrotate component file fact
-    set_fact:
-      logrotate_file: "{{ logrotate_component }}"
-    when:
-      - logrotate_template is not defined
-      - lookup('file', role_path + '/files/' + logrotate_component, errors='ignore')
+  - name: See if we have a file
+    stat:
+      path: "{{ role_path }}/files/{{ logrotate_component }}"
+    register: logrotate_file_check
 
   - name: Copy logrotate configuration template
     template:
-      src: "{{ logrotate_template }}"
+      src: '{{ logrotate_component }}.j2'
       dest: '/etc/logrotate.d/{{ logrotate_component }}'
       owner: root
       group: root
       force: false
-    when: logrotate_template is defined
+    when: logrotate_template_check.stat.exists
 
   - name: Copy logrotate configuration file
     copy:
-      src: "{{ logrotate_file | default('default') }}"
+      src: '{{ logrotate_component }}'
       dest: '/etc/logrotate.d/{{ logrotate_component }}'
       owner: root
       group: root
       force: false
     when:
-      - logrotate_template is not defined
-      - logrotate_file is defined
+      - logrotate_file_check.stat.exists
+      - not logrotate_template_check.stat.exists
 
   - name: Copy logrotate default configuration template
     template:
@@ -59,8 +57,8 @@
       group: root
       force: false
     when:
-      - logrotate_template is not defined
-      - logrotate_file is not defined
+      - not logrotate_file_check.stat.exists
+      - not logrotate_template_check.stat.exists
       - logrotate_logdir is defined
   when: logrotate_component is defined
 
