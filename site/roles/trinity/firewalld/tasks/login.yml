@@ -1,5 +1,13 @@
 ---
 
+- name: Install firewalld packages
+  yum:
+    name: '{{ firewalld_packages }}'
+    state: present
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
 - name: Enable firewalld
   systemd:
     name: firewalld
