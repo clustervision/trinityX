@@ -1,25 +1,76 @@
 ---
-- name: Install required packages
-  package:
-    name: '{{ logrotate_packages }}'
-    state: present
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-  tags: install-only
+- block:
+  - name: Install required packages
+    package:
+      name: '{{ logrotate_packages }}'
+      state: present
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
+    tags: install-only
 
-- name: Copy logrotate configuration files
+  - name: Copy logrotate configuration files
+    copy:
+      src: '{{ item }}'
+      dest: '/etc/logrotate.d/{{ item }}'
+      owner: root
+      group: root
+      force: false
+    with_items: "{{ logrotate_files }}"
+  when: logrotate_component is not defined
+
+- block:
+  - name: See if we have a template
+    stat:
+      path: "{{ role_path }}/templates/{{ logrotate_component }}.j2"
+    register: logrotate_template_check
+
+  - name: See if we have a file
+    stat:
+      path: "{{ role_path }}/files/{{ logrotate_component }}"
+    register: logrotate_file_check
+
+  - name: Copy logrotate configuration template
+    template:
+      src: '{{ logrotate_component }}.j2'
+      dest: '/etc/logrotate.d/{{ logrotate_component }}'
+      owner: root
+      group: root
+      force: false
+    when: logrotate_template_check.stat.exists
+
+  - name: Copy logrotate configuration file
+    copy:
+      src: '{{ logrotate_component }}'
+      dest: '/etc/logrotate.d/{{ logrotate_component }}'
+      owner: root
+      group: root
+      force: false
+    when:
+      - logrotate_file_check.stat.exists
+      - not logrotate_template_check.stat.exists
+
+  - name: Copy logrotate default configuration template
+    template:
+      src: "default.j2"
+      dest: '/etc/logrotate.d/{{ logrotate_component }}'
+      owner: root
+      group: root
+      force: false
+    when:
+      - not logrotate_file_check.stat.exists
+      - not logrotate_template_check.stat.exists
+      - logrotate_logdir is defined
+  when: logrotate_component is defined
+
+- name: Create empty log file
   copy:
-    src: '{{ item }}'
-    dest: '/etc/logrotate.d/{{ item }}'
-    force: false
-  with_items: "{{ logrotate_files + logrotate_additional }}"
-
-- name: Changing owner and group for logrotate config
-  file:
-    path: '/etc/logrotate.d/{{ item }}'
+    content: ""
+    dest: '{{ logrotate_logdir }}/{{ logrotate_emptyfile }}'
     owner: root
     group: root
-  with_items: "{{ logrotate_files + logrotate_additional }}"
+  when:
+    - logrotate_logdir is defined
+    - logrotate_emptyfile is defined
 
 - name: Restart logrotate
   assert: {that: true, quiet: true}
@@ -28,3 +79,4 @@
   when: 
     - ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
     - not in_image
+

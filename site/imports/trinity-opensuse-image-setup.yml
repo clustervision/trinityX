@@ -40,6 +40,11 @@
   - role: trinity/firewalld
     tags: firewalld
 
+  - role: trinity/logrotate
+    logrotate_files:
+      - prometheus-on-nodes
+    tags: logrotate
+
   - role: trinity/ssh
     tags: ssh
 
@@ -158,6 +163,7 @@
 
   - role: trinity/prometheus-slurm-job-exporter
     # Prometheus system exporter
+    when: "'slurm' in workload_manager "
     tags: prometheus, prometheus-slurm-job-exporter, monitoring
 
   - role: trinity/prometheus-ipmi-exporter
@@ -182,11 +188,6 @@
 
   - role: trinity/alertx
     tags: monitoring, alertx
-
-  - role: trinity/logrotate
-    logrotate_files:
-      - prometheus-on-nodes
-    tags: logrotate
 
   - role: trinity/osconfig
     tags: osconfig

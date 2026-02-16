@@ -138,6 +138,11 @@
     - role: trinity/chrony
       tags: chrony
 
+    - role: trinity/logrotate
+      logrotate_files:
+        - 'trinityx'
+      tags: logrotate
+
     - role: trinity/ssh
       tags: ssh
 
@@ -456,6 +461,7 @@
       prometheus_slurm_exporter_system_user: root
       prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_slurm_exporter.yml"
       prometheus_slurm_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      when: "'slurm' in workload_manager "
       tags: prometheus-slurm-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-slurm-job-exporter
@@ -463,6 +469,7 @@
       prometheus_slurm_job_exporter_system_user: root
       prometheus_slurm_job_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_slurm_job_exporter.yml"
       prometheus_slurm_job_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
+      when: "'slurm' in workload_manager "
       tags: prometheus-slurm-job-exporter, prometheus, monitoring
 
     - role: trinity/prometheus-ipmi-exporter
@@ -522,10 +529,6 @@
     - role: trinity/alertx
       alertx_drainer_enable: "{{ True if 'slurm' in workload_manager else False }}"
       tags: monitoring, alertx
-
-    - role: trinity/logrotate
-      logrotate_additional: '{{ workload_manager }}'
-      tags: logrotate
 
     - role: trinity/osconfig
       tags: osconfig
