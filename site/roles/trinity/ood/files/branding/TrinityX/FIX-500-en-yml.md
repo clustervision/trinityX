@@ -1,53 +1,52 @@
-# 修复 500：en.yml 中的 Jinja2 未渲染 (Psych::SyntaxError line 32)
+# Fix 500: unrendered Jinja2 in en.yml (Psych::SyntaxError around line 32)
 
-服务器上的 `en.yml` 含有未渲染的 Jinja2（`{% set %}`、`{{ }}`），YAML 解析会报错。按下面任选一种方式修复。
+The server's `en.yml` contains raw Jinja2 (`{% set %}`, `{{ }}`), so YAML parsing fails. Fix using one of the options below.
 
-## 方法一：在服务器上用 sed 一键修复（推荐）
+## Option 1: One-off fix with sed on the server (recommended)
 
-在 **yixin3-dev-ctrl001** 上执行（先备份再改）：
+On the node (e.g. **yixin3-dev-ctrl001**), after backing up:
 
 ```bash
 FILE=/var/www/ood/apps/sys/dashboard/config/locales/en.yml
 sudo cp "$FILE" "$FILE.bak"
 
-# 1) 删除含 Jinja2 的 6 行（约第 31–36 行：注释 + 4 行 {% set %} + 空行）
+# 1) Remove the Jinja2 block (comment + 4 {% set %} lines + blank line)
 sudo sed -i '/# Deploy with Ansible template module/,/^$/d' "$FILE"
-# 若上面命令删得不对，用下面按行号删（先 head -40 确认行号）：
+# If that removes too much/little, use line numbers (check with head -40):
 # sudo sed -i '31,36d' "$FILE"
 
-# 2) 把未渲染的占位符换成实际 HTML
-sudo sed -i 's|{{ trinityx_logo_html }}|<div class="trinityx-custom-logo-placeholder"><span class="trinityx-placeholder-label">Logo</span></div>|g' "$FILE"
-sudo sed -i 's|{{ trinityx_text_html }}|<div class="trinityx-custom-text-placeholder"><span class="trinityx-placeholder-label">Custom text</span></div>|g' "$FILE"
+# 2) Remove unrendered placeholders (match template: no circle/rectangle by default)
+sudo sed -i 's|{{ trinityx_logo_html }}||g' "$FILE"
+sudo sed -i 's|{{ trinityx_text_html }}||g' "$FILE"
+sudo sed -i 's|<div class="trinityx-custom-logo-wrap"></div>||g' "$FILE"
+sudo sed -i 's|<div class="trinityx-custom-text-wrap"></div>||g' "$FILE"
 
-# 3) 验证 YAML
+# 3) Validate YAML
 cd /var/www/ood/apps/sys/dashboard && ruby -r yaml -e "YAML.load_file('config/locales/en.yml')" && echo "OK"
 ```
 
-若无报错且输出 `OK`，在浏览器里 **Help → Restart Web Server** 再访问 dashboard。
+If you see no error and "OK", use **Help → Restart Web Server** in the dashboard and reload.
 
 ---
 
-## 方法二：用 vim 手动改
+## Option 2: Edit with vim
 
 1. `sudo vim /var/www/ood/apps/sys/dashboard/config/locales/en.yml`
-2. 删掉这 5 行（不要保留在文件里）：
+2. Delete these 5 lines (do not keep them):
    - `# Deploy with Ansible template module (not copy) so Jinja2 is evaluated.`
    - `{% set _logo_url = trinityx_custom_logo_url | default('') %}`
    - `{% set _welcome_text = trinityx_custom_welcome_text | default('') %}`
    - `{% set trinityx_logo_html = ... %}`
    - `{% set trinityx_text_html = ... %}`
-3. 搜索 `{{ trinityx_logo_html }}`，整段换成：  
-   `<div class="trinityx-custom-logo-placeholder"><span class="trinityx-placeholder-label">Logo</span></div>`  
-   （保留外面的 `<div class="trinityx-custom-logo-wrap">...</div>`，只换中间）
-4. 搜索 `{{ trinityx_text_html }}`，整段换成：  
-   `<div class="trinityx-custom-text-placeholder"><span class="trinityx-placeholder-label">Custom text</span></div>`
-5. 存盘后执行：  
+3. Search for `{{ trinityx_logo_html }}` and remove it (or replace with nothing).
+4. Search for `{{ trinityx_text_html }}` and remove it (or replace with nothing).
+5. Save, then run:  
    `cd /var/www/ood/apps/sys/dashboard && ruby -r yaml -e "YAML.load_file('config/locales/en.yml')"`  
-   无报错即可。
+   and ensure it does not raise.
 
 ---
 
-## 以后避免再出现
+## Avoiding this in the future
 
-**不要**把仓库里的 `en.yml.j2` 直接复制成 `en.yml` 使用。  
-应用 Ansible 的 **template** 任务从 `en.yml.j2` 生成 `en.yml`，这样 `{% %}` 和 `{{ }}` 会被替换成普通 HTML，不会触发 YAML 错误。
+Do **not** copy `en.yml.j2` from the repo to `en.yml` on the server.  
+Use Ansible **template** to generate `en.yml` from `en.yml.j2` so `{% %}` and `{{ }}` are replaced and YAML stays valid.
