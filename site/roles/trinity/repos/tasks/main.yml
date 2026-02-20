@@ -8,6 +8,18 @@
     - "{{ ansible_os_family }}.yaml"
   no_log: true
   ignore_errors: true
+  when: not is_airgap | default(False)
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file. Airgap.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_distribution }}.yaml"
+    - "airgap/{{ ansible_os_family }}.yaml"
+  no_log: true
+  ignore_errors: true
+  when: is_airgap | default(False)
 
 - block:
   - name: Rebuild RPM DB
