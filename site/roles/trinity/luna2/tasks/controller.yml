@@ -388,26 +388,25 @@
   - block:
     - name: Download X86 64-bit iPXE EFI image to tftpboot
       get_url:
-        url: "{{ luna2_x86_64_ipxe_files }}/ipxe.efi"
-        dest: "{{ luna2_tftpboot_directory }}/luna_ipxe.efi"
+        url: "{{ luna2_x86_64_ipxe_files }}/{{ item }}"
+        dest: "{{ luna2_tftpboot_directory }}/luna_{{ item }}"
         mode: '0444'
-      retries: "{{ rpm_retries | default(3) }}"
-      delay: "{{ rpm_delay | default(15) }}"
-
-    - name: Download iPXE legacy image to tftpboot
-      get_url:
-        url: "{{ luna2_x86_64_ipxe_files }}/undionly.kpxe"
-        dest: "{{ luna2_tftpboot_directory }}/luna_undionly.kpxe"
-        mode: '0444'
+      with_items:
+        - ipxe.efi
+        - undionly.kpxe
+        - snponly.efi
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
     when: system_arch == "x86_64" or luna2_download_all_arch_ipxe_files|default(False)
 
   - name: Download ARM 64-bit iPXE EFI image to tftpboot
     get_url:
-      url: "{{ luna2_aarch64_ipxe_files }}/ipxe.efi"
-      dest: "{{ luna2_tftpboot_directory }}/luna_ipxe_arm64.efi"
+      url: "{{ luna2_aarch64_ipxe_files }}/{{ item }}"
+      dest: "{{ luna2_tftpboot_directory }}/luna_{{ item | split('.') | first }}_arm64.efi"
       mode: '0444'
+    with_items:
+      - ipxe.efi
+      - snponly.efi
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
     when: system_arch == "aarch64" or luna2_download_all_arch_ipxe_files|default(False)
