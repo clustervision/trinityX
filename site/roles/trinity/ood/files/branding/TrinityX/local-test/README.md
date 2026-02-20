@@ -20,6 +20,10 @@ Edit these files locally for quick testing. When satisfied, copy changes back to
 
 So “导航、pinned_apps、custom_css 等” = the **navigation menus**, **pinned app list**, **custom CSS list**, and related options in `ondemand.yml`.
 
+### Where do section titles like "Interactive Apps" come from?
+
+They are **not** in **en.yml**. OOD builds them from each app's **manifest** (e.g. `manifest.yml`): the **category** field becomes the section title when `pinned_apps_group_by: category` is set. So "Interactive Apps", "Luna - Provisioning Engine", etc. are rendered by the dashboard view `widgets/pinned_apps/_group.html.erb`. You can only change their **style** in **custom.css** (e.g. color `#6969ff`, underline). To change the **text**, you would edit each app's manifest category on the server.
+
 ## How to use
 
 1. Edit **en.yml**, **custom.css**, **ondemand.yml** here.
