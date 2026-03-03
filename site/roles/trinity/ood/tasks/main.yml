@@ -104,7 +104,7 @@
 - name: Copy TrinityX OOD app icons to system apps
   ansible.builtin.copy:
     src: "branding/TrinityX/app-icons/{{ item.src }}"
-    dest: "/var/www/ood/apps/sys/{{ item.app }}/icon.svg"
+    dest: "/var/www/ood/apps/sys/{{ item.app }}/icon.png"
     mode: "0644"
     owner: root
     group: root
@@ -119,7 +119,7 @@
   ansible.builtin.lineinfile:
     path: "/var/www/ood/apps/sys/{{ item.app }}/manifest.yml"
     regexp: "^icon:"
-    line: "icon: /icon.svg"
+    line: "icon: /icon.png"
     create: no
   loop: "{{ trinityx_ood_app_icons | default([]) }}"
   when: ood_brand == "TrinityX"
