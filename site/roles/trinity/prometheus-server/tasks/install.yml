@@ -61,7 +61,7 @@
       ansible.builtin.get_url:
         url: "{{ prometheus_server_binary_url }}"
         dest: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
-        checksum: "sha256:{{ __prometheus_server_checksum }}"
+        checksum: "{{ ('sha256:' + __prometheus_server_checksum) if __prometheus_server_checksum is defined else '' }}"
         mode: 0644
       register: _download_archive
       until: _download_archive is succeeded

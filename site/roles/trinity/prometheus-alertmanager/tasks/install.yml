@@ -35,7 +35,7 @@
       ansible.builtin.get_url:
         url: "{{ prometheus_alertmanager_binary_url }}"
         dest: "/tmp/alertmanager-{{ prometheus_alertmanager_version }}.linux-{{ go_arch }}.tar.gz"
-        checksum: "sha256:{{ __prometheus_alertmanager_checksum }}"
+        checksum: "{{ ('sha256:' + __prometheus_alertmanager_checksum) if __prometheus_alertmanager_checksum is defined else '' }}"
         mode: 0644
       register: _download_archive
       until: _download_archive is succeeded

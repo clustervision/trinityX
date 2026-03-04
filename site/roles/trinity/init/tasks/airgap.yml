@@ -31,7 +31,9 @@
 
   - debug:
       msg: "Airgap Server: {{ ag_server }}"
-  when: init_ag_server_file.stat.exists
+  when:
+    - is_airgap | default(False) 
+    - init_ag_server_file.stat.exists
 
 - block:    
   - name: Set ag_server fact
