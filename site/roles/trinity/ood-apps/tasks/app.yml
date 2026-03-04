@@ -112,10 +112,15 @@
 # We do install the apps in the login image as it gives freedom and with the
 # scheduler we can deside whether to use the login node or not
 - name: Install packages on node if required
-  when:
-    - in_image
-    - ansible_facts['os_family'] == "RedHat"
   block:
+    - name: Include repos
+      include_role:
+        name: trinity/repos
+      vars:
+        trinityx_repositories: "{{ app.get('node_repositories', {}) }}"
+        package_based_repositories: []
+        use_baseurl_repositories: []
+
     - name: Install required yum packages
       ansible.builtin.dnf:
         name: "{{ item.name }}"
@@ -125,6 +130,9 @@
       loop: "{{ app.get('node_rpms', []) }}"
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
+  when:
+    - in_image
+    - ansible_facts['os_family'] == "RedHat"
 
 
 - name: Install APT packages on controller if required
