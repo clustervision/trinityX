@@ -9,6 +9,18 @@
   no_log: true
   ignore_errors: true
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file. Airgap.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_distribution }}.yaml"
+    - "airgap/{{ ansible_os_family }}.yaml"
+    - "airgap/main.yaml"
+  no_log: true
+  ignore_errors: true
+  when: is_airgap | default(False)
+
 # ---- when using DS389
 - block:
   - name: Generate ds389 root password and save it to /etc/trinity/passwords
@@ -24,6 +36,15 @@
                            chars=ascii_letters,digits,hexdigits') }}"
   when: ood_use_ds389 | default(False)
 # ----
+
+- name: Include repos
+  include_role:
+    name: trinity/repos
+  vars:
+    trinityx_repositories: '{{ ood_repositories }}'
+    package_based_repositories: []
+    use_baseurl_repositories: []
+  when: ood_repositories is defined
 
 - name: Install required rpms
   ansible.builtin.dnf:

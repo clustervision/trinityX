@@ -1,10 +1,42 @@
 ---
 
-package_based_repositories:
-  - name: epel-release
-  - name: rocky-repos
+package_based_repositories: []
+use_baseurl_repositories: []
+custom_repositories:
 
-use_baseurl_repositories:
-  - name: rocky-repos
-  - name: elrepo-release
+trinityx_repositories:
+  - name: BaseOS
+    repo: https://{{ ag_server }}/repos/BaseOS
+    gpgcheck: False
+  - name: extras
+    repo: https://{{ ag_server }}/repos/extras
+    gpgcheck: False
+  - name: AppStream
+    repo: https://{{ ag_server }}/repos/AppStream
+    gpgcheck: False
+  - name: crb
+    repo: https://{{ ag_server }}/repos/crb
+    gpgcheck: False
+  - name: epel
+    repo: https://{{ ag_server }}/repos/epel
+    gpgcheck: False
+  - name: plus
+    repo: https://{{ ag_server }}/repos/plus
+    gpgcheck: False
+  - name: highavailability
+    repo: https://{{ ag_server }}/repos/highavailability
+    gpgcheck: False
+  - name: trix
+    repo: https://{{ ag_server }}/trinityx/{{ trix_version }}/os/{{ hostvars[inventory_hostname].ansible_distribution|lower }}/{{ hostvars[inventory_hostname].ansible_distribution_major_version }}/{{ system_arch }}
+    gpgcheck: False
+  - name: luna2
+    repo: https://{{ ag_server }}/trinityx/{{ trix_version }}/luna2/{{ hostvars[inventory_hostname].ansible_distribution|lower }}/{{ hostvars[inventory_hostname].ansible_distribution_major_version }}/{{ system_arch }}
+    gpgcheck: False
+  - name: luna2-noarch
+    repo: https://{{ ag_server }}/trinityx/{{ trix_version }}/luna2/noarch/rpms
+    gpgcheck: False
 
+external_repository_rpms:
+  - name: https://{{ ag_server }}/trinityx/{{ trix_version }}/additional/noarch/rpms/elrepo-release-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.el{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.elrepo.noarch.rpm
+    file: elrepo-release.rpm
+    no_gpgcheck: True
