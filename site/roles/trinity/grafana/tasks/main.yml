@@ -1,14 +1,6 @@
 ---
-- name: Airgap. Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
-  include_vars: "{{ item }}"
-  with_first_found:
-    - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
-    - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
-    - "airgap/{{ ansible_distribution }}.yaml"
-    - "airgap/{{ ansible_os_family }}.yaml"
-    - "airgap/main.yaml"
-  no_log: true
-  ignore_errors: true
+- name: Load Airgap vars
+  include_vars: "airgap/main.yaml"
   when: is_airgap | default(False)
 
 - name: Generate grafana admin password and save it to /etc/trinity/passwords
@@ -59,11 +51,11 @@
     manager: auto
 
 - name: Install camptocamp-prometheus-alertmanager-datasource (Grafana < 10.2.0)
-  command: grafana-cli --pluginUrl="https://updates.clustervision.com/trinityx/external/monitoring/camptocamp-prometheus-alertmanager-datasource/{{ trix_stream }}/camptocamp-prometheus-alertmanager-datasource-2.2.0.zip" plugins install  camptocamp-prometheus-alertmanager-datasource
+  command: grafana-cli --pluginUrl="https://{{ grafana_plugin_url }}/trinityx/external/monitoring/camptocamp-prometheus-alertmanager-datasource/{{ trix_stream }}/camptocamp-prometheus-alertmanager-datasource-2.2.0.zip" plugins install  camptocamp-prometheus-alertmanager-datasource
   when: ansible_facts.packages['grafana'][0]['version'] is version('10.2.0', '<')
 
 - name: Install grafana-camptocamp-prometheus-alertmanager-datasource (Grafana >= 10.2.0)
-  command: grafana cli --pluginUrl="https://updates.clustervision.com/trinityx/external/monitoring/camptocamp-prometheus-alertmanager-datasource/{{ trix_stream }}/camptocamp-prometheus-alertmanager-datasource-2.2.0.zip" plugins install  camptocamp-prometheus-alertmanager-datasource
+  command: grafana cli --pluginUrl="https://{{ grafana_plugin_url }}/trinityx/external/monitoring/camptocamp-prometheus-alertmanager-datasource/{{ trix_stream }}/camptocamp-prometheus-alertmanager-datasource-2.2.0.zip" plugins install  camptocamp-prometheus-alertmanager-datasource
   when: ansible_facts.packages['grafana'][0]['version'] is version('10.2.0', '>=')
 
 - name: Configure LDAP
@@ -148,10 +140,46 @@
 #     state: present
 #   notify: restart grafana-server
 
+# ----------------
+
+- name: Set fallback interface
+  set_fact:
+    grafana_fallback_interface: "{{ trix_ctrl_external_nic }}"
+  when: trix_ctrl_external_nic is defined
+
+- name: Set fallback interface
+  set_fact:
+    grafana_fallback_interface: "{{ firewalld_public_interfaces|first }}"
+  when: 
+    - grafana_fallback_interface is not defined
+    - firewalld_public_interfaces|length == 1
+
+- name: Set external interface ip address fact
+  set_fact:
+    grafana_ipv4_address: "{{ ansible_default_ipv4.address }}"
+  when: ansible_default_ipv4.address is defined
+     
+- name: Set external interface ip address fact
+  set_fact:
+    grafana_ipv4_address: "{{ hostvars[inventory_hostname]['ansible_'+grafana_fallback_interface]['ipv4']['address'] }}"
+  when:
+    - ansible_default_ipv4.address is not defined
+    - grafana_fallback_interface is defined
+
+- name: Set external interface ip address fact
+  set_fact:
+    grafana_ipv4_address: "{{ trix_external_fqdn }}"
+  when: grafana_ipv4_address is not defined
+
+- debug:
+    msg: "Using {{ grafana_ipv4_address }} for configuring Grafana"
+
+# ----------------
+
 - name: List organisations
   uri:
     method: GET
-    url: "{{ grafana_protocol }}://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/org/"
+    url: "{{ grafana_protocol }}://{{ grafana_ipv4_address }}:{{ grafana_port }}/api/org/"
     user: "{{ grafana_admin }}"
     password: '{{ grafana_admin_pwd }}'
     return_content: true
@@ -163,7 +191,7 @@
 - name: Configure organization
   uri:
     method: PUT
-    url: "{{ grafana_protocol }}://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/org"
+    url: "{{ grafana_protocol }}://{{ grafana_ipv4_address }}:{{ grafana_port }}/api/org"
     user: "{{ grafana_admin }}"
     password: '{{ grafana_admin_pwd }}'
     validate_certs: "no"
@@ -177,7 +205,7 @@
 - name: Set home dashboard
   uri:
     method: PUT
-    url: "{{ grafana_protocol }}://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/org/preferences"
+    url: "{{ grafana_protocol }}://{{ grafana_ipv4_address }}:{{ grafana_port }}/api/org/preferences"
     user: "{{ grafana_admin }}"
     password: '{{ grafana_admin_pwd }}'
     validate_certs: "no"
