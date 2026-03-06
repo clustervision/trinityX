@@ -162,7 +162,7 @@ REDHAT_RELEASE=$(grep -i "Red Hat Enterprise Linux" /etc/os-release | grep -oE '
 if [ "$REDHAT_RELEASE" ]; then
   ARCH=$(uname -m)
   subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-${ARCH}-rpms
-  if [ "$IS_AIRGAP" ]; then; then
+  if [ "$IS_AIRGAP" ]; then
     dnf install https://${AG_SERVER}/rpms/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
   else
     dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
