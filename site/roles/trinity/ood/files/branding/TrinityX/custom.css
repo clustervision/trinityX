@@ -534,20 +534,46 @@ footer span {
     }
 }
 
-/* Override Shell SSH launcher icon to use PNG ---------------------------- */
+/* Override Shell SSH launcher icon to use PNG and align with other app tiles */
 /* Hide built‑in FontAwesome terminal icon on the Shell SSH launcher */
 a.launcher-click[href*="/pun/sys/shell/ssh"] .app-icon.fas.fa-terminal {
     display: none !important;
 }
-
+/* Ensure hidden icon wrapper does not reserve space */
+a.launcher-click[href*="/pun/sys/shell/ssh"] .center-block:has(.app-icon.fas.fa-terminal),
+a.launcher-click[href*="/pun/sys/shell/ssh"] .app-icon.fas.fa-terminal {
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+}
+/* Same flex layout as other app tiles: column, centered, same icon area height */
+a.launcher-click[href*="/pun/sys/shell/ssh"] {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: center;
+    min-height: 100%;
+}
+/* Icon area: match OOD app tile icon size (64px) and spacing */
 a.launcher-click[href*="/pun/sys/shell/ssh"]::before {
     content: "";
     display: block;
-    width: 72px; 
-    height: 72px;
-    margin: 0 auto 12px; 
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    margin: 0 0 12px 0;
     background-image: url("/pun/sys/dashboard/apps/icon/shell/sys/sys");
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
+}
+/* Align title and description like other tiles (same margins) */
+a.launcher-click[href*="/pun/sys/shell/ssh"] .app-title,
+a.launcher-click[href*="/pun/sys/shell/ssh"] .app-description {
+    margin-left: 0;
+    margin-right: 0;
 }
