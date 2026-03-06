@@ -24,7 +24,8 @@ h3.apps-section-header-blue {
     padding-left: 0 !important; 
     border: none !important;
     box-shadow: none !important;
-    margin-bottom: 20px !important;       
+    margin-bottom: 20px !important;
+    margin-top: 20px !important;    
 }
 
 .navbar,
@@ -121,8 +122,12 @@ header.navbar,
     margin-bottom: 8px;
     color: #6969ff;
     font-weight: 600;
-}
 
+}
+.app-title {
+    font-weight: 700 !important;
+    font-size: 1.5em !important;
+}
 /* Welcome title and subtitle: bold, correct size (override dashboard defaults) */
 .trinityx-hero .trinityx-hero-title-main,
 .trinityx-hero-title-main {
@@ -236,11 +241,11 @@ header.navbar,
 .trinityx-hero .trinityx-hero-buttons a.trinityx-btn-primary,
 .trinityx-hero-buttons a[href*="docs.clustervision.com"],
 .trinityx-hero-buttons a[href*="support.clustervision.com"] {
-    background: #2f6fff !important;
-    background-color: #2f6fff !important;
+    background: #6969ff !important;
+    background-color: #6969ff !important;
     color: #fff !important;
-    border: 2px solid #2f6fff !important;
-    border-color: #2f6fff !important;
+    border: 2px solid #6969ff !important;
+    border-color: #6969ff !important;
 }
 .trinityx-hero-buttons a.trinityx-btn-primary:hover,
 .trinityx-hero-buttons a.trinityx-btn-primary:focus,
@@ -260,8 +265,8 @@ header.navbar,
 }
 .trinityx-btn-primary:hover,
 .trinityx-btn-primary:focus {
-    background: #2559cc !important;
-    border-color: #2559cc !important;
+    background: #6969ff !important;
+    border-color: #6969ff !important;
     color: #fff !important;
     text-decoration: none;
 }
@@ -361,9 +366,8 @@ header.navbar,
     margin: 0 0 4px;
 }
 
-/* Pinned app category titles: TEXT color #6969ff only, no background.
- * OOD renders category names (e.g. "Interactive Apps") in widgets/pinned_apps/_group.html.erb.
- * Style only the title text; keep group container transparent; optional blue underline below title.
+/* Pinned app category titles: "Luna Provisioning Engine" → #5376ea; all others → #6969ff.
+ * OOD renders category names in widgets/pinned_apps/_group.html.erb.
  */
 #pinned_apps h2,
 #pinned_apps .pinned_apps_section_title,
@@ -379,7 +383,33 @@ header.navbar,
     width: 100%;
     background: transparent !important;
 }
-/* Group wrapper: no background, only first line (title text) in blue */
+/* Luna Provisioning Engine section: category title, border and text use #5376ea */
+#pinned_apps .pinned_apps_group:has(h2),
+#pinned_apps .group:has(h2) {
+    border-bottom-color: #6969ff !important;
+}
+#pinned_apps .pinned_apps_group[id*="luna"] h2,
+#pinned_apps .pinned_apps_group[id*="Luna"] h2,
+#pinned_apps .group[id*="luna"] h2,
+#pinned_apps .group[id*="Luna"] h2,
+#pinned_apps .pinned_apps_group[id*="luna"].app-launcher-category-title,
+#pinned_apps .pinned_apps_group[id*="Luna"].app-launcher-category-title {
+    color: #5376ea !important;
+    border-bottom-color: #5376ea !important;
+}
+#pinned_apps .pinned_apps_group[id*="luna"],
+#pinned_apps .pinned_apps_group[id*="Luna"],
+#pinned_apps .group[id*="luna"],
+#pinned_apps .group[id*="Luna"] {
+    border-bottom-color: #5376ea !important;
+}
+#pinned_apps .pinned_apps_group[id*="luna"]::first-line,
+#pinned_apps .pinned_apps_group[id*="Luna"]::first-line,
+#pinned_apps .group[id*="luna"]::first-line,
+#pinned_apps .group[id*="Luna"]::first-line {
+    color: #5376ea !important;
+}
+/* Group wrapper: no background, first line (title) blue */
 #pinned_apps .pinned_apps_group,
 #pinned_apps .group {
     background: transparent !important;
@@ -534,46 +564,22 @@ footer span {
     }
 }
 
-/* Override Shell SSH launcher icon to use PNG and align with other app tiles */
+/* Override Shell SSH launcher icon to use PNG ---------------------------- */
 /* Hide built‑in FontAwesome terminal icon on the Shell SSH launcher */
 a.launcher-click[href*="/pun/sys/shell/ssh"] .app-icon.fas.fa-terminal {
     display: none !important;
 }
-/* Ensure hidden icon wrapper does not reserve space */
-a.launcher-click[href*="/pun/sys/shell/ssh"] .center-block:has(.app-icon.fas.fa-terminal),
-a.launcher-click[href*="/pun/sys/shell/ssh"] .app-icon.fas.fa-terminal {
-    width: 0 !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    min-height: 0 !important;
-}
-/* Same flex layout as other app tiles: column, centered, same icon area height */
-a.launcher-click[href*="/pun/sys/shell/ssh"] {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    text-align: center;
-    min-height: 100%;
-}
-/* Icon area: match OOD app tile icon size (64px) and spacing */
+
+/* Use Shell app PNG icon instead */
 a.launcher-click[href*="/pun/sys/shell/ssh"]::before {
     content: "";
     display: block;
-    flex-shrink: 0;
-    width: 64px;
-    height: 64px;
-    margin: 0 0 12px 0;
+    width: 72px;
+    height: 72px;
+    margin-left: 108px;
+    margin-top: 24px;
+    margin-bottom: 8px;
     background-image: url("/pun/sys/dashboard/apps/icon/shell/sys/sys");
     background-size: contain;
     background-repeat: no-repeat;
-    background-position: center;
-}
-/* Align title and description like other tiles (same margins) */
-a.launcher-click[href*="/pun/sys/shell/ssh"] .app-title,
-a.launcher-click[href*="/pun/sys/shell/ssh"] .app-description {
-    margin-left: 0;
-    margin-right: 0;
 }
