@@ -142,44 +142,20 @@
 
 # ----------------
 
-- name: Set fallback interface
-  set_fact:
-    grafana_fallback_interface: "{{ trix_ctrl_external_nic }}"
-  when: trix_ctrl_external_nic is defined
-
-- name: Set fallback interface
-  set_fact:
-    grafana_fallback_interface: "{{ firewalld_public_interfaces|first }}"
-  when: 
-    - grafana_fallback_interface is not defined
-    - firewalld_public_interfaces|length == 1
-
 - name: Set external interface ip address fact
   set_fact:
-    grafana_ipv4_address: "{{ ansible_default_ipv4.address }}"
-  when: ansible_default_ipv4.address is defined
-     
-- name: Set external interface ip address fact
-  set_fact:
-    grafana_ipv4_address: "{{ hostvars[inventory_hostname]['ansible_'+grafana_fallback_interface]['ipv4']['address'] }}"
-  when:
-    - ansible_default_ipv4.address is not defined
-    - grafana_fallback_interface is defined
-
-- name: Set external interface ip address fact
-  set_fact:
-    grafana_ipv4_address: "{{ trix_external_fqdn }}"
-  when: grafana_ipv4_address is not defined
+    grafana_ip_address: "{{ trix_external_fqdn }}"
+  when: grafana_ip_address is not defined
 
 - debug:
-    msg: "Using {{ grafana_ipv4_address }} for configuring Grafana"
+    msg: "Using {{ grafana_ip_address }} for configuring Grafana"
 
 # ----------------
 
 - name: List organisations
   uri:
     method: GET
-    url: "{{ grafana_protocol }}://{{ grafana_ipv4_address }}:{{ grafana_port }}/api/org/"
+    url: "{{ grafana_protocol }}://{{ grafana_ip_address }}:{{ grafana_port }}/api/org/"
     user: "{{ grafana_admin }}"
     password: '{{ grafana_admin_pwd }}'
     return_content: true
@@ -191,7 +167,7 @@
 - name: Configure organization
   uri:
     method: PUT
-    url: "{{ grafana_protocol }}://{{ grafana_ipv4_address }}:{{ grafana_port }}/api/org"
+    url: "{{ grafana_protocol }}://{{ grafana_ip_address }}:{{ grafana_port }}/api/org"
     user: "{{ grafana_admin }}"
     password: '{{ grafana_admin_pwd }}'
     validate_certs: "no"
@@ -205,7 +181,7 @@
 - name: Set home dashboard
   uri:
     method: PUT
-    url: "{{ grafana_protocol }}://{{ grafana_ipv4_address }}:{{ grafana_port }}/api/org/preferences"
+    url: "{{ grafana_protocol }}://{{ grafana_ip_address }}:{{ grafana_port }}/api/org/preferences"
     user: "{{ grafana_admin }}"
     password: '{{ grafana_admin_pwd }}'
     validate_certs: "no"

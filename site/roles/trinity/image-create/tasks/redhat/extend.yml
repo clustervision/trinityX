@@ -50,7 +50,13 @@
     dest: "{{ image_path }}/etc/localtime"
     state: link
 
-
+- block:
+  - synchronize:
+      src: "/etc/pki/"
+      dest: "{{ image_path }}/etc/pki/"
+    ignore_errors: true
+  when: is_airgap | default(False)
+  
 - block:
   - synchronize:
       src: "/etc/yum.repos.d/redhat.repo"

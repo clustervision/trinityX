@@ -45,6 +45,13 @@
     with_items: "{{ trinityx_repositories }}"
     when: item.gpgkey is defined and item.gpgdata is defined
 
+  - name: Install dnf config manager plugin
+    package: 
+      name: dnf-command(config-manager)
+      state: present
+      use: dnf
+    ignore_errors: true
+
   # - name: Add GPG keys to RPM DB. normally NOT needed - Antoine
   #   ansible.builtin.rpm_key:
   #     state: present
@@ -73,6 +80,7 @@
   # Notify doesn't work inside chroot.... sigh..
   - ansible.builtin.include_tasks:
       file: mangling.yml
+    when: external_repository_rpms | default({}) | length > 0
 
   - name: Install external repo Packages
     dnf:
@@ -94,6 +102,7 @@
 
   - ansible.builtin.include_tasks:
       file: mangling.yml
+    when: package_based_repositories | default([]) | length > 0
 
   - name: Configure custom repos
     ansible.builtin.yum_repository:
