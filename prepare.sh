@@ -221,9 +221,7 @@ if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
     add_message "- make install"
     show_message
   else
-    if [ "$IS_AIRGAP" ]; then
-      yes y | dnf -y install https://${AG_SERVER}/rpms/epel/zfs-release-2-8$(rpm --eval "%{dist}").noarch.rpm
-    else 
+    if [ ! "$IS_AIRGAP" ]; then
       yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-8$(rpm --eval "%{dist}").noarch.rpm
     fi
     yes y | dnf -y install zfs zfs-dkms
