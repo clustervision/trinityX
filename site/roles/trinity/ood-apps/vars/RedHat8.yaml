@@ -1,11 +1,23 @@
 ---
+ood_luna_apps_version: 2.0.latest
+ood_luna_apps_url: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/noarch/pip/{{ trix_stream }}/ood/trinityx-ood-{{ ood_luna_apps_version }}.tar.gz # noqa: yaml[line-length]
+ood_apps_admin_group: admins
+
+ood_apps_path: /var/www/ood/apps/sys/
+
+ood_apps_arch_map:
+  x86_64: 'amd64'
+  aarch64: 'arm64'
+
+ood_apps_arch: "{{ ood_apps_arch_map[system_arch] | default(system_arch) }}"
+
 
 ood_apps:
   
   - name: jupyter
     type: bc
     node_rpms:
-      - name: [python3.13, python3.13-pip]
+      - name: [python3.11, python3.11-pip]
     node_apts:
       - name: [python3, python3-pip, python3-venv]
   
@@ -23,12 +35,12 @@ ood_apps:
     props:
       idle_timeout: 3600
       desktops:
-        - kde
-      desktops_default: kde
+        - xfce
+      desktops_default: xfce
     node_rpms:
-    - name: https://yum.osc.edu/ondemand/4.1/ondemand-release-compute-4.1-1.el{{ ansible_distribution_major_version }}.noarch.rpm
+    - name: https://yum.osc.edu/ondemand/4.0/ondemand-release-compute-4.0-1.el{{ ansible_distribution_major_version }}.noarch.rpm
       no_gpgcheck: true
-    - name: ["turbovnc", "python3-websockify", "dbus-x11", "@KDE"]
+    - name: ["turbovnc", "python3-websockify", "dbus-x11", "@xfce"]
       enablerepo: crb
     tasks: ["desktop.yml"]
 
@@ -110,3 +122,4 @@ ood_apps:
   - name: alertmanager
     mode: "0750"
   - name: grafana
+

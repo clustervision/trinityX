@@ -1,21 +1,22 @@
 ---
+ood_luna_apps_url: https://{{ ag_server }}/trinityx/{{ trix_version }}/luna2/noarch/pip/{{ trix_stream }}/ood/trinityx-ood-{{ ood_luna_apps_version }}.tar.gz # noqa: yaml[line-length]
 
 ood_apps:
   
   - name: jupyter
     type: bc
     node_rpms:
-      - name: [python3.13, python3.13-pip]
+      - name: [python3.11, python3.11-pip]
     node_apts:
       - name: [python3, python3-pip, python3-venv]
   
   - name: codeserver
     type: bc
     node_rpms:
-      - name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-{{ ood_apps_arch }}.rpm"
+      - name: "https://{{ ag_server }}/rpms/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-{{ ood_apps_arch }}.rpm"
         no_gpgcheck: true
     node_apts:
-      - name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_{{ ood_apps_arch }}.deb"
+      - name: "https://{{ ag_server }}/rpms/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_{{ ood_apps_arch }}.deb"
   
   - name: desktop
     override: true
@@ -23,12 +24,14 @@ ood_apps:
     props:
       idle_timeout: 3600
       desktops:
-        - kde
-      desktops_default: kde
+        - xfce
+      desktops_default: xfce
+    node_repositories:
+    - name: ondemand-compute
+      repo: https://{{ ag_server }}/repos/ondemand-compute
+      gpgcheck: False
     node_rpms:
-    - name: https://yum.osc.edu/ondemand/4.1/ondemand-release-compute-4.1-1.el{{ ansible_distribution_major_version }}.noarch.rpm
-      no_gpgcheck: true
-    - name: ["turbovnc", "python3-websockify", "dbus-x11", "@KDE"]
+    - name: ["turbovnc", "python3-websockify", "dbus-x11", "@xfce"]
       enablerepo: crb
     tasks: ["desktop.yml"]
 
@@ -110,3 +113,4 @@ ood_apps:
   - name: alertmanager
     mode: "0750"
   - name: grafana
+
