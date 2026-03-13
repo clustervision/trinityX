@@ -1,6 +1,22 @@
 include:
   - project: 'ClusterVision/gitlab-cicd-pipelines'
     file: '/trinityx-combined-pipeline.yml'
+    # Test shared fixes from the sandbox branch.
+    ref: 'trix-sandbox'
 
 stages:
   - test
+
+default:
+  retry:
+    max: 1
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+      - scheduler_failure
+      - api_failure
+
+variables:
+  # Keep weekly extra playbooks disabled unless explicitly enabled.
+  RUN_WEEKLY_EXTRAS: "false"
+  RUN_FULL_MATRIX: "false"
