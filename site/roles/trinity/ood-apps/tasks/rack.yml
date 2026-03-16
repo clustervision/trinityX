@@ -1,0 +1,22 @@
+---
+
+- block:
+  - name: Load Rack variables.
+    include_vars: "../defaults/rack.yml"
+
+  - name: Downloading Rack nodejs package
+    get_url:
+      url: "{{ rack_noarch_nodejs_repository }}/{{ rack_gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/rack/{{ rack_gui_nodejs }}"
+
+  - name: Unpack Rack nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/rack/{{ rack_gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/rack/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup Rack nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/rack/{{ rack_gui_nodejs }}"
+      state: absent
+  when: not in_image
