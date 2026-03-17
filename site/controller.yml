@@ -367,8 +367,8 @@
       ood_enable_ssl: true
       ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
       ood_use_ds389: '{{ trix_use_ds389 | default(False) }}'
-      ood_ssl_certificate: "{{ (ssl_cert_path | default('/etc/ssl/certs')) }}/{{ ansible_fqdn }}.crt"
-      ood_ssl_certificate_key: "{{ (ssl_cert_path | default('/etc/ssl/certs')) }}/{{ ansible_fqdn }}.key"
+      ood_ssl_certificate: "{{ (ssl_cert_path)) }}/{{ ansible_fqdn }}.crt"
+      ood_ssl_certificate_key: "{{ (ssl_cert_path)) }}/{{ ansible_fqdn }}.key"
       ood_login_host: "{{ trix_external_fqdn }}"
       ood_ldap_host: "{{ trix_ctrl_ip }}"
       ood_admin_group: "{{ admin_group }}"
@@ -383,6 +383,11 @@
 
     # App icons must run after ood-apps (app dirs are created there)
     - role: trinity/ood
+      ood_enable_ssl: true
+      ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
+      ood_use_ds389: '{{ trix_use_ds389 | default(False) }}'
+      ood_ssl_certificate: "{{ (ssl_cert_path)) }}/{{ ansible_fqdn }}.crt"
+      ood_ssl_certificate_key: "{{ (ssl_cert_path)) }}/{{ ansible_fqdn }}.key"
       tasks_from: app-icons.yml
       tags: ood, branding, ood-app-icons
       when: enable_ood
