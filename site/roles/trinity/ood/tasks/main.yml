@@ -104,34 +104,7 @@
     - ood
     - branding
 
-- name: Copy TrinityX OOD app icons to system apps
-  ansible.builtin.copy:
-    src: "branding/TrinityX/app-icons/{{ item.src }}"
-    dest: "/var/www/ood/apps/sys/{{ item.app }}/icon.png"
-    mode: "0644"
-    owner: root
-    group: root
-  loop: "{{ trinityx_ood_app_icons | default([]) }}"
-  when: ood_brand == "TrinityX"
-  ignore_errors: true
-  tags:
-    - ood
-    - branding
-    - ood-app-icons
-
-- name: Ensure TrinityX OOD app manifests use icon.png
-  ansible.builtin.lineinfile:
-    path: "/var/www/ood/apps/sys/{{ item.app }}/manifest.yml"
-    regexp: "^icon:"
-    line: "icon: /icon.png"
-    create: no
-  loop: "{{ trinityx_ood_app_icons | default([]) }}"
-  when: ood_brand == "TrinityX"
-  ignore_errors: true
-  tags:
-    - ood
-    - branding
-    - ood-app-icons
+# App icon copy moved to app-icons.yml - runs after ood-apps (see controller.yml)
 
 - name: Apply TrinityX en.yml (welcome_html) branding
   ansible.builtin.template:
