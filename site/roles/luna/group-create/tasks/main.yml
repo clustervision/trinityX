@@ -25,6 +25,12 @@
   ignore_errors: true
   no_log: true
 
+- name: Verify if default bmcsetup already exists in luna
+  shell: "luna bmcsetup show default-bmcsetup"
+  register: luna_bmcsetup_in_luna
+  ignore_errors: true
+  no_log: true
+
 
 - block:
   - set_fact:
@@ -41,11 +47,15 @@
       - post.rd
 
   - name: Creating group in luna
-    shell: "luna group add --osimage {{ luna_image_name }} -qpart /tmp/part.rd -qpost /tmp/post.rd {{ luna_group_name }}"
+    shell: "luna group add --osimage {{ luna_image_name }} -qpart /tmp/part.rd -qpost /tmp/post.rd --setupbmc no {{ luna_group_name }}"
     when: luna_image_distri is defined
 
   - name: Creating group in luna
-    shell: "luna group add --osimage {{ luna_image_name }} {{ luna_group_name }}"
+    shell: "luna group add --osimage {{ luna_image_name }} --setupbmc no {{ luna_group_name }}"
     when: luna_image_distri is not defined
+
+  - name: Assigning default bmcsetup to group in luna
+    shell: "luna group change --bmcsetupname default-bmcsetup --setupbmc yes {{ luna_group_name }}"
+    when: luna_bmcsetup_in_luna is defined and luna_bmcsetup_in_luna.rc|int != 0
   when: luna_group_in_luna is defined and luna_group_in_luna.rc|int != 0
 
