@@ -1,6 +1,23 @@
 include:
   - project: 'ClusterVision/gitlab-cicd-pipelines'
     file: '/trinityx-combined-pipeline.yml'
+    # Explicit so it can be swapped to a test branch during troubleshooting.
+    ref: 'main'
 
 stages:
   - test
+
+default:
+  retry:
+    max: 1
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+      - scheduler_failure
+      - api_failure
+
+variables:
+  # Keep weekly extra playbooks disabled unless explicitly enabled.
+  RUN_WEEKLY_EXTRAS: "false"
+  # Run the full 10-OS matrix on every scheduled run.
+  RUN_FULL_MATRIX: "true"
