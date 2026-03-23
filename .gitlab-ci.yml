@@ -21,3 +21,15 @@ variables:
   RUN_WEEKLY_EXTRAS: "false"
   # Run the full 10-OS matrix on every scheduled run.
   RUN_FULL_MATRIX: "true"
+
+# Default to Rocky 9 only for feature branches and MRs
+# Full matrix only for nightly scheduled runs
+.rules-scheduled-full-matrix: &rules-scheduled-full-matrix
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      variables:
+        RUN_FULL_MATRIX: "true"
+    - when: always
+      variables:
+        RUN_FULL_MATRIX: "false"
+        DISTRO_MATRIX: "rocky-9"
