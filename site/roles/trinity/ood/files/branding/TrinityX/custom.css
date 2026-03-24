@@ -31,8 +31,8 @@ h3.apps-section-header-blue {
 /* "Luna Provisioning Engine" header only: use #5376ea (same as pinned_apps Luna).
  * On dashboard, order is: first h3 = "Interactive Apps", second h3 = "Luna Provisioning Engine".
  * Target by position; if your layout differs, adjust or add a more specific wrapper.
+ * (OOD has no #app-launcher-container; tiles use class .app-launcher-container on each col.)
  */
-#app-launcher-container h3.apps-section-header-blue:nth-of-type(2),
 .dashboard-app-launcher h3.apps-section-header-blue:nth-of-type(2),
 #dashboard h3.apps-section-header-blue:nth-of-type(2),
 main h3.apps-section-header-blue:nth-of-type(2),
@@ -151,13 +151,14 @@ header.navbar,
     font-size: 1.5em !important;
 }
 /* Welcome title and subtitle: bold, correct size (override dashboard defaults) */
+.trinityx-hero h1.trinityx-hero-title.trinityx-hero-title-main,
 .trinityx-hero .trinityx-hero-title-main,
 .trinityx-hero-title-main {
     font-size: 32px !important;
     font-weight: 700 !important;
     text-align: center;
     margin: 0 0 8px;
-    color: #1b1b3a !important;
+    color: #2d2d2d !important;
 }
 .trinityx-hero .trinityx-hero-subtitle,
 .trinityx-hero-subtitle {
@@ -174,7 +175,7 @@ header.navbar,
     font-weight: 600 !important; /* Geist SemiBold */
     font-family: 'Geist Variable', sans-serif;
 }
-.trinityx-hero-title {
+.trinityx-hero-title:not(.trinityx-hero-title-main) {
     font-size: 22px;
     line-height: 1.4;
     margin: 0;
@@ -529,11 +530,6 @@ h3.apps-section-header-blue:nth-of-type(2) + .row .launcher-click *,
 #pinned_apps .pinned_apps_group[id*="luna"] .launcher-click *,
 #pinned_apps .pinned_apps_group[id*="Luna"] .launcher-click,
 #pinned_apps .pinned_apps_group[id*="Luna"] .launcher-click *,
-#app-launcher-container .row:nth-of-type(2) .app-title,
-#app-launcher-container .row:nth-of-type(2) .app-description,
-#app-launcher-container .row:nth-of-type(2) .text-muted,
-#app-launcher-container .row:nth-of-type(2) .launcher-click,
-#app-launcher-container .row:nth-of-type(2) .launcher-click *,
 .dashboard-app-launcher .row:nth-of-type(2) .app-title,
 .dashboard-app-launcher .row:nth-of-type(2) .app-description,
 .dashboard-app-launcher .row:nth-of-type(2) .text-muted,
@@ -554,13 +550,20 @@ h3.apps-section-header-blue:nth-of-type(2) + .row .launcher-click *,
     filter: none !important;
 }
 
-/* Remove shadow from app launcher outer container (id or class, and its children) */
-#app-launcher-container,
+/* Remove shadow from each tile column (.app-launcher-container) and descendants */
 .app-launcher-container,
-#app-launcher-container *,
 .app-launcher-container * {
     box-shadow: none !important;
     filter: none !important;
+}
+
+/* Equal spacing between pinned app tiles (OOD: widgets/pinned_apps/_app.html.erb).
+ * Each tile is .row > .col-* .app-launcher-container — there is no #app-launcher-container.
+ * Bootstrap 5 .row uses --bs-gutter-x / --bs-gutter-y on the row for padding on columns. */
+#dashboard .row:has(> .app-launcher-container),
+.row:has(> .app-launcher-container) {
+    --bs-gutter-x: 16px !important;
+    --bs-gutter-y: 6px !important;
 }
 .app-launcher .launcher-click *,
 .app-launcher .launcher-click::before,
