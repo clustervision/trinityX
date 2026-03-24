@@ -104,6 +104,34 @@
         - app.get('override') | default(override, true) | default((trix_shared + '/modulefiles/ood-' + app.name + '.lua') is not exists, true)
       failed_when: false
     
+    - name: Copy TrinityX icon for app {{ app.name }}
+      ansible.builtin.copy:
+        src: "app-icons/{{ app.icon }}"
+        dest: "{{ app_path }}/icon.png"
+        mode: "0644"
+        owner: root
+        group: root
+      when:
+        - ood_brand == "TrinityX"
+        - app.icon is defined
+        - app_enabled
+      ignore_errors: true
+      notify: Run update_ood
+    
+    - name: Ensure manifest uses TrinityX icon for app {{ app.name }}
+      ansible.builtin.lineinfile:
+        path: "{{ app_path }}/manifest.yml"
+        regexp: "^icon:"
+        line: "icon: /icon.png"
+        create: no
+      when:
+        - ood_brand == "TrinityX"
+        - app_enabled
+        - app.icon is defined
+        - (app_path + '/manifest.yml') is exists
+      ignore_errors: true
+      notify: Run update_ood
+
     - name: Include additional tasks for app {{ app.name }}
       include_tasks: "{{ item }}"
       loop: "{{ app.get('tasks', []) }}"
