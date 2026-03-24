@@ -7,6 +7,22 @@ include:
 stages:
   - test
 
+# Controls which distros are tested based on how the pipeline is triggered.
+#
+# - Nightly schedule  : full matrix (all distros), as before.
+# - Branch push / MR  : Rocky 9 only, automatically.
+# - Manual trigger    : Rocky 9 by default; override DISTRO_MATRIX in the
+#                       "Run pipeline" UI to cherry-pick specific distros,
+#                       e.g. "rocky8", "alma9", "rocky8 alma9 rhel9", etc.
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      variables:
+        RUN_FULL_MATRIX: "true"
+    - when: always
+      variables:
+        RUN_FULL_MATRIX: "false"
+
 default:
   retry:
     max: 1
@@ -17,19 +33,21 @@ default:
       - api_failure
 
 variables:
-  # Keep weekly extra playbooks disabled unless explicitly enabled.
   RUN_WEEKLY_EXTRAS: "false"
-  # Run the full 10-OS matrix on every scheduled run.
-  RUN_FULL_MATRIX: "true"
-
-# Default to Rocky 9 only for feature branches and MRs
-# Full matrix only for nightly scheduled runs
-.rules-scheduled-full-matrix: &rules-scheduled-full-matrix
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      variables:
-        RUN_FULL_MATRIX: "true"
-    - when: always
-      variables:
-        RUN_FULL_MATRIX: "false"
-        DISTRO_MATRIX: "rocky-9"
+  RUN_FULL_MATRIX: "false"
+  # Shown as a dropdown in the "Run pipeline" UI.
+  # On branch pushes/MRs this defaults to rocky9 automatically.
+  # On scheduled runs RUN_FULL_MATRIX=true overrides this entirely.
+  DISTRO_MATRIX:
+    value: "rocky9"
+    options:
+      - "rocky9"
+      - "rocky8"
+      - "rocky10"
+      - "alma9"
+      - "alma8"
+      - "alma10"
+      - "rhel8"
+      - "rhel9"
+      - "centos9"
+    description: "Distro to test. Ignored on nightly scheduled runs (full matrix runs instead)."
