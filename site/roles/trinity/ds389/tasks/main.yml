@@ -1,6 +1,14 @@
 ---
 # tasks file for ds389
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ package_arch }}/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ package_arch }}/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  no_log: true
+  ignore_errors: true
+
 - name: Install dependencies
   yum:
     name: '{{ ds389_dependencies }}'

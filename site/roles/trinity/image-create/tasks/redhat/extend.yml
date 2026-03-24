@@ -68,6 +68,11 @@
       dest: "{{ image_path }}/etc/rhsm/ca/redhat-uep.pem"
     ignore_errors: true
 
+  - synchronize:
+      src: "/etc/rhsm/rhsm.conf"
+      dest: "{{ image_path }}/etc/rhsm/rhsm.conf"
+    ignore_errors: true
+
   #- name: Sync RHEL subscription and entitlements
   #  shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
   #  ignore_errors: true
@@ -75,6 +80,11 @@
   - synchronize:
       src: "/etc/pki/"
       dest: "{{ image_path }}/etc/pki/"
+    ignore_errors: true
+
+  - synchronize:
+      src: "/var/lib/rhsm/"
+      dest: "{{ image_path }}/var/lib/rhsm/"
     ignore_errors: true
 
   - name: Fix Certificate locations in repo

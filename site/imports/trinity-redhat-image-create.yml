@@ -9,20 +9,28 @@
 
 - hosts: controllers
   pre_tasks:
+  - name: Kick off with init
+    include_role:
+      name: trinity/init
+    tags: always
+
   - fail:
       msg: "This playbook should only be run on the active controller"
     when:
       - ha | default(False)
       - not primary | default(False)
+    tags: always
 
   - name: Filter image name
     set_fact:
       regex_image_name: "{{ image_name | regex_search('^[a-zA-Z0-9\\ \\-\\_\\.]+$') }}"
+    tags: always
 
   - name: Verify image name compliancy
     fail:
       msg: "Image name {{ image_name }} is not compliant. Supported is a-z A-Z 0-9 'space' '-' '_' '.'"
     when: regex_image_name != image_name
+    tags: always
 
   - name: Determining controller Distribution
     set_fact:
@@ -52,9 +60,6 @@
 
   roles:
   - role: trinity/lock-check
-    tags: always
-
-  - role: trinity/init
     tags: always
 
   - role: trinity/ldap-backend-selector
