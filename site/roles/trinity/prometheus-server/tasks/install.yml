@@ -60,7 +60,7 @@
       become: false
       ansible.builtin.get_url:
         url: "{{ prometheus_server_binary_url }}"
-        dest: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
+        dest: "{{ trix_tmpdir }}/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
         checksum: "{{ ('sha256:' + __prometheus_server_checksum) if __prometheus_server_checksum is defined else '' }}"
         mode: 0644
       register: _download_archive
@@ -72,15 +72,15 @@
     - name: Unpack prometheus binaries
       become: false
       ansible.builtin.unarchive:
-        src: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
-        dest: "/tmp"
-        creates: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/prometheus"
+        src: "{{ trix_tmpdir }}/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}.tar.gz"
+        dest: "{{ trix_tmpdir }}"
+        creates: "{{ trix_tmpdir }}/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/prometheus"
       check_mode: false
 
     - name: Propagate official prometheus and promtool binaries
       ansible.builtin.copy:
         remote_src: true
-        src: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/{{ item }}"
+        src: "{{ trix_tmpdir }}/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/{{ item }}"
         dest: "{{ _prometheus_server_binary_install_dir }}/{{ item }}"
         mode: 0755
         owner: root
@@ -94,7 +94,7 @@
     # - name: Propagate official console templates
     #   ansible.builtin.copy:
     #     remote_src: true
-    #     src: "/tmp/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/{{ item }}/"
+    #     src: "{{ trix_tmpdir }}/prometheus-{{ prometheus_server_version }}.linux-{{ go_arch }}/{{ item }}/"
     #     dest: "{{ prometheus_server_config_dir }}/{{ item }}/"
     #     mode: 0644
     #     owner: root

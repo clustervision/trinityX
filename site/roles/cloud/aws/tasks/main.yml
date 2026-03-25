@@ -22,21 +22,21 @@
 - name: Download the AWS installation file
   get_url:
     url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
-    dest: /tmp/awscliv2.zip
+    dest: "{{ trix_tmpdir }}/awscliv2.zip"
     force: true
 
 - name: Unzip the installer
   unarchive:
-    src: /tmp/awscliv2.zip
-    dest: /tmp/
+    src: "{{ trix_tmpdir }}/awscliv2.zip"
+    dest: "{{ trix_tmpdir }}/"
 
 - name: Installing AWS CLI
-  shell: "sh /tmp/aws/install"
+  shell: "sh {{ trix_tmpdir }}/aws/install"
 
 - name: Clean up
   file:
     state: absent
-    path: /tmp/aws
+    path: "{{ trix_tmpdir }}/aws"
 
 
 - block:

@@ -66,10 +66,10 @@
             - node
 
         - debug:
-            msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/terraform-output.log"
+            msg: "Please note that the next tasks may take very long.... Progress can be followed tailing {{ trix_tmpdir }}/terraform-output.log"
 
         - name: Do Terraform runs
-          shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
+          shell: "terraform {{ item }} 2>&1 | tee {{ trix_tmpdir }}/terraform-output.log"
           args:
             chdir: "{{ terraform_path }}"
           with_items:
@@ -80,7 +80,7 @@
 #            - destroy
           environment:
             TF_LOG: DEBUG
-            TF_LOG_PATH: /tmp/terraform-debug.log
+            TF_LOG_PATH: "{{ trix_tmpdir }}/terraform-debug.log"
         when: stage == 'init'
 
       # ----------------------- storage run -------------------------
@@ -97,10 +97,10 @@
             - network
 
         - debug:
-            msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/terraform-output.log"
+            msg: "Please note that the next tasks may take very long.... Progress can be followed tailing {{ trix_tmpdir }}/terraform-output.log"
 
         - name: Do Terraform runs
-          shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
+          shell: "terraform {{ item }} 2>&1 | tee {{ trix_tmpdir }}/terraform-output.log"
           args:
             chdir: "{{ terraform_path }}"
           with_items:
@@ -109,7 +109,7 @@
             - "apply {{ cloudname }}-storage-tfplan"
           environment:
             TF_LOG: DEBUG
-            TF_LOG_PATH: /tmp/terraform-debug.log
+            TF_LOG_PATH: "{{ trix_tmpdir }}/terraform-debug.log"
         when: 
           - stage == 'storage'
           - subscription_id is defined
@@ -139,7 +139,7 @@
             - storage
           environment:
             TF_LOG: DEBUG
-            TF_LOG_PATH: /tmp/terraform-debug.log
+            TF_LOG_PATH: "{{ trix_tmpdir }}/terraform-debug.log"
 
         - name: Add required parameters
           lineinfile:
@@ -152,10 +152,10 @@
             - storage_name
 
         - debug:
-            msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/terraform-output.log"
+            msg: "Please note that the next tasks may take very long.... Progress can be followed tailing {{ trix_tmpdir }}/terraform-output.log"
 
         - name: Do Terraform runs
-          shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
+          shell: "terraform {{ item }} 2>&1 | tee {{ trix_tmpdir }}/terraform-output.log"
           args:
             chdir: "{{ terraform_path }}"
           with_items:
@@ -197,10 +197,10 @@
     # ----------------------- straight forward run -------------------------
     - block:
       - debug:
-          msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/terraform-output.log"
+          msg: "Please note that the next tasks may take very long.... Progress can be followed tailing {{ trix_tmpdir }}/terraform-output.log"
 
       - name: Do Terraform runs
-        shell: "terraform {{ item }} 2>&1 | tee /tmp/terraform-output.log"
+        shell: "terraform {{ item }} 2>&1 | tee {{ trix_tmpdir }}/terraform-output.log"
         args:
           chdir: "{{ terraform_path }}"
         with_items:
@@ -211,7 +211,7 @@
 #          - destroy
         environment:
           TF_LOG: DEBUG
-          TF_LOG_PATH: /tmp/terraform-debug.log
+          TF_LOG_PATH: "{{ trix_tmpdir }}/terraform-debug.log"
 
       # ----------------------- after run parts -------------------------
       - name: Collect all output variables
