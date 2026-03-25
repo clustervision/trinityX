@@ -4,6 +4,13 @@
 # Keep in mind that this role applies to the controllers
 # as well as compute nodes and images
 
+- name: Check umask
+  ansible.builtin.include_tasks:
+    file: check-umask.yml
+    apply:
+      tags: always
+  tags: always
+
 - name: Airgap tasks
   ansible.builtin.include_tasks:
     file: airgap.yml
@@ -477,7 +484,7 @@
   when: on_controller
 
 
-- name: Airgap tasks
+- name: Check fqdn
   ansible.builtin.include_tasks:
     file: check-fqdn.yml
     apply:
@@ -487,41 +494,6 @@
     - on_controller
     - (trix_external_fqdn is not defined) or trix_external_fqdn==""
 
-#- block:
-#  - name: Copy resolv.sh script to {{ trix_tmpdir }}
-#    copy:
-#      src: 'resolve.sh'
-#      dest: '{{ trix_tmpdir }}/resolve.sh'
-#      mode: 0755
-#
-#  - name: Resolving trix_external_fqdn
-#    command: "{{ trix_tmpdir }}/resolve.sh {{ trix_ctrl_external_ip }} {{ trix_dns_forwarders | default([]) | first }}"
-#    register: trix_resolved_host_fqdn
-#    ignore_errors: true
-#    when: trix_ctrl_external_ip is defined
-#
-#  - name: Setting trix_external_fqdn
-#    set_fact:
-#      trix_external_fqdn: "{{ trix_resolved_host_fqdn.stdout }}"
-#    when:
-#      - (trix_external_fqdn is not defined) or trix_external_fqdn==""
-#      - trix_resolved_host_fqdn is defined
-#
-#  - block:
-#    - fail: 
-#        msg: 'trix_external_fqdn is not configured and it could not be resolved. OpenOndemand will not work properly. This check can be skipped by "-e skip_fqdn=true"'
-#      ignore_errors: "{{ skip_fqdn | default(False) }}"
-#      when: enable_ood
-#
-#    - name: Setting trix_external_fqdn
-#      set_fact:
-#        trix_external_fqdn: '{{ ansible_fqdn }}'
-#      ignore_errors: true
-#      when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
-#  tags: always
-#  when:
-#    - on_controller
-#    - (trix_external_fqdn is not defined) or trix_external_fqdn==""
 
 - block:
   - debug:

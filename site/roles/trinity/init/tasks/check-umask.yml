@@ -1,0 +1,13 @@
+---
+
+- name: Verify umask
+  command: "umask"
+  register: trix_inuse_umask
+
+- fail: 
+    msg: 'An umask of {{ trix_inuse_umask.stdout }} has been detected but 0022 expected. This will most likely result in a failed installation. This check can be skipped by "-e skip_umask_check=true"'
+  ignore_errors: "{{ skip_umask_check | default(False) }}"
+  when:
+    - trix_inuse_umask.stdout is defined
+    - trix_inuse_umask.stdout != "0022"
+

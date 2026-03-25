@@ -19,14 +19,13 @@
     - (trix_external_fqdn is not defined) or trix_external_fqdn==""
     - trix_resolved_host_fqdn is defined
 
-- block:
-  - fail: 
-      msg: 'trix_external_fqdn is not configured and it could not be resolved. OpenOndemand will not work properly. This check can be skipped by "-e skip_fqdn=true"'
-    ignore_errors: "{{ skip_fqdn | default(False) }}"
-    when: enable_ood
+- fail: 
+    msg: 'trix_external_fqdn is not configured and it could not be resolved. OpenOndemand will not work properly. This check can be skipped by "-e skip_fqdn=true"'
+  ignore_errors: "{{ skip_fqdn | default(False) }}"
+  when: enable_ood
 
-  - name: Setting trix_external_fqdn
-    set_fact:
-      trix_external_fqdn: '{{ ansible_fqdn }}'
-    ignore_errors: true
-    when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
+- name: Setting trix_external_fqdn
+  set_fact:
+    trix_external_fqdn: '{{ ansible_fqdn }}'
+  ignore_errors: true
+  when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
