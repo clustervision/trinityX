@@ -91,14 +91,18 @@ function call_hook {
     return $RET
 }
 
-TRY=20
+TRY=8
+INC=$(( ( RANDOM % 2 ) + 1 ))
 while ! call_hook; do
     if [ "$TRY" -lt "0" ]; then
         echo "--> giving up"
         exit 2
     fi
     TRY=$[TRY-1]
-    sleep $(( ( RANDOM % 10 )  + 4 ))
+    INC=$[INC*2]
+    VAR=$(( ( RANDOM % $INC )  + $INC ))
+    echo "--> No success. We wait $VAR seconds before retrying...."
+    sleep $VAR
 done
 exit $?
 
