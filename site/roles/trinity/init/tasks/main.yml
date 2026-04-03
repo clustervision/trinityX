@@ -156,27 +156,6 @@
     register: pcs_primary
     ignore_errors: true
 
-    # we also support a file to override the primary. Useful during recovery of the
-    # the original primary controller.
-  - name: Verify if primary override exists
-    stat:
-      path: /etc/trinity/primary
-    register: stat_primary_file
-
-  - name: Using override to set who is primary
-    set_fact:
-      primary_controller: "{{ lookup('file', '/etc/trinity/primary') | trim }}"
-    when: stat_primary_file.stat.exists
-
-    # although we call it override, ultimately pcs/pacemaker is leading as it will
-    # absolutely destroy the setup if someone makes a mistake here.
-  - name: Check if this node is the primary controller based on override
-    set_fact:
-      primary: '{{ True if primary_controller == ansible_hostname else False }}'
-    when:
-      - on_controller
-      - primary_controller is defined
-
     # we assume that we start with controller 1 as being the first installed and primary
     # technically controller2 could be the primary but i do not dare to judge if things
     # would work as expected. for now we leave it as it is.
@@ -199,6 +178,32 @@
     when:
       - pcs_primary is defined 
       - pcs_primary.stdout != "not_available"
+
+    # we also support a file to override the primary. Useful during recovery of the
+    # the original primary controller.
+  - name: Verify if primary override exists
+    stat:
+      path: /etc/trinity/primary
+    register: stat_primary_file
+
+  - name: Using override to set who is primary
+    set_fact:
+      primary_controller: "{{ lookup('file', '/etc/trinity/primary') | trim }}"
+    when: stat_primary_file.stat.exists
+
+    # although we override it, ultimately pcs/pacemaker should leading as it will
+    # absolutely destroy the setup if someone makes a mistake here.
+    # But hey..... that's what overrides are for...
+  - block:
+    - debug:
+        msg: "primary_controller: {{ primary_controller }}, ansible_hostname: {{ ansible_hostname }}"
+
+    - name: Check if this node is the primary controller based on override
+      set_fact:
+        primary: '{{ True if primary_controller == ansible_hostname else False }}'
+    when:
+      - on_controller
+      - primary_controller is defined
 
   - name: Set primary false if we cannot confirm with confidence
     set_fact:
