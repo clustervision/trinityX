@@ -2,7 +2,7 @@
 
 LVM_CONF=/etc/lvm/lvm.conf
 
-cat << EOF > /tmp/lvm_filter.dat
+cat << EOF > {{ shared_fs_tmpdir }}/lvm_filter.dat
 {% for disk in shared_lvm_disks %}
 {% if 'fstype' in disk and disk['fstype'] == 'lvm' %}
 {% if 'disk' in disk %}
@@ -16,7 +16,7 @@ cat << EOF > /tmp/lvm_filter.dat
 {% endfor -%}
 EOF
 
-cat << EOF > /tmp/lvm_volumes.dat
+cat << EOF > {{ shared_fs_tmpdir }}/lvm_volumes.dat
 {% for disk in shared_fs_disks %}
 {% if 'fstype' in disk and disk['fstype'] == 'lvm' %}
 {{ disk['name'] }}
@@ -24,13 +24,13 @@ cat << EOF > /tmp/lvm_volumes.dat
 {% endfor -%}
 EOF
 
-LVM_DISKS=$(cat /tmp/lvm_filter.dat | grep -v '^#')
-VGROUPS=$(cat /tmp/lvm_volumes.dat | grep -v '^#' )
+LVM_DISKS=$(cat {{ shared_fs_tmpdir }}/lvm_filter.dat | grep -v '^#')
+VGROUPS=$(cat {{ shared_fs_tmpdir }}/lvm_volumes.dat | grep -v '^#' )
 if [ ! "$LVM_DISKS" ] && [ ! "$VGROUPS" ]; then
         # we have no lvm disks and groups so we keep everything default
         exit 0
 fi
-find /dev -type l -exec echo -n {}'=' \; -exec readlink -f {} \; > /tmp/dev-links.dat
+find /dev -type l -exec echo -n {}'=' \; -exec readlink -f {} \; > {{ shared_fs_tmpdir }}/dev-links.dat
 
 # Default is empty filter, but we have seen sometimes partlabel causing issues
 # where the kernel sees it at a later point, after this script ran.
@@ -63,7 +63,7 @@ for DISK in $LVM_DISKS; do
                 if [ "$DISK" == "$REAL_DISK" ]; then
                         FILTER="$FILTER \"r|$DISK|\","
                 fi
-		EXCL=$(grep -w $REAL_DISK /tmp/dev-links.dat | awk -F'=' '{ print $1 }')
+		EXCL=$(grep -w $REAL_DISK {{ shared_fs_tmpdir }}/dev-links.dat | awk -F'=' '{ print $1 }')
 		for F in $EXCL; do
 			echo "1: $F"
 			FILTER="$FILTER \"r|$F|\","
@@ -105,23 +105,23 @@ if [ ! "$OK_DEVICE_PRESENT" ]; then
 	if [ "$DEVICE_PRESENT" ]; then
 		sed -i "s%^\(\s*use_devicesfile\s*=.*\)$%# TRINITYX \1\n\tuse_devicesfile = 0%g" $LVM_CONF
 	else
-		echo -e "\tuse_devicesfile = 0" > /tmp/__lvm_device.dat
-		sed -i '/^devices {/r /tmp/__lvm_device.dat' $LVM_CONF
+		echo -e "\tuse_devicesfile = 0" > {{ shared_fs_tmpdir }}/__lvm_device.dat
+		sed -i '/^devices {/r {{ shared_fs_tmpdir }}/__lvm_device.dat' $LVM_CONF
 	fi
 fi
 if [ ! "$OK_FILTER_PRESENT" ]; then
 	if [ "$FILTER_PRESENT" ]; then
 		sed -i "s%^\(\s*filter\s*=.*\)$%# TRINITYX \1\n\tfilter = $FILTER%g" $LVM_CONF
 	else
-		echo -e "\tfilter = $FILTER" > /tmp/__lvm_filter.dat
-		sed -i '/^devices {/r /tmp/__lvm_filter.dat' $LVM_CONF
+		echo -e "\tfilter = $FILTER" > {{ shared_fs_tmpdir }}/__lvm_filter.dat
+		sed -i '/^devices {/r {{ shared_fs_tmpdir }}/__lvm_filter.dat' $LVM_CONF
 	fi
 fi
 if [ ! "$OK_VOLUMES_PRESENT" ]; then
 	if [ "$VOLUMES_PRESENT" ]; then
 		sed -i "s%^\(\s*volume_list\s*=.*\)%# TRINITYX \1\n\tvolume_list = $VOLUMES%g" $LVM_CONF
 	else
-		echo -e "\tvolume_list = $VOLUMES" > /tmp/__lvm_volumes.dat
-		sed -i '/^activation {/r /tmp/__lvm_volumes.dat' $LVM_CONF
+		echo -e "\tvolume_list = $VOLUMES" > {{ shared_fs_tmpdir }}/__lvm_volumes.dat
+		sed -i '/^activation {/r {{ shared_fs_tmpdir }}/__lvm_volumes.dat' $LVM_CONF
 	fi
 fi

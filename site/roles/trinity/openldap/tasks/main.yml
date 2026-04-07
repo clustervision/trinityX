@@ -255,7 +255,7 @@
   - name: Render OpenLDAP configuration
     template:
       src: '{{ item }}.j2'
-      dest: '/tmp/{{ item }}'
+      dest: '{{ trix_tmpdir }}/{{ item }}'
     with_items:
       - config.ldif
       - local.ldif
@@ -265,19 +265,19 @@
   - name: Copy OpenLDAP overlay configurations
     copy:
       src: '{{ item }}'
-      dest: '/tmp/'
+      dest: '{{ trix_tmpdir }}/'
     with_items:
       - ppolicy.ldif
       - memberof.ldif
 
   - name: Load OpenLDAP global configuration
-    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
+    command: "ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f {{ trix_tmpdir }}/config.ldif"
     args:
       creates: '/etc/openldap/slapd.d/cn=config.ldif'
     notify: restart openldap
 
   - name: Load OpenLDAP local configuration
-    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
+    command: "ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f {{ trix_tmpdir }}/{{ item }}"
     args:
       creates: '/etc/openldap/slapd.d/cn=config/olcDatabase={?}hdb/olcOverlay={0}memberof.ldif'
     with_items:
@@ -317,7 +317,7 @@
   - name: Render OpenLDAP configuration
     template:
       src: '{{ item }}-25.j2'
-      dest: '/tmp/{{ item }}'
+      dest: '{{ trix_tmpdir }}/{{ item }}'
     with_items:
       - config.ldif
       - local.ldif
@@ -327,18 +327,18 @@
   - name: Copy OpenLDAP overlay configurations
     copy:
       src: '{{ item }}'
-      dest: "/tmp/{{ item.split('-') | first }}"
+      dest: "{{ trix_tmpdir }}/{{ item.split('-') | first }}"
     with_items:
       - memberof.ldif-25
 
   - name: Load OpenLDAP global configuration
-    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
+    command: "ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f {{ trix_tmpdir }}/config.ldif"
     args:
       creates: '/etc/openldap/slapd.d/cn=config.ldif'
     notify: restart openldap
 
   - name: Load OpenLDAP local configuration
-    command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
+    command: "ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f {{ trix_tmpdir }}/{{ item }}"
     args:
       creates: '/etc/openldap/slapd.d/cn=config/olcDatabase={?}mdb/olcOverlay={0}memberof.ldif'
     with_items:

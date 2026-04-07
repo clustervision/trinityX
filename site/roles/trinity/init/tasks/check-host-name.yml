@@ -1,0 +1,13 @@
+---
+
+- name: Filter host name
+  set_fact:
+    regex_host_name: "{{ check_host_name | regex_search('[a-z0-9\\-\\.]+') }}"
+  tags: always
+
+- name: Verify host name compliancy
+  fail:
+    msg: 'Host name {{ check_host_name }} might not be advisable. Please consider a host name containing just a-z and 0-9. This check can be skipped by "-e skip_host_name_check=true"'
+  ignore_errors: "{{ skip_host_name_check | default(False) }}"
+  when: regex_host_name != check_host_name
+  tags: always

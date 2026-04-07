@@ -8,15 +8,13 @@
     command: apt-get clean
     when: ansible_facts['os_family'] == "Debian"
 
-  - name: Cleanup /tmp
-    command: rm -f /tmp/*
-
-# cannot be done from within image - Antoine
-# - block:
-#  - name: Pack the image
-#     run_once: true
-#     ansible.builtin.shell:
-#       cmd: "luna osimage pack {{ image_name }}"
-
+  - name: Cleanup tmp directories 
+    command: "rm -f {{ item }}/*"
+    with_items:
+      - /tmp
+      - '{{ trix_tmpdir }}'
+    when: 
+      - item | length > 0
+      - not item in ['/', ' ']
   when: in_image
   tags: always

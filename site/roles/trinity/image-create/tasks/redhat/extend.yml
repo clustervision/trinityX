@@ -30,7 +30,7 @@
 - name: Configuring resolv.conf
   copy:
     dest: "{{ image_path }}/etc/resolv.conf"
-    content: "nameserver {{ trix_ctrl_ip }}"
+    content: "search {{ resolv_search_domains }}\nnameserver {{ trix_ctrl_ip }}\n"
 
 - name: Use the controller as default gateway
   lineinfile:
@@ -50,7 +50,13 @@
     dest: "{{ image_path }}/etc/localtime"
     state: link
 
-
+- block:
+  - synchronize:
+      src: "/etc/pki/"
+      dest: "{{ image_path }}/etc/pki/"
+    ignore_errors: true
+  when: is_airgap | default(False)
+  
 - block:
   - synchronize:
       src: "/etc/yum.repos.d/redhat.repo"

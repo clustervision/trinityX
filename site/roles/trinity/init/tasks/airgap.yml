@@ -1,0 +1,46 @@
+---
+
+- name: Check if we do Airgap installation
+  stat:
+    path: /etc/trinity/airgap_install
+  register: init_ag_install_file
+
+- block:
+  - name: Set airgap install fact
+    set_fact:
+      is_airgap: true
+
+  - debug:
+      msg: "---------------------------- Airgap Install -----------------------------"
+  when: init_ag_install_file.stat.exists
+
+- name: Check if Airgap Server config file exists
+  stat:
+    path: /etc/trinity/airgap_server
+  register: init_ag_server_file
+
+- block:
+  - name: Read in Airgap Server config
+    slurp:
+      src: /etc/trinity/airgap_server
+    register: init_ag_server_config
+
+  - name: Set ag_server fact
+    set_fact:
+      ag_server: "{{ init_ag_server_config['content'] | b64decode | default(trix_ctrl_ip+':7060') | replace ('\n','') }}"
+
+  - debug:
+      msg: "Airgap Server: {{ ag_server }}"
+  when:
+    - is_airgap | default(False) 
+    - init_ag_server_file.stat.exists
+
+- block:    
+  - name: Set ag_server fact
+    set_fact:
+      ag_server: "{{ trix_ctrl_ip+':7060' }}"
+
+  - debug:
+      msg: "Airgap Server: {{ ag_server }}"
+  when: not init_ag_server_file.stat.exists
+

@@ -1,3 +1,12 @@
+---
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  no_log: true
+  ignore_errors: true
+
 - block:
   - name: Get EasyBuild user info
     ansible.builtin.getent:
@@ -33,6 +42,27 @@
       - primary | default(False)
   when: on_controller | default(False)
   tags: easybuild-prepare
+
+- block:
+  - name: Install required packages
+    package:
+      name: "{{ item }}"
+      state: present
+    with_items: "{{ easybuild_packages }}"
+    tags: install-only
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
+
+  - name: Install required pip packages
+    ansible.builtin.pip:
+      executable: pip3
+      name: "{{ item }}"
+      #extra_args: "--prefix=/usr --force" # use when easybuild_extra_flags approach won't work
+    with_items: "{{ easybuild_pip_packages }}"
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
+  when: on_controller | default(False)
+  tags: easybuild-install, easybuild-env
 
 - block:
   - name: Ensure EasyBuild shared directory exists

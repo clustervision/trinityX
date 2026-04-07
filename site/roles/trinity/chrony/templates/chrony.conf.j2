@@ -20,6 +20,7 @@ rtcsync
 # if the adjustment is larger than 10 seconds.
 makestep 10 3
 
+{% if chrony_as_server %}
 # Allow NTP client access from local network.
 {% if chrony_allow_networks %}
 {% for server in chrony_allow_networks %}
@@ -29,19 +30,30 @@ allow {{ net }}
 allow
 {% endif %}
 
+# Serve time even if not synchronized to any NTP server.
+local stratum 10
+{% endif %}
+
 # Listen for commands only on localhost.
 bindcmdaddress 127.0.0.1
 bindcmdaddress ::1
 
-# Serve time even if not synchronized to any NTP server.
-local stratum 10
-
+# keyfile deprecated for EL9
 keyfile /etc/chrony.keys
 
-# Specify the key used as password for chronyc.
+{% if chrony_upstream_servers %}
+# Force a sync even when time has drifted too far
+initstepslew 30
+{%- for server in chrony_upstream_servers %}
+ {{ server }}
+{%- endfor %}
+{% endif %}
+
+#
+# Specify the key used as password for chronyc. Deprecated for EL9
 commandkey 1
 
-# Generate command key if missing.
+# Generate command key if missing. Deprecated for EL9
 generatecommandkey
 
 # Disable logging of client accesses.

@@ -8,6 +8,19 @@
     - "{{ ansible_os_family }}.yaml"
   no_log: true
   ignore_errors: true
+  when: not is_airgap | default(False)
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file. Airgap.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_distribution }}.yaml"
+    - "airgap/{{ ansible_os_family }}.yaml"
+    - "airgap/main.yaml"
+  no_log: true
+  ignore_errors: true
+  when: is_airgap | default(False)
 
 - block:
   - name: Rebuild RPM DB
@@ -31,6 +44,13 @@
       content: "{{ item.gpgdata }}"
     with_items: "{{ trinityx_repositories }}"
     when: item.gpgkey is defined and item.gpgdata is defined
+
+  - name: Install dnf config manager plugin
+    package: 
+      name: dnf-command(config-manager)
+      state: present
+      use: dnf
+    ignore_errors: true
 
   # - name: Add GPG keys to RPM DB. normally NOT needed - Antoine
   #   ansible.builtin.rpm_key:
@@ -60,6 +80,7 @@
   # Notify doesn't work inside chroot.... sigh..
   - ansible.builtin.include_tasks:
       file: mangling.yml
+    when: external_repository_rpms | default({}) | length > 0
 
   - name: Install external repo Packages
     dnf:
@@ -81,6 +102,7 @@
 
   - ansible.builtin.include_tasks:
       file: mangling.yml
+    when: package_based_repositories | default({}) | length > 0
 
   - name: Configure custom repos
     ansible.builtin.yum_repository:

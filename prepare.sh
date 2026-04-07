@@ -4,6 +4,12 @@ if [ ! -d /etc/trinity ]; then
     mkdir /etc/trinity
 fi
 
+if [ -f /etc/trinity/airgap_install ]; then
+    export IS_AIRGAP=1
+    AG_SERVER=$(cat /etc/trinity/airgap_server)
+    export AG_SERVER
+fi
+
 # --------------------------------------------------------------------------------------
 
 function add_message() {
@@ -132,8 +138,12 @@ if [ ! "$GITLAB_CI" ]; then
       dnf -y install wget
     fi
     ARCH=$(uname -m)
-    TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml* 2> /dev/null | grep -oE '[0-9\.]+' | sort -n | tail -n1 | grep -v '' || echo '15')
-    wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
+    TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml* 2> /dev/null | grep -oE '[0-9\.]+' | sort -n | tail -n1 | grep -v '^$' || echo '15')
+    if [ "$IS_AIRGAP" ]; then
+      wget --directory-prefix site/ https://${AG_SERVER}/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
+    else
+      wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
+    fi
     chmod 755 site/tui_configurator
   fi
 fi
@@ -152,17 +162,23 @@ REDHAT_RELEASE=$(grep -i "Red Hat Enterprise Linux" /etc/os-release | grep -oE '
 if [ "$REDHAT_RELEASE" ]; then
   ARCH=$(uname -m)
   subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-${ARCH}-rpms
-  dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
+  if [ ! "$IS_AIRGAP" ]; then
+    dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
+  fi
 else
-  dnf install epel-release -y
+  if [ ! "$IS_AIRGAP" ]; then
+    dnf install epel-release -y
+  fi
 fi
 
 dnf install ansible -y 2> /dev/null || true
 dnf install ansible-core -y
 dnf install ansible-collection-community-general -y 2> /dev/null
 dnf install ansible-collection-ansible-posix -y 2> /dev/null
-ansible-galaxy collection install community.mysql
-ansible-galaxy install OndrejHome.pcs-modules-2
+if [ ! "$IS_AIRGAP" ]; then
+  ansible-galaxy collection install community.mysql
+  ansible-galaxy install OndrejHome.pcs-modules-2
+fi
 
 # --------------------- KERNEL CHECK ----------------------
 # kernel check. Did we pull in a newer kernel?
@@ -205,7 +221,9 @@ if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
     add_message "- make install"
     show_message
   else
-    yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-8$(rpm --eval "%{dist}").noarch.rpm
+    if [ ! "$IS_AIRGAP" ]; then
+      yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-8$(rpm --eval "%{dist}").noarch.rpm
+    fi
     yes y | dnf -y install zfs zfs-dkms
     echo "zfs" >> /etc/modules-load.d/zfs.conf
     modprobe zfs

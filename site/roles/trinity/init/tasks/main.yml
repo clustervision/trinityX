@@ -4,6 +4,25 @@
 # Keep in mind that this role applies to the controllers
 # as well as compute nodes and images
 
+- name: Check umask
+  ansible.builtin.include_tasks:
+    file: check-umask.yml
+    apply:
+      tags: always
+  tags: always
+
+- name: Airgap tasks
+  ansible.builtin.include_tasks:
+    file: airgap.yml
+    apply:
+      tags: always
+  tags: always
+
+- name: Set trix_tmpdir variable
+  set_fact:
+    trix_tmpdir: "{{ tmpdir if tmpdir is defined and tmpdir|length > 0 and tmpdir not in ['/',' '] else lookup('ansible.builtin.env', 'TMPDIR', default='/tmp') }}"
+  tags: always
+
 - name: Install init packages
   yum:
     name: '{{ item }}'
@@ -15,6 +34,8 @@
     - init_packages is defined
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+
+# -----------------------------
 
 - block:
   - name: Set architecture specific variables
@@ -135,27 +156,6 @@
     register: pcs_primary
     ignore_errors: true
 
-    # we also support a file to override the primary. Useful during recovery of the
-    # the original primary controller.
-  - name: Verify if primary override exists
-    stat:
-      path: /etc/trinity/primary
-    register: stat_primary_file
-
-  - name: Using override to set who is primary
-    set_fact:
-      primary_controller: "{{ lookup('file', '/etc/trinity/primary') | trim }}"
-    when: stat_primary_file.stat.exists
-
-    # although we call it override, ultimately pcs/pacemaker is leading as it will
-    # absolutely destroy the setup if someone makes a mistake here.
-  - name: Check if this node is the primary controller based on override
-    set_fact:
-      primary: '{{ True if primary_controller == ansible_hostname else False }}'
-    when:
-      - on_controller
-      - primary_controller is defined
-
     # we assume that we start with controller 1 as being the first installed and primary
     # technically controller2 could be the primary but i do not dare to judge if things
     # would work as expected. for now we leave it as it is.
@@ -178,6 +178,32 @@
     when:
       - pcs_primary is defined 
       - pcs_primary.stdout != "not_available"
+
+    # we also support a file to override the primary. Useful during recovery of the
+    # the original primary controller.
+  - name: Verify if primary override exists
+    stat:
+      path: /etc/trinity/primary
+    register: stat_primary_file
+
+  - name: Using override to set who is primary
+    set_fact:
+      primary_controller: "{{ lookup('file', '/etc/trinity/primary') | trim }}"
+    when: stat_primary_file.stat.exists
+
+    # although we override it, ultimately pcs/pacemaker should leading as it will
+    # absolutely destroy the setup if someone makes a mistake here.
+    # But hey..... that's what overrides are for...
+  - block:
+    - debug:
+        msg: "primary_controller: {{ primary_controller }}, ansible_hostname: {{ ansible_hostname }}"
+
+    - name: Check if this node is the primary controller based on override
+      set_fact:
+        primary: '{{ True if primary_controller == ansible_hostname else False }}'
+    when:
+      - on_controller
+      - primary_controller is defined
 
   - name: Set primary false if we cannot confirm with confidence
     set_fact:
@@ -241,12 +267,20 @@
   when: ha | default(False)
   tags: always,ha,verify-ip
 
-- name: Verify controller hostname is configured
-  fail:
-    msg: "Current controller hostname does not match configured 'trix_ctrl1_hostname'. Please set the hostname to match what is configured"
-  when:
-    - not ha | default(False)
-    - trix_ctrl_hostname != ansible_hostname
+- block:
+  - name: Verify controller hostname compliancy
+    include_tasks: check-host-name.yml
+    with_items: "{{ all_ctrl_hostname }}"
+    loop_control:
+      loop_var: check_host_name
+
+  - name: Verify controller hostname is configured
+    fail:
+      msg: "Current controller hostname does not match configured 'trix_ctrl1_hostname'. Please set the hostname to match what is configured"
+    when:
+      - not ha | default(False)
+      - trix_ctrl_hostname != ansible_hostname
+  tags: always,verify-host
 
 - block:
   - name: Adding cloud controllers hostnames
@@ -293,27 +327,27 @@
 
   # we check if networks, subnets and addresses match
 - block:
-  - name: Copy verify-ip.sh script to /tmp
+  - name: Copy verify-ip.sh script to {{ trix_tmpdir }}
     copy:
       src: 'verify-ip.sh'
-      dest: '/tmp/verify-ip.sh'
+      dest: '{{ trix_tmpdir }}/verify-ip.sh'
       mode: 0755
 
   - name: Verifying controller IP addresses with network
     ansible.builtin.shell:
-      cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
+      cmd: "{{ trix_tmpdir }}/verify-ip.sh {{ item }} {{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
     with_items: "{{ all_ctrl_ip }}"
 
   - name: Verifying DHCP addresses with network
     ansible.builtin.shell:
-      cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
+      cmd: "{{ trix_tmpdir }}/verify-ip.sh {{ item }} {{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
     with_items:
       - "{{ trix_cluster_dhcp_start }}"
       - "{{ trix_cluster_dhcp_end }}"
 
   - name: Verifying BMC IP addresses with network
     ansible.builtin.shell:
-      cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_bmc_net }}/{{ trix_bmc_netprefix }}"
+      cmd: "{{ trix_tmpdir }}/verify-ip.sh {{ item }} {{ trix_bmc_net }}/{{ trix_bmc_netprefix }}"
     with_items: "{{ all_ctrl_bmcip }}"
     when: all_ctrl_bmcip is defined
   tags: luna,verify-ip
@@ -377,21 +411,31 @@
 
 - block:
   - block:
-    - name: Trying to figure out external interface
-      shell: "ip route | grep default | grep -oP 'dev \\K\\S+' | grep '^.\\+$'"
-      ignore_errors: true
-      register: init_ctrl_external_nic
-
-    - name: Set trix_ctrl_external_nic
+    - name: Resolving external interface ipv4
       set_fact:
-        trix_ctrl_external_nic: "{{ init_ctrl_external_nic.stdout }}"
-      when: init_ctrl_external_nic.rc | int == 0
+        trix_ctrl_external_nic: "{{ ansible_default_ipv4['interface'] }}"
+      when: ansible_default_ipv4
+
+    - name: Resolving external interface ipv6
+      set_fact:
+        trix_ctrl_external_nic: "{{ ansible_default_ipv6['interface'] }}"
+      when:
+        - not ansible_default_ipv4 
+        - ansible_default_ipv6
+
+    - name: Resolving external interface based on firewall setting
+      set_fact:
+        trix_ctrl_external_nic: "{{ firewalld_public_interfaces|first }}"
+      when:
+        - trix_ctrl_external_nic is not defined
+        - firewalld_public_interfaces|length == 1
 
     - debug:
         msg: "trix_ctrl_external_nic: {{ trix_ctrl_external_nic }}"
     when: trix_ctrl_external_nic is not defined
 
   - block:
+    # IPv4 ------------
     - block:
       - name: Store external nic address information
         set_fact:
@@ -412,6 +456,28 @@
           trix_ctrl_external_netprefix: "{{ init_ctrl_external_network_info['prefix'] }}"
         when: trix_ctrl_external_netprefix is not defined or trix_ctrl_external_netprefix == "" 
       when: hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv4'] is defined
+
+    # IPv6 ------------
+    - block:
+      - name: Store external nic address information
+        set_fact:
+          init_ctrl_external_network_info: "{{ hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv6'] }}"
+
+      - name: Resolving external interface ip address
+        set_fact:
+          trix_ctrl_external_ip: "{{ init_ctrl_external_network_info['address'] }}"
+        when: trix_ctrl_external_ip is not defined or trix_ctrl_external_ip == "" 
+
+      - name: Resolving external interface network address
+        set_fact:
+          trix_ctrl_external_network: "{{ init_ctrl_external_network_info['network']+'/'+init_ctrl_external_network_info['prefix'] }}"
+        when: trix_ctrl_external_network is not defined or trix_ctrl_external_network == "" 
+
+      - name: Resolving external interface netprefix address
+        set_fact:
+          trix_ctrl_external_netprefix: "{{ init_ctrl_external_network_info['prefix'] }}"
+        when: trix_ctrl_external_netprefix is not defined or trix_ctrl_external_netprefix == "" 
+      when: hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv6'] is defined
     when: trix_ctrl_external_nic is defined
 
   - debug:
@@ -423,41 +489,16 @@
   when: on_controller
 
 
-- block:
-  - name: Copy resolv.sh script to /tmp
-    copy:
-      src: 'resolve.sh'
-      dest: '/tmp/resolve.sh'
-      mode: 0755
-
-  - name: Resolving trix_external_fqdn
-    command: "/tmp/resolve.sh {{ trix_ctrl_external_ip }} {{ trix_dns_forwarders | default([]) | first }}"
-    register: trix_resolved_host_fqdn
-    ignore_errors: true
-    when: trix_ctrl_external_ip is defined
-
-  - name: Setting trix_external_fqdn
-    set_fact:
-      trix_external_fqdn: "{{ trix_resolved_host_fqdn.stdout }}"
-    when:
-      - (trix_external_fqdn is not defined) or trix_external_fqdn==""
-      - trix_resolved_host_fqdn is defined
-
-  - block:
-    - fail: 
-        msg: 'trix_external_fqdn is not configured and it could not be resolved. OpenOndemand will not work properly. This check can be skipped by "-e skip_fqdn=true"'
-      ignore_errors: "{{ skip_fqdn | default(False) }}"
-      when: enable_ood
-
-    - name: Setting trix_external_fqdn
-      set_fact:
-        trix_external_fqdn: '{{ ansible_fqdn }}'
-      ignore_errors: true
-      when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
+- name: Check fqdn
+  ansible.builtin.include_tasks:
+    file: check-fqdn.yml
+    apply:
+      tags: always
   tags: always
   when:
     - on_controller
     - (trix_external_fqdn is not defined) or trix_external_fqdn==""
+
 
 - block:
   - debug:
