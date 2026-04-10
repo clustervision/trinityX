@@ -9,7 +9,9 @@
     gpgcheck: "{{ item.gpgcheck | default(False) }}"
     gpgkey: "{{ item.gpgkey | default('') }}"
   with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
-  when: enable_openhpc == true
+  when:
+    - not is_airgap | default(False)
+    - enable_openhpc == true
 
 - name: Install PyMSQL
   yum:

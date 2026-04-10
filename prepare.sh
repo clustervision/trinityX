@@ -242,7 +242,13 @@ fi
 if [ ! -f site/group_vars/all.yml ]; then
     add_message "Please modify the site/group_vars/all.yml.example and save it as site/group_vars/all.yml"
 else
-  if ! grep -q "^trix_ctrl1_hostname:\s*$(hostname -s)\s*$" site/group_vars/all.yml; then
+  for HOST_NR in 1 2 3 4; do
+    if grep -q "^trix_ctrl${HOST_NR}_hostname:\s*$(hostname -s)\s*$" site/group_vars/all.yml; then
+      HOST_CHKOK=1
+      break
+    fi
+  done
+  if [ ! "$HOST_CHKOK" ]; then
     add_message "Please note the hostnames are not matching (see site/group_vars/all.yml)."
   fi
 fi
