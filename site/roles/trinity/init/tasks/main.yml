@@ -90,14 +90,6 @@
       cloud_install: >-
         {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
 
-  - name: Airgap tasks
-    ansible.builtin.include_tasks:
-      file: airgap.yml
-      apply:
-        tags: always
-    when: on_controller
-    tags: always
-
   - block:
     - name: Setting cloud vpn namekey
       set_fact:
@@ -215,6 +207,14 @@
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}, in_image: {{ in_image }}"
   tags: always
 
+
+- name: Airgap tasks
+  ansible.builtin.include_tasks:
+    file: airgap.yml
+    apply:
+      tags: always
+  when: on_controller
+  tags: always
 
 - name: Running keys vault tasks
   ansible.builtin.include_tasks:
