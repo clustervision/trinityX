@@ -11,13 +11,6 @@
       tags: always
   tags: always
 
-- name: Airgap tasks
-  ansible.builtin.include_tasks:
-    file: airgap.yml
-    apply:
-      tags: always
-  tags: always
-
 - name: Set trix_tmpdir variable
   set_fact:
     trix_tmpdir: "{{ tmpdir if tmpdir is defined and tmpdir|length > 0 and tmpdir not in ['/',' '] else lookup('ansible.builtin.env', 'TMPDIR', default='/tmp') }}"
@@ -96,6 +89,14 @@
     set_fact:
       cloud_install: >-
         {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
+
+  - name: Airgap tasks
+    ansible.builtin.include_tasks:
+      file: airgap.yml
+      apply:
+        tags: always
+    when: on_controller
+    tags: always
 
   - block:
     - name: Setting cloud vpn namekey
