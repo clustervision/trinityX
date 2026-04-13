@@ -25,6 +25,37 @@
     name: '{{ cv_support_pip_packages }}'
     executable: pip3
   tags: install-only
+  ignore_errors: True
+
+- block:
+  - name: Install diagnostics tools
+    copy:
+      src: "{{ item }}"
+      dest: "/usr/local/bin/{{ item }}"
+      mode: 0755
+      owner: root
+      group: root
+    with_items: "{{ trix_tools }}"
+
+  - name: Configure remote-assistance tunnel service
+    copy:
+      src: "remote-assistance.service"
+      dest: "/etc/systemd/system/remote-assistance.service"
+    notify: reload systemd daemon
+
+  - name: Configure systemd service
+    systemd:
+      daemon_reload: "yes"
+      name: "remote-assistance.service"
+  when: not is_airgap | default(False)
+
+- name: Add /trinity/site file to the controllers
+  lineinfile:
+    path: '/trinity/site'
+    line: '{{ project_id }}'
+    state: present
+    create: 'yes'
+  when: primary|default(True)
 
 - name: Render /root/.bash_profile
   template:
@@ -38,34 +69,6 @@
     state: present
     create: 'yes'
   when: primary|default(True)
-
-- name: Add /trinity/site file to the controllers
-  lineinfile:
-    path: '/trinity/site'
-    line: '{{ project_id }}'
-    state: present
-    create: 'yes'
-  when: primary|default(True)
-
-- name: Install diagnostics tools
-  copy:
-    src: "{{ item }}"
-    dest: "/usr/local/bin/{{ item }}"
-    mode: 0755
-    owner: root
-    group: root
-  with_items: "{{ trix_tools }}"
-
-- name: Configure remote-assistance tunnel service
-  copy:
-    src: "remote-assistance.service"
-    dest: "/etc/systemd/system/remote-assistance.service"
-  notify: reload systemd daemon
-
-- name: Configure systemd service
-  systemd:
-    daemon_reload: "yes"
-    name: "remote-assistance.service"
 
 - name: Install MOTD
   template:
