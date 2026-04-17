@@ -10,6 +10,17 @@
   ignore_errors: true
   when: not is_airgap | default(False)
 
+- block:
+  - name: Set airgap distribution repo
+    set_fact:
+      ag_repo: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
+
+  - debug:
+      msg: "Airgap repo location: {{ ag_repo }}"
+  when:
+    - is_airgap | default(False)
+    - ag_repo is not defined
+
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file. Airgap.
   include_vars: "{{ item }}"
   with_first_found:
