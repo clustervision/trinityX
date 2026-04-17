@@ -142,3 +142,11 @@
   when: ansible_facts['os_family'] == "RedHat"
   tags: install-only
 
+- name: Add configuration for airgapped pip.conf
+  template:
+    src: 'pip.conf.j2'
+    dest: '/etc/pip.conf'
+    owner: 'root'
+    group: 'root'
+  when: is_airgap | default(False)
+  tags: install-only
