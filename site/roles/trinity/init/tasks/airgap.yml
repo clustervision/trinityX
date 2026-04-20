@@ -32,10 +32,10 @@
   - debug:
       msg: "Airgap Server: {{ ag_server }}"
   when:
-    - is_airgap | default(False) 
+    - is_airgap | default(False)
     - init_ag_server_file.stat.exists
 
-- block:    
+- block:
   - name: Set ag_server fact
     set_fact:
       ag_server: "{{ trix_ctrl_ip+':7060' }}"
@@ -44,3 +44,11 @@
       msg: "Airgap Server: {{ ag_server }}"
   when: not init_ag_server_file.stat.exists
 
+- block:
+  - name: Set airgap distribution repo
+    set_fact:
+      ag_repo: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
+
+  - debug:
+      msg: "Airgap repo location: {{ ag_repo }}"
+  when: is_airgap | default(False)
