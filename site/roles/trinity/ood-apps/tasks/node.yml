@@ -1,0 +1,26 @@
+---
+
+- block:
+  - name: Load Node variables.
+    include_vars: "../defaults/node.yml"
+
+  - name: Load Airgap Node variables.
+    include_vars: "../vars/airgap/node.yml"
+    when: is_airgap | default(False)
+
+  - name: Downloading Node nodejs package
+    get_url:
+      url: "{{ node_noarch_nodejs_repository }}/{{ node_gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/node/{{ node_gui_nodejs }}"
+
+  - name: Unpack Node nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/node/{{ node_gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/node/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup Node nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/node/{{ node_gui_nodejs }}"
+      state: absent
+  when: not in_image
