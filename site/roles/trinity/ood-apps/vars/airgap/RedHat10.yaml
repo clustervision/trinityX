@@ -1,17 +1,9 @@
 ---
-ood_luna_apps_url: https://{{ ag_server }}/{{ ag_repo }}/trinityx/{{ trix_version }}/luna2/noarch/pip/{{ trix_stream }}/ood/trinityx-ood-{{ ood_luna_apps_version }}.tar.gz # noqa: yaml[line-length]
 
-ood_apps_overrides_airgap:
+ood_apps_overrides:
   jupyter:
     node_rpms:
       - name: [python3.13, python3.13-pip]
-
-  codeserver:
-    node_rpms:
-      - name: "https://{{ ag_server }}/{{ ag_repo }}/rpms/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-{{ ood_apps_arch }}.rpm"
-        no_gpgcheck: true
-    node_apts:
-      - name: "https://{{ ag_server }}/{{ ag_repo }}/rpms/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_{{ ood_apps_arch }}.deb"
 
   desktop:
     props:
@@ -26,10 +18,11 @@ ood_apps_overrides_airgap:
       - name: ["turbovnc", "python3-websockify", "dbus-x11", "@KDE"]
         enablerepo: crb
 
+ood_apps_remove:
   group:
-    __remove_keys__:
-      - tasks
-
+    - tasks
   rack:
-    __remove_keys__:
-      - tasks
+    - tasks
+
+ood_apps_meta:
+  ood_luna_apps_url: https://{{ ag_server }}/{{ ag_repo }}/trinityx/{{ trix_version }}/luna2/noarch/pip/{{ trix_stream }}/ood/trinityx-ood-{{ ood_luna_apps_version }}.tar.gz # noqa: yaml[line-length]
