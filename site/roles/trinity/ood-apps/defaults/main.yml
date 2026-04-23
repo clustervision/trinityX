@@ -11,18 +11,46 @@ ood_apps_arch_map:
 
 ood_apps_arch: "{{ ood_apps_arch_map[system_arch] | default(system_arch) }}"
 
+ood_apps_enabled_default:
+  - jupyter
+  - codeserver
+  - desktop
+  - bmcsetup
+  - cluster
+  - group
+  - network
+  - node
+  - osimage
+  - otherdev
+  - secrets
+  - service
+  - switch
+  - control
+  - users
+  - osimagetag
+  - monitor
+  - dns
+  - slurm
+  - infiniband
+  - rack
+  - alertx
+  - passwd
+  - system-status
+  - shell
+  - prometheus
+  - alertmanager
+  - grafana
 
-ood_apps:
-  
-  - name: jupyter
+ood_apps_catalog_default:
+  jupyter:
     type: bc
     icon: jupyter.png
     node_rpms:
       - name: [python3.11, python3.11-pip]
     node_apts:
       - name: [python3, python3-pip, python3-venv]
-  
-  - name: codeserver
+
+  codeserver:
     type: bc
     icon: code-server.png
     node_rpms:
@@ -30,8 +58,8 @@ ood_apps:
         no_gpgcheck: true
     node_apts:
       - name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_{{ ood_apps_arch }}.deb"
-  
-  - name: desktop
+
+  desktop:
     override: true
     type: bc
     icon: desktop.png
@@ -41,115 +69,115 @@ ood_apps:
         - xfce
       desktops_default: xfce
     node_rpms:
-    - name: https://yum.osc.edu/ondemand/4.1/ondemand-release-compute-4.1-1.el{{ ansible_distribution_major_version }}.noarch.rpm
-      no_gpgcheck: true
-    - name: ["turbovnc", "python3-websockify", "dbus-x11", "@xfce"]
-      enablerepo: crb
+      - name: https://yum.osc.edu/ondemand/4.1/ondemand-release-compute-4.1-1.el{{ ansible_distribution_major_version }}.noarch.rpm
+        no_gpgcheck: true
+      - name: ["turbovnc", "python3-websockify", "dbus-x11", "@xfce"]
+        enablerepo: crb
     tasks: ["desktop.yml"]
 
-  - name: bmcsetup
+  bmcsetup:
     type: trinity
     icon: bmc-setup.png
     mode: "0750"
-  - name: cluster
+  cluster:
     type: trinity
     icon: cluster.png
     mode: "0750"
-  - name: group
+  group:
     type: trinity
     icon: groups.png
     mode: "0750"
     tasks: ["group.yml"]
-  - name: network
+  network:
     type: trinity
     icon: network.png
     mode: "0750"
-  - name: node
+  node:
     type: trinity
     icon: nodes.png
     mode: "0750"
     # tasks: ["node.yml"] #TODO: Until Node App finished, this is commented out to avoid confusion
-  - name: osimage
+  osimage:
     type: trinity
     icon: os-images.png
     mode: "0750"
-  - name: otherdev
+  otherdev:
     type: trinity
     icon: other-devices.png
     mode: "0750"
-  - name: secrets
+  secrets:
     type: trinity
     icon: secrets.png
     mode: "0750"
-  - name: service
+  service:
     type: trinity
     icon: service.png
     mode: "0750"
-  - name: switch
+  switch:
     type: trinity
     icon: switch.png
     mode: "0750"
-  - name: control
+  control:
     type: trinity
     icon: control.png
     mode: "0750"
-  - name: users
+  users:
     type: trinity
     icon: users.png
     mode: "0750"
-  - name: osimagetag
+  osimagetag:
     type: trinity
     icon: os-images-tags.png
     mode: "0750"
-  - name: monitor
+  monitor:
     type: trinity
     icon: monitoring.png
     mode: "0750"
-  - name: dns
+  dns:
     type: trinity
     icon: dns.png
     mode: "0750"
-  - name: slurm
+  slurm:
     type: trinity
     icon: slurm.png
     mode: "0750"
-  - name: infiniband
+  infiniband:
     type: trinity
     icon: infiniband.png
     mode: "0750"
     tasks: ["infiniband.yml"]
-  - name: rack
+  rack:
     type: trinity
     icon: rack.png
     mode: "0750"
     tasks: ["rack.yml"]
-  - name: alertx
+  alertx:
     type: trinity
     icon: alertx.png
     mode: "0750"
     tasks: ["alertx.yml"]
-  - name: passwd
+  passwd:
     type: trinity
     icon: passwd.png
     mode: "0755"
     tasks: ["passwd.yml"]
-  
-    
-  - name: system-status
-    # icon: desktop.png
+  system-status:
     mode: "0000"
-  - name: shell
+  shell:
     icon: shell.png
     override: true
     mode: "0750"
     props:
       lchroot_wrapper_path: /usr/local/sbin/ood_lchroot_wrapper
     tasks: ["lchroot.yml"]
-
-  - name: prometheus
+  prometheus:
     icon: prometheus.png
-  - name: alertmanager
+  alertmanager:
     icon: alert-manager.png
     mode: "0750"
-  - name: grafana
+  grafana:
     icon: grafana.png
+
+ood_apps_overrides_os: {}
+ood_apps_overrides_airgap: {}
+ood_apps_overrides: {}

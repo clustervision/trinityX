@@ -8,19 +8,23 @@
     include_vars: "../vars/airgap/group.yml"
     when: is_airgap | default(False)
 
+  - name: Merge Group asset variables.
+    set_fact:
+      group_assets: "{{ group_assets_default | combine(group_assets_airgap | default({}), recursive=True) }}"
+
   - name: Downloading Group nodejs package
     get_url:
-      url: "{{ group_noarch_nodejs_repository }}/{{ group_gui_nodejs }}"
-      dest: "{{ trix_ood }}/3.0/group/{{ group_gui_nodejs }}"
+      url: "{{ group_assets.noarch_nodejs_repository }}/{{ group_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/group/{{ group_assets.gui_nodejs }}"
 
   - name: Unpack Group nodejs files
     unarchive:
-      src: "{{ trix_ood }}/3.0/group/{{ group_gui_nodejs }}"
+      src: "{{ trix_ood }}/3.0/group/{{ group_assets.gui_nodejs }}"
       dest: "{{ trix_ood }}/3.0/group/app/assets/"
       keep_newer: false # override?
 
   - name: Cleanup Group nodejs package
     file:
-      path: "{{ trix_ood }}/3.0/group/{{ group_gui_nodejs }}"
+      path: "{{ trix_ood }}/3.0/group/{{ group_assets.gui_nodejs }}"
       state: absent
   when: not in_image
