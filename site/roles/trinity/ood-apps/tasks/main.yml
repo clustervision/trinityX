@@ -11,7 +11,6 @@
 - name: Load OS-specific OOD app overrides
   ansible.builtin.include_vars:
     file: "{{ item }}"
-    name: ood_apps_os_vars
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
@@ -19,18 +18,34 @@
   no_log: true
   ignore_errors: true
 
+- set_fact:
+    ood_apps_os_vars:
+      ood_apps_overrides: "{{ ood_apps_overrides }}"
+
+#- name: ood apps os vars
+#  debug:
+#    var: ood_apps_os_vars
+
 - name: Load generic airgap OOD app overrides
   ansible.builtin.include_vars:
     file: "vars/airgap/main.yaml"
-    name: ood_apps_airgap_main_vars
   no_log: true
   when:
     - ood_apps_is_airgap
 
+- set_fact:
+    ood_apps_airgap_main_vars:
+      ood_apps_overrides: "{{ ood_apps_overrides }}"
+      ood_apps_remove: "{{ ood_apps_remove }}"
+      ood_apps_meta: "{{ ood_apps_meta }}"
+
+#- name: ood apps airgap main vars
+#  debug:
+#    var: ood_apps_airgap_main_vars
+
 - name: Load airgap OOD app overrides
   ansible.builtin.include_vars:
     file: "{{ item }}"
-    name: ood_apps_airgap_vars
   with_first_found:
     - "airgap/{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
     - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
@@ -42,6 +57,16 @@
   ignore_errors: true
   when:
     - ood_apps_is_airgap
+
+- set_fact:
+    ood_apps_airgap_vars:
+      ood_apps_overrides: "{{ ood_apps_overrides }}"
+      ood_apps_remove: "{{ ood_apps_remove }}"
+      ood_apps_meta: "{{ ood_apps_meta }}"
+
+#- name: ood apps airgap vars
+#  debug:
+#    var: ood_apps_airgap_vars
 
 - name: Merge OOD app model
   ansible.builtin.set_fact:
@@ -106,6 +131,10 @@
         ]
       }}
   loop: "{{ ood_apps_enabled_resolved }}"
+
+- main: ood_apps var content
+  debug:
+    var: ood_apps
 
 - name: Include tasks for login image
   ansible.builtin.include_tasks:
