@@ -10,18 +10,14 @@
 
 - name: Load OS-specific OOD app overrides
   ansible.builtin.include_vars:
-    file: "{{ lookup('ansible.builtin.first_found', ood_apps_os_var_params, errors='ignore') }}"
+    file: "{{ item }}"
     name: ood_apps_os_vars
-  vars:
-    ood_apps_os_var_params:
-      files:
-        - "{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
-        - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
-        - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
-      paths:
-        - vars
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
   no_log: true
-  when: ((lookup('ansible.builtin.first_found', ood_apps_os_var_params, errors='ignore')) or '') | length > 0
+  ignore_errors: true
 
 - name: Load generic airgap OOD app overrides
   ansible.builtin.include_vars:
@@ -33,23 +29,19 @@
 
 - name: Load airgap OOD app overrides
   ansible.builtin.include_vars:
-    file: "{{ lookup('ansible.builtin.first_found', ood_apps_airgap_var_params, errors='ignore') }}"
+    file: "{{ item }}"
     name: ood_apps_airgap_vars
-  vars:
-    ood_apps_airgap_var_params:
-      files:
-        - "{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
-        - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
-        - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
-        - "{{ ansible_distribution }}.yaml"
-        - "{{ ansible_os_family }}.yaml"
-        - main.yaml
-      paths:
-        - vars/airgap
+  with_first_found:
+    - "airgap/{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
+    - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_distribution }}.yaml"
+    - "airgap/{{ ansible_os_family }}.yaml"
+    - "airgap/main.yaml"
   no_log: true
+  ignore_errors: true
   when:
     - ood_apps_is_airgap
-    - ((lookup('ansible.builtin.first_found', ood_apps_airgap_var_params, errors='ignore')) or '') | length > 0
 
 - name: Merge OOD app model
   ansible.builtin.set_fact:
