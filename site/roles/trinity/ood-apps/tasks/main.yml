@@ -21,7 +21,7 @@
       paths:
         - vars
   no_log: true
-  when: (lookup('ansible.builtin.first_found', ood_apps_os_var_params, errors='ignore') | default('')) | length > 0
+  when: ((lookup('ansible.builtin.first_found', ood_apps_os_var_params, errors='ignore')) or '') | length > 0
 
 - name: Load generic airgap OOD app overrides
   ansible.builtin.include_vars:
@@ -49,7 +49,7 @@
   no_log: true
   when:
     - ood_apps_is_airgap
-    - (lookup('ansible.builtin.first_found', ood_apps_airgap_var_params, errors='ignore') | default('')) | length > 0
+    - ((lookup('ansible.builtin.first_found', ood_apps_airgap_var_params, errors='ignore')) or '') | length > 0
 
 - name: Merge OOD app model
   ansible.builtin.set_fact:
