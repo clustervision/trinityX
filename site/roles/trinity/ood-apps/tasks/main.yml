@@ -1,7 +1,16 @@
 ---
 
-- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
-  include_vars: "{{ item }}"
+- name: Initialize OOD app variable layers
+  ansible.builtin.set_fact:
+    ood_apps_os_vars: {}
+    ood_apps_airgap_main_vars: {}
+    ood_apps_airgap_vars: {}
+    ood_apps: []
+    ood_apps_is_airgap: "{{ is_airgap | default(False) }}"
+
+- name: Load OS-specific OOD app overrides
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
@@ -9,8 +18,34 @@
   no_log: true
   ignore_errors: true
 
-- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file. Airgap.
-  include_vars: "{{ item }}"
+- set_fact:
+    ood_apps_os_vars:
+      ood_apps_overrides: "{{ ood_apps_overrides }}"
+
+#- name: ood apps os vars
+#  debug:
+#    var: ood_apps_os_vars
+
+- name: Load generic airgap OOD app overrides
+  ansible.builtin.include_vars:
+    file: "vars/airgap/main.yaml"
+  no_log: true
+  when:
+    - ood_apps_is_airgap
+
+- set_fact:
+    ood_apps_airgap_main_vars:
+      ood_apps_overrides: "{{ ood_apps_overrides }}"
+      ood_apps_remove: "{{ ood_apps_remove }}"
+      ood_apps_meta: "{{ ood_apps_meta }}"
+
+#- name: ood apps airgap main vars
+#  debug:
+#    var: ood_apps_airgap_main_vars
+
+- name: Load airgap OOD app overrides
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
   with_first_found:
     - "airgap/{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
     - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
@@ -20,7 +55,86 @@
     - "airgap/main.yaml"
   no_log: true
   ignore_errors: true
-  when: is_airgap | default(False)
+  when:
+    - ood_apps_is_airgap
+
+- set_fact:
+    ood_apps_airgap_vars:
+      ood_apps_overrides: "{{ ood_apps_overrides }}"
+      ood_apps_remove: "{{ ood_apps_remove }}"
+      ood_apps_meta: "{{ ood_apps_meta }}"
+
+#- name: ood apps airgap vars
+#  debug:
+#    var: ood_apps_airgap_vars
+
+- name: Merge OOD app model
+  ansible.builtin.set_fact:
+    ood_apps_catalog_merged: >-
+      {{
+        ood_apps_catalog
+        | combine((ood_apps_os_vars.ood_apps_catalog | default({})) if not ood_apps_is_airgap else {}, recursive=True)
+        | combine((ood_apps_airgap_main_vars.ood_apps_catalog | default({})) if ood_apps_is_airgap else {}, recursive=True)
+        | combine((ood_apps_airgap_vars.ood_apps_catalog | default({})) if ood_apps_is_airgap else {}, recursive=True)
+      }}
+    ood_apps_overrides_merged: >-
+      {{
+        ood_apps_overrides
+        | combine((ood_apps_os_vars.ood_apps_overrides | default({})) if not ood_apps_is_airgap else {}, recursive=True)
+        | combine((ood_apps_airgap_main_vars.ood_apps_overrides | default({})) if ood_apps_is_airgap else {}, recursive=True)
+        | combine((ood_apps_airgap_vars.ood_apps_overrides | default({})) if ood_apps_is_airgap else {}, recursive=True)
+      }}
+    ood_apps_remove_merged: >-
+      {{
+        ood_apps_remove
+        | combine((ood_apps_os_vars.ood_apps_remove | default({})) if not ood_apps_is_airgap else {}, recursive=True)
+        | combine((ood_apps_airgap_main_vars.ood_apps_remove | default({})) if ood_apps_is_airgap else {}, recursive=True)
+        | combine((ood_apps_airgap_vars.ood_apps_remove | default({})) if ood_apps_is_airgap else {}, recursive=True)
+      }}
+    ood_apps_enabled_seed: >-
+      {{
+        (ood_apps_airgap_vars.ood_apps_enabled_default | default(ood_apps_airgap_main_vars.ood_apps_enabled_default | default(ood_apps_enabled_default)))
+        if ood_apps_is_airgap
+        else (ood_apps_os_vars.ood_apps_enabled_default | default(ood_apps_enabled_default))
+      }}
+    ood_luna_apps_url: >-
+      {{
+        (ood_apps_airgap_vars.ood_apps_meta.ood_luna_apps_url | default(ood_apps_airgap_main_vars.ood_apps_meta.ood_luna_apps_url | default(ood_luna_apps_url)))
+        if ood_apps_is_airgap
+        else (ood_apps_os_vars.ood_apps_meta.ood_luna_apps_url | default(ood_luna_apps_url))
+      }}
+
+- name: Resolve final OOD app order
+  ansible.builtin.set_fact:
+    ood_apps_enabled_resolved: >-
+      {{
+        (
+          ood_apps_enabled
+          if (ood_apps_enabled is defined)
+          else (ood_apps_enabled_seed + (ood_apps_catalog_merged.keys() | list) + (ood_apps_overrides_merged.keys() | list))
+        ) | unique
+      }}
+
+- name: Materialize final OOD app list
+  ansible.builtin.set_fact:
+    ood_apps: >-
+      {{
+        ood_apps + [
+          (
+            {'name': item}
+            | combine(ood_apps_catalog_merged[item] | default({}), recursive=True)
+            | combine(ood_apps_overrides_merged[item] | default({}), recursive=True)
+            | dict2items
+            | rejectattr('key', 'in', ood_apps_remove_merged[item] | default([]))
+            | items2dict
+          )
+        ]
+      }}
+  loop: "{{ ood_apps_enabled_resolved }}"
+
+- name: ood_apps var content
+  debug:
+    var: ood_apps
 
 - name: Include tasks for login image
   ansible.builtin.include_tasks:
@@ -40,4 +154,3 @@
 - name: Include tasks for login image
   ansible.builtin.include_tasks:
     file: login-post.yml
-

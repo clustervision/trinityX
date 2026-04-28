@@ -8,19 +8,31 @@
     include_vars: "../vars/airgap/rack.yml"
     when: is_airgap | default(False)
 
+  - name: Merge Rack asset variables.
+    set_fact:
+      rack_assets: "{{ rack_assets_default | combine(rack_assets_airgap | default({}), recursive=True) }}"
+
   - name: Downloading Rack nodejs package
     get_url:
-      url: "{{ rack_noarch_nodejs_repository }}/{{ rack_gui_nodejs }}"
-      dest: "{{ trix_ood }}/3.0/rack/{{ rack_gui_nodejs }}"
+      url: "{{ rack_assets.noarch_nodejs_repository }}/{{ rack_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/rack/{{ rack_assets.gui_nodejs }}"
+
+  - name: Ensure Rack assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/rack/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
 
   - name: Unpack Rack nodejs files
     unarchive:
-      src: "{{ trix_ood }}/3.0/rack/{{ rack_gui_nodejs }}"
+      src: "{{ trix_ood }}/3.0/rack/{{ rack_assets.gui_nodejs }}"
       dest: "{{ trix_ood }}/3.0/rack/app/assets/"
       keep_newer: false # override?
 
   - name: Cleanup Rack nodejs package
     file:
-      path: "{{ trix_ood }}/3.0/rack/{{ rack_gui_nodejs }}"
+      path: "{{ trix_ood }}/3.0/rack/{{ rack_assets.gui_nodejs }}"
       state: absent
   when: not in_image

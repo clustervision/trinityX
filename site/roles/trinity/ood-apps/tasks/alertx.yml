@@ -8,19 +8,31 @@
     include_vars: "airgap/alertx.yml"
     when: is_airgap | default(False)
 
+  - name: Merge alertx asset variables.
+    set_fact:
+      alertx_assets: "{{ alertx_assets_default | combine(alertx_assets_airgap | default({}), recursive=True) }}"
+
   - name: Downloading nodejs package
     get_url:
-      url: "{{ alertx_noarch_nodejs_repository }}/{{ alertx_gui_nodejs }}"
-      dest: "{{ trix_ood }}/3.0/alertx/{{ alertx_gui_nodejs }}"
+      url: "{{ alertx_assets.noarch_nodejs_repository }}/{{ alertx_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/alertx/{{ alertx_assets.gui_nodejs }}"
+
+  - name: Ensure alertx assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/alertx/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
 
   - name: Unpack nodejs files
     unarchive:
-      src: "{{ trix_ood }}/3.0/alertx/{{ alertx_gui_nodejs }}"
+      src: "{{ trix_ood }}/3.0/alertx/{{ alertx_assets.gui_nodejs }}"
       dest: "{{ trix_ood }}/3.0/alertx/app/assets/"
       keep_newer: false # override?
 
   - name: Cleanup nodejs package
     file:
-      path: "{{ trix_ood }}/3.0/alertx/{{ alertx_gui_nodejs }}"
+      path: "{{ trix_ood }}/3.0/alertx/{{ alertx_assets.gui_nodejs }}"
       state: absent
   when: not in_image

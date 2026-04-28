@@ -8,19 +8,31 @@
     include_vars: "../vars/airgap/node.yml"
     when: is_airgap | default(False)
 
+  - name: Merge Node asset variables.
+    set_fact:
+      node_assets: "{{ node_assets_default | combine(node_assets_airgap | default({}), recursive=True) }}"
+
   - name: Downloading Node nodejs package
     get_url:
-      url: "{{ node_noarch_nodejs_repository }}/{{ node_gui_nodejs }}"
-      dest: "{{ trix_ood }}/3.0/node/{{ node_gui_nodejs }}"
+      url: "{{ node_assets.noarch_nodejs_repository }}/{{ node_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/node/{{ node_assets.gui_nodejs }}"
+
+  - name: Ensure Node assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/node/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
 
   - name: Unpack Node nodejs files
     unarchive:
-      src: "{{ trix_ood }}/3.0/node/{{ node_gui_nodejs }}"
+      src: "{{ trix_ood }}/3.0/node/{{ node_assets.gui_nodejs }}"
       dest: "{{ trix_ood }}/3.0/node/app/assets/"
       keep_newer: false # override?
 
   - name: Cleanup Node nodejs package
     file:
-      path: "{{ trix_ood }}/3.0/node/{{ node_gui_nodejs }}"
+      path: "{{ trix_ood }}/3.0/node/{{ node_assets.gui_nodejs }}"
       state: absent
   when: not in_image
