@@ -19,23 +19,45 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-- name: Copy 91-hpc-limits.conf to /etc/security/limits.d
+- name: Copy 91-hpc-controller-limits.conf to /etc/security/limits.d
   template:
-    src: '91-hpc-limits.conf.j2'
+    src: '91-hpc-controller-limits.conf.j2'
     dest: '/etc/security/limits.d/91-hpc-limits.conf'
     owner: 'root'
     group: 'root'
     mode: '0644'
+  when: on_controller | default(False) or in_login_image | default(False)
 
-- name: Copy 91-hpc-sysctl.conf to /etc/sysctl.d/
+- name: Copy 91-hpc-compute-limits.conf to /etc/security/limits.d
   template:
-    src: '91-hpc-sysctl.conf.j2'
+    src: '91-hpc-compute-limits.conf.j2'
+    dest: '/etc/security/limits.d/91-hpc-limits.conf'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+  when: in_image | default(True)
+
+- name: Copy 91-hpc-controller-sysctl.conf to /etc/sysctl.d/
+  template:
+    src: '91-hpc-controller-sysctl.conf.j2'
     dest: '/etc/sysctl.d/91-hpc-sysctl.conf'
     owner: 'root'
     group: 'root'
     mode: '0644'
     backup: true
   notify: activate sysctls
+  when: on_controller | default(False) or in_login_image | default(False)
+
+- name: Copy 91-hpc-compute-sysctl.conf to /etc/sysctl.d/
+  template:
+    src: '91-hpc-compute-sysctl.conf.j2'
+    dest: '/etc/sysctl.d/91-hpc-sysctl.conf'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+    backup: true
+  notify: activate sysctls
+  when: in_image | default(True)
 
 - name: Setting compute performance tuned profile
   shell: "tuned-adm profile {{ compute_tuned_profile | default('hpc-compute') }}"
