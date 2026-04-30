@@ -35,6 +35,7 @@ It will also set up:
 * High Availability/HA
 * and more
 
+
 .. image:: img/trinityxbanner_scaled.png
 
 
