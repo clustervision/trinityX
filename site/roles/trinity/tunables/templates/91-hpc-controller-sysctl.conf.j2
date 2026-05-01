@@ -1,0 +1,42 @@
+{{ ansible_managed | comment }}
+
+# Kernel sysctl configuration file for compute node.
+#
+
+# Controls whether core dumps will append the PID to the core filename.
+# Useful for debugging multi-threaded applications.
+kernel.core_uses_pid = 1
+
+# Only if hardening baseline is a demand
+#kernel.sysrq=0
+
+# Controls IP packet forwarding
+net.ipv4.ip_forward = 1
+
+# Reverse path filtering
+# Loose mode is safer for complex / asymmetric HPC networking than strict mode
+net.ipv4.conf.all.rp_filter=2
+net.ipv4.conf.default.rp_filter=2
+
+# Increase size of ARP tables
+net.ipv4.neigh.default.gc_thresh1=2048
+net.ipv4.neigh.default.gc_thresh2=4096
+net.ipv4.neigh.default.gc_thresh3=8192
+
+# Turn on ARP filtering (this allows multiple NICs to be on the same network)
+#net.ipv4.conf.all.arp_filter = 1
+#net.ipv4.conf.ib0.arp_filter = 1
+
+# This prevents ARP replies on the wrong interface
+#net.ipv4.conf.all.arp_ignore = 1
+#net.ipv4.conf.ib0.arp_ignore = 1
+
+#net.ipv4.conf.all.arp_announce=2
+#net.ipv4.conf.ib0.arp_announce=2
+
+# Memory that is kept free for use by special reserves including atomi (or reclaim).
+vm.min_free_kbytes=262144
+
+# Improve memory allocation after high I/O
+#vm.zone_reclaim_mode = 3
+
