@@ -599,7 +599,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum(\r\n        sum by (hostname) (avg_over_time(power_consumption_per_cpu_watts[$__range:]))\r\n        * \r\n        sum by (hostname) (\r\n            last_over_time(\r\n                (\r\n                    slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"} \r\n                    * on (jobid) group_right(hostname) \r\n                    slurm_job_runtime{jobid=~\"$job_id\",jobstate=\"RUNNING\"}\r\n                )\r\n                [$__range:]))\r\n) / 3600\r\n+\r\n(sum(\r\n        sum by (hostname) (avg_over_time(power_consumption_per_gpu_watts[$__range:]))\r\n        * \r\n        sum by (hostname) (\r\n            last_over_time(\r\n                (\r\n                    slurm_job_allocated_gres{jobid=~\"$job_id\",jobstate=\"RUNNING\",gres_type=\"gpu\"} \r\n                    * on (jobid) group_right(hostname) \r\n                    slurm_job_runtime{jobid=~\"$job_id\",jobstate=\"RUNNING\"}\r\n                )\r\n                [$__range:]))\r\n) OR vector(0)) / 3600) * max(slurm_job_info{jobid=~\"$job_id\",jobstate=\"RUNNING\"})",
+          "expr": "(sum(\r\n        sum by (hostname) (avg_over_time(power_consumption_per_cpu_watts[$__range:]))\r\n        * \r\n        sum by (hostname) (\r\n            last_over_time(\r\n                (\r\n                    max without (instance) (slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"}) \r\n                    * on (jobid) group_left \r\n                    max by (jobid) (slurm_job_runtime{jobid=~\"$job_id\",jobstate=\"RUNNING\"})\r\n                )\r\n                [$__range:]))\r\n) / 3600\r\n+\r\n(sum(\r\n        sum by (hostname) (avg_over_time(power_consumption_per_gpu_watts[$__range:]))\r\n        * \r\n        sum by (hostname) (\r\n            last_over_time(\r\n                (\r\n                    max without (instance) (slurm_job_allocated_gres{jobid=~\"$job_id\",jobstate=\"RUNNING\",gres_type=\"gpu\"}) \r\n                    * on (jobid) group_left \r\n                    max by (jobid) (slurm_job_runtime{jobid=~\"$job_id\",jobstate=\"RUNNING\"})\r\n                )\r\n                [$__range:]))\r\n) OR vector(0)) / 3600) * max(slurm_job_info{jobid=~\"$job_id\",jobstate=\"RUNNING\"})",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -773,7 +773,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum(\r\n        sum by (hostname) (avg_over_time(power_consumption_per_cpu_watts[$__range:]))\r\n        * \r\n        sum by (hostname) (\r\n            last_over_time(\r\n                (\r\n                    slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"} \r\n                    * on (jobid) group_right(hostname) \r\n                    slurm_job_runtime{jobid=~\"$job_id\",jobstate=\"RUNNING\"}\r\n                )\r\n                [$__range:]))\r\n) / 3600\r\n+\r\n(sum(\r\n        sum by (hostname) (avg_over_time(power_consumption_per_gpu_watts[$__range:]))\r\n        * \r\n        sum by (hostname) (\r\n            last_over_time(\r\n                (\r\n                    slurm_job_allocated_gres{jobid=~\"$job_id\",jobstate=\"RUNNING\",gres_type=\"gpu\"} \r\n                    * on (jobid) group_right(hostname) \r\n                    slurm_job_runtime{jobid=~\"$job_id\",jobstate=\"RUNNING\"}\r\n                )\r\n                [$__range:]))\r\n) OR vector(0)) / 3600) * max(slurm_job_info{jobid=~\"$job_id\",jobstate=\"RUNNING\"})",
+          "expr": "(sum(\r\n        sum by (hostname) (avg_over_time(power_consumption_per_cpu_watts[$__range:]))\r\n        * \r\n        sum by (hostname) (\r\n            last_over_time(\r\n                (\r\n                    max without (instance) (slurm_job_allocated_cores{jobid=~\"$job_id\",jobstate=\"RUNNING\"}) \r\n                    * on (jobid) group_left \r\n                    max by (jobid) (slurm_job_runtime{jobid=~\"$job_id\",jobstate=\"RUNNING\"})\r\n                )\r\n                [$__range:]))\r\n) / 3600\r\n+\r\n(sum(\r\n        sum by (hostname) (avg_over_time(power_consumption_per_gpu_watts[$__range:]))\r\n        * \r\n        sum by (hostname) (\r\n            last_over_time(\r\n                (\r\n                    max without (instance) (slurm_job_allocated_gres{jobid=~\"$job_id\",jobstate=\"RUNNING\",gres_type=\"gpu\"}) \r\n                    * on (jobid) group_left \r\n                    max by (jobid) (slurm_job_runtime{jobid=~\"$job_id\",jobstate=\"RUNNING\"})\r\n                )\r\n                [$__range:]))\r\n) OR vector(0)) / 3600) * max(slurm_job_info{jobid=~\"$job_id\",jobstate=\"RUNNING\"})",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -939,7 +939,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname) (power_consumption_per_gpu_watts)\r\n    *\r\n    sum by (hostname)((slurm_job_gpu_streaming_multiprocessor_usage >0)* on (jobid) group_right(hostname) \r\n                    slurm_job_info{jobid=~\"$job_id\",jobstate=\"RUNNING\"})\r\n    )",
+          "expr": "sum(\r\n    sum by (hostname) (power_consumption_per_gpu_watts)\r\n    *\r\n    sum by (hostname)((max without (instance) (slurm_job_gpu_streaming_multiprocessor_usage > 0)) * on (jobid) group_left \r\n                    max by (jobid) (slurm_job_info{jobid=~\"$job_id\",jobstate=\"RUNNING\"}))\r\n    )",
           "hide": false,
           "instant": false,
           "interval": "1m",
@@ -1113,7 +1113,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(\r\n    sum by (hostname) (power_consumption_per_gpu_watts)\r\n    *\r\n    sum by (hostname)((slurm_job_gpu_streaming_multiprocessor_usage >0)* on (jobid) group_right(hostname) \r\n                    slurm_job_info{jobid=~\"$job_id\",jobstate=\"RUNNING\"})\r\n    )",
+          "expr": "sum(\r\n    sum by (hostname) (power_consumption_per_gpu_watts)\r\n    *\r\n    sum by (hostname)((max without (instance) (slurm_job_gpu_streaming_multiprocessor_usage > 0)) * on (jobid) group_left \r\n                    max by (jobid) (slurm_job_info{jobid=~\"$job_id\",jobstate=\"RUNNING\"}))\r\n    )",
           "hide": false,
           "instant": false,
           "interval": "1m",
@@ -1876,7 +1876,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-	  "expr": "sum(\r\n  rate(\r\n    label_replace(\r\n      {__name__=~\"slurm_job_gpu_.*_seconds_total\", jobid=\"$job_id\"},\r\n      \"metric\", \"$1\", \"__name__\", \"(.*)\"\r\n    )[$__rate_interval:]\r\n  )\r\n)",
+          "expr": "sum(\r\n  rate(\r\n    label_replace(\r\n      {__name__=~\"slurm_job_gpu_.*_seconds_total\", jobid=\"$job_id\"},\r\n      \"metric\", \"$1\", \"__name__\", \"(.*)\"\r\n    )[$__rate_interval:]\r\n  )\r\n)",
           "hide": false,
           "instant": false,
           "interval": "30s",
@@ -2029,7 +2029,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-	  "expr": "sum(\r\n  rate(\r\n    label_replace(\r\n      {__name__=~\"slurm_job_gpu_.*_seconds_total\", jobid=\"$job_id\"},\r\n      \"metric\", \"$1\", \"__name__\", \"(.*)\"\r\n    )[$__rate_interval:]\r\n  )\r\n)",
+          "expr": "sum(\r\n  rate(\r\n    label_replace(\r\n      {__name__=~\"slurm_job_gpu_.*_seconds_total\", jobid=\"$job_id\"},\r\n      \"metric\", \"$1\", \"__name__\", \"(.*)\"\r\n    )[$__rate_interval:]\r\n  )\r\n)",
           "hide": false,
           "instant": false,
           "interval": "30s",
