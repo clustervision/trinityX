@@ -57,36 +57,6 @@
 
 # ---------------------------------------------------------------------------
 
-- name: Install slurm packages
-  yum:
-    name: '{{ slurm_packages }}'
-    state: present
-    enablerepo:
-      - powertools
-      - crb
-  tags: install-only
-  when:
-    - enable_openhpc == false
-    - on_controller
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Install slurm packages in image
-  yum:
-    name: '{{ slurm_packages_image }}'
-    state: present
-    enablerepo:
-      - powertools
-      - crb
-  tags: install-only
-  when:
-    - enable_openhpc == false
-    - in_image
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-# ---------------------------------------------------------------------------
-
 - name: ensure legacy slurm rpms are not installed before configuring ohpc versions
   yum:
     name: '{{ slurm_packages }}'
@@ -109,25 +79,27 @@
 
 # ---------------------------------------------------------------------------
 
-- name: Install ohpc slurm packages
+- name: Install slurm packages
   yum:
-    name: '{{ slurm_packages_ohpc }}'
+    name: "{{ slurm_packages_image if in_image else slurm_packages }}"
     state: present
+    enablerepo:
+      - powertools
+      - crb
   tags: install-only
-  when:
-    - enable_openhpc == true
-    - on_controller
+  when: not enable_openhpc
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-- name: Install ohpc slurm packages in image
+- name: Install ohpc slurm packages
   yum:
-    name: '{{ slurm_packages_ohpc_image }}'
+    name: "{{ slurm_packages_ohpc_image if in_image else slurm_packages_ohpc }}"
     state: present
+    enablerepo:
+      - powertools
+      - crb
   tags: install-only
-  when:
-    - enable_openhpc == true
-    - in_image
+  when: enable_openhpc
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
