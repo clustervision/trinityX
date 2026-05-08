@@ -79,27 +79,34 @@
 
 # ---------------------------------------------------------------------------
 
+- name: Resolve slurm package flavor
+  set_fact:
+    slurm_packages_flavor: >-
+      {{
+        'slurm_packages_cv' if enable_cvslurm | default(False)
+        else 'slurm_packages_ohpc' if enable_openhpc | default(False)
+        else 'slurm_packages'
+      }}
+  when: not in_image
+
+- name: Resolve slurm package flavor for images
+  set_fact:
+    slurm_packages_flavor: >-
+      {{
+        'slurm_packages_cv_image' if enable_cvslurm | default(False)
+        else 'slurm_packages_ohpc_image' if enable_openhpc | default(False)
+        else 'slurm_packages_image'
+      }}
+  when: in_image
+
 - name: Install slurm packages
   yum:
-    name: "{{ slurm_packages_image if in_image else slurm_packages }}"
+    name: "{{ lookup('vars', slurm_packages_flavor) }}"
     state: present
     enablerepo:
       - powertools
       - crb
   tags: install-only
-  when: not enable_openhpc
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Install ohpc slurm packages
-  yum:
-    name: "{{ slurm_packages_ohpc_image if in_image else slurm_packages_ohpc }}"
-    state: present
-    enablerepo:
-      - powertools
-      - crb
-  tags: install-only
-  when: enable_openhpc
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
