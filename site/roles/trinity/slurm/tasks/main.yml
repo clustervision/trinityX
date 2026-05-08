@@ -1,17 +1,32 @@
 ---
 # tasks file for slurm
 
-- name: Configure OpenHPC repos
-  ansible.builtin.yum_repository:
-    name: "openhpc-{{ item.name }}"
-    description: "openhpc-{{ item.name }}"
-    baseurl: "{{ item.repo }}"
-    gpgcheck: "{{ item.gpgcheck | default(False) }}"
-    gpgkey: "{{ item.gpgkey | default('') }}"
-  with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
-  when:
-    - not is_airgap | default(False)
-    - enable_openhpc == true
+- block:
+  - name: Configure OpenHPC repos
+    ansible.builtin.yum_repository:
+      name: "openhpc-{{ item.name }}"
+      description: "openhpc-{{ item.name }}"
+      baseurl: "{{ item.repo }}"
+      gpgcheck: "{{ item.gpgcheck | default(False) }}"
+      gpgkey: "{{ item.gpgkey | default('') }}"
+    with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
+    when:
+      - enable_openhpc == true
+      - not enable_trinityx_slurm | default(True)
+
+  - name: Configure CV-Slurm repos
+    ansible.builtin.yum_repository:
+      name: "trinityx-slurm-{{ ansible_os_family }}"
+      description: "trinityx-slurm-{{ ansible_os_family }}"
+      baseurl: "{{ item.repo }}/{{ system_arch }}"
+      gpgcheck: "{{ item.gpgcheck | default(False) }}"
+      gpgkey: "{{ item.gpgkey | default('') }}"
+    with_items: "{{ trinityx_slurm_repositories }}"
+    when:
+      - not enable_openhpc | default(False)
+      - enable_trinityx_slurm | default(True)
+      - item.name == ansible_os_family
+  when: not is_airgap | default(False)
 
 - name: Install PyMSQL
   yum:
@@ -83,7 +98,7 @@
   set_fact:
     slurm_packages_flavor: >-
       {{
-        'slurm_packages_cv' if enable_cvslurm | default(False)
+        'slurm_packages_trx' if enable_trinityx_slurm | default(True)
         else 'slurm_packages_ohpc' if enable_openhpc | default(False)
         else 'slurm_packages'
       }}
@@ -93,7 +108,7 @@
   set_fact:
     slurm_packages_flavor: >-
       {{
-        'slurm_packages_cv_image' if enable_cvslurm | default(False)
+        'slurm_packages_trx_image' if enable_trinityx_slurm | default(True)
         else 'slurm_packages_ohpc_image' if enable_openhpc | default(False)
         else 'slurm_packages_image'
       }}
