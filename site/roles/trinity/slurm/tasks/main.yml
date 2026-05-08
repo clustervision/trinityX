@@ -55,6 +55,8 @@
     - ['{{ munge_user_id }}', '{{ slurm_user_id }}']
   tags: install-only
 
+# ---------------------------------------------------------------------------
+
 - name: Install slurm packages
   yum:
     name: '{{ slurm_packages }}'
@@ -63,9 +65,27 @@
       - powertools
       - crb
   tags: install-only
-  when: enable_openhpc == false
+  when:
+    - enable_openhpc == false
+    - on_controller
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install slurm packages in image
+  yum:
+    name: '{{ slurm_packages_image }}'
+    state: present
+    enablerepo:
+      - powertools
+      - crb
+  tags: install-only
+  when:
+    - enable_openhpc == false
+    - in_image
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+# ---------------------------------------------------------------------------
 
 - name: ensure legacy slurm rpms are not installed before configuring ohpc versions
   yum:
@@ -87,14 +107,31 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+# ---------------------------------------------------------------------------
+
 - name: Install ohpc slurm packages
   yum:
     name: '{{ slurm_packages_ohpc }}'
     state: present
   tags: install-only
-  when: enable_openhpc == true
+  when:
+    - enable_openhpc == true
+    - on_controller
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install ohpc slurm packages in image
+  yum:
+    name: '{{ slurm_packages_ohpc_image }}'
+    state: present
+  tags: install-only
+  when:
+    - enable_openhpc == true
+    - in_image
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+# ---------------------------------------------------------------------------
 
 - name: Create systemd unit dirs
   file:
@@ -394,7 +431,7 @@
       until: '"Adding Cluster" in sacctmgr_success.stdout or "Not adding." in sacctmgr_success.stdout'
       retries: 10
       delay: 15
-  when: 
+  when:
     - primary|default(True)
     - on_controller
 
@@ -405,7 +442,7 @@
     name: '{{ item }}'
     state: started
     enabled: true
-  when: 
+  when:
     - on_controller
   with_items:
     - munge
@@ -415,7 +452,7 @@
     name: '{{ item }}'
     enabled: true
     state: started
-  when: 
+  when:
     - not on_controller
     - not on_node|default(False)
     - not in_image
@@ -433,7 +470,7 @@
         group: root
         mode: 0644
       when: enable_slurm_pam
-  when: 
+  when:
     - primary|default(True)
     - on_controller
 
