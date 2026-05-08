@@ -14,7 +14,7 @@
       - enable_openhpc == true
       - not enable_trinityx_slurm | default(True)
 
-  - name: Configure CV-Slurm repos
+  - name: Configure TrinityX-Slurm repos
     ansible.builtin.yum_repository:
       name: "trinityx-slurm-{{ ansible_os_family }}"
       description: "trinityx-slurm-{{ ansible_os_family }}"
@@ -23,7 +23,6 @@
       gpgkey: "{{ item.gpgkey | default('') }}"
     with_items: "{{ trinityx_slurm_repositories }}"
     when:
-      - not enable_openhpc | default(False)
       - enable_trinityx_slurm | default(True)
       - item.name == ansible_os_family
   when: not is_airgap | default(False)
