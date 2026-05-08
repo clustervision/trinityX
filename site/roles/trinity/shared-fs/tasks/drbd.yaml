@@ -134,16 +134,35 @@
     # we wont ignore errors here as we have to make sure this step succeeds before proceeding
   when: (not drbd_res_config.stat.exists) or override | default(False)
 
+- name: Verify if DRBD did not start last time
+  stat:
+     path: "/etc/trinity/drbd.start.failed"
+  register: drbd_fail_start
+
 - block:
   - block:
     - name: Populate service facts
       service_facts:
 
-    - name: Temporarily start DRBD up
-      service:
-        name: drbd
-        state: started
-      register: drbd_started
+    - block:
+      - name: Temporarily start DRBD up
+        service:
+          name: drbd
+          state: started
+        register: drbd_started
+      rescue:
+      - name: Mark failed drbd start
+        ansible.builtin.file:
+          path: /etc/trinity/drbd.start.failed
+          state: touch
+      # we need to bail out here. however we still need to come back here because zfs or lvm is not done yet
+      - fail:
+          msg: "Failed to start DRBD service... please investigate and rerun playbook once solved"
+
+    - name: Remove failed drbd start marker if present
+      ansible.builtin.file:
+        path: /etc/trinity/drbd.start.failed
+        state: absent
 
 #    - name: Attach DRBD shared resources
 #      shell: '/usr/sbin/drbdadm attach {{ item.name | replace("/","_") }}'
@@ -299,7 +318,7 @@
         state: stopped
       when: drbd_started is defined and drbd_started.state == "started"
 
-    when: (not drbd_res_config.stat.exists) or override | default(False)
+    when: (not drbd_res_config.stat.exists) or drbd_fail_start.stat.exists or override | default(False)
 
 
   #--------------------------------------------
