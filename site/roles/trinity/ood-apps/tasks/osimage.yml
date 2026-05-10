@@ -1,0 +1,38 @@
+---
+
+- block:
+  - name: Load OS Image variables.
+    include_vars: "../defaults/osimage.yml"
+
+  - name: Load Airgap OS Image variables.
+    include_vars: "../vars/airgap/osimage.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge OS Image asset variables.
+    set_fact:
+      osimage_assets: "{{ osimage_assets_default | combine(osimage_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading OS Image nodejs package
+    get_url:
+      url: "{{ osimage_assets.noarch_nodejs_repository }}/{{ osimage_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/osimage/{{ osimage_assets.gui_nodejs }}"
+
+  - name: Ensure OS Image assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/osimage/app/assets"
+      state: directory
+      owner: root
+      osimage: root
+      mode: "0755"
+
+  - name: Unpack OS Image nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/osimage/{{ osimage_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/osimage/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup OS Image nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/osimage/{{ osimage_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image
