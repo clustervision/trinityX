@@ -1,0 +1,563 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "home"
+      ],
+      "targetBlank": false,
+      "title": "TrinityX Home",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "dashboard"
+      ],
+      "targetBlank": false,
+      "title": "TrinityX Dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${history_ds}"
+      },
+      "description": "Total alert events stored from Alertmanager.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^total_events$/",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "${history_ds}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS total_events FROM alert_history_events WHERE $__timeFilter(created_at)",
+          "refId": "A"
+        }
+      ],
+      "title": "Total events",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${history_ds}"
+      },
+      "description": "Firing events stored from Alertmanager.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^firing_events$/",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "${history_ds}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS firing_events FROM alert_history_events WHERE status = 'firing' AND $__timeFilter(created_at)",
+          "refId": "A"
+        }
+      ],
+      "title": "Firing events",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${history_ds}"
+      },
+      "description": "Resolved events stored from Alertmanager.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^resolved_events$/",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "${history_ds}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS resolved_events FROM alert_history_events WHERE status = 'resolved' AND $__timeFilter(created_at)",
+          "refId": "A"
+        }
+      ],
+      "title": "Resolved events",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${history_ds}"
+      },
+      "description": "Append-only Alertmanager event history.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "active": {
+                        "color": "orange",
+                        "index": 0,
+                        "text": "active"
+                      },
+                      "firing": {
+                        "color": "orange",
+                        "index": 3,
+                        "text": "firing"
+                      },
+                      "resolved": {
+                        "color": "green",
+                        "index": 2,
+                        "text": "resolved"
+                      },
+                      "suppressed": {
+                        "color": "yellow",
+                        "index": 1,
+                        "text": "suppressed"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "severity"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "critical": {
+                        "color": "red",
+                        "index": 0,
+                        "text": "critical"
+                      },
+                      "danger": {
+                        "color": "orange",
+                        "index": 1,
+                        "text": "danger"
+                      },
+                      "info": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "info"
+                      },
+                      "warning": {
+                        "color": "yellow",
+                        "index": 2,
+                        "text": "warning"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "description"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 680
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 19,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "record_time"
+          }
+        ]
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "${history_ds}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  created_at AS record_time,\n  event_at AS event_time,\n  hostname,\n  alertname,\n  status,\n  alertmanager_state,\n  is_suppressed,\n  severity,\n  description,\n  value_text AS value,\n  job,\n  exporter,\n  source,\n  fingerprint\nFROM alert_history_events\nWHERE $__timeFilter(created_at)\n  AND ('${hostname:raw}' = 'All' OR hostname = '${hostname:raw}')\n  AND ('${severity:raw}' = 'All' OR severity = '${severity:raw}')\n  AND ('${alertname:raw}' = 'All' OR alertname = '${alertname:raw}')\n  AND ('${status:raw}' = 'All' OR status = '${status:raw}')\nORDER BY created_at DESC, id DESC\nLIMIT 5000",
+          "refId": "A"
+        }
+      ],
+      "title": "Alert history",
+      "type": "table"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "dashboard",
+    "alerts",
+    "history"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "AlertHistory",
+          "value": "trixalerthistory"
+        },
+        "description": "Alert history datasource",
+        "hide": 2,
+        "includeAll": false,
+        "label": "History datasource",
+        "multi": false,
+        "name": "history_ds",
+        "options": [],
+        "query": "mysql",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "mysql",
+          "uid": "${history_ds}"
+        },
+        "definition": "SELECT DISTINCT hostname AS __text, hostname AS __value FROM alert_history_events WHERE hostname IS NOT NULL AND hostname != '' ORDER BY hostname",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Hostname",
+        "multi": false,
+        "name": "hostname",
+        "options": [],
+        "query": "SELECT DISTINCT hostname AS __text, hostname AS __value FROM alert_history_events WHERE hostname IS NOT NULL AND hostname != '' ORDER BY hostname",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "mysql",
+          "uid": "${history_ds}"
+        },
+        "definition": "SELECT DISTINCT severity AS __text, severity AS __value FROM alert_history_events WHERE severity IS NOT NULL AND severity != '' ORDER BY severity",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Severity",
+        "multi": false,
+        "name": "severity",
+        "options": [],
+        "query": "SELECT DISTINCT severity AS __text, severity AS __value FROM alert_history_events WHERE severity IS NOT NULL AND severity != '' ORDER BY severity",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "mysql",
+          "uid": "${history_ds}"
+        },
+        "definition": "SELECT DISTINCT alertname AS __text, alertname AS __value FROM alert_history_events WHERE alertname IS NOT NULL AND alertname != '' ORDER BY alertname",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Alert",
+        "multi": false,
+        "name": "alertname",
+        "options": [],
+        "query": "SELECT DISTINCT alertname AS __text, alertname AS __value FROM alert_history_events WHERE alertname IS NOT NULL AND alertname != '' ORDER BY alertname",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "mysql",
+          "uid": "${history_ds}"
+        },
+        "definition": "SELECT DISTINCT status AS __text, status AS __value FROM alert_history_events WHERE status IS NOT NULL AND status != '' ORDER BY status",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Status",
+        "multi": false,
+        "name": "status",
+        "options": [],
+        "query": "SELECT DISTINCT status AS __text, status AS __value FROM alert_history_events WHERE status IS NOT NULL AND status != '' ORDER BY status",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1y",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Alert history",
+  "uid": "trixalerthistorydash",
+  "version": 25,
+  "weekStart": ""
+}

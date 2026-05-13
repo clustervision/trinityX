@@ -1,0 +1,43 @@
+import configparser
+import os
+
+_HISTORY_INI_FILE_PATH = "/trinity/local/alertx/history/config/history.ini"
+
+_config = configparser.ConfigParser()
+_config.read(_HISTORY_INI_FILE_PATH)
+
+SERVER_HOST = _config.get("SERVER", "HOST", fallback="127.0.0.1")
+SERVER_PORT = _config.getint("SERVER", "PORT", fallback=7151)
+
+DB_HOST = _config.get("DATABASE", "HOST", fallback="127.0.0.1")
+DB_PORT = _config.getint("DATABASE", "PORT", fallback=3306)
+DB_NAME = _config.get("DATABASE", "NAME", fallback="alertx_history")
+DB_USER = _config.get("DATABASE", "USER", fallback="alertx_history")
+DB_PASSWORD_FILE = _config.get("DATABASE", "PASSWORD_FILE", fallback="")
+DB_TABLE = _config.get("DATABASE", "TABLE", fallback="alert_history_events")
+
+ALERTMANAGER_URL = _config.get("ALERTMANAGER", "URL", fallback="https://127.0.0.1:9093")
+ALERTMANAGER_USER = _config.get("ALERTMANAGER", "USER", fallback="admin")
+ALERTMANAGER_PASSWORD_FILE = _config.get("ALERTMANAGER", "PASSWORD_FILE", fallback="")
+ALERTMANAGER_POLL_INTERVAL = _config.getint("ALERTMANAGER", "POLL_INTERVAL", fallback=30)
+ALERTMANAGER_REQUEST_TIMEOUT = _config.getint("ALERTMANAGER", "REQUEST_TIMEOUT", fallback=10)
+
+DEBUG_MODE = _config.getboolean("LOGGER", "DEBUG_MODE", fallback=False)
+LOG_DIR = _config.get("LOGGER", "LOG_DIR", fallback="/var/log/alertx")
+LOG_FILE = os.path.join(LOG_DIR, "history.log")
+
+
+def _read_file(path):
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            return handle.read().strip()
+    except OSError:
+        return ""
+
+
+def read_database_password():
+    return _read_file(DB_PASSWORD_FILE)
+
+
+def read_alertmanager_password():
+    return _read_file(ALERTMANAGER_PASSWORD_FILE)

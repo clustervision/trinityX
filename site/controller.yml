@@ -524,12 +524,18 @@
       grafana_prometheus_url: "https://{{ trix_ctrl_local_ip }}:9090"
       grafana_alertmanager_url: "https://{{ trix_ctrl_local_ip }}:9093"
       grafana_alertmanager_basic_auth_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      grafana_alert_history_enable: true
+      grafana_alert_history_mysql_host: "127.0.0.1:3306"
+      grafana_alert_history_mysql_db: "{{ alertx_history_sql_db | default('alertx_history') }}"
+      grafana_alert_history_mysql_user: "{{ alertx_history_sql_user | default('alertx_history') }}"
+      grafana_alert_history_mysql_password: "{{ lookup('password', '/etc/trinity/passwords/mysql/' + (alertx_history_sql_user | default('alertx_history')) + '.txt chars=ascii_letters,digits,hexdigits') }}"
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       tags: grafana, monitoring
 
     - role: trinity/alertx
       alertx_drainer_enable: "{{ True if 'slurm' in workload_manager else False }}"
+      alertx_history_enable: true
       tags: monitoring, alertx
 
     - role: trinity/osconfig
