@@ -1,20 +1,29 @@
 ---
 # vars file for ood-portal
 
-ood_rpms:
+ood_packages:
   - name: epel-release
   - name: https://yum.osc.edu/ondemand/4.1/ondemand-release-web-4.1-1.el{{ ansible_distribution_major_version }}.noarch.rpm
     no_gpgcheck: true
   - name: ["httpd", "@nodejs:22", "@ruby:3.3", "ondemand", "luna2-python"]
 
-ood_dex_rpms:
+ood_debs:
+  - key_url: https://apt.osc.edu/ondemand/DEB-GPG-KEY-ondemand
+    key_id: 4B72FE2B92D31755
+  - key_url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+    key_id: 6F71F525282841EEDAF851B42F59B5F99B1BE0B4
+
+ood_deb_repos:
+  - deb: "https://apt.osc.edu/ondemand/4.1/ondemand-release-web_4.1.0-{{ ansible_distribution_release }}_all.deb"
+
+ood_dex_packages:
   - name: ondemand-dex
 
-ood_pam_rpms:
+ood_pam_packages:
   - name: mod_authnz_pam
 
 ood_port: 8080
-ood_user: apache
+ood_user: "{{ 'www-data' if ansible_os_family == 'Debian' else 'apache' }}"
 ood_cfg_path: /etc/ood/config/
 ood_brand: TrinityX
 ood_auth_provider: dex # 'pam' or 'dex' ( only openldap is configured for dex )
@@ -22,6 +31,9 @@ ood_cluster_name: TrinityX
 ood_login_host: localhost
 ood_ldap_host: localhost
 ood_enable_ssl: true
+ood_apache_service_name: "{{ 'apache2' if ansible_os_family == 'Debian' else 'httpd' }}"
+ood_apache_modules_path: "{{ '/etc/apache2/mods-enabled' if ansible_os_family == 'Debian' else '/etc/httpd/conf.modules.d' }}"
+ood_htcacheclean_service_name: "{{ 'apache2' if ansible_os_family == 'Debian' else 'htcacheclean' }}"
 
 ood_footer_dir: "/etc/ood/config/apps/dashboard/views/layouts"
 ood_footer_file: "_footer.html.erb"

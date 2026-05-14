@@ -1,7 +1,13 @@
 {{ ansible_managed | comment }}
 
 ClusterName=cluster
-SlurmctldHost={{ slurm_ctrl_list }}
+{% if enable_trinityx_slurm %}
+{% for controller in slurm_ctrl_list %}
+SlurmctldHost={{ controller }}
+{% endfor %}
+{% else %}
+SlurmctldHost={{ slurm_ctrl_list | join(",") }}
+{% endif %}
 SlurmctldAddr={{ slurm_ctrl_ip }}
 
 Include /etc/slurm/slurm-nodes.conf

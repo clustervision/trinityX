@@ -4,10 +4,22 @@
     name: "{{ item.name }}"
     state: present
     disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
-  with_items: "{{ ood_dex_rpms }}"
+  with_items: "{{ ood_dex_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
   notify: Run update_ood
+  when: ansible_os_family == "RedHat"
+
+- name: Install required apt packages
+  ansible.builtin.apt:
+    name: "{{ item.name }}"
+    state: present
+    update_cache: true
+  loop: "{{ ood_dex_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  notify: Run update_ood
+  when: ansible_os_family == "Debian"
 
 - name: Enable ondemand-dex service on startup
   ansible.builtin.service:

@@ -1,11 +1,12 @@
 {{ ansible_managed | comment }}
 
 [Unit]
-After=remote-fs.target
-Requires=remote-fs.target
+#After=remote-fs.target
+#Requires=remote-fs.target
+RequiresMountsFor={{ munge_conf_path }}
 
 [Service]
-TimeoutStartSec=300
+TimeoutStartSec=600
 ExecStart=
 ExecStart=/usr/sbin/munged  --key-file {{ munge_conf_path }}/munge.key
 Restart=on-failure
