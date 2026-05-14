@@ -1,4 +1,14 @@
 ---
+# Ubuntu login image wrapper.
+#
+# This mirrors the structure of login-default.yml, but uses the Ubuntu
+# image creation/setup flow from compute-ubuntu.yml.
+#
+# Note: full login-default parity for Ubuntu still requires Ubuntu support in
+# the trinity/ood and trinity/slurm roles. Today this playbook renders the
+# Ubuntu login-image entrypoint, while the role-level OOD/slurm work remains
+# a follow-up.
+
 - hosts: localhost
   pre_tasks:
   #
@@ -6,7 +16,7 @@
   #
   - name: Set image name
     set_fact:
-      image_name: "ubuntu-image"
+      image_name: "login-ubuntu-image"
     tags: always
 
 - import_playbook: imports/trinity-ubuntu-image-create.yml
@@ -24,10 +34,11 @@
     # The alternative source can be 'base' or 'docker'
     #alternative_image_source: 'base'
 
-
-- import_playbook: imports/trinity-ubuntu-image-setup.yml
+- import_playbook: imports/trinity-ubuntu-login-setup.yml
   vars:
     hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    in_login_image: true
+  tags: build
 
 - hosts:
     - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
