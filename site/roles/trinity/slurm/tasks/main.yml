@@ -1,36 +1,71 @@
 ---
 # tasks file for slurm
 
-- name: Configure OpenHPC repos
-  ansible.builtin.yum_repository:
-    name: "openhpc-{{ item.name }}"
-    description: "openhpc-{{ item.name }}"
-    baseurl: "{{ item.repo }}"
-    gpgcheck: "{{ item.gpgcheck | default(False) }}"
-    gpgkey: "{{ item.gpgkey | default('') }}"
-  with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
-  when:
-    - not is_airgap | default(False)
-    - enable_openhpc == true
+- block:
+  - name: Configure OpenHPC repos
+    ansible.builtin.yum_repository:
+      name: "openhpc-{{ item.name }}"
+      description: "openhpc-{{ item.name }}"
+      baseurl: "{{ item.repo }}"
+      gpgcheck: "{{ item.gpgcheck | default(False) }}"
+      gpgkey: "{{ item.gpgkey | default('') }}"
+    with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
+    when:
+      - ansible_os_family == 'RedHat'
+      - enable_openhpc == true
+      - not enable_trinityx_slurm | default(True)
 
-- name: Install PyMSQL
-  yum:
-    name: python3-PyMySQL
-    state: installed
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
+  - name: Configure TrinityX-Slurm repos
+    ansible.builtin.yum_repository:
+      name: "trinityx-slurm-{{ ansible_os_family }}"
+      description: "trinityx-slurm-{{ ansible_os_family }}"
+      baseurl: "{{ item.repo }}/{{ system_arch }}"
+      gpgcheck: "{{ item.gpgcheck | default(False) }}"
+      gpgkey: "{{ item.gpgkey | default('') }}"
+    with_items: "{{ trinityx_slurm_repositories }}"
+    when:
+      - ansible_os_family == 'RedHat'
+      - enable_trinityx_slurm | default(True)
+      - item.name == ansible_os_family
 
-- name: Generate password for DB user and save it to /etc/trinity/passwords
-  set_fact:
-    tmp_pwd: '{{ lookup("password",
+  - name: Configure TrinityX-Slurm repos
+    ansible.builtin.apt_repository:
+      repo: "deb [trusted=yes] {{ item.repo }} trix main"
+    with_items: "{{ trinityx_slurm_repositories }}"
+    when:
+      - ansible_os_family == 'Debian'
+      - enable_trinityx_slurm | default(True)
+      - item.name == ansible_os_family
+  when: not is_airgap | default(False)
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}.yml"
+    - "{{ ansible_os_family }}.yml"
+  no_log: true
+  ignore_errors: true
+
+- block:
+  - name: Install PyMSQL
+    dnf:
+      name: python3-PyMySQL
+      state: installed
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
+
+  - name: Generate password for DB user and save it to /etc/trinity/passwords
+    set_fact:
+      tmp_pwd: '{{ lookup("password",
                            "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt
                             chars=ascii_letters,digits,hexdigits") }}'
 
-- name: Get password for DB user from /etc/trinity/passwords)
-  set_fact:
-    slurmdbd_sql_pwd: '{{ lookup("password",
+  - name: Get password for DB user from /etc/trinity/passwords)
+    set_fact:
+      slurmdbd_sql_pwd: '{{ lookup("password",
                            "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt
                             chars=ascii_letters,digits,hexdigits") }}'
+  when: on_controller
 
 - name: Create groups for munge and slurm
   group:
@@ -55,46 +90,105 @@
     - ['{{ munge_user_id }}', '{{ slurm_user_id }}']
   tags: install-only
 
+# ---------------------------------------------------------------------------
+
+- name: Resolve slurm package flavor
+  set_fact:
+    slurm_packages_flavor: >-
+      {{
+        'slurm_packages_trx' if enable_trinityx_slurm | default(True)
+        else 'slurm_packages_ohpc' if enable_openhpc | default(False)
+        else 'slurm_packages'
+      }}
+  when: not in_image
+
+- name: Resolve slurm package flavor for images
+  set_fact:
+    slurm_packages_flavor: >-
+      {{
+        'slurm_packages_trx_image' if enable_trinityx_slurm | default(True)
+        else 'slurm_packages_ohpc_image' if enable_openhpc | default(False)
+        else 'slurm_packages_image'
+      }}
+  when: in_image
+
+# TRIX-1608 remove clashing slurm package flavors before install
+- name: Resolve slurm package flavors for removal
+  set_fact:
+    slurm_package_flavors_all:
+      - slurm_packages
+      - slurm_packages_trx
+      - slurm_packages_ohpc
+  when: not in_image
+
+- name: Resolve slurm package flavors for removal in images
+  set_fact:
+    slurm_package_flavors_all:
+      - slurm_packages_image
+      - slurm_packages_trx_image
+      - slurm_packages_ohpc_image
+  when: in_image
+
+- name: Resolve clashing slurm package flavors
+  set_fact:
+    slurm_package_flavors_clashing: "{{ slurm_package_flavors_all | difference([slurm_packages_flavor]) }}"
+
+- name: Resolve additional slurm packages to remove
+  set_fact:
+    slurm_packages_additional_to_remove: >-
+      {{
+        slurm_packages_additional_ohpc_remove
+        if 'slurm_packages_ohpc' in slurm_packages_flavor
+        else slurm_packages_additional_trx_remove
+        if 'slurm_packages_trx' in slurm_packages_flavor
+        else slurm_packages_additional_default_remove
+      }}
+
+- name: Build clashing slurm package list
+  set_fact:
+    slurm_packages_to_remove: >-
+      {{
+        (
+          (lookup('vars', slurm_package_flavors_clashing[0]) + lookup('vars', slurm_package_flavors_clashing[1]))
+          | difference(lookup('vars', slurm_packages_flavor))
+        )
+        + slurm_packages_additional_to_remove
+        | unique
+      }}
+
+- name: Remove clashing slurm packages
+  package:
+    name: "{{ slurm_packages_to_remove }}"
+    state: absent
+  when: slurm_packages_to_remove | length > 0
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
 - name: Install slurm packages
-  yum:
-    name: '{{ slurm_packages }}'
+  dnf:
+    name: "{{ lookup('vars', slurm_packages_flavor) }}"
     state: present
     enablerepo:
       - powertools
       - crb
+      - epel
+      - appstream
+  when: ansible_os_family != 'Debian'
   tags: install-only
-  when: enable_openhpc == false
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-- name: ensure legacy slurm rpms are not installed before configuring ohpc versions
-  yum:
-    name: '{{ slurm_packages }}'
-    state: removed
-  tags: install-only
-  when: enable_openhpc == true
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: ensure legacy rpms are not installed before configuring ohpc versions
-  yum:
-    name:
-      - pmix
-      - pmix-devel
-    state: removed
-  tags: install-only
-  when: enable_openhpc == true
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Install ohpc slurm packages
-  yum:
-    name: '{{ slurm_packages_ohpc }}'
+- name: Install slurm packages
+  package:
+    name: "{{ lookup('vars', slurm_packages_flavor) }}"
     state: present
+  when: ansible_os_family == 'Debian'
   tags: install-only
-  when: enable_openhpc == true
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+
+# ---------------------------------------------------------------------------
 
 - name: Create systemd unit dirs
   file:
@@ -375,16 +469,8 @@
         - slurmctld
 
     - name: Add slurm pacemaker resources
-      pcs_resource:
-        name: '{{ item }}'
-        resource_class: 'systemd'
-        resource_type: 'systemd:{{ item }}'
-        options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
-        state: present
+      include_tasks: ha.yml
       when: ha|default(False)
-      with_items:
-        - slurmdbd
-        - slurmctld
       tags: pcs
 
     - name: Register slurm cluster in slurmdbd
@@ -394,7 +480,7 @@
       until: '"Adding Cluster" in sacctmgr_success.stdout or "Not adding." in sacctmgr_success.stdout'
       retries: 10
       delay: 15
-  when: 
+  when:
     - primary|default(True)
     - on_controller
 
@@ -405,7 +491,7 @@
     name: '{{ item }}'
     state: started
     enabled: true
-  when: 
+  when:
     - on_controller
   with_items:
     - munge
@@ -415,7 +501,7 @@
     name: '{{ item }}'
     enabled: true
     state: started
-  when: 
+  when:
     - not on_controller
     - not on_node|default(False)
     - not in_image
@@ -433,7 +519,7 @@
         group: root
         mode: 0644
       when: enable_slurm_pam
-  when: 
+  when:
     - primary|default(True)
     - on_controller
 

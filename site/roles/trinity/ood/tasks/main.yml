@@ -47,17 +47,48 @@
     external_repository_rpms: {}
     package_based_repositories: []
     use_baseurl_repositories: []
-  when: ood_repositories is defined
+  when:
+    - ood_repositories is defined
+    - ansible_os_family == "RedHat"
+
+- name: Install OOD apt repo keys
+  ansible.builtin.apt_key:
+    state: present
+    url: "{{ item.key_url }}"
+    id: "{{ item.key_id }}"
+  loop: "{{ ood_debs }}"
+  when: ansible_os_family == "Debian"
+
+- name: Install OOD apt repo packages
+  ansible.builtin.apt:
+    deb: "{{ item.deb }}"
+    state: present
+    update_cache: true
+    dpkg_options: force-confnew
+  loop: "{{ ood_deb_repos }}"
+  when: ansible_os_family == "Debian"
 
 - name: Install required rpms
   ansible.builtin.dnf:
     name: "{{ item.name }}"
     state: present
     disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
-  with_items: "{{ ood_rpms }}"
+  with_items: "{{ ood_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
   notify: Run update_ood
+  when: ansible_os_family == "RedHat"
+
+- name: Install required apt packages
+  ansible.builtin.apt:
+    name: "{{ item.name }}"
+    state: present
+    update_cache: true
+  loop: "{{ ood_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  notify: Run update_ood
+  when: ansible_os_family == "Debian"
 
 - name: Ensure ssl certificate and key exists
   ansible.builtin.file:
@@ -234,6 +265,6 @@
 
 - name: Enable OOD webserver on startup
   ansible.builtin.service:
-    name: httpd
+    name: "{{ ood_apache_service_name }}"
     enabled: "yes"
     state: started
