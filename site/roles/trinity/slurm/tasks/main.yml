@@ -352,14 +352,13 @@
         line: 'UsePAM=1'
       when: enable_slurm_pam
 
-    - name: Start munge and slurmdbd services
+    - name: Start slurmdbd services
       service:
         daemon_reload: true
         name: '{{ item }}'
         state: started
         enabled: "{{ not ha|default(True) }}"
       with_items:
-        - munge
         - slurmdbd
 
     - name: wait 10s after starting slurmdbd
@@ -384,7 +383,6 @@
         state: present
       when: ha|default(False)
       with_items:
-        - munge
         - slurmdbd
         - slurmctld
       tags: pcs
@@ -396,26 +394,26 @@
       until: '"Adding Cluster" in sacctmgr_success.stdout or "Not adding." in sacctmgr_success.stdout'
       retries: 10
       delay: 15
-
   when: 
     - primary|default(True)
     - on_controller
 
 
+- name: Start munge service on all controllers
+  service:
+    daemon_reload: true
+    name: '{{ item }}'
+    state: started
+    enabled: true
+  when: 
+    - on_controller
+  with_items:
+    - munge
+
 - name: Enable munge service on passive slurm nodes (portal services etc)
   systemd:
     name: '{{ item }}'
     enabled: true
-  when: 
-    - not on_controller
-    - not on_node|default(False)
-    - not in_image
-  with_items:
-    - munge
-
-- name: start munge service on passive slurm nodes (portal services etc)
-  systemd:
-    name: '{{ item }}'
     state: started
   when: 
     - not on_controller
