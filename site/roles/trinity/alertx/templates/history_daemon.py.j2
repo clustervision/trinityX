@@ -27,13 +27,20 @@ log = Logger.get_logger("TRIX-HISTORY: daemon")
 store = HistoryStore()
 
 
-class AlertmanagerPoller:
-    def __init__(self):
-        self.url = f"{ALERTMANAGER_URL.rstrip('/')}/api/v2/alerts"
-        self.auth = (ALERTMANAGER_USER, read_alertmanager_password())
-        self.seen = {}
+class AlertDeduplicator:
+    """
+    Shared change-detection state used by both the poller and the webhook
+    listener.  An alert is only forwarded to the store when its signature
+    (fingerprint + updatedAt + state + silenced/inhibited + starts/endsAt)
+    differs from the last recorded value.
+    """
 
-    def _signature(self, alert):
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.seen: dict = {}
+
+    @staticmethod
+    def _signature(alert) -> str:
         fingerprint = alert.get("fingerprint") or ""
         updated_at = alert.get("updatedAt") or ""
         status = alert.get("status", {})
@@ -49,6 +56,28 @@ class AlertmanagerPoller:
         starts_at = alert.get("startsAt") or ""
         return "|".join([fingerprint, updated_at, state, inhibited, silenced, starts_at, ends_at])
 
+    def filter_changed(self, alerts: list) -> list:
+        """Return only alerts whose signature has changed since last seen."""
+        changed = []
+        with self._lock:
+            for alert in alerts:
+                sig = self._signature(alert)
+                fp = alert.get("fingerprint") or sig
+                if self.seen.get(fp) != sig:
+                    self.seen[fp] = sig
+                    changed.append(alert)
+        return changed
+
+
+# Module-level singleton shared by poller and webhook handler.
+deduplicator = AlertDeduplicator()
+
+
+class AlertmanagerPoller:
+    def __init__(self):
+        self.url = f"{ALERTMANAGER_URL.rstrip('/')}/api/v2/alerts"
+        self.auth = (ALERTMANAGER_USER, read_alertmanager_password())
+
     def poll_once(self):
         response = requests.get(
             self.url,
@@ -58,17 +87,8 @@ class AlertmanagerPoller:
         )
         response.raise_for_status()
         alerts = response.json() or []
-        changed = []
-        current_signatures = {}
 
-        for alert in alerts:
-            signature = self._signature(alert)
-            fingerprint = alert.get("fingerprint") or signature
-            current_signatures[fingerprint] = signature
-            if self.seen.get(fingerprint) != signature:
-                changed.append(alert)
-
-        self.seen = current_signatures
+        changed = deduplicator.filter_changed(alerts)
 
         if changed:
             inserted = store.insert_alerts({"receiver": "alertx-history-poller", "groupKey": "poll", "status": "poll", "alerts": changed}, source="poll")
@@ -107,8 +127,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             return self._send_json(400, {"error": "invalid json"})
 
+        raw_alerts = payload.get("alerts") or []
+        changed_alerts = deduplicator.filter_changed(raw_alerts)
+        if not changed_alerts:
+            log.debug("Webhook payload contained no alert state changes; skipping insert.")
+            return self._send_json(200, {"stored": 0})
+
+        filtered_payload = dict(payload)
+        filtered_payload["alerts"] = changed_alerts
         try:
-            inserted = store.insert_alerts(payload, source="webhook")
+            inserted = store.insert_alerts(filtered_payload, source="webhook")
         except Exception as exc:
             log.exception("Failed to persist Alertmanager payload: %s", exc)
             return self._send_json(500, {"error": "failed to persist alerts"})
