@@ -1,0 +1,38 @@
+---
+
+- block:
+  - name: Load Switch variables.
+    include_vars: "../defaults/switch.yml"
+
+  - name: Load Airgap Switch variables.
+    include_vars: "../vars/airgap/switch.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge Switch asset variables.
+    set_fact:
+      switch_assets: "{{ switch_assets_default | combine(switch_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading Switch nodejs package
+    get_url:
+      url: "{{ switch_assets.noarch_nodejs_repository }}/{{ switch_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/switch/{{ switch_assets.gui_nodejs }}"
+
+  - name: Ensure Switch assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/switch/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Unpack Switch nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/switch/{{ switch_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/switch/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup Switch nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/switch/{{ switch_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image

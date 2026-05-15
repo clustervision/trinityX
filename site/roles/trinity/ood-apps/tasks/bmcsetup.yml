@@ -1,0 +1,38 @@
+---
+
+- block:
+  - name: Load BMC Setup variables.
+    include_vars: "../defaults/bmcsetup.yml"
+
+  - name: Load Airgap BMC Setup variables.
+    include_vars: "../vars/airgap/bmcsetup.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge BMC Setup asset variables.
+    set_fact:
+      bmcsetup_assets: "{{ bmcsetup_assets_default | combine(bmcsetup_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading BMC Setup nodejs package
+    get_url:
+      url: "{{ bmcsetup_assets.noarch_nodejs_repository }}/{{ bmcsetup_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/bmcsetup/{{ bmcsetup_assets.gui_nodejs }}"
+
+  - name: Ensure BMC Setup assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/bmcsetup/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Unpack BMC Setup nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/bmcsetup/{{ bmcsetup_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/bmcsetup/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup BMC Setup nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/bmcsetup/{{ bmcsetup_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image

@@ -1,0 +1,38 @@
+---
+
+- block:
+  - name: Load Other Device variables.
+    include_vars: "../defaults/otherdev.yml"
+
+  - name: Load Airgap Other Device variables.
+    include_vars: "../vars/airgap/otherdev.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge Other Device asset variables.
+    set_fact:
+      otherdev_assets: "{{ otherdev_assets_default | combine(otherdev_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading Other Device nodejs package
+    get_url:
+      url: "{{ otherdev_assets.noarch_nodejs_repository }}/{{ otherdev_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/otherdev/{{ otherdev_assets.gui_nodejs }}"
+
+  - name: Ensure Other Device assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/otherdev/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Unpack Other Device nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/otherdev/{{ otherdev_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/otherdev/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup Other Device nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/otherdev/{{ otherdev_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image
