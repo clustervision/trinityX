@@ -190,20 +190,6 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-# ---------------------------------------------------------------------------
-
-- name: Create systemd unit dirs
-  file:
-    name: '/etc/systemd/system/{{ item }}.service.d'
-    state: directory
-  with_items: "{{ slurm_services if on_controller else slurm_services_image }}"
-
-- name: Render systemd units for slurm, slurmdbd and munge
-  template:
-    src: 'systemd/{{ item }}.service.d/trinity.conf.j2'
-    dest: '/etc/systemd/system/{{ item }}.service.d/trinity.conf'
-    backup: "yes"
-  with_items: "{{ slurm_services if on_controller else slurm_services_image }}"
 
 # ----------------- backup current slurm if requested -------------
 
@@ -290,6 +276,21 @@
     force: false
   when: default_slurm_path.stat.exists == false
 
+# ---------------------------------------------------------------------------
+
+- name: Create systemd unit dirs
+  file:
+    name: '/etc/systemd/system/{{ item }}.service.d'
+    state: directory
+  with_items: "{{ slurm_services if on_controller else slurm_services_image }}"
+
+- name: Render systemd units for slurm, slurmdbd and munge
+  template:
+    src: 'systemd/{{ item }}.service.d/trinity.conf.j2'
+    dest: '/etc/systemd/system/{{ item }}.service.d/trinity.conf'
+    backup: "yes"
+  with_items: "{{ slurm_services if on_controller else slurm_services_image }}"
+
 - name: Enable slurm controller services
   service:
     daemon_reload: "yes"
@@ -298,10 +299,7 @@
   when: not ha|default(False)
         and primary|default(True)
         and on_controller
-  with_items:
-    - munge
-    - slurmdbd
-    - slurmctld
+  with_items: "{{ slurm_services }}"
 
 
 - block:
@@ -309,9 +307,7 @@
       systemd:
         name: '{{ item }}'
         enabled: true
-      with_items:
-        - slurmd
-        - munge
+      with_items: "{{ slurm_services_image }}"
 
     - name: Disable default After dependency for slurmd service
       ansible.builtin.replace:
@@ -345,9 +341,7 @@
     daemon_reload: "yes"
     name: '{{ item }}'
     state: started
-  with_items:
-    - munge
-    - slurmd
+  with_items: "{{ slurm_services_image }}"
   when: on_node|default(False)
 
 
