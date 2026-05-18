@@ -1,0 +1,38 @@
+---
+
+- block:
+  - name: Load Cluster variables.
+    include_vars: "../defaults/cluster.yml"
+
+  - name: Load Airgap Cluster variables.
+    include_vars: "../vars/airgap/cluster.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge Cluster asset variables.
+    set_fact:
+      cluster_assets: "{{ cluster_assets_default | combine(cluster_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading Cluster nodejs package
+    get_url:
+      url: "{{ cluster_assets.noarch_nodejs_repository }}/{{ cluster_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/cluster/{{ cluster_assets.gui_nodejs }}"
+
+  - name: Ensure Cluster assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/cluster/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Unpack Cluster nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/cluster/{{ cluster_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/cluster/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup Cluster nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/cluster/{{ cluster_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image

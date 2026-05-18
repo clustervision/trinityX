@@ -1,0 +1,38 @@
+---
+
+- block:
+  - name: Load Network variables.
+    include_vars: "../defaults/network.yml"
+
+  - name: Load Airgap Network variables.
+    include_vars: "../vars/airgap/network.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge Network asset variables.
+    set_fact:
+      network_assets: "{{ network_assets_default | combine(network_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading Network nodejs package
+    get_url:
+      url: "{{ network_assets.noarch_nodejs_repository }}/{{ network_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/network/{{ network_assets.gui_nodejs }}"
+
+  - name: Ensure Network assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/network/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Unpack Network nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/network/{{ network_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/network/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup Network nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/network/{{ network_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image

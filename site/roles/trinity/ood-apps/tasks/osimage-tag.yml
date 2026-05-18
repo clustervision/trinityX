@@ -1,0 +1,38 @@
+---
+
+- block:
+  - name: Load OS Image Tag variables.
+    include_vars: "../defaults/osimagetag.yml"
+
+  - name: Load Airgap OS Image Tag variables.
+    include_vars: "../vars/airgap/osimagetag.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge OS Image Tag asset variables.
+    set_fact:
+      osimagetag_assets: "{{ osimagetag_assets_default | combine(osimagetag_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading OS Image Tag nodejs package
+    get_url:
+      url: "{{ osimagetag_assets.noarch_nodejs_repository }}/{{ osimagetag_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/osimagetag/{{ osimagetag_assets.gui_nodejs }}"
+
+  - name: Ensure OS Image Tag assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/osimagetag/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Unpack OS Image Tag nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/osimagetag/{{ osimagetag_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/osimagetag/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup OS Image Tag nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/osimagetag/{{ osimagetag_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image
