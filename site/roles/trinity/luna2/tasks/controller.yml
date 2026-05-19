@@ -333,35 +333,28 @@
 - debug:
     msg: "{{ luna2_cluster }}"
 
-- name: Ensure Trinity password directory exists
-  ansible.builtin.file:
-    path: /etc/trinity/passwords/bmcsetup
-    state: directory
-    owner: root
-    group: root
-    mode: '0700'
+- block:
+  - name: Generate default BMC setup password value
+    set_fact:
+      luna_bmcsetup_password: |
+        "{{ lookup('password', '/dev/null', length=3, chars=['ascii_uppercase']) + 
+          lookup('password', '/dev/null', length=6, chars=['ascii_lowercase']) +
+          lookup('password', '/dev/null', length=2, chars=['digits']) +
+          lookup('password', '/dev/null', length=2, chars='_!@#%^.') }}"
 
-- name: Set default BMC setup password value
-  ansible.builtin.set_fact:
-    trix_bmcsetup_default_password: "P@ssword!"
+  - debug:
+      msg: "luna_bmcsetup_password is not defined, generating random password"
+  when: luna_bmcsetup_password is not defined or luna_bmcsetup_password | length == 0
 
-- name: Warn and generate random BMC password if default is still used
-  ansible.builtin.debug:
-    msg: "trix_bmcsetup_password not changed from default; generating random password for default-bmcsetup"
-    warn: true
-  when: trix_bmcsetup_password == trix_bmcsetup_default_password
+- block:
+  - name: Setting default bmcsetup user
+    set_fact:
+      luna_bmcsetup_user: 'admin'
 
-- name: Set effective BMC password (random if default was left)
-  ansible.builtin.set_fact:
-    trix_bmcsetup_effective_password: >-
-      {{ lookup(
-           'password',
-           '/etc/trinity/passwords/bmcsetup/{{ trix_bmcsetup_user }}.txt chars=ascii_letters,digits length=16'
-         )
-         if trix_bmcsetup_password == trix_bmcsetup_default_password
-         else trix_bmcsetup_password
-      }}
-  
+  - debug:
+      msg: "luna_bmcsetup_user is not defined, using 'admin' as default"
+  when: luna_bmcsetup_user is not defined or luna_bmcsetup_user | length == 0
+
 - name: Render /trinity/local/luna/daemon/config/bootstrap.ini
   template:
     src: 'bootstrap.ini.j2'
