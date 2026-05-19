@@ -333,6 +333,28 @@
 - debug:
     msg: "{{ luna2_cluster }}"
 
+- block:
+  - debug:
+      msg: "luna_bmcsetup_password is not defined, generating random password"
+
+  - name: Generate default BMC setup password value
+    set_fact:
+      luna_bmcsetup_password: |
+        "{{ lookup('password', '/dev/null', length=3, chars=['ascii_uppercase']) + 
+          lookup('password', '/dev/null', length=6, chars=['ascii_lowercase']) +
+          lookup('password', '/dev/null', length=2, chars=['digits']) +
+          lookup('password', '/dev/null', length=2, chars='_!@#%^.') }}"
+  when: (luna_bmcsetup_password is not defined) or luna_bmcsetup_password | length == 0
+
+- block:
+  - debug:
+      msg: "luna_bmcsetup_user is not defined, using 'admin' as default"
+
+  - name: Setting default bmcsetup user
+    set_fact:
+      luna_bmcsetup_user: 'admin'
+  when: (luna_bmcsetup_user is not defined) or luna_bmcsetup_user | length == 0
+
 - name: Render /trinity/local/luna/daemon/config/bootstrap.ini
   template:
     src: 'bootstrap.ini.j2'
