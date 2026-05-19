@@ -4,6 +4,13 @@
 # Keep in mind that this role applies to the controllers
 # as well as compute nodes and images
 
+- name: Check passwords
+  ansible.builtin.include_tasks:
+    file: check-passwords.yml
+    apply:
+      tags: always
+  tags: always
+
 - name: Set trix_tmpdir variable
   set_fact:
     trix_tmpdir: "{{ tmpdir if tmpdir is defined and tmpdir|length > 0 and tmpdir not in ['/',' '] else lookup('ansible.builtin.env', 'TMPDIR', default='/tmp') }}"
