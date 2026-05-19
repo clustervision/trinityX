@@ -1,0 +1,83 @@
+#!/bin/bash
+# node-console-setup.sh
+# Deployed into the compute image by the trinity/node-console Ansible role.
+# Runs at node boot (via node-console-setup.service) to load the netconsole
+# kernel module with the correct runtime parameters.
+#
+# On the controller, lconsole (default mode) starts IPMI/Redfish SOL first
+# and then hands off to the netconsole UDP stream once this script writes
+# the TRINITYX_LCONSOLE_NETCONSOLE_READY marker to /dev/kmsg.
+#
+# This code is part of the TrinityX software suite
+# Copyright (C) 2025  ClusterVision Solutions b.v.
+# License: GPL v3 or later
+
+CTRL_IP="{{ netconsole_ctrl_ip }}"
+CTRL_MAC="{{ netconsole_ctrl_mac }}"
+NETCONSOLE_PORT="{{ netconsole_port }}"
+ROUTE_WAIT_TIMEOUT="{{ netconsole_route_wait_timeout }}"
+
+# ---------------------------------------------------------------------------
+# Determine the node's cluster-facing interface and IP address.
+# The route can briefly be unavailable even after network-online.target, so
+# wait a bit instead of failing immediately.
+# ---------------------------------------------------------------------------
+
+ROUTE_INFO=""
+IFACE=""
+NODE_IP=""
+DEADLINE=$(( $(date +%s) + ROUTE_WAIT_TIMEOUT ))
+
+echo "netconsole-setup: waiting up to ${ROUTE_WAIT_TIMEOUT}s for route to ${CTRL_IP}"
+
+while true; do
+    ROUTE_INFO=$(ip route get "${CTRL_IP}" 2>/dev/null || true)
+    if [ -n "${ROUTE_INFO}" ]; then
+        # Extract interface: field after 'dev'
+        IFACE=$(echo "${ROUTE_INFO}" | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}' | head -1)
+        # Extract source IP: field after 'src'
+        NODE_IP=$(echo "${ROUTE_INFO}" | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1)
+        if [ -n "${IFACE}" ] && [ -n "${NODE_IP}" ]; then
+            break
+        fi
+    fi
+
+    if [ "$(date +%s)" -ge "${DEADLINE}" ]; then
+        echo "netconsole-setup: ERROR - cannot determine usable route to ${CTRL_IP} after ${ROUTE_WAIT_TIMEOUT}s" >&2
+        if [ -n "${ROUTE_INFO}" ]; then
+            echo "netconsole-setup: last route output was: ${ROUTE_INFO}" >&2
+        fi
+        exit 1
+    fi
+
+    sleep 1
+done
+
+echo "netconsole-setup: interface=${IFACE}  node_ip=${NODE_IP}  ctrl_ip=${CTRL_IP}  ctrl_mac=${CTRL_MAC}  port=${NETCONSOLE_PORT}"
+
+# ---------------------------------------------------------------------------
+# Load the netconsole kernel module.
+# Format: [src-port]@[src-ip]/[dev],[tgt-port]@<tgt-ip>/[tgt-macaddr]
+# ---------------------------------------------------------------------------
+PARAMS="${NETCONSOLE_PORT}@${NODE_IP}/${IFACE},${NETCONSOLE_PORT}@${CTRL_IP}/${CTRL_MAC}"
+
+# Unload first if already loaded (e.g. after a soft reboot)
+if lsmod | grep -q "^netconsole "; then
+    rmmod netconsole 2>/dev/null || true
+fi
+
+modprobe netconsole "netconsole=${PARAMS}"
+RC=$?
+
+if [ ${RC} -eq 0 ]; then
+    echo "netconsole-setup: netconsole loaded successfully (${PARAMS})"
+    # Strong handoff marker for lconsole (default hybrid mode). Goes through printk/kmsg
+    # and is therefore visible via netconsole when the path is really active.
+    if [ -w /dev/kmsg ]; then
+        printf '<6>{{ netconsole_ready_marker }} interface=%s node_ip=%s ctrl_ip=%s port=%s\n' \
+            "${IFACE}" "${NODE_IP}" "${CTRL_IP}" "${NETCONSOLE_PORT}" > /dev/kmsg || true
+    fi
+else
+    echo "netconsole-setup: ERROR - modprobe netconsole returned ${RC}" >&2
+    exit ${RC}
+fi

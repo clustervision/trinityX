@@ -1,0 +1,23 @@
+[Unit]
+Description=TrinityX node console setup (netconsole kernel module)
+Documentation=https://www.kernel.org/doc/Documentation/networking/netconsole.txt
+# Must run after networking is fully up so that:
+#  - the cluster interface has an IP assigned
+#  - the ARP cache has been populated by DHCP/Luna contact
+# The script also retries internally for {{ netconsole_route_wait_timeout }}s
+# so transient race conditions at boot are handled gracefully.
+After=network-online.target
+Wants=network-online.target
+# Do not block normal boot if netconsole fails to load
+FailureAction=none
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart={{ netconsole_setup_script }}
+# Log to journal: journalctl -u {{ netconsole_service_name }}
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
