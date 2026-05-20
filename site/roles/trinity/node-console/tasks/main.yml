@@ -1,58 +1,61 @@
 ---
-# tasks file for trinity/node-console
-#
-# Sets up full node console access for TrinityX compute nodes:
-#   - Serial console (ttyS0) — visible over IPMI or Redfish SOL from day one
-#   - Kernel netconsole (UDP) — streams printk to the controller once network is up
-#   - Controller packages required by lconsole (ipmitool, sshpass)
-#
-# lconsole default mode: SOL first → auto-handoff to netconsole once loaded
-# lconsole --netconsole: netconsole UDP only
-# lconsole --sol-only:   interactive SOL only (IPMI or Redfish)
+# trinity/node-console — full console access for TrinityX compute nodes.
+# Controller: install ipmitool/sshpass, open UDP 6666, set SELinux label.
+# Image:      deploy netconsole setup script+service, inject kernel cmdline.
 
-# -------------------------------------------------------------------------
-# CONTROLLER side — packages
-# -------------------------------------------------------------------------
+# --- controller: packages ---
 
-- name: Ensure ipmitool is installed on controller (lconsole --sol-backend=ipmi)
+- name: Install ipmitool on controller
   package:
     name: "{{ node_console_controller_packages_ipmi }}"
     state: present
   when: on_controller | default(False)
 
-- name: Ensure sshpass is installed on controller (lconsole --sol-backend=redfish)
+- name: Install sshpass on controller
   package:
     name: "{{ node_console_controller_packages }}"
     state: present
   when: on_controller | default(False)
 
-# -------------------------------------------------------------------------
-# Resolve controller MAC address (runs once, on the controller itself).
-# Needed because trix_ctrl_interface is only set on the controller play,
-# not inside the image-build play context.
-# -------------------------------------------------------------------------
+# --- resolve controller MAC address ---
+# Mirrors trinity/init find-interface.yml: gather network facts via
+# delegate_to so it works from both controller and chroot play contexts.
 
-- name: Resolve controller cluster interface MAC (from controller facts)
+- name: Gather controller network facts (delegate to localhost)
+  setup:
+    gather_subset: ['!all', 'network']
+  delegate_to: localhost
+  delegate_facts: true
+  run_once: true
+  when: netconsole_ctrl_mac == ""
+
+- name: Resolve controller MAC from primary IPv4
   set_fact:
-    netconsole_ctrl_mac: >-
-      {{ hostvars['localhost']['ansible_' + item]['macaddress'] }}
+    netconsole_ctrl_mac: "{{ hostvars['localhost']['ansible_' + item]['macaddress'] }}"
   when:
     - netconsole_ctrl_mac == ""
-    - hostvars['localhost']['ansible_' + item] is defined
     - hostvars['localhost']['ansible_' + item]['ipv4'] is defined
     - hostvars['localhost']['ansible_' + item]['ipv4']['address'] == trix_ctrl_ip
-  loop: "{{ hostvars['localhost']['ansible_interfaces'] }}"
+  with_items: "{{ hostvars['localhost']['ansible_interfaces'] }}"
+
+- name: Resolve controller MAC from secondary IPv4
+  set_fact:
+    netconsole_ctrl_mac: "{{ hostvars['localhost']['ansible_' + item]['macaddress'] }}"
+  when:
+    - netconsole_ctrl_mac == ""
+    - hostvars['localhost']['ansible_' + item]['ipv4_secondaries'] is defined
+    - hostvars['localhost']['ansible_' + item]['ipv4_secondaries']
+      | selectattr('address', 'equalto', trix_ctrl_ip) | list | length > 0
+  with_items: "{{ hostvars['localhost']['ansible_interfaces'] }}"
 
 - name: Fail if controller MAC could not be resolved
   fail:
     msg: >
-      Could not determine the controller MAC address for interface carrying
-      {{ trix_ctrl_ip }}. Set netconsole_ctrl_mac explicitly in group_vars.
+      No interface on the controller carries {{ trix_ctrl_ip }}.
+      Set netconsole_ctrl_mac explicitly in group_vars or defaults/main.yml.
   when: netconsole_ctrl_mac == ""
 
-# -------------------------------------------------------------------------
-# NODE / IMAGE side
-# -------------------------------------------------------------------------
+# --- image: netconsole setup script and service ---
 
 - name: Deploy node-console setup script into image
   template:
@@ -63,7 +66,7 @@
     mode: "0755"
   when: in_image | default(False)
 
-- name: Deploy node-console systemd service unit into image
+- name: Deploy node-console systemd service into image
   template:
     src: netconsole-setup.service.j2
     dest: "/etc/systemd/system/{{ netconsole_service_name }}.service"
@@ -72,17 +75,13 @@
     mode: "0644"
   when: in_image | default(False)
 
-- name: Enable node-console-setup service in image (starts at node boot)
+- name: Enable node-console-setup service in image
   systemd:
     name: "{{ netconsole_service_name }}"
     enabled: true
   when: in_image | default(False)
 
-- name: Ensure required kernel modules are included in Luna osimage
-  # netconsole         : kernel UDP log transport (node → controller)
-  # ipmi_devintf       : /dev/ipmi0 — required by ipmitool on the node side
-  # ipmi_si            : IPMI System Interface (KCS/SMIC/BT)
-  # ipmi_msghandler    : IPMI message handler base (required by ipmi_si)
+- name: Add kernel modules to Luna osimage
   shell: >
     luna osimage change
     --kernelmodules "{{ node_console_kernel_modules }}"
@@ -90,23 +89,9 @@
   delegate_to: localhost
   when: in_image | default(False)
 
-- name: Inject serial console + netconsole kernel cmdline parameters into Luna osimage
-  # Parameters injected:
-  #   console=tty0
-  #       Keep local VGA console working (useful for physical access / KVM).
-  #
-  #   console=<device>,<speed>n8
-  #       Enable serial console from the very first kernel message.
-  #       This is what IPMI SOL and Redfish SSH SOL see — without this the
-  #       serial port is silent during early boot.
-  #       lconsole (default mode) opens SOL first precisely to capture this.
-  #
-  #   netconsole=<port>@/,<port>@<ctrl_ip>/<ctrl_mac>
-  #       Static kernel-level netconsole config as a fallback / fast path.
-  #       @/ means kernel auto-detects node src-IP and interface at boot time.
-  #       The runtime node-console-setup.sh service also loads the module
-  #       dynamically (with the actual runtime IP) for more reliable results.
-  #
+- name: Inject serial console + netconsole kernel cmdline into Luna osimage
+  # console=ttyS0,115200n8  — serial console active from first kernel message (IPMI/Redfish SOL)
+  # netconsole=6666@/,...   — static netconsole fallback; @ / means kernel auto-detects src-IP
   shell: >
     luna osimage change
     --quick-kerneloptions
@@ -115,15 +100,9 @@
   delegate_to: localhost
   when: in_image | default(False)
 
-# -------------------------------------------------------------------------
-# CONTROLLER side — firewall / SELinux
-# -------------------------------------------------------------------------
+# --- controller: firewall / SELinux ---
 
-# The cluster interface is typically in the firewalld trusted zone and already
-# allows all traffic from nodes. We open the port explicitly on the trusted
-# zone so it also works in non-standard deployments with a more restrictive zone.
-
-- name: Open netconsole UDP port in firewalld (trusted zone, controller only)
+- name: Open netconsole UDP port in firewalld
   firewalld:
     zone: trusted
     port: "{{ netconsole_port }}/udp"
@@ -133,7 +112,7 @@
   when: on_controller | default(False)
   ignore_errors: true
 
-- name: Add SELinux label for netconsole UDP port (controller only)
+- name: Add SELinux label for netconsole UDP port
   seport:
     ports: "{{ netconsole_port }}"
     proto: udp

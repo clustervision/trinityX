@@ -1,79 +1,48 @@
 ---
-# vars file for trinity/node-console
-#
-# This role sets up full node console access for TrinityX compute nodes:
-#   - Serial console (ttyS0) visible over IPMI/Redfish SOL from the controller
-#   - Kernel netconsole (UDP) streaming printk to the controller
-#   - Systemd service that loads the netconsole module at node boot with the
-#     correct runtime IP/interface parameters
-#
-# lconsole (the controller-side tool) uses both transports:
-#   default mode   : SOL first, auto-handoff to netconsole once kernel is up
-#   --netconsole   : netconsole UDP only
-#   --sol-only     : interactive SOL only (IPMI or Redfish)
+# trinity/node-console defaults.
+# Override in group_vars or at role invocation.
 
-# ---------------------------------------------------------------------------
-# Netconsole (UDP kernel log transport)
-# ---------------------------------------------------------------------------
+# --- netconsole (UDP kernel log transport) ---
 
-# UDP port that nodes send netconsole output to (lconsole listens on this port)
+# UDP port nodes send to; lconsole listens on the same port
 netconsole_port: 6666
 
-# Controller cluster IP — nodes send UDP datagrams here
-# Defaults to trix_ctrl_ip (defined in group_vars/all.yml)
+# Controller cluster IP (defaults to trix_ctrl_ip from group_vars/all.yml)
 netconsole_ctrl_ip: "{{ trix_ctrl_ip }}"
 
-# Controller cluster interface MAC address.
-# Auto-resolved from trix_ctrl_ip at role runtime.
-# Override only if auto-detection fails.
+# Controller cluster interface MAC — auto-resolved at runtime from trix_ctrl_ip.
+# Set explicitly only if auto-detection fails.
 netconsole_ctrl_mac: ""
 
-# Name of the setup script deployed inside the image
+# Boot script and systemd unit deployed inside the compute image
 netconsole_setup_script: /usr/local/sbin/node-console-setup.sh
-
-# Name of the systemd service unit inside the image
 netconsole_service_name: node-console-setup
 
-# Seconds to wait at boot for a usable route to the controller before giving up
+# Seconds the boot script waits for a usable route to the controller
 netconsole_route_wait_timeout: 60
 
-# ---------------------------------------------------------------------------
-# Serial console (SOL — Serial over LAN)
-# ---------------------------------------------------------------------------
+# --- serial console (SOL) ---
 
-# Serial device and speed used for kernel early boot output and SOL.
-# Different vendors/platforms may need ttyS1 or ttyS2 — override here.
+# Serial device and baud rate for kernel early-boot output and SOL.
+# Override to ttyS1/ttyS2 if the platform uses a different port.
 serial_console_device: ttyS0
 serial_console_speed: 115200
 
-# ---------------------------------------------------------------------------
-# lconsole handoff marker
-# ---------------------------------------------------------------------------
+# --- lconsole handoff marker ---
 
-# String written to /dev/kmsg by the node after netconsole loads successfully.
-# lconsole (default hybrid mode) watches for this to know SOL can be closed.
+# Written to /dev/kmsg by the node once netconsole loads.
+# lconsole default hybrid mode watches for this to close SOL.
 netconsole_ready_marker: TRINITYX_LCONSOLE_NETCONSOLE_READY
 
-# ---------------------------------------------------------------------------
-# Packages installed on the controller and/or image
-# ---------------------------------------------------------------------------
+# --- packages ---
 
-# sshpass: required by lconsole --sol-backend=redfish for non-interactive SSH
-# login to the BMC serial console port.  Installed on the controller only.
+# Installed on the controller only
 node_console_controller_packages:
   - sshpass
 
-# ipmitool: required by lconsole --sol-backend=ipmi (default).
-# Must be present on the controller (usually already installed by other roles).
-# Listed here so the role can ensure it explicitly.
 node_console_controller_packages_ipmi:
   - ipmitool
 
-# Kernel modules to include in the Luna osimage.
-# netconsole         : kernel UDP log transport
-# ipmi_devintf       : /dev/ipmi0 character device
-# ipmi_si            : IPMI System Interface (KCS/SMIC/BT)
-# ipmi_msghandler    : IPMI message handler (base, required by ipmi_si)
+# --- Luna osimage kernel modules ---
+
 node_console_kernel_modules: "netconsole,ipmi_devintf,ipmi_si,ipmi_msghandler"
-
-
