@@ -59,6 +59,7 @@
     ds389_root_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/ds389/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
+  tags: ds389-config
 
 # -- start sync
 - block:
@@ -417,6 +418,7 @@
       dest: /etc/dirsrv/slapd-local/schema/
     ignore_errors: true
   when: primary | default(True)
+  tags: ds389-config
 
 
 # --- memberOf
@@ -443,6 +445,7 @@
       ignore_errors: true
     when: ds389_memberof.rc|int != 0 or 'disabled' in ds389_memberof.stdout
   when: primary | default(True)
+  tags: ds389-config
 
 - meta: flush_handlers
 
