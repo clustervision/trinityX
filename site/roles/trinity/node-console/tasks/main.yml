@@ -1,19 +1,10 @@
 ---
 # trinity/node-console — full console access for TrinityX compute nodes.
-# Controller: install ipmitool/sshpass, open UDP 6666, set SELinux label.
-# Image:      deploy netconsole setup script+service, inject kernel cmdline.
 
 # --- controller: packages ---
-
-- name: Install ipmitool on controller
-  package:
-    name: "{{ node_console_controller_packages_ipmi }}"
-    state: present
-  when: on_controller | default(False)
-
-- name: Install sshpass on controller
-  package:
-    name: "{{ node_console_controller_packages }}"
+- name: Install packages on controller
+  ansible.builtin.package:
+    name: "{{ node_console_packages }}"
     state: present
   when: on_controller | default(False)
 
@@ -21,7 +12,7 @@
 # Mirrors trinity/init find-interface.yml: gather network facts via
 # delegate_to so it works from both controller and chroot play contexts.
 
-- name: Gather controller network facts (delegate to localhost)
+- name: Gather controller network facts
   setup:
     gather_subset: ['!all', 'network']
   delegate_to: localhost
