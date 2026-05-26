@@ -10,12 +10,12 @@
 
   - name: Merge DNS asset variables.
     set_fact:
-      network_assets: "{{ network_assets_default | combine(network_assets_airgap | default({}), recursive=True) }}"
+      dns_assets: "{{ dns_assets_default | combine(dns_assets_airgap | default({}), recursive=True) }}"
 
   - name: Downloading DNS nodejs package
     get_url:
-      url: "{{ network_assets.noarch_nodejs_repository }}/{{ network_assets.gui_nodejs }}"
-      dest: "{{ trix_ood }}/3.0/dns/{{ network_assets.gui_nodejs }}"
+      url: "{{ dns_assets.noarch_nodejs_repository }}/{{ dns_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/dns/{{ dns_assets.gui_nodejs }}"
 
   - name: Ensure DNS assets directory exists
     ansible.builtin.file:
@@ -27,12 +27,12 @@
 
   - name: Unpack DNS nodejs files
     unarchive:
-      src: "{{ trix_ood }}/3.0/dns/{{ network_assets.gui_nodejs }}"
+      src: "{{ trix_ood }}/3.0/dns/{{ dns_assets.gui_nodejs }}"
       dest: "{{ trix_ood }}/3.0/dns/app/assets/"
       keep_newer: false # override?
 
   - name: Cleanup DNS nodejs package
     file:
-      path: "{{ trix_ood }}/3.0/dns/{{ network_assets.gui_nodejs }}"
+      path: "{{ trix_ood }}/3.0/dns/{{ dns_assets.gui_nodejs }}"
       state: absent
   when: not in_image

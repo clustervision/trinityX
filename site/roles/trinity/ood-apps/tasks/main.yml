@@ -104,6 +104,17 @@
         else (ood_apps_os_vars.ood_apps_meta.ood_luna_apps_url | default(ood_luna_apps_url))
       }}
 
+# - name: Resolve final OOD app order
+#   ansible.builtin.set_fact:
+#     ood_apps_enabled_resolved: >-
+#       {{
+#         (
+#           ood_apps_enabled
+#           if (ood_apps_enabled is defined)
+#           else (ood_apps_enabled_seed + (ood_apps_catalog_merged.keys() | list) + (ood_apps_overrides_merged.keys() | list))
+#         ) | unique
+#       }}
+
 - name: Resolve final OOD app order
   ansible.builtin.set_fact:
     ood_apps_enabled_resolved: >-
@@ -112,8 +123,22 @@
           ood_apps_enabled
           if (ood_apps_enabled is defined)
           else (ood_apps_enabled_seed + (ood_apps_catalog_merged.keys() | list) + (ood_apps_overrides_merged.keys() | list))
-        ) | unique
+        )
+        | unique
+        | reject('in', ood_apps_absent | default([]))
+        | list
       }}
+
+- name: Remove absent/legacy OOD apps from published Open OnDemand app directory
+  ansible.builtin.file:
+    path: "{{ (ood_apps_path | regex_replace('/+$', '')) }}/{{ item.1 }}{{ item.0 }}"
+    state: absent
+  loop: "{{ (ood_apps_absent | default([])) | product(['trinity_', 'bc_', '']) | list }}"
+  loop_control:
+    label: "{{ item.1 }}{{ item.0 }}"
+  when:
+    - in_login_image | default(false) or on_controller
+  notify: Run update_ood
 
 - name: Materialize final OOD app list
   ansible.builtin.set_fact:
