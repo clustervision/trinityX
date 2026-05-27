@@ -1,0 +1,38 @@
+---
+
+- block:
+  - name: Load DNS variables.
+    include_vars: "../defaults/dns.yml"
+
+  - name: Load Airgap DNS variables.
+    include_vars: "../vars/airgap/dns.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge DNS asset variables.
+    set_fact:
+      dns_assets: "{{ dns_assets_default | combine(dns_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading DNS nodejs package
+    get_url:
+      url: "{{ dns_assets.noarch_nodejs_repository }}/{{ dns_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/dns/{{ dns_assets.gui_nodejs }}"
+
+  - name: Ensure DNS assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/dns/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Unpack DNS nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/dns/{{ dns_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/dns/app/assets/"
+      keep_newer: false # override?
+
+  - name: Cleanup DNS nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/dns/{{ dns_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image
