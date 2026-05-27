@@ -43,6 +43,11 @@
         - "{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
       tags: noproxy
 
+    - role: trinity/resolv
+      bind_dns_forwarders: '{{ trix_dns_forwarders }}'
+      no_resolv_server: true
+      tags: resolv-first
+
     - role: trinity/repos
       tags: repos
 
@@ -171,7 +176,6 @@
         - authentication  
 
     - role: trinity/bind
-      bind_db_path: '{{ trix_local }}/var/lib/named'
       bind_dnssec_enable: "no"
       bind_dns_forwarders: '{{ trix_dns_forwarders }}'
       tags: bind

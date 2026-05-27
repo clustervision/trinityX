@@ -2,7 +2,9 @@
 
 {% if ansible_dns['nameservers'] is defined or bind_dns_forwarders %}
 search {{ resolv_search_domains }}
+{% if not no_resolv_server %}
 nameserver {{ resolv_server }}
+{% endif %}
 {% if bind_dns_forwarders %}
 {% for f in bind_dns_forwarders %}
 nameserver {{ f }}
