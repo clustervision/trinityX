@@ -48,6 +48,9 @@
   no_log: true
   ignore_errors: true
 
+- debug:
+    msg: "enable_openhpc: {{ enable_openhpc }}, enable_trinityx_slurm: {{ enable_trinityx_slurm }}"
+
 - block:
   - name: Install PyMSQL
     dnf:
@@ -158,6 +161,9 @@
         | unique
       }}
 
+- debug:
+    var: slurm_packages_to_remove
+
 - name: Remove clashing slurm packages
   package:
     name: "{{ slurm_packages_to_remove }}"
@@ -166,6 +172,9 @@
   tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+
+- debug:
+    var: lookup('vars', slurm_packages_flavor)
 
 - name: Install slurm packages
   dnf:

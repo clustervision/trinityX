@@ -60,7 +60,7 @@
         owner: root
         group: "{{ ood_apps_admin_group }}"
       when: 
-      - override | default(ood_luna_apps_download.changed)
+      - override | default(ood_luna_apps_download.changed) or ('admin-change' in ansible_run_tags)
 
     - name: Render trinityx-ood luna app luna.ini
       ansible.builtin.template:
@@ -70,7 +70,7 @@
         group: "{{ ood_apps_admin_group }}"
         mode: "0640"
       when: 
-      - override | default(ood_luna_apps_download.changed)
+      - override | default(ood_luna_apps_download.changed) or ('admin-change' in ansible_run_tags)
 
     - name: Install trinityx-ood custom apps python requirements
       ansible.builtin.pip:
