@@ -33,9 +33,13 @@
 - name: install luna2-client package
   shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
 
-- name: Disable tinysshd if it is there
+- name: Disable unwanted/unneeded services
   service:
     name: "{{ item }}"
     enabled: false
+  with_items:
+    - tinysshd
+    - sssd-pam.socket
+    - sssd-nss.socket
   ignore_errors: true
 
