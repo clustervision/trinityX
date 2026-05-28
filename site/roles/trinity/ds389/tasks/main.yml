@@ -432,6 +432,15 @@
     ds389_nssdb_pwdfile: /etc/dirsrv/slapd-local/pwdfile.txt
   when: primary | default(True)
 
+# --- Fix for DS389 bug leaving /dev/shm/slapd-local in an unrecoverable state
+- name: Clearing stale /dev/shm/slapd-local
+  file:
+    path: /dev/shm/slapd-local
+    state: absent
+  when:
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution_major_version|int < 10
+
 - meta: flush_handlers
 
 # --- let's make sure we are running before we continue.
