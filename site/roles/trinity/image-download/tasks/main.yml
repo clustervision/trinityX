@@ -31,7 +31,6 @@
     get_url:
       url: "{{ image_download_repo }}/{{ image_architecture }}/base-image-{{ image_download_distribution }}.tgz"
       dest: "{{ trix_root }}/downloads/base-image-{{ image_download_distribution }}.tgz"
-
     tags: install-only
   - name: Extracting base image
     unarchive:
@@ -49,7 +48,6 @@
       state: present
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
-
     tags: install-only
   - name: Pulling docker image
     shell: "docker pull {{ image_download_distribution }}"
@@ -65,7 +63,6 @@
     unarchive:
       src: "{{ trix_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
       dest: "{{ image_path }}"
-
     tags: install-only
   - name: Deleting placeholder container
     shell: "docker rm {{ docker_container_id.stdout }}"
