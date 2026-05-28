@@ -70,7 +70,7 @@
     image_download_distribution: "{{ alternative_distribution }}"
     image_download_source: "{{ alternative_image_source|default('base') }}"
     image_architecture: "{{ system_arch }}"
-    tags: image-create
+    tags: image-create, install-only
     when: download_base_image is defined
 
   - role: ansible/write_facts
@@ -78,7 +78,7 @@
 
   - role: trinity/image-create
     image_create_distribution: "{{ alternative_image_distr|default(ansible_distribution|lower) }}"
-    tags: image-create
+    tags: image-create, install-only
 
   - role: luna/osimage-create
     luna_image_path: "{{ trix_images }}/{{ image_name }}"
@@ -150,7 +150,7 @@
   - role: trinity/image-create
     image_create_distribution: "{{ alternative_image_distr|default(ansible_distribution|lower) }}"
     image_create_inside_chroot: true
-    tags: image-create
+    tags: image-create, install-only
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"

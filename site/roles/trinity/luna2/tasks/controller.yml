@@ -28,6 +28,7 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+  tags: install-only
 - name: Install required packages
   yum:
     name: '{{ required_packages }}'
@@ -35,6 +36,7 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+  tags: install-only
 - name: Ensure /var/log/luna exists
   file:
     path: '/var/log/luna'
@@ -419,6 +421,7 @@
         - snponly.efi
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
+      tags: install-only
     when: system_arch == "x86_64" or luna2_download_all_arch_ipxe_files|default(False)
 
   - name: Download ARM 64-bit iPXE EFI image to tftpboot
@@ -432,6 +435,7 @@
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
     when: system_arch == "aarch64" or luna2_download_all_arch_ipxe_files|default(False)
+    tags: install-only
   when: ansible_facts['os_family'] == "RedHat"
 
 #- name: Include luna's DNS zone file in named conf

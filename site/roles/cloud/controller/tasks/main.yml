@@ -25,6 +25,7 @@
   - name: preparing TrinityX repo for remote controller
     shell: "tar -C {{ playbook_dir }}/../.. --exclude site/group_vars/*.yml --exclude .git -zcvf {{ trix_tmpdir }}/remote_controller/trinityx.tgz ."
 
+    tags: install-only
   - name: Transferring file to remote controller
     shell: "scp {{ trix_tmpdir }}/remote_controller/{{ item }} {{ controller }}:"
     with_items:
@@ -50,6 +51,7 @@
   - name: Preparing remote controller installation
     shell: "ssh {{ controller }} \"mkdir install; cd install && tar -zxvf ../trinityx.tgz && cp ../all.yml site/group_vars/ && touch site/group_vars/{{ cloudname }}.yml\" | tee {{ trix_tmpdir }}/cloud-controller-pre.out"
 
+    tags: install-only
   - name: Creating dummy vars files for remote controller installation
     shell: "ssh {{ controller }} \"touch install/site/group_vars/{{ item }}.yml\" | tee -a {{ trix_tmpdir }}/cloud-controller-pre.out"
     with_items: "{{ cloud_support }}"

@@ -11,6 +11,7 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+  tags: install-only
 - name: Gather debootstrap version
   shell: "debootstrap --version | awk '{print $2}'"
   register: debootstrap_version
@@ -74,3 +75,4 @@
   shell: "chroot {{ image_path }} apt-get install -y {{ item }}"
   with_items:
     - python3
+  tags: install-only

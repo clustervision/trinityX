@@ -16,12 +16,14 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+  tags: install-only
 - name: Install nfs packages
   apt:
     name: '{{ nfs_packages }}'
     state: present
   when: ansible_facts['os_family'] == "Debian"
 
+  tags: install-only
 - name: Render nfs_mounts based on solely nfs_remote_mask info
   set_fact:
     new_nfs_mounts: "{{ new_nfs_mounts|d([]) + [item|combine({'path': item.mount if item.mount is defined else item.name})] }}"
