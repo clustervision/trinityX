@@ -68,6 +68,7 @@
   loop: "{{ ood_deb_repos }}"
   when: ansible_os_family == "Debian"
   tags: install-only
+
 - name: Install required rpms
   ansible.builtin.dnf:
     name: "{{ item.name }}"
@@ -79,6 +80,7 @@
   notify: Run update_ood
   when: ansible_os_family == "RedHat"
   tags: install-only
+
 - name: Install required apt packages
   ansible.builtin.apt:
     name: "{{ item.name }}"
@@ -90,6 +92,7 @@
   notify: Run update_ood
   when: ansible_os_family == "Debian"
   tags: install-only
+
 - name: Ensure ssl certificate and key exists
   ansible.builtin.file:
     path: "{{ item }}"
@@ -259,9 +262,11 @@
 - name: Include auth task
   ansible.builtin.include_tasks: dex-auth.yml
   tags: install-only
+
 - name: Include auth task
   ansible.builtin.include_tasks: pam-auth.yml
   tags: install-only
+
 - name: Include tasks for login image
   ansible.builtin.include_tasks: login.yml
 
