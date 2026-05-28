@@ -30,7 +30,7 @@
       group: root
       mode: "0755"
     when: 
-      - override | default(('/etc/sudoers.d/lchroot') is not exists )
+      - override | default(('/etc/sudoers.d/lchroot') is not exists ) or ('admin-change' in ansible_run_tags)
 
   - name: Render lchroot wrapper script
     ansible.builtin.template:
@@ -40,5 +40,5 @@
       group: "{{ ood_apps_admin_group }}"
       mode: "0755"
     when:
-      - override | default(('/usr/local/sbin/ood_lchroot_wrapper') is not exists )
+      - override | default(('/usr/local/sbin/ood_lchroot_wrapper') is not exists ) or ('admin-change' in ansible_run_tags)
 
