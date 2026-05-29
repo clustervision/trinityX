@@ -24,6 +24,7 @@
   when: not playbook_done_prior | default(False)
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install core packages - @core, kernel and grub2
   ansible.builtin.apt:
@@ -32,11 +33,13 @@
   when: playbook_done_prior | default(False)
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Download luna2-client package
   get_url:
     url: "{{ luna2_client_package }}"
     dest: "/tmp/{{ luna2_client_package|split('/')|last }}"
+  tags: install-only
 #    validate_certs: false
 
 - name: install luna2-client package
