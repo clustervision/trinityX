@@ -357,6 +357,16 @@
       luna_bmcsetup_user: 'admin'
   when: (luna_bmcsetup_user is not defined) or luna_bmcsetup_user | length == 0
 
+- name: Get installed named minor version
+  shell: "named -v 2>&1 | awk '{print $2}' | cut -d. -f2"
+  register: luna2_named_minor_raw
+  changed_when: false
+  failed_when: false
+
+- name: Set BIND_LEGACY fact
+  set_fact:
+    luna2_bind_legacy: "{{ 'true' if (luna2_named_minor_raw.stdout | trim != '' and (luna2_named_minor_raw.stdout | trim | int) <= 16) else 'false' }}"
+
 - name: Render /trinity/local/luna/daemon/config/bootstrap.ini
   template:
     src: 'bootstrap.ini.j2'
