@@ -64,7 +64,11 @@ SlurmdTimeout=10
 ProctrackType=proctrack/cgroup
 #FastSchedule=0
 SelectType=select/cons_tres
+{% if enable_slurm_pam | default(false) and enable_slurm_pam_adopt | default(true) and slurm_pam_adopt_manage_cgroup | default(true) %}
+SelectTypeParameters=CR_Core_Memory
+{% else %}
 SelectTypeParameters=CR_Core
+{% endif %}
 DefMemPerCPU=1024
 
 
