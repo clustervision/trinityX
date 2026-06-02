@@ -43,6 +43,11 @@ scrape_configs:
     - files:
       - {{prometheus_server_config_dir}}/file_sd/trix/*.yml
     metric_relabel_configs:
+      # Drop transient systemd unit states to reduce cardinality.
+      - source_labels: ['__name__', 'state']
+        regex: 'node_systemd_unit_state;(activating|deactivating)'
+        action: drop
+
       # Step 1: Check if the `hostname_override` label exists and override `hostname`
       - source_labels: ['hostname_override']
         target_label: 'hostname'
@@ -57,4 +62,9 @@ scrape_configs:
     file_sd_configs:
     - files:
       - {{prometheus_server_config_dir}}/file_sd/other/*.yml
+    metric_relabel_configs:
+      # Drop transient systemd unit states to reduce cardinality.
+      - source_labels: ['__name__', 'state']
+        regex: 'node_systemd_unit_state;(activating|deactivating)'
+        action: drop
 {{ prometheus_server_additional_sd | default([]) | to_nice_yaml(indent=2,sort_keys=False) | indent(2, True) }}
