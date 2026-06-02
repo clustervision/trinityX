@@ -26,6 +26,25 @@
     - ansible_facts['os_family'] == "RedHat"
     - ansible_facts['distribution_major_version']|int > 9
 
+- name: Set LDAP backend facts from trinity_ldap_backend if not already set
+  set_fact:
+    trix_use_openldap: "{{ trinity_ldap_backend == 'openldap' }}"
+    trix_use_ds389: "{{ trinity_ldap_backend == 'ds389' }}"
+  when:
+    - trix_use_openldap is not defined
+    - trix_use_ds389 is not defined
+
+- name: Validate LDAP backend selection
+  assert:
+    that:
+      - trix_use_openldap is defined
+      - trix_use_ds389 is defined
+      - trix_use_openldap | bool != trix_use_ds389 | bool
+    fail_msg: >-
+      Invalid LDAP backend selection:
+      trix_use_openldap={{ trix_use_openldap | default('undefined') }},
+      trix_use_ds389={{ trix_use_ds389 | default('undefined') }}
+
 - debug:
     msg: "trix_use_openldap: {{ trix_use_openldap }}, trix_use_ds389: {{ trix_use_ds389 }}"
   when:
