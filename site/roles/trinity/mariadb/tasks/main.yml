@@ -1,13 +1,7 @@
 ---
 # tasks for mariadb role
 
-- name: Generate password for DB root and save it to /etc/trinity/passwords
-  set_fact:
-    tmp_pwd: "{{ lookup('password',
-                          '/etc/trinity/passwords/mysql/root.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
-
-- name: Get root password from /etc/trinity/passwords
+- name: Generate or Get root password from /etc/trinity/passwords
   set_fact:
     mysql_root_pwd: "{{ lookup('password',
                           '/etc/trinity/passwords/mysql/root.txt
@@ -63,7 +57,6 @@
   when: not ha|default(False)
 
 - block:
-
   - name: Start MariaDB service
     service:
       name: mariadb
@@ -97,5 +90,4 @@
       state: present
     when: ha | default(False)
     tags: pcs
-
   when: primary | default(True)
