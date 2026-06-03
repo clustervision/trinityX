@@ -46,8 +46,7 @@
       - alternative_image_source is defined
       - alternative_image_source != 'osgrab'
 
-  - name:
-    debug:
+  - debug:
       msg: "Downloading for {{ alternative_distribution }} using {{ alternative_image_source|default('base') }}"
     when: download_base_image is defined
 
@@ -62,6 +61,7 @@
   - role: trinity/image-download
     image_download_distribution: "{{ alternative_distribution }}"
     image_download_source: "{{ alternative_image_source|default('base') }}"
+    image_architecture: "{{ system_arch }}"
     when: download_base_image is defined
     tags: image-create, install-only
 
