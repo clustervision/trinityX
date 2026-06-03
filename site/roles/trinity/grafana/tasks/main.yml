@@ -39,7 +39,69 @@
   delay: "{{ rpm_delay | default(15) }}"
   tags: install-only
 
-- name: Install grafana dashboard
+- name: Gather package facts for Grafana upgrade decision
+  package_facts:
+    manager: auto
+
+- name: Set grafana_installed fact
+  set_fact:
+    grafana_installed: "{{ ansible_facts.packages['grafana'] is defined }}"
+
+- name: Determine if upgrade is needed
+  set_fact:
+    grafana_needs_upgrade: >-
+      {%- if not grafana_installed -%}
+      false
+      {%- else -%}
+      {{ ansible_facts.packages['grafana'][0]['version'] != grafana_version }}
+      {%- endif -%}
+
+- name: Upgrade — stop grafana-server before backup
+  systemd:
+    name: grafana-server
+    state: stopped
+  when: grafana_needs_upgrade | bool
+
+- name: Upgrade — create timestamped backup directory
+  file:
+    state: directory
+    path: "/root/grafana_backup_{{ ansible_date_time.epoch }}"
+    owner: root
+    group: root
+    mode: '0700'
+  register: grafana_backup_dir
+  when: grafana_needs_upgrade | bool
+
+- name: Upgrade — backup /var/lib/grafana and /etc/grafana
+  archive:
+    path:
+      - /var/lib/grafana
+      - /etc/grafana
+    dest: "{{ grafana_backup_dir.path }}/grafana_full_backup.tar.gz"
+    format: gz
+  when: grafana_needs_upgrade | bool
+
+- name: Upgrade — record pre-upgrade version info
+  copy:
+    content: |
+      Previous Grafana version: {{ ansible_facts.packages['grafana'][0]['version'] }}
+      Target version: {{ grafana_version }}
+      Upgrade date: {{ ansible_date_time.iso8601 }}
+    dest: "{{ grafana_backup_dir.path }}/upgrade_info.txt"
+  when: grafana_needs_upgrade | bool
+
+- debug:
+    msg: >-
+      {%- if grafana_needs_upgrade | bool -%}
+      Grafana upgrade: {{ ansible_facts.packages['grafana'][0]['version'] }} → {{ grafana_version }}.
+      Backup created at {{ grafana_backup_dir.path }}
+      {%- elif grafana_installed -%}
+      Grafana {{ grafana_version }} already installed. Skipping.
+      {%- else -%}
+      Grafana not installed. Performing fresh install of {{ grafana_version }}.
+      {%- endif -%}
+
+- name: Install/upgrade grafana
   yum:
     name: "{{ grafana_rpm }}"
     disable_gpg_check: true
@@ -48,17 +110,8 @@
   delay: "{{ rpm_delay | default(15) }}"
   tags: install-only
 
-- name: Gather package facts
-  package_facts:
-    manager: auto
-
-- name: Install camptocamp-prometheus-alertmanager-datasource (Grafana < 10.2.0)
-  command: grafana-cli --pluginUrl="https://{{ grafana_plugin_url }}/trinityx/external/monitoring/camptocamp-prometheus-alertmanager-datasource/{{ trix_stream }}/camptocamp-prometheus-alertmanager-datasource-2.2.0.zip" plugins install  camptocamp-prometheus-alertmanager-datasource
-  when: ansible_facts.packages['grafana'][0]['version'] is version('10.2.0', '<')
-
-- name: Install grafana-camptocamp-prometheus-alertmanager-datasource (Grafana >= 10.2.0)
-  command: grafana cli --pluginUrl="https://{{ grafana_plugin_url }}/trinityx/external/monitoring/camptocamp-prometheus-alertmanager-datasource/{{ trix_stream }}/camptocamp-prometheus-alertmanager-datasource-2.2.0.zip" plugins install  camptocamp-prometheus-alertmanager-datasource
-  when: ansible_facts.packages['grafana'][0]['version'] is version('10.2.0', '>=')
+- name: Install camptocamp-prometheus-alertmanager-datasource plugin
+  command: grafana cli --pluginUrl="https://{{ grafana_plugin_url }}/trinityx/external/monitoring/camptocamp-prometheus-alertmanager-datasource/{{ trix_stream }}/camptocamp-prometheus-alertmanager-datasource-2.2.0.zip" plugins install camptocamp-prometheus-alertmanager-datasource
 
 - name: Configure LDAP
   template:
@@ -134,6 +187,13 @@
     name: grafana-server
     state: started
     enabled: true
+
+- name: Wait for Grafana to be ready on port {{ grafana_port }}
+  wait_for:
+    port: "{{ grafana_port }}"
+    host: "{{ grafana_ip_address }}"
+    delay: 2
+    timeout: 60
 
 # - name: Install piechart
 #   grafana_plugin:
