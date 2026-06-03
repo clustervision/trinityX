@@ -71,6 +71,20 @@
 
   - meta: flush_handlers
 
+  # --------------------
+
+  - name: Set MariaDB's root pasword
+    ansible.mysql.mysql_user:
+      login_user: root
+      login_password: ""
+      name: root
+      password: '{{ mysql_root_pwd }}'
+      host_all: true
+      check_implicit_admin: true
+      state: present
+    failed_when: false
+    when: ansible_version.full is version('2.14.18', '>=')
+
   - name: Set MariaDB's root pasword
     mysql_user:
       login_user: root
@@ -81,6 +95,9 @@
       check_implicit_admin: true
       state: present
     failed_when: false
+    when: ansible_version.full is version('2.14.18', '<')
+
+  # --------------------
 
   - name: Render /root/.my.cnf
     template:
@@ -91,6 +108,18 @@
       mode: 0600
       backup: true
 
+  # --------------------
+
+  - name: Set MariaDB's root pasword
+    ansible.mysql.mysql_user:
+      config_file: '/root/.my.cnf'
+      name: root
+      password: '{{ mysql_root_pwd }}'
+      host_all: true
+      check_implicit_admin: true
+      state: present
+    when: ansible_version.full is version('2.14.18', '>=')
+
   - name: Set MariaDB's root pasword
     mysql_user:
       config_file: '/root/.my.cnf'
@@ -99,6 +128,17 @@
       host_all: true
       check_implicit_admin: true
       state: present
+    when: ansible_version.full is version('2.14.18', '<')
+
+  # --------------------
+
+  - name: Remove anonymous users
+    ansible.mysql.mysql_user:
+      config_file: '/root/.my.cnf'
+      name: ''
+      host_all: true
+      state: absent
+    when: ansible_version.full is version('2.14.18', '>=')
 
   - name: Remove anonymous users
     mysql_user:
@@ -106,12 +146,23 @@
       name: ''
       host_all: true
       state: absent
+    when: ansible_version.full is version('2.14.18', '<')
+
+  # --------------------
+
+  - name: Remove test db
+    ansible.mysql.mysql_db:
+      config_file: '/root/.my.cnf'
+      name: test
+      state: absent
+    when: ansible_version.full is version('2.14.18', '>=')
 
   - name: Remove test db
     mysql_db:
       config_file: '/root/.my.cnf'
       name: test
       state: absent
+    when: ansible_version.full is version('2.14.18', '<')
 
   - name: Add pacemaker resource
     pcs_resource:
