@@ -51,6 +51,10 @@
 - debug:
     msg: "enable_openhpc: {{ enable_openhpc }}, enable_trinityx_slurm: {{ enable_trinityx_slurm }}"
 
+
+- set_fact:
+    slurm_os_family: '{{ ansible_os_family }}'
+
 - block:
   - name: Install PyMSQL
     dnf:
@@ -319,6 +323,14 @@
         enabled: true
       with_items: "{{ slurm_services_image }}"
 
+    - name: Render sshd PAM config file
+      template:
+        src: pam-sshd.j2
+        dest: '/etc/pam.d/sshd'
+        mode: '0644'
+        owner: root
+        force: false
+
     - name: Update PAM configuration to enable slurm pam controls
       copy:
         src: '{{ item.0 }}'
@@ -327,8 +339,8 @@
         group: root
         mode: 0644
       with_together:
-        - ['pam-sshd', 'pam-slurm']
-        - ['sshd', 'slurm']
+        - ['pam-slurm']
+        - ['slurm']
       when: enable_slurm_pam
 
     # cv-slurm packages install pam modules to /usr/lib/security/,
@@ -350,78 +362,76 @@
       ignore_errors: true
       when:
         - enable_slurm_pam
-        - enable_slurm_pam_adopt | default(true)
+        - enable_slurm_pam_adopt | default(True)
         - ansible_os_family == 'RedHat'
         - ansible_architecture == 'x86_64'
 
-    - name: Comment legacy pam_slurm.so in sshd PAM stack
-      replace:
-        path: /etc/pam.d/sshd
-        regexp: '^(account\s+required\s+pam_slurm\.so.*)$'
-        replace: '#\1'
-      when:
-        - enable_slurm_pam
-        - enable_slurm_pam_adopt | default(true)
+    #- name: Comment legacy pam_slurm.so in sshd PAM stack
+    #  replace:
+    #    path: /etc/pam.d/sshd
+    #    regexp: '^(account\s+required\s+pam_slurm\.so.*)$'
+    #    replace: '#\1'
+    #  when:
+    #    - enable_slurm_pam
+    #    - enable_slurm_pam_adopt | default(True)
 
-    - name: Ensure pam_slurm_adopt.so is last in sshd account stack
-      lineinfile:
-        path: /etc/pam.d/sshd
-        regexp: '^-?account\s+required\s+pam_slurm_adopt\.so.*$'
-        line: "-account   required     pam_slurm_adopt.so {{ slurm_pam_adopt_options }}"
-        insertafter: '^account\s+include\s+(password-auth|system-auth|common-account)'
-      when:
-        - enable_slurm_pam
-        - enable_slurm_pam_adopt | default(true)
+    #- name: Ensure pam_slurm_adopt.so is last in sshd account stack
+    #  lineinfile:
+    #    path: /etc/pam.d/sshd
+    #    regexp: '^-?account\s+required\s+pam_slurm_adopt\.so.*$'
+    #    line: "-account   required     pam_slurm_adopt.so {{ slurm_pam_adopt_options }}"
+    #    insertafter: '^account\s+include\s+(password-auth|system-auth|common-account)'
+    #  when:
+    #    - enable_slurm_pam
+    #    - enable_slurm_pam_adopt | default(True)
 
     # pam_slurm_adopt conflicts with pam_systemd.so.  On authselect-managed
     # systems the commented lines may be reverted if authselect is re-run
     # (e.g. during auth or sssd role execution).  This task should run after
     # any authselect role, which is guaranteed by the controller.yml order.
-    - name: Disable pam_systemd.so in RedHat PAM stacks for pam_slurm_adopt
-      replace:
-        path: '/etc/pam.d/{{ item }}'
-        regexp: '^(\s*-?session\s+optional\s+pam_systemd\.so.*)$'
-        replace: '#\1'
-      loop:
-        - password-auth
-        - system-auth
-      when:
-        - enable_slurm_pam
-        - enable_slurm_pam_adopt | default(true)
-        - slurm_pam_adopt_manage_pam_systemd | default(true)
-        - ansible_os_family == 'RedHat'
+    - block:
+      - name: Disable pam_systemd.so in RedHat PAM stacks for pam_slurm_adopt
+        replace:
+          path: '/etc/pam.d/{{ item }}'
+          regexp: '^(\s*-?session\s+optional\s+pam_systemd\.so.*)$'
+          replace: '#\1'
+        loop:
+          - password-auth
+          - system-auth
+        when:
+          - slurm_pam_adopt_manage_pam_systemd | default(True)
+          - ansible_os_family == 'RedHat'
 
-    # Same as RedHat above — pam_systemd.so conflict with pam_slurm_adopt.
-    - name: Disable pam_systemd.so in Debian PAM stacks for pam_slurm_adopt
-      replace:
-        path: '/etc/pam.d/{{ item }}'
-        regexp: '^(\s*-?session\s+optional\s+pam_systemd\.so.*)$'
-        replace: '#\1'
-      loop:
-        - common-session
-        - common-session-noninteractive
-      when:
-        - enable_slurm_pam
-        - enable_slurm_pam_adopt | default(true)
-        - slurm_pam_adopt_manage_pam_systemd | default(true)
-        - ansible_os_family == 'Debian'
+      # Same as RedHat above — pam_systemd.so conflict with pam_slurm_adopt.
+      - name: Disable pam_systemd.so in Debian PAM stacks for pam_slurm_adopt
+        replace:
+          path: '/etc/pam.d/{{ item }}'
+          regexp: '^(\s*-?session\s+optional\s+pam_systemd\.so.*)$'
+          replace: '#\1'
+        loop:
+          - common-session
+          - common-session-noninteractive
+        when:
+          - slurm_pam_adopt_manage_pam_systemd | default(True)
+          - ansible_os_family == 'Debian'
 
-    - name: Disable keyboard-interactive ssh authentication for pam_slurm_adopt
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?\s*{{ item.key }}\s+'
-        line: '{{ item.key }} {{ item.value }}'
-      loop:
-        - key: UsePAM
-          value: 'yes'
-        - key: KbdInteractiveAuthentication
-          value: 'no'
-        - key: ChallengeResponseAuthentication
-          value: 'no'
-      when:
-        - enable_slurm_pam
-        - enable_slurm_pam_adopt | default(true)
-        - slurm_pam_adopt_manage_sshd | default(true)
+      - name: Disable keyboard-interactive ssh authentication for pam_slurm_adopt
+        lineinfile:
+          path: /etc/ssh/sshd_config
+          regexp: '^#?\s*{{ item.key }}\s+'
+          line: '{{ item.key }} {{ item.value }}'
+        loop:
+          - key: UsePAM
+            value: 'yes'
+          - key: KbdInteractiveAuthentication
+            value: 'no'
+          - key: ChallengeResponseAuthentication
+            value: 'no'
+        when:
+          - slurm_pam_adopt_manage_sshd | default(True)
+    when:
+      - enable_slurm_pam | default(False)
+      - enable_slurm_pam_adopt | default(True)
   when: in_image or on_node|default(False)
 
 
