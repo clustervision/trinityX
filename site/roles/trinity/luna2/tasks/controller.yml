@@ -27,6 +27,7 @@
     enablerepo: luna2
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install required packages
   yum:
@@ -34,6 +35,7 @@
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Ensure /var/log/luna exists
   file:
@@ -355,6 +357,16 @@
       luna_bmcsetup_user: 'admin'
   when: (luna_bmcsetup_user is not defined) or luna_bmcsetup_user | length == 0
 
+- name: Get installed named minor version
+  shell: "named -v 2>&1 | awk '{print $2}' | cut -d. -f2"
+  register: luna2_named_minor_raw
+  changed_when: false
+  failed_when: false
+
+- name: Set BIND_LEGACY fact
+  set_fact:
+    luna2_bind_legacy: "{{ 'true' if (luna2_named_minor_raw.stdout | trim != '' and (luna2_named_minor_raw.stdout | trim | int) <= 16) else 'false' }}"
+
 - name: Render /trinity/local/luna/daemon/config/bootstrap.ini
   template:
     src: 'bootstrap.ini.j2'
@@ -419,6 +431,7 @@
         - snponly.efi
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
+      tags: install-only
     when: system_arch == "x86_64" or luna2_download_all_arch_ipxe_files|default(False)
 
   - name: Download ARM 64-bit iPXE EFI image to tftpboot
@@ -432,6 +445,7 @@
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
     when: system_arch == "aarch64" or luna2_download_all_arch_ipxe_files|default(False)
+    tags: install-only
   when: ansible_facts['os_family'] == "RedHat"
 
 #- name: Include luna's DNS zone file in named conf
@@ -537,7 +551,6 @@
     owner: root
     group: root
     mode: '0600'
-  ignore_errors: true
 
 # -------------- H/A stuff ------------------
 

@@ -13,9 +13,9 @@
   yum:
     name: '{{ ds389_dependencies }}'
     state: installed
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install DS389 packages
   yum:
@@ -25,9 +25,9 @@
       - plus
       - powertools
       - appstream
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 
 # -- start sync
@@ -333,47 +333,113 @@
     groups: '{{ ssl_cert_group }}'
 
 - block:
-  - name: Verify whether we have to add cluster-ca
-    command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n cluster-ca'
+  - name: Verify whether cluster-ca exists in DS389 NSS database
+    command: 'certutil -L -d "{{ ds389_nssdb }}" -n "cluster-ca"'
     register: ds389_ca_cert
+    changed_when: false
+    failed_when: false
     no_log: true
-    ignore_errors: true
 
   - name: Add cluster CA as a valid DS389 CA
-    command: 'dsconf local security ca-certificate add --file {{ ds389_tls_cacrt }} --name "cluster-ca"'
+    command: >
+      certutil -A
+      -d "{{ ds389_nssdb }}"
+      -n "cluster-ca"
+      -t "CT,,"
+      -a
+      -i "{{ ds389_tls_cacrt }}"
+      -f "{{ ds389_nssdb_pwdfile }}"
     notify: restart ds389
     when: ds389_ca_cert.rc|int != 0
 
-  - name: Verify whether we have to remove the default cert name
-    shell: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert | grep "{{ trix_ctrl_hostname }}"'
-    register: ds389_default_cert
-    ignore_errors: true
+  - name: Read cluster-ca DS389 NSS trust flags
+    shell: >
+      certutil -L -d "{{ ds389_nssdb }}" |
+      awk '$1 == "cluster-ca" { print $2; found=1 } END { exit found ? 0 : 1 }'
+    args:
+      executable: /bin/bash
+    register: ds389_ca_cert_trust
+    changed_when: false
+    failed_when: false
 
-  - block:
-    - name: Remove default server cert
-      command: certutil -D -d "/etc/dirsrv/slapd-local" -n Server-Cert
-
-    - name: Add controller certificate
-      command: 'dsctl local tls import-server-key-cert {{ ds389_tls_crt }} {{ ds389_tls_key }}'
-      notify: restart ds389
-    when: ds389_default_cert.rc|int != 0 or ds389_default_cert.stdout == '' or ds389_ca_cert.rc|int != 0
-
-  - name: Verify whether we have server cert
-    shell: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert'
-    register: ds389_new_cert
-    ignore_errors: true
-
-  - name: Verify whether we have to rename to default cert name
-    command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n controller'
-    register: ds389_rename_cert
-    when: ds389_new_cert.rc|int != 0
-    ignore_errors: true
-
-  - name: Rename controller cert to match DS defaults
-    command: 'certutil -d "/etc/dirsrv/slapd-local" --rename -n "controller" --new-n "Server-Cert"'
+  - name: Ensure cluster-ca has CA trust flags
+    command: >
+      certutil -M
+      -d "{{ ds389_nssdb }}"
+      -n "cluster-ca"
+      -t "CT,,"
+      -f "{{ ds389_nssdb_pwdfile }}"
     notify: restart ds389
-    when: ds389_rename_cert.rc is defined and ds389_rename_cert.rc|int == 0
+    when: ds389_ca_cert_trust.stdout != 'CT,,'
+
+  - name: Get expected DS389 Server-Cert fingerprint
+    command: 'openssl x509 -in "{{ ds389_tls_crt }}" -noout -fingerprint -sha256'
+    register: ds389_expected_server_cert_fp
+    changed_when: false
+
+  - name: Get current DS389 Server-Cert fingerprint
+    shell: |
+      set -o pipefail
+      certutil -L -d "{{ ds389_nssdb }}" -n "Server-Cert" -a |
+      openssl x509 -noout -fingerprint -sha256
+    args:
+      executable: /bin/bash
+    register: ds389_current_server_cert_fp
+    changed_when: false
+    failed_when: false
+
+  - name: Verify whether legacy controller certificate exists
+    command: 'certutil -L -d "{{ ds389_nssdb }}" -n "controller"'
+    register: ds389_controller_cert
+    changed_when: false
+    failed_when: false
+    when: ds389_current_server_cert_fp.rc|int != 0
+
+  - name: Rename legacy controller certificate to Server-Cert
+    command: 'certutil -d "{{ ds389_nssdb }}" --rename -n "controller" --new-n "Server-Cert"'
+    notify: restart ds389
+    when:
+      - ds389_current_server_cert_fp.rc|int != 0
+      - ds389_controller_cert.rc is defined
+      - ds389_controller_cert.rc|int == 0
+
+  - name: Refresh current DS389 Server-Cert fingerprint
+    shell: |
+      set -o pipefail
+      certutil -L -d "{{ ds389_nssdb }}" -n "Server-Cert" -a |
+      openssl x509 -noout -fingerprint -sha256
+    args:
+      executable: /bin/bash
+    register: ds389_current_server_cert_fp
+    changed_when: false
+    failed_when: false
+
+  - name: Remove current DS389 Server-Cert when it is not the TrinityX certificate
+    command: 'certutil -D -d "{{ ds389_nssdb }}" -n "Server-Cert"'
+    when:
+      - ds389_current_server_cert_fp.rc|int == 0
+      - ds389_current_server_cert_fp.stdout != ds389_expected_server_cert_fp.stdout
+
+  - name: Import TrinityX controller certificate into DS389
+    command: 'dsctl local tls import-server-key-cert {{ ds389_tls_crt }} {{ ds389_tls_key }}'
+    notify: restart ds389
+    when: >
+      ds389_current_server_cert_fp.rc|int != 0 or
+      ds389_current_server_cert_fp.stdout != ds389_expected_server_cert_fp.stdout
+
+  vars:
+    ds389_nssdb: /etc/dirsrv/slapd-local
+    ds389_nssdb_pwdfile: /etc/dirsrv/slapd-local/pwdfile.txt
   when: primary | default(True)
+
+# --- Fix for DS389 bug leaving /dev/shm/slapd-local in an unrecoverable state
+- name: Clearing stale /dev/shm/slapd-local
+  file:
+    path: /dev/shm/slapd-local
+    state: absent
+  when:
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution_major_version|int < 10
 
 - meta: flush_handlers
 
@@ -410,6 +476,7 @@
          -w {{ ds389_root_pwd }}
          -f /etc/dirsrv/schema/local_schema.ldif
     when: ds389_ldapsearch.rc|int != 0
+    no_log: true
     ignore_errors: true
 
   - name: Copy trust schema

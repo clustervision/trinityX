@@ -4,7 +4,7 @@ groups:
 - name: trinityx
   rules:
   - alert: ServiceFailedSystemdGeneric
-    expr: 'node_systemd_unit_state{state="failed"} > 0'
+    expr: 'node_systemd_unit_state{name!~"(dhcpd|named|nginx|luna2-daemon|slurmctld|slurmdbd|munge|sssd|slapd|dirsrv@local|rsyslogd|slurmd|sshd).service", state="failed"} > 0'
     for: 10m
     labels:
       severity: warning
@@ -31,7 +31,7 @@ groups:
       description: '{% raw %}Service {{ $labels.name }} on server {{ $labels.hostname }} has failed{% endraw %}'
 
   - alert: ServiceFailedAuthenticationOnController
-    expr: 'node_systemd_unit_state{name=~"(sssd|slapd).service", state="failed", job="luna_controllers"} > 0'
+    expr: 'node_systemd_unit_state{name=~"(sssd|slapd|dirsrv@local).service", state="failed", job="luna_controllers"} > 0'
     for: 10m
     labels:
       severity: critical

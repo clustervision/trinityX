@@ -48,6 +48,9 @@
   no_log: true
   ignore_errors: true
 
+- debug:
+    msg: "enable_openhpc: {{ enable_openhpc }}, enable_trinityx_slurm: {{ enable_trinityx_slurm }}"
+
 - block:
   - name: Install PyMSQL
     dnf:
@@ -55,6 +58,7 @@
       state: installed
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
+    tags: install-only
 
   - name: Generate password for DB user and save it to /etc/trinity/passwords
     set_fact:
@@ -158,14 +162,20 @@
         | unique
       }}
 
+- debug:
+    var: slurm_packages_to_remove
+
 - name: Remove clashing slurm packages
   package:
     name: "{{ slurm_packages_to_remove }}"
     state: absent
   when: slurm_packages_to_remove | length > 0
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+- debug:
+    var: lookup('vars', slurm_packages_flavor)
 
 - name: Install slurm packages
   dnf:
@@ -177,18 +187,18 @@
       - epel
       - appstream
   when: ansible_os_family != 'Debian'
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install slurm packages
   package:
     name: "{{ lookup('vars', slurm_packages_flavor) }}"
     state: present
   when: ansible_os_family == 'Debian'
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 
 # ----------------- backup current slurm if requested -------------

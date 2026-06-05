@@ -21,21 +21,37 @@
     name: "{{ item }}"
     state: present
   with_items: "{{ image_core_packages }}"
+  when: not playbook_done_prior | default(False)
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+- name: Install core packages - @core, kernel and grub2
+  ansible.builtin.apt:
+    name: "{{ image_core_packages }}"
+    state: present
+  when: playbook_done_prior | default(False)
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Download luna2-client package
   get_url:
     url: "{{ luna2_client_package }}"
     dest: "/tmp/{{ luna2_client_package|split('/')|last }}"
+  tags: install-only
 #    validate_certs: false
 
 - name: install luna2-client package
   shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
 
-- name: Disable tinysshd if it is there
+- name: Disable unwanted/unneeded services
   service:
     name: "{{ item }}"
     enabled: false
+  with_items:
+    - tinysshd
+    - sssd-pam.socket
+    - sssd-nss.socket
   ignore_errors: true
 

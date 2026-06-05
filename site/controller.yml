@@ -43,6 +43,11 @@
         - "{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
       tags: noproxy
 
+    - role: trinity/resolv
+      bind_dns_forwarders: '{{ trix_dns_forwarders }}'
+      no_resolv_server: true
+      tags: resolv-first
+
     - role: trinity/repos
       tags: repos
 
@@ -171,7 +176,6 @@
         - authentication  
 
     - role: trinity/bind
-      bind_db_path: '{{ trix_local }}/var/lib/named'
       bind_dnssec_enable: "no"
       bind_dns_forwarders: '{{ trix_dns_forwarders }}'
       tags: bind
@@ -214,7 +218,7 @@
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
       when: enable_authentication|default(True)
-      tags: sssd, authentication, config-slurm
+      tags: sssd, sss, authentication, admin-change, config-slurm
 
     - role: trinity/mariadb
       mariadb_db_path: "{{ trix_ha if ha else trix_local }}/var/lib/mysql"
@@ -291,15 +295,15 @@
     - role: trinity/config-slurm
       cs_admin_group: "{{ admin_group }}"
       when: "'slurm' in workload_manager "
-      tags: slurm, config-slurm, ood-apps
+      tags: slurm, config-slurm, ood-apps, admin-change
 
     - role: trinity/config-genders
       cg_admin_group: "{{ admin_group }}"
-      tags: config-genders
+      tags: config-genders, admin-change
 
     - role: trinity/config-manager
       cm_admin_group: "{{ admin_group }}"
-      tags: config-manager
+      tags: config-manager, admin-change
 
       # We added kea for future reference
       # For now it's here as a reference
@@ -361,7 +365,7 @@
       syslog_file_template_rules:
         - name: controllers
           type: string
-          content: '/var/log/cluster-messages/%HOSTNAME%.messages'
+          content: '/var/log/cluster-messages/%hostname:F,46:1%.messages'
           field: '$fromhost-ip'
           criteria: startswith
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
@@ -379,13 +383,13 @@
       ood_login_host: "{{ trix_external_fqdn }}"
       ood_ldap_host: "{{ trix_ctrl_ip }}"
       ood_admin_group: "{{ admin_group }}"
-      tags: ood, ood-core
+      tags: ood, ood-core, admin-change
       when: enable_ood
 
     - role: trinity/ood-apps
       ood_enable_ssl: true
       ood_apps_admin_group: "{{ admin_group }}"
-      tags: ood, ood-apps
+      tags: ood, ood-apps, admin-change
       when: enable_ood
 
     # - role: trinity/prometheus-auth
@@ -446,7 +450,7 @@
       # below depends on the above 
       #   role: trinity/prometheus-server -> prometheus_server_tls/enabled: true == https
       prometheus_alertmanager_web_protocol: "https"
-      tags: prometheus-alertmanager, prometheus, monitoring
+      tags: prometheus-alertmanager, prometheus, monitoring, admin-change
 
     - role: trinity/prometheus-node-exporter
       # Prometheus node exporter
@@ -532,7 +536,7 @@
       grafana_alertmanager_basic_auth_file: '/etc/trinity/passwords/prometheus/admin.txt'
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      tags: grafana, monitoring
+      tags: grafana, monitoring, admin-change
 
     - role: trinity/alertx
       alertx_drainer_enable: "{{ True if 'slurm' in workload_manager else False }}"

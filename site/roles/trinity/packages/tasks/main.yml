@@ -20,9 +20,25 @@
       - codeready-builder-for-rhel-*-aarch64-rpm
     disable_gpg_check: true
   with_items: "{{ install_packages }}"
-  tags: install-only
+  when: not playbook_done_prior | default(False)
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+- name: Install additional packages
+  dnf:
+    name: "{{ install_packages }}"
+    state: present
+    enablerepo:
+      - powertools
+      - crb
+      - codeready-builder-for-rhel-*-x86_64-rpm
+      - codeready-builder-for-rhel-*-aarch64-rpm
+    disable_gpg_check: true
+  when: playbook_done_prior | default(False)
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Enable haveged service
   service:

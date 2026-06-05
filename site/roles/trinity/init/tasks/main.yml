@@ -4,6 +4,13 @@
 # Keep in mind that this role applies to the controllers
 # as well as compute nodes and images
 
+- name: Playbook state
+  ansible.builtin.include_tasks:
+    file: playbook-state.yml
+    apply:
+      tags: always
+  tags: always
+
 - name: Check passwords
   ansible.builtin.include_tasks:
     file: check-passwords.yml
@@ -20,13 +27,13 @@
   yum:
     name: '{{ item }}'
     state: present
-  tags: install-only
   with_items: '{{ init_packages }}'
   when:
     - ansible_facts['os_family'] == "RedHat"
     - init_packages is defined
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 # -----------------------------
 

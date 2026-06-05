@@ -8,9 +8,9 @@
   yum:
     name: python3-policycoreutils
     state: installed
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 # -- start sync
 - block:
@@ -69,9 +69,9 @@
     enablerepo:
       - plus
       - powertools
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Determine openldap version
   shell: "rpm -q openldap-servers|grep -oE '[0-9]\\.[0-9]'|tr -d '.'|head -n1"
@@ -299,6 +299,7 @@
       ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
                                -f /etc/openldap/schema/local_schema.ldif
     ignore_errors: true
+    no_log: true
     when: ldapsearch.rc == 32
   when: (primary | default(True)) and (openldap_version is defined and openldap_version.stdout|int < 25)
 
@@ -372,6 +373,7 @@
       ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
                                -f /etc/openldap/schema/local_schema.ldif
     ignore_errors: true
+    no_log: true
     when: ldapsearch.rc == 32
   when: (primary | default(True)) and (openldap_version is defined and openldap_version.stdout|int > 24)
 
