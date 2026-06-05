@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+URL="${OOD_PLACEHOLDER_CHECK_URL:-{{ ood_placeholder_check_url }}}"
+HOST_HEADER="${OOD_PLACEHOLDER_CHECK_HOST_HEADER:-{{ ood_placeholder_check_host_header | default('') }}}"
+DISPLAY_URL="${OOD_PLACEHOLDER_DISPLAY_URL:-{{ ood_placeholder_display_url | default(ood_placeholder_check_url) }}}"
+TRIGGER_STATUS="${OOD_PLACEHOLDER_TRIGGER_STATUS:-{{ ood_placeholder_trigger_status }}}"
+TIMEOUT="${OOD_PLACEHOLDER_CHECK_TIMEOUT:-{{ ood_placeholder_check_timeout }}}"
+ENABLE_FILE="${OOD_PLACEHOLDER_ENABLE_FILE:-{{ ood_placeholder_enable_file }}}"
+REASON_FILE="${OOD_PLACEHOLDER_REASON_FILE:-{{ ood_placeholder_reason_file }}}"
+APACHE_SERVICE="${OOD_APACHE_SERVICE:-{{ ood_apache_service_name }}}"
+FOLLOW_REDIRECTS="${OOD_PLACEHOLDER_FOLLOW_REDIRECTS:-{{ 'true' if ood_placeholder_check_follow_redirects else 'false' }}}"
+VALIDATE_CERTS="${OOD_PLACEHOLDER_VALIDATE_CERTS:-{{ 'true' if ood_placeholder_check_validate_certs else 'false' }}}"
+
+curl_args=(--silent --output /dev/null --write-out '%{http_code}' --connect-timeout "${TIMEOUT}" --max-time "${TIMEOUT}")
+if [ -n "${HOST_HEADER}" ]; then
+    curl_args+=(--header "Host: ${HOST_HEADER}")
+fi
+if [ "${FOLLOW_REDIRECTS}" = "true" ]; then
+    curl_args+=(--location)
+fi
+if [ "${VALIDATE_CERTS}" != "true" ]; then
+    curl_args+=(--insecure)
+fi
+
+if command -v curl >/dev/null 2>&1; then
+    status="$(curl "${curl_args[@]}" "${URL}" || true)"
+elif command -v wget >/dev/null 2>&1; then
+    wget_args=(--server-response --spider --timeout="${TIMEOUT}")
+    if [ -n "${HOST_HEADER}" ]; then
+        wget_args+=(--header="Host: ${HOST_HEADER}")
+    fi
+    if [ "${VALIDATE_CERTS}" != "true" ]; then
+        wget_args+=(--no-check-certificate)
+    fi
+    status="$(wget "${wget_args[@]}" "${URL}" 2>&1 | awk '/^  HTTP\// { code=$2 } END { print code }' || true)"
+else
+    echo "Neither curl nor wget is available; cannot check ${URL}." >&2
+    exit 2
+fi
+
+if [ "${status}" = "${TRIGGER_STATUS}" ]; then
+    if [ -f "${ENABLE_FILE}" ]; then
+        echo "TrinityX OOD placeholder already enabled; ${DISPLAY_URL} returned HTTP ${status}."
+        exit 0
+    fi
+
+    printf 'TrinityX enabled the OOD placeholder because %s returned HTTP %s on %s.\nCheck URL: %s\nUnset with: {{ ood_placeholder_unset_script }}\n' \
+        "${DISPLAY_URL}" "${status}" "$(date -Is)" "${URL}" > "${REASON_FILE}"
+    touch "${ENABLE_FILE}"
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl reload "${APACHE_SERVICE}" 2>/dev/null || systemctl restart "${APACHE_SERVICE}"
+    fi
+    echo "TrinityX OOD placeholder enabled because ${DISPLAY_URL} returned HTTP ${status}."
+    exit 0
+fi
+
+echo "TrinityX OOD placeholder not enabled; ${DISPLAY_URL} returned HTTP ${status:-unknown}."
