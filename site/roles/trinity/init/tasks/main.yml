@@ -4,6 +4,13 @@
 # Keep in mind that this role applies to the controllers
 # as well as compute nodes and images
 
+- name: Playbook state
+  ansible.builtin.include_tasks:
+    file: playbook-state.yml
+    apply:
+      tags: always
+  tags: always
+
 - name: Check passwords
   ansible.builtin.include_tasks:
     file: check-passwords.yml
@@ -577,11 +584,4 @@
     state: "{{ 'permissive' if enable_selinux else 'disabled' }}"
     policy: 'targeted'
   when: ansible_facts['os_family'] == "RedHat"
-
-- name: Playbook state
-  ansible.builtin.include_tasks:
-    file: playbook-state.yml
-    apply:
-      tags: always
-  tags: always
 
