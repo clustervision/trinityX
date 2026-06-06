@@ -366,25 +366,6 @@
       - ansible_os_family == 'RedHat'
       - ansible_architecture == 'x86_64'
 
-  #- name: Comment legacy pam_slurm.so in sshd PAM stack
-  #  replace:
-  #    path: /etc/pam.d/sshd
-  #    regexp: '^(account\s+required\s+pam_slurm\.so.*)$'
-  #    replace: '#\1'
-  #  when:
-  #    - enable_slurm_pam
-  #    - enable_slurm_pam_adopt | default(True)
-
-  #- name: Ensure pam_slurm_adopt.so is last in sshd account stack
-  #  lineinfile:
-  #    path: /etc/pam.d/sshd
-  #    regexp: '^-?account\s+required\s+pam_slurm_adopt\.so.*$'
-  #    line: "-account   required     pam_slurm_adopt.so {{ slurm_pam_adopt_options }}"
-  #    insertafter: '^account\s+include\s+(password-auth|system-auth|common-account)'
-  #  when:
-  #    - enable_slurm_pam
-  #    - enable_slurm_pam_adopt | default(True)
-
   # pam_slurm_adopt conflicts with pam_systemd.so.  On authselect-managed
   # systems the commented lines may be reverted if authselect is re-run
   # (e.g. during auth or sssd role execution).  This task should run after
