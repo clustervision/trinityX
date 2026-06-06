@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TrinityX Open OnDemand placeholder</title>
+  <style>
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #f4f6f8; color: #1f2933; }
+    main { max-width: 920px; margin: 4rem auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 14px rgba(0,0,0,.12); padding: 2rem 2.5rem; }
+    h1 { margin-top: 0; color: #b42318; }
+    h2 { margin-top: 2rem; color: #344054; }
+    code, pre { background: #eef2f6; border-radius: 4px; }
+    code { padding: .1rem .3rem; }
+    pre { padding: 1rem; overflow-x: auto; }
+    a { color: #0969da; }
+    .note { border-left: 4px solid #f79009; padding: .8rem 1rem; background: #fff8eb; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Open OnDemand is installed but not ready</h1>
+    <p>
+      TrinityX detected that the Open OnDemand endpoint
+      <code>{{ ood_placeholder_display_url | default(ood_placeholder_check_url) }}</code> returned HTTP
+      <code>{{ ood_placeholder_trigger_status }}</code>.  This placeholder is shown instead of the
+      OOD error page so administrators can complete the final configuration.
+    </p>
+
+    <p>
+      The local health check used <code>{{ ood_placeholder_check_url }}</code>{% if ood_placeholder_check_host_header | default('') %}
+      with HTTP host header <code>{{ ood_placeholder_check_host_header }}</code>{% endif %}.
+    </p>
+
+    <h2>Common causes</h2>
+    <ul>
+      <li>The configured OOD hostname/FQDN does not resolve from clients or from the controller itself.</li>
+      <li>The certificate does not match the hostname used to reach OOD, or the generated certificate was not updated after the hostname changed.</li>
+      <li><code>trix_external_fqdn</code>, <code>ood_login_host</code>, DNS, or <code>/etc/hosts</code> still need to be corrected.</li>
+    </ul>
+
+    <h2>Where to look</h2>
+    <ul>
+      <li><a href="{{ ood_placeholder_docs_admin_url }}">TrinityX admin documentation: Open OnDemand</a></li>
+      <li><a href="{{ ood_placeholder_docs_user_url }}">TrinityX user documentation: OOD portal</a></li>
+    </ul>
+
+    <h2>How to unset this placeholder</h2>
+    <p>After fixing hostname resolution and certificates, run this on the controller:</p>
+    <pre>{{ ood_placeholder_unset_script }}</pre>
+    <p>Alternatively remove the marker files manually:</p>
+    <pre>rm -f {{ ood_placeholder_enable_file }} {{ ood_placeholder_reason_file }}</pre>
+
+    <div class="note">
+      If the placeholder returns after rerunning the OOD role, the endpoint still returns HTTP
+      <code>{{ ood_placeholder_trigger_status }}</code>; re-check DNS, FQDN and certificate settings.
+    </div>
+  </main>
+</body>
+</html>
