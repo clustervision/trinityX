@@ -10,7 +10,18 @@
     - slurmctld
   retries: 10
   delay: 15
-  when: primary|default(True)
+  when:
+    - primary|default(True)
+    - on_controller | default(False)
+
+- name: restart slurmd
+  service:
+    name: slurmd
+    state: restarted
+  retries: 10
+  delay: 15
+  when:
+    - on_node | default(False)
 
 - name: restart munge
   service:
