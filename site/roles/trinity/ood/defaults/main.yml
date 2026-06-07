@@ -30,6 +30,30 @@ ood_footer_dir: "/etc/ood/config/apps/dashboard/views/layouts"
 ood_footer_file: "_footer.html.erb"
 ood_admin_group: admins
 
+# OOD maintenance/placeholder settings.  The placeholder check runs after the
+# role has rendered OOD and started the webserver.  If the endpoint returns the
+# trigger status, the standard OOD maintenance marker is created so users see a
+# TrinityX help page instead of the HTTP 500.
+ood_maintenance_ip_allowlist: []
+ood_placeholder_check_enabled: true
+ood_placeholder_trigger_status: 500
+ood_placeholder_check_timeout: 10
+ood_placeholder_check_follow_redirects: true
+ood_placeholder_check_validate_certs: false
+# Check the local Apache vhost directly.  This catches OOD/Dex/FQDN failures even
+# when the public OOD FQDN is not resolvable yet from the controller.
+ood_placeholder_check_url: "{{ 'https' if ood_enable_ssl else 'http' }}://127.0.0.1:{{ ood_port }}/pun/sys/dashboard"
+ood_placeholder_check_host_header: "{{ ood_login_host }}:{{ ood_port }}"
+ood_placeholder_display_url: "{{ 'https' if ood_enable_ssl else 'http' }}://{{ ood_login_host }}:{{ ood_port }}/"
+ood_placeholder_public_dir: /var/www/ood/public/maintenance
+ood_placeholder_enable_file: /etc/ood/maintenance.enable
+ood_placeholder_reason_file: /etc/ood/trinityx-ood-placeholder.reason
+ood_placeholder_script_dir: "{{ trix_sbin | default('/trinity/local/sbin') }}"
+ood_placeholder_check_script: "{{ ood_placeholder_script_dir }}/ood-placeholder-check.sh"
+ood_placeholder_unset_script: "{{ ood_placeholder_script_dir }}/ood-placeholder-unset.sh"
+ood_placeholder_docs_admin_url: https://docs.clustervision.com/admin/ood
+ood_placeholder_docs_user_url: https://docs.clustervision.com/user/ood-portal
+
 # Optional: custom logo and text in dashboard welcome area (TrinityX branding)
 # Set these in group_vars or extra vars to replace the grey placeholders.
 # trinityx_custom_logo_url: "https://example.com/logo.png"   # URL to logo image (shown in circle)

@@ -270,8 +270,64 @@
 - name: Include tasks for login image
   ansible.builtin.include_tasks: login.yml
 
+- name: Ensure OOD placeholder public directory exists
+  ansible.builtin.file:
+    path: "{{ ood_placeholder_public_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Render OOD placeholder page
+  ansible.builtin.template:
+    src: placeholder/index.html.j2
+    dest: "{{ ood_placeholder_public_dir }}/index.html"
+    mode: "0644"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Ensure OOD placeholder script directory exists
+  ansible.builtin.file:
+    path: "{{ ood_placeholder_script_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Render OOD placeholder check script
+  ansible.builtin.template:
+    src: placeholder/ood-placeholder-check.sh.j2
+    dest: "{{ ood_placeholder_check_script }}"
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Render OOD placeholder unset script
+  ansible.builtin.template:
+    src: placeholder/ood-placeholder-unset.sh.j2
+    dest: "{{ ood_placeholder_unset_script }}"
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Apply pending OOD portal changes before endpoint check
+  ansible.builtin.meta: flush_handlers
+
 - name: Enable OOD webserver on startup
   ansible.builtin.service:
     name: "{{ ood_apache_service_name }}"
     enabled: "yes"
     state: started
+
+- name: Run OOD placeholder HTTP 500 check
+  ansible.builtin.command: "{{ ood_placeholder_check_script }}"
+  register: ood_placeholder_check_result
+  changed_when: "'placeholder enabled' in ood_placeholder_check_result.stdout"
+  when:
+    - ood_placeholder_check_enabled | default(True)
+    - not in_login_image | default(False)
