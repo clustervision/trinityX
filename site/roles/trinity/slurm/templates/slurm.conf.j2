@@ -19,8 +19,16 @@ Include /etc/slurm/slurm-partitions.conf
 #SwitchType=switch/none
 
 # To enable resource enforcement
+{% if enable_slurm_pam | default(false) and enable_slurm_pam_adopt | default(true) and slurm_pam_adopt_manage_cgroup | default(true) %}
+TaskPlugin=task/cgroup
+PrologFlags=contain
+{% if slurm_pam_adopt_launch_parameters | default([]) | length > 0 %}
+LaunchParameters={{ slurm_pam_adopt_launch_parameters | join(',') }}
+{% endif %}
+{% else %}
 # TaskPlugin=task/cgroup
 TaskPlugin=task/none
+{% endif %}
 MpiDefault=none
 ReturnToService=2
 
@@ -53,10 +61,14 @@ SlurmctldTimeout=10
 SlurmdTimeout=10
 
 # Consumable Resource
-Proctracktype=proctrack/cgroup
+ProctrackType=proctrack/cgroup
 #FastSchedule=0
 SelectType=select/cons_tres
+{% if enable_slurm_pam | default(false) and enable_slurm_pam_adopt | default(true) and slurm_pam_adopt_manage_cgroup | default(true) %}
+SelectTypeParameters=CR_Core_Memory
+{% else %}
 SelectTypeParameters=CR_Core
+{% endif %}
 DefMemPerCPU=1024
 
 

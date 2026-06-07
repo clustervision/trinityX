@@ -62,6 +62,10 @@
 - debug:
     msg: "enable_openhpc: {{ enable_openhpc }}, enable_trinityx_slurm: {{ enable_trinityx_slurm }}"
 
+
+- set_fact:
+    slurm_os_family: '{{ ansible_os_family }}'
+
 - block:
   - name: Install PyMSQL
     dnf:
@@ -324,23 +328,102 @@
 
 
 - block:
-    - name: Enable slurm compute services
-      systemd:
-        name: '{{ item }}'
-        enabled: true
-      with_items: "{{ slurm_services_image }}"
+  - name: Enable slurm compute services
+    systemd:
+      name: '{{ item }}'
+      enabled: true
+    with_items: "{{ slurm_services_image }}"
 
-    - name: Update PAM configuration to enable slurm pam controls
-      copy:
-        src: '{{ item.0 }}'
-        dest: '/etc/pam.d/{{ item.1 }}'
-        owner: root
-        group: root
-        mode: 0644
-      with_together:
-        - ['pam-sshd', 'pam-slurm']
-        - ['sshd', 'slurm']
-      when: enable_slurm_pam
+  - name: Render sshd PAM config file
+    template:
+      src: pam-sshd.j2
+      dest: '/etc/pam.d/sshd'
+      mode: '0644'
+      owner: root
+      force: false
+
+  - name: Update PAM configuration to enable slurm pam controls
+    copy:
+      src: '{{ item.0 }}'
+      dest: '/etc/pam.d/{{ item.1 }}'
+      owner: root
+      group: root
+      mode: 0644
+    with_together:
+      - ['pam-slurm']
+      - ['slurm']
+    when: enable_slurm_pam
+
+  # cv-slurm packages install pam modules to /usr/lib/security/,
+  # but PAM on RHEL x86_64 searches /usr/lib64/security/.
+  # Symlink so pam_slurm_adopt.so is found. Tolerate if source is
+  # absent (EPEL/normal Slurm already puts module in lib64) or if
+  # destination already exists (force overwrites safely).
+  - name: Ensure pam_slurm_adopt.so is accessible from lib64 PAM path
+    file:
+      src: '{{ item.src }}'
+      dest: '{{ item.dest }}'
+      state: link
+      force: true
+    loop:
+      - src: /usr/lib/security/pam_slurm_adopt.so
+        dest: /usr/lib64/security/pam_slurm_adopt.so
+      - src: /usr/lib/security/pam_slurm.so
+        dest: /usr/lib64/security/pam_slurm.so
+    ignore_errors: true
+    when:
+      - enable_slurm_pam
+      - enable_slurm_pam_adopt | default(True)
+      - ansible_os_family == 'RedHat'
+      - ansible_architecture == 'x86_64'
+
+  # pam_slurm_adopt conflicts with pam_systemd.so.  On authselect-managed
+  # systems the commented lines may be reverted if authselect is re-run
+  # (e.g. during auth or sssd role execution).  This task should run after
+  # any authselect role, which is guaranteed by the controller.yml order.
+  - block:
+    - name: Disable pam_systemd.so in RedHat PAM stacks for pam_slurm_adopt
+      replace:
+        path: '/etc/pam.d/{{ item }}'
+        regexp: '^(\s*-?session\s+optional\s+pam_systemd\.so.*)$'
+        replace: '#\1'
+      loop:
+        - password-auth
+        - system-auth
+      when:
+        - slurm_pam_adopt_manage_pam_systemd | default(True)
+        - ansible_os_family == 'RedHat'
+
+    # Same as RedHat above — pam_systemd.so conflict with pam_slurm_adopt.
+    - name: Disable pam_systemd.so in Debian PAM stacks for pam_slurm_adopt
+      replace:
+        path: '/etc/pam.d/{{ item }}'
+        regexp: '^(\s*-?session\s+optional\s+pam_systemd\.so.*)$'
+        replace: '#\1'
+      loop:
+        - common-session
+        - common-session-noninteractive
+      when:
+        - slurm_pam_adopt_manage_pam_systemd | default(True)
+        - ansible_os_family == 'Debian'
+
+    - name: Disable keyboard-interactive ssh authentication for pam_slurm_adopt
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?\s*{{ item.key }}\s+'
+        line: '{{ item.key }} {{ item.value }}'
+      loop:
+        - key: UsePAM
+          value: 'yes'
+        - key: KbdInteractiveAuthentication
+          value: 'no'
+        - key: ChallengeResponseAuthentication
+          value: 'no'
+      when:
+        - slurm_pam_adopt_manage_sshd | default(True)
+    when:
+      - enable_slurm_pam | default(False)
+      - enable_slurm_pam_adopt | default(True)
   when: in_image or on_node|default(False)
 
 
@@ -402,7 +485,7 @@
         priv: '{{ slurmdbd_sql_db }}.*:ALL'
         state: present
 
-    - name: Copy configuration files
+    - name: Copy static configuration files
       copy:
         src: '{{ item }}'
         dest: '{{ slurm_conf_path }}/{{ item }}'
@@ -410,8 +493,18 @@
       with_items:
         - slurm-health.conf
         - topology.conf
-        - cgroup.conf
       notify: restart slurm
+
+    - name: Render cgroup.conf
+      template:
+        src: cgroup.conf.j2
+        dest: '{{ slurm_conf_path }}/cgroup.conf'
+        mode: '0644'
+        owner: root
+        force: false
+      notify:
+        - restart slurm
+        - restart slurmd
 
     - name: Place SLURM scripts
       copy:
@@ -436,7 +529,9 @@
         - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'slurm-partitions.conf', 'gres.conf']
         - ['0644', '0600', '0644', '0644', '0644']
         - ['root', 'slurm', 'root', 'root', 'root']
-      notify: restart slurm
+      notify:
+        - restart slurm
+        - restart slurmd
 
     - name: Set UsePAM to 1 in slurm.conf
       lineinfile:
