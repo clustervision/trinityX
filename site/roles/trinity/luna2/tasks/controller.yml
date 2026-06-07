@@ -397,10 +397,31 @@
   copy:
     remote_src: true
     src: "{{ trix_luna }}/cli/addons/bash_completion.sh"
-    dest: '/etc/bash_completion.d/luna.sh' 
+    dest: '/etc/bash_completion.d/luna.sh'
     owner: root
     group: root
     mode: 0644
+
+# Any luna util shipping a *_completion.sh under its addons directory is picked up
+# here, so new tools get bash completion without touching this role. Older utils
+# without an addons directory simply yield no matches.
+- name: Discover bash completion scripts shipped by luna utils
+  find:
+    paths: "{{ luna2_python_dir.stdout }}/site-packages/utils/addons"
+    patterns: '*_completion.sh'
+  register: luna2_utils_completions
+
+- name: Install luna utils bash completion scripts
+  copy:
+    remote_src: true
+    src: "{{ item.path }}"
+    dest: "/etc/bash_completion.d/{{ item.path | basename | regex_replace('_completion\\.sh$', '.sh') }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items: "{{ luna2_utils_completions.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
 
 - block:
   - name: Copy tftp configuration to /etc/xinetd.d
