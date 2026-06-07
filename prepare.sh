@@ -176,7 +176,7 @@ dnf install ansible-core -y
 dnf install ansible-collection-community-general -y 2> /dev/null
 dnf install ansible-collection-ansible-posix -y 2> /dev/null
 if [ ! "$IS_AIRGAP" ]; then
-  ansible-galaxy collection install community.mysql
+  ansible-galaxy collection install community.mysql community.crypto
   ansible-galaxy install OndrejHome.pcs-modules-2
 fi
 
