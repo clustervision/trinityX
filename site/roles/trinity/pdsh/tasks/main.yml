@@ -34,6 +34,12 @@
       - item.name == ansible_os_family
       - not (is_airgap | default(false) | bool)
 
+  - name: Remove conflicting pdsh packages
+    ansible.builtin.dnf:
+      name: "{{ trinityx_pdsh_conflicting_packages }}"
+      state: absent
+      installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
+  
   - name: Install cv-pdsh packages
     ansible.builtin.dnf:
       name: "{{ trinityx_pdsh_packages }}"
