@@ -48,22 +48,24 @@
     ansible.builtin.file:
       path: "{{ trinityx_pdsh_genders_conf_path }}"
       owner: root
-      group: root
+      group: "{{ trinityx_pdsh_genders_group }}"
       state: directory
-      mode: "0755"
+      mode: "0775"
 
   - name: Create empty pdsh genders file in TrinityX shared
     ansible.builtin.file:
       path: "{{ trinityx_pdsh_genders_conf_path }}/genders"
       owner: root
-      group: root
+      group: "{{ trinityx_pdsh_genders_group }}"
       state: touch
-      mode: "0644"
+      mode: "0664"
 
   - name: Link /etc/genders to TrinityX shared genders file
     ansible.builtin.file:
       src: "{{ trinityx_pdsh_genders_conf_path }}/genders"
       dest: /etc/genders
+      owner: root
+      group: "{{ trinityx_pdsh_genders_group }}"
       state: link
       force: true
 
