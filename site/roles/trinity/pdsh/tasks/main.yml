@@ -1,0 +1,49 @@
+---
+# tasks file for pdsh
+
+- name: Show pdsh installation mode
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'enable_openhpc is false, enabling cv-pdsh'
+         if not (enable_openhpc | default(false) | bool)
+         else 'enable_openhpc is true, skipping cv-pdsh' }}
+
+- block:
+  - name: Load pdsh airgap variables
+    ansible.builtin.include_vars: "{{ item }}"
+    with_first_found:
+      - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yaml"
+      - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version }}.yaml"
+      - "airgap/{{ ansible_distribution }}.yaml"
+      - "airgap/{{ ansible_os_family }}.yaml"
+      - "airgap/main.yaml"
+    no_log: true
+    ignore_errors: true
+    when: is_airgap | default(false) | bool
+
+  - name: Configure cv-pdsh repository
+    ansible.builtin.yum_repository:
+      name: "trinityx-pdsh-{{ ansible_os_family }}-{{ ansible_distribution_major_version }}"
+      description: "TrinityX cv-pdsh for {{ ansible_os_family }} {{ ansible_distribution_major_version }}"
+      baseurl: "{{ item.repo }}"
+      gpgcheck: "{{ item.gpgcheck | default(false) }}"
+      enabled: "{{ item.enabled | default(true) }}"
+      reposdir: "{{ params.install_root + '/etc/yum.repos.d/' if params.install_root is defined else '/etc/yum.repos.d' }}"
+    with_items: "{{ trinityx_pdsh_repositories }}"
+    when:
+      - item.name == ansible_os_family
+      - not (is_airgap | default(false) | bool)
+
+  - name: Install cv-pdsh packages
+    ansible.builtin.dnf:
+      name: "{{ trinityx_pdsh_packages }}"
+      state: present
+      update_cache: true
+      installroot: "{{ params.install_root if params.install_root is defined else '/' }}"
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
+    tags: install-only
+
+  when:
+    - ansible_os_family == 'RedHat'
+    - not (enable_openhpc | default(false) | bool)
