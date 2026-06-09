@@ -11,7 +11,7 @@ administrator_email: 'root@localhost'
 # -----------------------------------------------------------------------
 # Trinity version number
 
-trix_version: '15.3'
+trix_version: '16'
 
 # What stream to follow. Stable is the default and recommended.
 trix_stream: 'stable'
@@ -347,7 +347,7 @@ shared_fs_prefix: '{{ trix_root }}/mounts'
 #                     Luna specific configuration                       #
 #########################################################################
 
-# Luna credentials. These !! SHOULD !! be changed.
+# Luna credentials. These !! MUST !! be changed.
 
 luna_username: luna
 luna_password: luna
@@ -360,6 +360,17 @@ luna_password: luna
 
 luna_protocol: https
 luna_verify_certificate: false
+
+
+#########################################################################
+#                     BMC Setup Credentials                             #
+#########################################################################
+
+# BMC setup credentials. These !! SHOULD !! be set or password
+# will be generated.
+
+luna_bmcsetup_user: admin
+luna_bmcsetup_password: ''
 
 
 #########################################################################
@@ -405,12 +416,12 @@ ssl_cert_group: ssl
 #                           LDAP backend                                #
 #########################################################################
 
-# the backend is set default to openldap but can be set to ds389 for
-# experimental purposes.
-# Note: for RedHat, Rocky and Alma distributions of version 10+,
-# the backend is set to ds389 as a default
+# the backend is set default to ds389 but can be set to openldap for
+# legacy purposes.
+# Note: for RedHat, Rocky and Alma distributions of version 9+,
+# the backend is set to ds389 as a default. Release 8 uses openldap.
 
-trinity_ldap_backend: 'openldap'
+trinity_ldap_backend: 'ds389'
 
 
 #########################################################################
@@ -465,6 +476,26 @@ el10_openhpc_repositories:
     gpgcheck: false
 
 
+# CV-Slurm repositories
+
+trinityx_slurm_repositories:
+  - name: RedHat
+    repo: https://updates.clustervision.com/trinityx/slurm/25.11.5/redhat
+    gpgcheck: false
+  - name: Ubuntu
+    repo: https://updates.clustervision.com/trinityx/slurm/25.11.5/ubuntu
+    gpgcheck: false
+  - name: Debian
+    repo: https://updates.clustervision.com/trinityx/slurm/25.11.5/ubuntu
+    gpgcheck: false
+  - name: Suse
+    repo: https://updates.clustervision.com/trinityx/slurm/25.11.5/suse
+    gpgcheck: false
+  - name: SLE
+    repo: https://updates.clustervision.com/trinityx/slurm/25.11.5/suse
+    gpgcheck: false
+
+
 # -----------------------------------------------------------------------
 # set the default target for images. 
 # available: graphical and multi-user
@@ -497,9 +528,15 @@ enable_ood: true
 
 # -----------------------------------------------------------------------
 # Install userspace packages from OpenHPC project
-# Note: ohpc is not supported for EL10 release
 
-enable_openhpc: true
+enable_openhpc: false
+
+
+# -----------------------------------------------------------------------
+# Install Slurm packages from ClusterVison's Slurm repository
+# Enabling this overrides Slurm package selection from the OpenHPC project
+
+enable_trinityx_slurm: true
 
 
 # -----------------------------------------------------------------------
@@ -535,4 +572,4 @@ enable_authentication: true
 
 
 # -----------------------------------------------------------------------
-# DO NOT REMOVE: yml check: 150300
+# DO NOT REMOVE: yml check: 160000

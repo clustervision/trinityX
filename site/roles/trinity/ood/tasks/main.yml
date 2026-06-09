@@ -47,17 +47,51 @@
     external_repository_rpms: {}
     package_based_repositories: []
     use_baseurl_repositories: []
-  when: ood_repositories is defined
+  when:
+    - ood_repositories is defined
+    - ansible_os_family == "RedHat"
+
+- name: Install OOD apt repo keys
+  ansible.builtin.apt_key:
+    state: present
+    url: "{{ item.key_url }}"
+    id: "{{ item.key_id }}"
+  loop: "{{ ood_debs }}"
+  when: ansible_os_family == "Debian"
+
+- name: Install OOD apt repo packages
+  ansible.builtin.apt:
+    deb: "{{ item.deb }}"
+    state: present
+    update_cache: true
+    dpkg_options: force-confnew
+  loop: "{{ ood_deb_repos }}"
+  when: ansible_os_family == "Debian"
+  tags: install-only
 
 - name: Install required rpms
   ansible.builtin.dnf:
     name: "{{ item.name }}"
     state: present
     disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
-  with_items: "{{ ood_rpms }}"
+  with_items: "{{ ood_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
   notify: Run update_ood
+  when: ansible_os_family == "RedHat"
+  tags: install-only
+
+- name: Install required apt packages
+  ansible.builtin.apt:
+    name: "{{ item.name }}"
+    state: present
+    update_cache: true
+  loop: "{{ ood_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  notify: Run update_ood
+  when: ansible_os_family == "Debian"
+  tags: install-only
 
 - name: Ensure ssl certificate and key exists
   ansible.builtin.file:
@@ -227,13 +261,73 @@
 
 - name: Include auth task
   ansible.builtin.include_tasks: dex-auth.yml
+  tags: install-only
+
 - name: Include auth task
   ansible.builtin.include_tasks: pam-auth.yml
+  tags: install-only
+
 - name: Include tasks for login image
   ansible.builtin.include_tasks: login.yml
 
+- name: Ensure OOD placeholder public directory exists
+  ansible.builtin.file:
+    path: "{{ ood_placeholder_public_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Render OOD placeholder page
+  ansible.builtin.template:
+    src: placeholder/index.html.j2
+    dest: "{{ ood_placeholder_public_dir }}/index.html"
+    mode: "0644"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Ensure OOD placeholder script directory exists
+  ansible.builtin.file:
+    path: "{{ ood_placeholder_script_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Render OOD placeholder check script
+  ansible.builtin.template:
+    src: placeholder/ood-placeholder-check.sh.j2
+    dest: "{{ ood_placeholder_check_script }}"
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Render OOD placeholder unset script
+  ansible.builtin.template:
+    src: placeholder/ood-placeholder-unset.sh.j2
+    dest: "{{ ood_placeholder_unset_script }}"
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Apply pending OOD portal changes before endpoint check
+  ansible.builtin.meta: flush_handlers
+
 - name: Enable OOD webserver on startup
   ansible.builtin.service:
-    name: httpd
+    name: "{{ ood_apache_service_name }}"
     enabled: "yes"
     state: started
+
+- name: Run OOD placeholder HTTP 500 check
+  ansible.builtin.command: "{{ ood_placeholder_check_script }}"
+  register: ood_placeholder_check_result
+  changed_when: "'placeholder enabled' in ood_placeholder_check_result.stdout"
+  when:
+    - ood_placeholder_check_enabled | default(True)
+    - not in_login_image | default(False)

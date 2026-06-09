@@ -15,7 +15,39 @@ slurm_packages:
   - slurm-slurmd
   - slurm-slurmdbd
   - slurm-slurmctld
-  - slurm-torque
+#  - slurm-torque
+
+slurm_packages_image:
+  - munge-libs
+  - munge
+  - slurm
+  - slurm-libs
+  - slurm-slurmd
+
+slurm_packages_trx:
+  - munge-libs
+  - munge
+  - pmix
+  - slurm-cv
+  - slurm-cv-slurmctld
+  - slurm-cv-slurmdbd
+  - slurm-cv-slurmd
+  - slurm-cv-contribs
+  - slurm-cv-devel
+  - slurm-cv-openlava
+  - slurm-cv-pam_slurm
+  - slurm-cv-perlapi
+  - slurm-cv-libpmi
+#  - slurm-cv-torque
+
+slurm_packages_trx_image:
+  - munge-libs
+  - munge
+  - pmix
+  - slurm-cv
+  - slurm-cv-slurmd
+  - slurm-cv-pam_slurm
+  - slurm-cv-libpmi
 
 slurm_packages_ohpc:
   - slurm-ohpc
@@ -32,7 +64,44 @@ slurm_packages_ohpc:
   - slurm-perlapi-ohpc
   - slurm-slurmdbd-ohpc
   - slurm-sview-ohpc
+#  - slurm-torque-ohpc
+
+slurm_packages_ohpc_image:
+  - slurm-slurmd-ohpc
+  - slurm-slurmd-ohpc
+  - slurm-libpmi-ohpc
+  - slurm-pam_slurm-ohpc
+  - pmix-ohpc
+  - munge-libs
+  - munge
+
+slurm_packages_additional_default_remove: 
+  - pmix-ohpc
   - slurm-torque-ohpc
+  - slurm-cv-torque
+
+slurm_packages_additional_trx_remove:
+  - pmix-ohpc
+  - slurm-torque-ohpc
+  - slurm-perlapi
+  - slurm-libs
+
+slurm_packages_additional_ohpc_remove:
+  - pmix
+  - pmix-devel
+  - libpmix
+  - slurm-perlapi
+  - slurm-libs
+  - slurm-cv-torque
+
+slurm_services:
+  - munge
+  - slurmdbd
+  - slurmctld
+
+slurm_services_image:
+  - munge
+  - slurmd
 
 slurm_conf_path: '/etc/slurm'
 slurm_spool_path: '/var/spool/slurm'
@@ -46,6 +115,17 @@ slurm_ctrl_ip: '127.0.0.1'
 slurm_ctrl_list: 'controller1,controller2'
 
 enable_slurm_pam: false
+enable_slurm_pam_adopt: true
+slurm_pam_adopt_options: 'action_adopt_failure=deny action_generic_failure=deny'
+slurm_pam_adopt_manage_cgroup: true
+slurm_pam_adopt_manage_pam_systemd: true
+slurm_pam_adopt_manage_sshd: true
+slurm_pam_adopt_launch_parameters: []
+slurm_cgroup_plugin: 'autodetect'
+slurm_cgroup_constrain_cores: 'yes'
+slurm_cgroup_constrain_devices: 'yes'
+slurm_cgroup_constrain_ram: 'yes'
+slurm_cgroup_constrain_swap: 'yes'
 
 slurmdbd_sql_user: 'slurm_accounting'
 slurmdbd_sql_db: 'slurm_accounting'

@@ -1,9 +1,11 @@
-.. image:: img/trinityxbanner_scaled.png
+.. image:: img/triX_300.png
+   :width: 300px
+   :height: 300px
 
 Overview
 ========
 
-Welcome to TrinityX 15!
+Welcome to TrinityX 16!
 
 TrinityX is the new generation of ClusterVision's open-source HPC, AI and cloud platform. It is designed from the ground up to provide all services required in a modern HPC, AI and cloud system, and to allow full customization of the installation. Also it includes optional modules for specific needs, please check the controller and compute playbooks.
 
@@ -15,7 +17,7 @@ Quick start
 In standard configuration TrinityX provides the following services to the cluster:
 
 * Luna, our default super-efficient node provisioner
-* OpenLDAP
+* OpenLDAP or 389DS
 * SLURM or OpenPBS
 * Prometheus and Grafana
 * AlertX
@@ -33,9 +35,8 @@ It will also set up:
 * High Availability/HA
 * and more
 
-.. image:: img/triX_300.png
-   :width: 300px
-   :height: 300px
+
+.. image:: img/trinityxbanner_scaled.png
 
 
 Steps to install TrinityX

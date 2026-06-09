@@ -9,7 +9,7 @@ bind = '0.0.0.0:7050'
 
 # Number of gunicorn workers to spawn. This should typically be 2n+1, where
 # n is the number of CPU cores present.
-workers = {{ (ansible_processor_nproc * 0.8) | int }}
+workers = {{ [(ansible_processor_nproc * 0.8) | int, 1] | max }}
 
 # Number of threads per worker process
 # threads = 3
@@ -24,10 +24,12 @@ timeout = 600
 reload_engine = 'auto'
 
 #### Automated Process ####
-on_starting = luna.on_starting      ## Called when service starts
-on_exit = luna.on_exit              ## Called when service exits
-on_reload = luna.on_reload          ## Called when service reload
-worker_abort = luna.worker_abort    ## Called when a worker is killed
+on_starting = luna.on_starting          ## Called in master before workers fork
+post_worker_init = luna.post_worker_init ## Called in worker after app init
+worker_exit = luna.worker_exit          ## Called when a worker exits
+on_exit = luna.on_exit                  ## Called when service exits
+on_reload = luna.on_reload              ## Called when service reload
+worker_abort = luna.worker_abort        ## Called when a worker is killed
 #### Automated Process ####
 
 {% if luna_protocol == "https" -%}

@@ -28,8 +28,25 @@
       - codeready-builder-for-rhel-*-aarch64-rpm
     disable_gpg_check: true
   with_items: "{{ image_core_packages }}"
+  when: not playbook_done_prior | default(False)
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+- name: Install core packages - @core, kernel and grub2
+  dnf:
+    name: "{{ image_core_packages }}"
+    state: present
+    enablerepo:
+      - powertools
+      - crb
+      - codeready-builder-for-rhel-*-x86_64-rpm
+      - codeready-builder-for-rhel-*-aarch64-rpm
+    disable_gpg_check: true
+  when: playbook_done_prior | default(False)
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install missing elfutils-libs on RedHat
   dnf:
@@ -39,6 +56,7 @@
   when: ansible_distribution == "RedHat"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Add dracut.conf.d entries
   template:

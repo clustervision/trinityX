@@ -35,6 +35,14 @@
   ansible.builtin.zypper:
     name: "{{ item }}"
   with_items: "{{ image_core_packages }}"
+  when: not playbook_done_prior | default(False)
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install core packages - @core, kernel and grub2
+  ansible.builtin.zypper:
+    name: "{{ image_core_packages }}"
+  when: playbook_done_prior | default(False)
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
