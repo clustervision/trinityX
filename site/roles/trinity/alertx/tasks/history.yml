@@ -1,0 +1,105 @@
+---
+
+- name: Install AlertX history dependencies
+  yum:
+    name:
+      - python3-PyMySQL
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  when: alertx_history_enable
+
+- name: Generate password for AlertX history database user and save it to /etc/trinity/passwords
+  set_fact:
+    alertx_history_sql_pwd: '{{ lookup("password",
+                           "/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt
+                            chars=ascii_letters,digits,hexdigits") }}'
+  when: alertx_history_enable
+
+- name: Ensure alertX history daemon directory exists
+  file:
+    path: "{{ alertx_history_daemon_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure alertX history config directory exists
+  file:
+    path: "{{ alertx_history_ini_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure alertX history log directory exists
+  file:
+    path: '{{ alertx_history_log_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Include logrotate for alertx logs
+  include_role:
+    name: trinity/logrotate
+  vars:
+    logrotate_component: 'alertx'
+    logrotate_logdir: '{{ alertx_history_log_dir }}'
+    logrotate_emptyfile: 'history.log'
+
+- name: Create AlertX history database
+  mysql_db:
+    config_file: '/root/.my.cnf'
+    name: '{{ alertx_history_sql_db }}'
+    state: present
+  when: alertx_history_enable
+
+- name: Create AlertX history database user
+  mysql_user:
+    config_file: '/root/.my.cnf'
+    name: '{{ alertx_history_sql_user }}'
+    host: '{{ item }}'
+    password: '{{ alertx_history_sql_pwd }}'
+    priv: '{{ alertx_history_sql_db }}.*:ALL'
+    state: present
+  with_items:
+    - localhost
+    - 127.0.0.1
+  when: alertx_history_enable
+
+- name: Install AlertX history ini file
+  template:
+    src: 'history.ini.j2'
+    dest: '{{ alertx_history_ini_dir }}/history.ini'
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: Install all AlertX history daemon Python templates
+  template:
+    src: "{{ item }}"
+    dest: "{{ alertx_history_daemon_dir }}/{{ item | basename | regex_replace('\\.j2$', '') }}"
+    owner: root
+    group: root
+    mode: '0750'
+  with_items:
+    - 'history_config.py.j2'
+    - 'history_logger.py.j2'
+    - 'history_store.py.j2'
+    - 'history_daemon.py.j2'
+
+- name: Install AlertX history service file to systemd
+  template:
+    src: 'alertx-history.service.j2'
+    dest: '/etc/systemd/system/alertx-history.service'
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload daemon for alertx history service
+  systemd:
+    name: alertx-history.service
+    state: "{{ 'restarted' if alertx_history_enable else 'stopped' }}"
+    enabled: "{{ True if alertx_history_enable else False }}"
+    daemon_reload: true

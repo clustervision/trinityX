@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+
+import json
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse
+
+import requests
+import urllib3
+
+from history_config import (
+    ALERTMANAGER_POLL_INTERVAL,
+    ALERTMANAGER_REQUEST_TIMEOUT,
+    ALERTMANAGER_URL,
+    ALERTMANAGER_USER,
+    SERVER_HOST,
+    SERVER_PORT,
+    read_alertmanager_password,
+)
+from history_logger import Logger
+from history_store import HistoryStore
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+log = Logger.get_logger("TRIX-HISTORY: daemon")
+store = HistoryStore()
+
+
+class AlertDeduplicator:
+    """
+    Shared change-detection state used by both the poller and the webhook
+    listener.  An alert is only forwarded to the store when its signature
+    (fingerprint + updatedAt + state + silenced/inhibited + starts/endsAt)
+    differs from the last recorded value.
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.seen: dict = {}
+
+    @staticmethod
+    def _signature(alert) -> str:
+        fingerprint = alert.get("fingerprint") or ""
+        updated_at = alert.get("updatedAt") or ""
+        status = alert.get("status", {})
+        if isinstance(status, dict):
+            state = status.get("state") or ""
+            inhibited = ",".join(sorted(status.get("inhibitedBy", [])))
+            silenced = ",".join(sorted(status.get("silencedBy", [])))
+        else:
+            state = str(status or "")
+            inhibited = ""
+            silenced = ""
+        ends_at = alert.get("endsAt") or ""
+        starts_at = alert.get("startsAt") or ""
+        return "|".join([fingerprint, updated_at, state, inhibited, silenced, starts_at, ends_at])
+
+    def filter_changed(self, alerts: list) -> list:
+        """Return only alerts whose signature has changed since last seen."""
+        changed = []
+        with self._lock:
+            for alert in alerts:
+                sig = self._signature(alert)
+                fp = alert.get("fingerprint") or sig
+                if self.seen.get(fp) != sig:
+                    self.seen[fp] = sig
+                    changed.append(alert)
+        return changed
+
+
+# Module-level singleton shared by poller and webhook handler.
+deduplicator = AlertDeduplicator()
+
+
+class AlertmanagerPoller:
+    def __init__(self):
+        self.url = f"{ALERTMANAGER_URL.rstrip('/')}/api/v2/alerts"
+        self.auth = (ALERTMANAGER_USER, read_alertmanager_password())
+
+    def poll_once(self):
+        response = requests.get(
+            self.url,
+            auth=self.auth,
+            verify=False,
+            timeout=ALERTMANAGER_REQUEST_TIMEOUT,
+        )
+        response.raise_for_status()
+        alerts = response.json() or []
+
+        changed = deduplicator.filter_changed(alerts)
+
+        if changed:
+            inserted = store.insert_alerts({"receiver": "alertx-history-poller", "groupKey": "poll", "status": "poll", "alerts": changed}, source="poll")
+            log.info("Stored %s alert changes from Alertmanager polling", inserted)
+
+
+class RequestHandler(BaseHTTPRequestHandler):
+    server_version = "AlertXHistory/1.0"
+
+    def log_message(self, fmt, *args):
+        log.info("%s - %s", self.address_string(), fmt % args)
+
+    def _send_json(self, status_code, payload):
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        if parsed.path in ["/", "/healthz"]:
+            return self._send_json(200, {"status": "ok"})
+        return self._send_json(404, {"error": "not found"})
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path != "/listener":
+            return self._send_json(404, {"error": "not found"})
+
+        length = int(self.headers.get("Content-Length", "0"))
+        raw = self.rfile.read(length) if length > 0 else b"{}"
+        try:
+            payload = json.loads(raw.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return self._send_json(400, {"error": "invalid json"})
+
+        raw_alerts = payload.get("alerts") or []
+        changed_alerts = deduplicator.filter_changed(raw_alerts)
+        if not changed_alerts:
+            log.debug("Webhook payload contained no alert state changes; skipping insert.")
+            return self._send_json(200, {"stored": 0})
+
+        filtered_payload = dict(payload)
+        filtered_payload["alerts"] = changed_alerts
+        try:
+            inserted = store.insert_alerts(filtered_payload, source="webhook")
+        except Exception as exc:
+            log.exception("Failed to persist Alertmanager payload: %s", exc)
+            return self._send_json(500, {"error": "failed to persist alerts"})
+
+        return self._send_json(200, {"stored": inserted})
+
+
+def poll_worker():
+    poller = AlertmanagerPoller()
+    while True:
+        try:
+            poller.poll_once()
+        except Exception as exc:
+            log.exception("Failed to poll Alertmanager: %s", exc)
+        time.sleep(max(ALERTMANAGER_POLL_INTERVAL, 5))
+
+
+def main():
+    thread = threading.Thread(target=poll_worker, daemon=True)
+    thread.start()
+    server = ThreadingHTTPServer((SERVER_HOST, SERVER_PORT), RequestHandler)
+    log.info("Starting AlertX history daemon on %s:%s", SERVER_HOST, SERVER_PORT)
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

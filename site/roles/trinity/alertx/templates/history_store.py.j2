@@ -1,0 +1,238 @@
+import json
+from datetime import datetime, timezone
+
+import pymysql
+import pymysql.cursors
+
+from history_config import DB_HOST, DB_NAME, DB_PORT, DB_TABLE, DB_USER, read_database_password
+from history_logger import Logger
+
+log = Logger.get_logger("TRIX-HISTORY: store")
+_VIEW_NAME = "alert_history_latest"
+
+
+class HistoryStore:
+    def __init__(self):
+        self.password = read_database_password()
+        self.table = DB_TABLE
+        self.view = _VIEW_NAME
+        self._ensure_schema()
+
+    def _connection(self, database=None):
+        return pymysql.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            user=DB_USER,
+            password=self.password,
+            database=database or DB_NAME,
+            charset="utf8mb4",
+            autocommit=True,
+            cursorclass=pymysql.cursors.DictCursor,
+        )
+
+    def _ensure_schema(self):
+        statements = [
+            f"""
+            CREATE TABLE IF NOT EXISTS `{self.table}` (
+              id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+              fingerprint VARCHAR(255) DEFAULT NULL,
+              alertname VARCHAR(255) DEFAULT NULL,
+              status VARCHAR(32) NOT NULL,
+              payload_status VARCHAR(32) DEFAULT NULL,
+              alertmanager_state VARCHAR(32) DEFAULT NULL,
+              is_suppressed TINYINT(1) NOT NULL DEFAULT 0,
+              receiver VARCHAR(255) DEFAULT NULL,
+              group_key TEXT DEFAULT NULL,
+              hostname VARCHAR(255) DEFAULT NULL,
+              severity VARCHAR(32) DEFAULT NULL,
+              job VARCHAR(255) DEFAULT NULL,
+              exporter VARCHAR(255) DEFAULT NULL,
+              description TEXT DEFAULT NULL,
+              summary TEXT DEFAULT NULL,
+              value_text TEXT DEFAULT NULL,
+              starts_at DATETIME(6) DEFAULT NULL,
+              ends_at DATETIME(6) DEFAULT NULL,
+              event_at DATETIME(6) NOT NULL,
+              updated_at DATETIME(6) DEFAULT NULL,
+              created_at DATETIME(6) NOT NULL,
+              source ENUM('webhook','poll') NOT NULL DEFAULT 'webhook',
+              labels_json LONGTEXT NOT NULL,
+              annotations_json LONGTEXT NOT NULL,
+              payload_json LONGTEXT NOT NULL,
+              PRIMARY KEY (id),
+              KEY idx_event_at (event_at),
+              KEY idx_created_at (created_at),
+              KEY idx_updated_at (updated_at),
+              KEY idx_hostname (hostname),
+              KEY idx_alertname (alertname),
+              KEY idx_status (status),
+              KEY idx_severity (severity),
+              KEY idx_fingerprint (fingerprint),
+              KEY idx_source (source),
+              KEY idx_host_event (hostname, event_at),
+              KEY idx_alert_event (alertname, event_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """,
+            f"""
+            CREATE OR REPLACE VIEW `{self.view}` AS
+            SELECT
+              latest.id,
+              latest.fingerprint,
+              latest.alertname,
+              latest.status,
+              latest.payload_status,
+              latest.alertmanager_state,
+              latest.is_suppressed,
+              latest.receiver,
+              latest.group_key,
+              latest.hostname,
+              latest.severity,
+              latest.job,
+              latest.exporter,
+              latest.description,
+              latest.summary,
+              latest.value_text,
+              latest.starts_at,
+              latest.ends_at,
+              latest.event_at,
+              latest.updated_at,
+              latest.created_at,
+              latest.source
+            FROM `{self.table}` AS latest
+            INNER JOIN (
+              SELECT fingerprint, MAX(id) AS max_id
+              FROM `{self.table}`
+              WHERE fingerprint IS NOT NULL AND fingerprint != ''
+              GROUP BY fingerprint
+            ) AS dedup
+              ON latest.fingerprint = dedup.fingerprint AND latest.id = dedup.max_id
+            UNION ALL
+            SELECT
+              nofp.id,
+              nofp.fingerprint,
+              nofp.alertname,
+              nofp.status,
+              nofp.payload_status,
+              nofp.alertmanager_state,
+              nofp.is_suppressed,
+              nofp.receiver,
+              nofp.group_key,
+              nofp.hostname,
+              nofp.severity,
+              nofp.job,
+              nofp.exporter,
+              nofp.description,
+              nofp.summary,
+              nofp.value_text,
+              nofp.starts_at,
+              nofp.ends_at,
+              nofp.event_at,
+              nofp.updated_at,
+              nofp.created_at,
+              nofp.source
+            FROM `{self.table}` AS nofp
+            WHERE nofp.fingerprint IS NULL OR nofp.fingerprint = ''
+            """,
+        ]
+
+        conn = self._connection()
+        try:
+            with conn.cursor() as cursor:
+                for statement in statements:
+                    cursor.execute(statement)
+        finally:
+            conn.close()
+
+    def _parse_datetime(self, value):
+        if not value:
+            return None
+        try:
+            normalized = str(value).strip().replace("Z", "+00:00")
+            dt = datetime.fromisoformat(normalized)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        except Exception:
+            log.warning("Failed to parse datetime value: %s", value)
+            return None
+
+    def _event_time(self, alert_status, starts_at, ends_at, updated_at=None):
+        if alert_status == "resolved":
+            return self._parse_datetime(ends_at) or self._parse_datetime(updated_at) or self._parse_datetime(starts_at)
+        return self._parse_datetime(updated_at) or self._parse_datetime(starts_at) or self._parse_datetime(ends_at) or datetime.utcnow()
+
+    def insert_alerts(self, payload, source="webhook"):
+        receiver = payload.get("receiver")
+        group_key = payload.get("groupKey")
+        payload_status = payload.get("status")
+        alerts = payload.get("alerts", []) or []
+        inserted = 0
+
+        insert_sql = f"""
+            INSERT INTO `{self.table}` (
+              fingerprint, alertname, status, payload_status, alertmanager_state,
+              is_suppressed, receiver, group_key,
+              hostname, severity, job, exporter,
+              description, summary, value_text,
+              starts_at, ends_at, event_at, updated_at, created_at,
+              source, labels_json, annotations_json, payload_json
+            ) VALUES (
+              %(fingerprint)s, %(alertname)s, %(status)s, %(payload_status)s, %(alertmanager_state)s,
+              %(is_suppressed)s, %(receiver)s, %(group_key)s,
+              %(hostname)s, %(severity)s, %(job)s, %(exporter)s,
+              %(description)s, %(summary)s, %(value_text)s,
+              %(starts_at)s, %(ends_at)s, %(event_at)s, %(updated_at)s, %(created_at)s,
+              %(source)s, %(labels_json)s, %(annotations_json)s, %(payload_json)s
+            )
+        """
+
+        conn = self._connection()
+        try:
+            with conn.cursor() as cursor:
+                for alert in alerts:
+                    labels = alert.get("labels", {}) or {}
+                    annotations = alert.get("annotations", {}) or {}
+                    raw_state = alert.get("status")
+                    if isinstance(raw_state, dict):
+                        alertmanager_state = raw_state.get("state")
+                        status_value = alertmanager_state or payload_status or "unknown"
+                        is_suppressed = 1 if alertmanager_state == "suppressed" else 0
+                    else:
+                        alertmanager_state = raw_state or payload_status
+                        status_value = raw_state or payload_status or "unknown"
+                        is_suppressed = 0
+
+                    updated_at = self._parse_datetime(alert.get("updatedAt"))
+                    event_at = self._event_time(status_value, alert.get("startsAt"), alert.get("endsAt"), alert.get("updatedAt"))
+                    row = {
+                        "fingerprint": alert.get("fingerprint"),
+                        "alertname": labels.get("alertname"),
+                        "status": status_value,
+                        "payload_status": payload_status,
+                        "alertmanager_state": alertmanager_state,
+                        "is_suppressed": is_suppressed,
+                        "receiver": receiver,
+                        "group_key": group_key,
+                        "hostname": labels.get("hostname"),
+                        "severity": labels.get("severity"),
+                        "job": labels.get("job"),
+                        "exporter": labels.get("exporter"),
+                        "description": annotations.get("description"),
+                        "summary": annotations.get("summary"),
+                        "value_text": annotations.get("valueString") or annotations.get("value") or annotations.get("value_string"),
+                        "starts_at": self._parse_datetime(alert.get("startsAt")),
+                        "ends_at": self._parse_datetime(alert.get("endsAt")),
+                        "event_at": event_at,
+                        "updated_at": updated_at,
+                        "created_at": datetime.utcnow(),
+                        "source": source,
+                        "labels_json": json.dumps(labels, sort_keys=True),
+                        "annotations_json": json.dumps(annotations, sort_keys=True),
+                        "payload_json": json.dumps(alert, sort_keys=True),
+                    }
+                    cursor.execute(insert_sql, row)
+                    inserted += 1
+        finally:
+            conn.close()
+
+        return inserted
