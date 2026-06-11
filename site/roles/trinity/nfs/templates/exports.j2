@@ -10,20 +10,21 @@
 {% else %}
 {# For other types, check for rwhosts #}
 {% if export.get('rwhosts') or export.get('hosts') %}
-
-{{ export.path }} \
+{% set lines = [export.path] %}
 {% if export.get('rwhosts') %}
 {% for entry in export.rwhosts %}
- {{ entry }}({{ nfs_rw_options }}) \
+{% set _ = lines.append(' ' + entry + '(' + nfs_rw_options + ')') %}
 {% endfor %}
 {% endif %}
 {% if export.get('hosts') %}
 {% for entry in export.hosts %}
- {{ entry }}({{ export.get('options') }}) \
+{% set _ = lines.append(' ' + entry + '(' + (export.options | default('')) + ')') %}
 {% endfor %}
-{% else %}
- {{ export.options | default('') }}
+{% elif export.options | default('') %}
+{% set _ = lines.append(' ' + export.options) %}
 {% endif %}
+
+{{ lines | join(' \\\n') }}
 {% else %}
 
 {{ export.path }}  {{ export.options | default('') }}
@@ -31,4 +32,3 @@
 {% endif %}
 {% endif %}
 {% endfor %}
-
