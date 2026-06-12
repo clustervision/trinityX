@@ -48,15 +48,17 @@
     logrotate_logdir: '{{ alertx_history_log_dir }}'
     logrotate_emptyfile: 'history.log'
 
-- name: Include modern Ansible part for MariaDB configuration
-  include_tasks: modern-ansible.yml
-  when:
-    - ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
-    - ansible_version.full is version('2.14.18', '>=')
+- block:
+  - name: Include modern Ansible part for MariaDB configuration
+    include_tasks: modern-ansible.yml
+    when:
+      - ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
+      - ansible_version.full is version('2.14.18', '>=')
 
-- name: Include older Ansible part for MariaDB configuration
-  include_tasks: older-ansible.yml
-  when: ansible_version.full is version('2.14.18', '<') or (ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9)
+  - name: Include older Ansible part for MariaDB configuration
+    include_tasks: older-ansible.yml
+    when: ansible_version.full is version('2.14.18', '<') or (ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9)
+  when: primary | default(True)
 
 - name: Install AlertX history ini file
   template:
@@ -98,18 +100,10 @@
 - name: Disable AlertX history direct systemd autostart on HA controllers
   systemd:
     name: alertx-history.service
-    enabled: false
+    state: stopped
+    enabled: '{{ True if alertx_history_enable else False }}'
     daemon_reload: true
   when: ha | default(False)
-
-- name: Stop AlertX history on HA controllers when disabled
-  systemd:
-    name: alertx-history.service
-    state: stopped
-    daemon_reload: true
-  when:
-    - ha | default(False)
-    - not alertx_history_enable
 
 - name: Add AlertX history pacemaker resource
   pcs_resource:
