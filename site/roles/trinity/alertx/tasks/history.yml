@@ -48,25 +48,15 @@
     logrotate_logdir: '{{ alertx_history_log_dir }}'
     logrotate_emptyfile: 'history.log'
 
-- name: Create AlertX history database
-  mysql_db:
-    config_file: '/root/.my.cnf'
-    name: '{{ alertx_history_sql_db }}'
-    state: present
-  when: alertx_history_enable
+- name: Include modern Ansible part for MariaDB configuration
+  include_tasks: modern-ansible.yml
+  when:
+    - ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
+    - ansible_version.full is version('2.14.18', '>=')
 
-- name: Create AlertX history database user
-  mysql_user:
-    config_file: '/root/.my.cnf'
-    name: '{{ alertx_history_sql_user }}'
-    host: '{{ item }}'
-    password: '{{ alertx_history_sql_pwd }}'
-    priv: '{{ alertx_history_sql_db }}.*:ALL'
-    state: present
-  with_items:
-    - localhost
-    - 127.0.0.1
-  when: alertx_history_enable
+- name: Include older Ansible part for MariaDB configuration
+  include_tasks: older-ansible.yml
+  when: ansible_version.full is version('2.14.18', '<') or (ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9)
 
 - name: Install AlertX history ini file
   template:
