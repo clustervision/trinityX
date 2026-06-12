@@ -97,9 +97,38 @@
     group: root
     mode: '0644'
 
-- name: Reload daemon for alertx history service
+- name: Manage AlertX history systemd service on non-HA controllers
   systemd:
     name: alertx-history.service
     state: "{{ 'restarted' if alertx_history_enable else 'stopped' }}"
     enabled: "{{ True if alertx_history_enable else False }}"
     daemon_reload: true
+  when: not ha | default(False)
+
+- name: Disable AlertX history direct systemd autostart on HA controllers
+  systemd:
+    name: alertx-history.service
+    enabled: false
+    daemon_reload: true
+  when: ha | default(False)
+
+- name: Stop AlertX history on HA controllers when disabled
+  systemd:
+    name: alertx-history.service
+    state: stopped
+    daemon_reload: true
+  when:
+    - ha | default(False)
+    - not alertx_history_enable
+
+- name: Add AlertX history pacemaker resource
+  pcs_resource:
+    name: 'alertx-history'
+    resource_class: 'systemd'
+    resource_type: 'systemd:alertx-history.service'
+    options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+    state: "{{ 'present' if alertx_history_enable else 'absent' }}"
+  when:
+    - ha | default(False)
+    - primary | default(True)
+  tags: pcs
