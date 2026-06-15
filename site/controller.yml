@@ -59,7 +59,11 @@
 
     - role: trinity/sync-secrets
       sync_controller: '{{ primary_controller | default(trix_ctrl1_hostname) }}'
-      tags: ha,sync-secrets
+      # 'alertx' included so that re-running with --tags alertx also pulls the
+      # synced secrets on the secondary; the alertx-history DB password is stored
+      # in {{ trix_sync }} by the primary and must be present before the alertx
+      # role copies it locally, otherwise the daemon fails auth after a failover.
+      tags: ha,sync-secrets,alertx
       when: ha | default(False)
 
     - role: trinity/pacemaker
