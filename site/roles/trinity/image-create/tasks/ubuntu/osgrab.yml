@@ -51,7 +51,24 @@
     enabled: false
   with_items:
     - tinysshd
-    - sssd-pam.socket
-    - sssd-nss.socket
   ignore_errors: true
+
+# The SSSD responders are listed in the 'services =' line of sssd.conf (in-process
+# responders), so the socket-activation units conflict and fail at boot with
+# "configured to be socket-activated but still mentioned in the services line"
+# (exit 17), which trips the ServiceFailedSystemdGeneric alert. 'enabled: false' is
+# not enough: it omits sssd-pam-priv.socket, does not take effect in the image chroot,
+# is re-asserted by the package preset, and a disabled-but-failed unit still alerts.
+# Mask all three responder sockets via a /dev/null symlink so systemd can never start
+# them (chroot-safe, survives into the booted image, cannot be re-enabled by preset).
+- name: Mask conflicting socket-activated SSSD responders
+  ansible.builtin.file:
+    src: /dev/null
+    dest: "/etc/systemd/system/{{ item }}"
+    state: link
+    force: true
+  with_items:
+    - sssd-nss.socket
+    - sssd-pam.socket
+    - sssd-pam-priv.socket
 
