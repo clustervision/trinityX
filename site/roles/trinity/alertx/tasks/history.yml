@@ -9,12 +9,50 @@
   delay: "{{ rpm_delay | default(15) }}"
   when: alertx_history_enable
 
+- block:
+  - name: Ensure AlertX history password directory exists
+    file:
+      path: '/etc/trinity/passwords/mysql'
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Copy AlertX history DB password from sync
+    copy:
+      remote_src: true
+      src: '{{ trix_sync }}/alertx/{{ alertx_history_sql_user }}.txt'
+      dest: '/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt'
+      owner: root
+      group: root
+      mode: '0600'
+  when:
+    - alertx_history_enable
+    - not primary | default(False)
+    - ha | default(False)
+
 - name: Generate password for AlertX history database user and save it to /etc/trinity/passwords
   set_fact:
     alertx_history_sql_pwd: '{{ lookup("password",
                            "/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt
                             chars=ascii_letters,digits,hexdigits") }}'
   when: alertx_history_enable
+
+- block:
+  - name: Ensure AlertX history sync directory exists
+    file:
+      path: '{{ trix_sync }}/alertx'
+      state: directory
+
+  - name: Add AlertX history DB password to sync
+    copy:
+      remote_src: true
+      src: '/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt'
+      dest: '{{ trix_sync }}/alertx/'
+  when:
+    - alertx_history_enable
+    - primary | default(True)
+    - ha | default(False)
 
 - name: Ensure alertX history daemon directory exists
   file:
@@ -58,7 +96,9 @@
   - name: Include older Ansible part for MariaDB configuration
     include_tasks: older-ansible.yml
     when: ansible_version.full is version('2.14.18', '<') or (ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9)
-  when: primary | default(True)
+  when:
+    - alertx_history_enable
+    - not ha | default(False) or primary | default(True)
 
 - name: Install AlertX history ini file
   template:
@@ -100,10 +140,18 @@
 - name: Disable AlertX history direct systemd autostart on HA controllers
   systemd:
     name: alertx-history.service
-    state: stopped
-    enabled: '{{ True if alertx_history_enable else False }}'
+    enabled: false
     daemon_reload: true
   when: ha | default(False)
+
+- name: Stop AlertX history direct systemd service on HA controllers when disabled
+  systemd:
+    name: alertx-history.service
+    state: stopped
+    daemon_reload: true
+  when:
+    - ha | default(False)
+    - not alertx_history_enable
 
 - name: Add AlertX history pacemaker resource
   pcs_resource:
