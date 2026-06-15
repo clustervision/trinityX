@@ -9,12 +9,50 @@
   delay: "{{ rpm_delay | default(15) }}"
   when: alertx_history_enable
 
+- block:
+  - name: Ensure AlertX history password directory exists
+    file:
+      path: '/etc/trinity/passwords/mysql'
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Copy AlertX history DB password from sync
+    copy:
+      remote_src: true
+      src: '{{ trix_sync }}/alertx/{{ alertx_history_sql_user }}.txt'
+      dest: '/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt'
+      owner: root
+      group: root
+      mode: '0600'
+  when:
+    - alertx_history_enable
+    - not primary | default(False)
+    - ha | default(False)
+
 - name: Generate password for AlertX history database user and save it to /etc/trinity/passwords
   set_fact:
     alertx_history_sql_pwd: '{{ lookup("password",
                            "/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt
                             chars=ascii_letters,digits,hexdigits") }}'
   when: alertx_history_enable
+
+- block:
+  - name: Ensure AlertX history sync directory exists
+    file:
+      path: '{{ trix_sync }}/alertx'
+      state: directory
+
+  - name: Add AlertX history DB password to sync
+    copy:
+      remote_src: true
+      src: '/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt'
+      dest: '{{ trix_sync }}/alertx/'
+  when:
+    - alertx_history_enable
+    - primary | default(True)
+    - ha | default(False)
 
 - name: Ensure alertX history daemon directory exists
   file:
@@ -48,25 +86,19 @@
     logrotate_logdir: '{{ alertx_history_log_dir }}'
     logrotate_emptyfile: 'history.log'
 
-- name: Create AlertX history database
-  mysql_db:
-    config_file: '/root/.my.cnf'
-    name: '{{ alertx_history_sql_db }}'
-    state: present
-  when: alertx_history_enable
+- block:
+  - name: Include modern Ansible part for MariaDB configuration
+    include_tasks: modern-ansible.yml
+    when:
+      - ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
+      - ansible_version.full is version('2.14.18', '>=')
 
-- name: Create AlertX history database user
-  mysql_user:
-    config_file: '/root/.my.cnf'
-    name: '{{ alertx_history_sql_user }}'
-    host: '{{ item }}'
-    password: '{{ alertx_history_sql_pwd }}'
-    priv: '{{ alertx_history_sql_db }}.*:ALL'
-    state: present
-  with_items:
-    - localhost
-    - 127.0.0.1
-  when: alertx_history_enable
+  - name: Include older Ansible part for MariaDB configuration
+    include_tasks: older-ansible.yml
+    when: ansible_version.full is version('2.14.18', '<') or (ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9)
+  when:
+    - alertx_history_enable
+    - not ha | default(False) or primary | default(True)
 
 - name: Install AlertX history ini file
   template:
@@ -97,9 +129,38 @@
     group: root
     mode: '0644'
 
-- name: Reload daemon for alertx history service
+- name: Manage AlertX history systemd service on non-HA controllers
   systemd:
     name: alertx-history.service
     state: "{{ 'restarted' if alertx_history_enable else 'stopped' }}"
     enabled: "{{ True if alertx_history_enable else False }}"
     daemon_reload: true
+  when: not ha | default(False)
+
+- name: Disable AlertX history direct systemd autostart on HA controllers
+  systemd:
+    name: alertx-history.service
+    enabled: false
+    daemon_reload: true
+  when: ha | default(False)
+
+- name: Stop AlertX history direct systemd service on HA controllers when disabled
+  systemd:
+    name: alertx-history.service
+    state: stopped
+    daemon_reload: true
+  when:
+    - ha | default(False)
+    - not alertx_history_enable
+
+- name: Add AlertX history pacemaker resource
+  pcs_resource:
+    name: 'alertx-history'
+    resource_class: 'systemd'
+    resource_type: 'systemd:alertx-history.service'
+    options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+    state: "{{ 'present' if alertx_history_enable else 'absent' }}"
+  when:
+    - ha | default(False)
+    - primary | default(True)
+  tags: pcs

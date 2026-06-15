@@ -1,0 +1,21 @@
+---
+
+- name: Create AlertX history database
+  mysql_db:
+    config_file: '/root/.my.cnf'
+    name: '{{ alertx_history_sql_db }}'
+    state: present
+  when: alertx_history_enable
+
+- name: Create AlertX history database user
+  mysql_user:
+    config_file: '/root/.my.cnf'
+    name: '{{ alertx_history_sql_user }}'
+    host: '{{ item }}'
+    password: '{{ alertx_history_sql_pwd }}'
+    priv: '{{ alertx_history_sql_db }}.*:ALL'
+    state: present
+  with_items:
+    - localhost
+    - 127.0.0.1
+  when: alertx_history_enable

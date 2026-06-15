@@ -157,6 +157,37 @@
     - datasources
     - dashboards
 
+- block:
+  - name: Ensure AlertX history password directory exists for Grafana datasource
+    file:
+      path: '/etc/trinity/passwords/mysql'
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Check if synced AlertX history DB password exists for Grafana datasource
+    stat:
+      path: '{{ trix_sync }}/alertx/{{ grafana_alert_history_mysql_user }}.txt'
+    register: grafana_alert_history_password_sync_file
+
+  - name: Copy AlertX history DB password from sync for Grafana datasource
+    copy:
+      remote_src: true
+      src: '{{ trix_sync }}/alertx/{{ grafana_alert_history_mysql_user }}.txt'
+      dest: '/etc/trinity/passwords/mysql/{{ grafana_alert_history_mysql_user }}.txt'
+      owner: root
+      group: root
+      mode: '0600'
+    when: grafana_alert_history_password_sync_file.stat.exists
+
+  - name: Read AlertX history DB password for Grafana datasource
+    set_fact:
+      grafana_alert_history_mysql_password: "{{ lookup('file', '/etc/trinity/passwords/mysql/' + grafana_alert_history_mysql_user + '.txt') }}"
+  when:
+    - grafana_alert_history_enable | default(False)
+    - ha | default(False)
+
 - name: Configure Grafana datasources
   template:
     src: trinityx-datasource.yaml.j2

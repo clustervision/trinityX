@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import json
+import signal
 import threading
-import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
@@ -24,15 +24,16 @@ from history_store import HistoryStore
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 log = Logger.get_logger("TRIX-HISTORY: daemon")
-store = HistoryStore()
+stop_event = threading.Event()
+store_lock = threading.Lock()
+store = None
 
 
 class AlertDeduplicator:
     """
-    Shared change-detection state used by both the poller and the webhook
-    listener.  An alert is only forwarded to the store when its signature
-    (fingerprint + updatedAt + state + silenced/inhibited + starts/endsAt)
-    differs from the last recorded value.
+    Shared in-process change-detection state used by both the poller and the
+    webhook listener. Durable cross-process/HA deduplication is handled by the
+    database event_key unique index.
     """
 
     def __init__(self):
@@ -73,6 +74,18 @@ class AlertDeduplicator:
 deduplicator = AlertDeduplicator()
 
 
+def get_store():
+    """Initialize the database lazily and retry on later requests if it is down."""
+    global store
+    if store is not None:
+        return store
+
+    with store_lock:
+        if store is None:
+            store = HistoryStore()
+        return store
+
+
 class AlertmanagerPoller:
     def __init__(self):
         self.url = f"{ALERTMANAGER_URL.rstrip('/')}/api/v2/alerts"
@@ -91,8 +104,17 @@ class AlertmanagerPoller:
         changed = deduplicator.filter_changed(alerts)
 
         if changed:
-            inserted = store.insert_alerts({"receiver": "alertx-history-poller", "groupKey": "poll", "status": "poll", "alerts": changed}, source="poll")
+            inserted = get_store().insert_alerts({"receiver": "alertx-history-poller", "groupKey": "poll", "status": "poll", "alerts": changed}, source="poll")
             log.info("Stored %s alert changes from Alertmanager polling", inserted)
+
+
+def retention_worker():
+    while not stop_event.is_set():
+        try:
+            get_store().purge_old_events()
+        except Exception as exc:
+            log.exception("Failed to purge old alert history events: %s", exc)
+        stop_event.wait(24 * 60 * 60)
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -136,30 +158,53 @@ class RequestHandler(BaseHTTPRequestHandler):
         filtered_payload = dict(payload)
         filtered_payload["alerts"] = changed_alerts
         try:
-            inserted = store.insert_alerts(filtered_payload, source="webhook")
+            inserted = get_store().insert_alerts(filtered_payload, source="webhook")
         except Exception as exc:
             log.exception("Failed to persist Alertmanager payload: %s", exc)
-            return self._send_json(500, {"error": "failed to persist alerts"})
+            return self._send_json(503, {"error": "failed to persist alerts"})
 
         return self._send_json(200, {"stored": inserted})
 
 
 def poll_worker():
     poller = AlertmanagerPoller()
-    while True:
+    while not stop_event.is_set():
         try:
             poller.poll_once()
         except Exception as exc:
             log.exception("Failed to poll Alertmanager: %s", exc)
-        time.sleep(max(ALERTMANAGER_POLL_INTERVAL, 5))
+        stop_event.wait(max(ALERTMANAGER_POLL_INTERVAL, 5))
+
+
+def install_signal_handlers(server):
+    def _handle_signal(signum, _frame):
+        log.info("Received signal %s, stopping AlertX history daemon", signum)
+        stop_event.set()
+        threading.Thread(target=server.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, _handle_signal)
+    signal.signal(signal.SIGINT, _handle_signal)
 
 
 def main():
-    thread = threading.Thread(target=poll_worker, daemon=True)
-    thread.start()
+    poll_thread = threading.Thread(target=poll_worker, name="alertmanager-poller", daemon=True)
+    poll_thread.start()
+
+    cleanup_thread = threading.Thread(target=retention_worker, name="history-retention", daemon=True)
+    cleanup_thread.start()
+
     server = ThreadingHTTPServer((SERVER_HOST, SERVER_PORT), RequestHandler)
+    install_signal_handlers(server)
     log.info("Starting AlertX history daemon on %s:%s", SERVER_HOST, SERVER_PORT)
-    server.serve_forever()
+
+    try:
+        server.serve_forever()
+    finally:
+        stop_event.set()
+        server.server_close()
+        poll_thread.join(timeout=max(ALERTMANAGER_REQUEST_TIMEOUT + 2, 5))
+        cleanup_thread.join(timeout=5)
+        log.info("AlertX history daemon stopped")
 
 
 if __name__ == "__main__":
