@@ -180,6 +180,26 @@ if [ ! "$IS_AIRGAP" ]; then
   ansible-galaxy install OndrejHome.pcs-modules-2
 fi
 
+# Bulletproof gate (online and airgap): the mariadb/alertx roles need a
+# resolvable mysql module. Surface a missing collection here, not mid-playbook.
+mysql_module_present() {
+  for ns in community.mysql ansible.mysql; do
+    ansible-doc -t module "${ns}.mysql_db" 2>/dev/null | grep -qi "^> ${ns}.mysql_db" && return 0
+  done
+  ansible-doc -t module mysql_db 2>/dev/null | grep -qi "^> .*mysql_db" && return 0
+  return 1
+}
+if ! mysql_module_present; then
+  if [ "$IS_AIRGAP" ]; then
+    add_message "No mysql Ansible module resolves yet. On airgap it comes from the bundled community.mysql tarball installed by prepare_airgap.sh - confirm that ran; the mariadb/alertx roles will abort if it is still missing."
+    show_message
+  else
+    add_message "No mysql Ansible module after installing community.mysql. Check connectivity to galaxy.ansible.com, then re-run prepare.sh."
+    show_message
+    exit 1
+  fi
+fi
+
 # --------------------- KERNEL CHECK ----------------------
 # kernel check. Did we pull in a newer kernel?
 # We might want to reboot before using ZFS...

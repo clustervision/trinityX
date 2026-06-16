@@ -64,15 +64,100 @@
 
   - meta: flush_handlers
 
-  - name: Include modern Ansible part for MariaDB configuration
-    include_tasks: modern-ansible.yml
-    when:
-      - ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 8
-      - ansible_version.full is version('2.14.18', '>=')
+  # Pick the mysql module namespace by what actually RESOLVES on the control
+  # node, in order of preference - never by Ansible/OS version, which is only a
+  # proxy for the real question (which collection is installed).
+  #
+  #   community.mysql.*      broadest current support and the short-name redirect
+  #                          target; deprecated on 5.x but still functional, and
+  #                          (unlike ansible.mysql 5.x) supported on core 2.14.
+  #   ansible.mysql.*        the renamed successor collection; picked once
+  #                          community.mysql is gone (removed in its 6.0).
+  #   mysql_db / mysql_user  legacy built-in, only on monolithic Ansible < 2.10.
+  #
+  # A name counts as usable only if ansible-doc can resolve the module, so a
+  # stub/empty collection or a missing one never gets selected.
+  - name: Probe which mysql module namespace resolves on the control node
+    shell: |
+      for ns in community.mysql ansible.mysql; do
+        if ansible-doc -t module "${ns}.mysql_db" 2>/dev/null | grep -qi "^> ${ns}.mysql_db"; then
+          echo "$ns"; exit 0
+        fi
+      done
+      if ansible-doc -t module mysql_db 2>/dev/null | grep -qi "^> .*mysql_db"; then
+        echo builtin; exit 0
+      fi
+      echo none
+    register: mysql_ns_probe
+    changed_when: false
+    failed_when: false
+    delegate_to: localhost
+    run_once: true
 
-  - name: Include older Ansible part for MariaDB configuration
-    include_tasks: older-ansible.yml
-    when: ansible_version.full is version('2.14.18', '<') or (ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9)
+  - name: Select mysql module names
+    set_fact:
+      mysql_module_namespace: "{{ mysql_ns_probe.stdout | trim }}"
+      mysql_db_module: "{{ 'mysql_db' if (mysql_ns_probe.stdout | trim) in ['builtin', 'none'] else (mysql_ns_probe.stdout | trim) ~ '.mysql_db' }}"
+      mysql_user_module: "{{ 'mysql_user' if (mysql_ns_probe.stdout | trim) in ['builtin', 'none'] else (mysql_ns_probe.stdout | trim) ~ '.mysql_user' }}"
+
+  - name: Ensure a usable mysql module set is available
+    assert:
+      that: mysql_module_namespace != 'none'
+      fail_msg: >-
+        No mysql module resolves on this control node: neither the ansible.mysql
+        nor the community.mysql collection is installed and Ansible
+        {{ ansible_version.full }} has no built-in mysql modules. Install the
+        community.mysql collection (online via galaxy) or stage its collection
+        RPM in the airgap mirror, then re-run.
+      success_msg: >-
+        Using '{{ mysql_db_module }}' / '{{ mysql_user_module }}'.
+
+  - name: Set MariaDB's root pasword
+    action:
+      module: "{{ mysql_user_module }}"
+      login_user: root
+      login_password: ""
+      config_file: ""
+      name: root
+      password: '{{ mysql_root_pwd }}'
+      host_all: true
+      check_implicit_admin: true
+      state: present
+    failed_when: false
+
+  - name: Render /root/.my.cnf
+    template:
+      src: my.cnf.j2
+      dest: /root/.my.cnf
+      owner: root
+      group: root
+      mode: 0600
+      backup: true
+
+  - name: Set MariaDB's root pasword
+    action:
+      module: "{{ mysql_user_module }}"
+      config_file: '/root/.my.cnf'
+      name: root
+      password: '{{ mysql_root_pwd }}'
+      host_all: true
+      check_implicit_admin: true
+      state: present
+
+  - name: Remove anonymous users
+    action:
+      module: "{{ mysql_user_module }}"
+      config_file: '/root/.my.cnf'
+      name: ''
+      host_all: true
+      state: absent
+
+  - name: Remove test db
+    action:
+      module: "{{ mysql_db_module }}"
+      config_file: '/root/.my.cnf'
+      name: test
+      state: absent
 
   - name: Add pacemaker resource
     pcs_resource:
