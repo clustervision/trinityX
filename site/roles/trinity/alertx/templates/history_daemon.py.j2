@@ -3,7 +3,13 @@
 import json
 import signal
 import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
+try:
+    from http.server import ThreadingHTTPServer
+except ImportError:
+    import socketserver
+    class ThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
+        daemon_threads = True
 from urllib.parse import urlparse
 
 import requests
