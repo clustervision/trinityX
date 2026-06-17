@@ -532,6 +532,12 @@
       prometheus_luna_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-luna-exporter, prometheus, monitoring, luna
 
+    - role: trinity/alertx
+      alertx_drainer_enable: "{{ True if 'slurm' in workload_manager else False }}"
+      alertx_history_sql_db: 'alertx_history'
+      alertx_history_enable: true
+      tags: monitoring, alertx
+
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"
       grafana_enable_ssl: true
@@ -541,16 +547,13 @@
       grafana_prometheus_url: "https://{{ trix_ctrl_local_ip }}:9090"
       grafana_alertmanager_url: "https://{{ trix_ctrl_local_ip }}:9093"
       grafana_alertmanager_basic_auth_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      grafana_alert_history_sql_auth_file: '/etc/trinity/passwords/mysql/alertx_history.txt'
+      grafana_alert_history_sql_db: 'alertx_history'
       grafana_alert_history_enable: true
       grafana_auto_upgrade: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
       tags: grafana, monitoring, admin-change
-
-    - role: trinity/alertx
-      alertx_drainer_enable: "{{ True if 'slurm' in workload_manager else False }}"
-      alertx_history_enable: true
-      tags: monitoring, alertx
 
     - role: trinity/osconfig
       tags: osconfig
