@@ -18,15 +18,17 @@
   set_fact:
     grafana_alertmanager_basic_auth_pwd: "{{ lookup('file', grafana_alertmanager_basic_auth_file) }}"
 
-- name: Retrieve grafana_alert_history_sql_auth
-  set_fact:
-    grafana_alert_history_sql_auth: "{{ grafana_alert_history_sql_auth_file is defined and grafana_alert_history_sql_auth_file | length > 0 }}"
-- name: Retrieve grafana_alert_history_sql_auth_user
-  set_fact:
-    grafana_alert_history_sql_user: "{{ grafana_alert_history_sql_auth_file | basename | regex_replace('(.*)\\..*', '\\1') }}"
-- name: Retrieve grafana_alert_history_sql_auth_pwd
-  set_fact:
-    grafana_alert_history_sql_password: "{{ lookup('file', grafana_alert_history_sql_auth_file) }}"
+- block:
+  - name: Retrieve grafana_alert_history_sql_auth
+    set_fact:
+      grafana_alert_history_sql_auth: "{{ grafana_alert_history_sql_auth_file is defined and grafana_alert_history_sql_auth_file | length > 0 }}"
+  - name: Retrieve grafana_alert_history_sql_auth_user
+    set_fact:
+      grafana_alert_history_sql_user: "{{ grafana_alert_history_sql_auth_file | basename | regex_replace('(.*)\\..*', '\\1') }}"
+  - name: Retrieve grafana_alert_history_sql_auth_pwd
+    set_fact:
+      grafana_alert_history_sql_password: "{{ lookup('file', grafana_alert_history_sql_auth_file) }}"
+  when: grafana_alert_history_enable
 
 
 
