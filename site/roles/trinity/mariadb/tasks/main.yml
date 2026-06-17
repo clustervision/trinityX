@@ -56,6 +56,44 @@
     enabled: true
   when: not ha|default(False)
 
+# Pick the mysql module namespace by what actually RESOLVES on the control
+# node, in order of preference - never by Ansible/OS version, which is only a
+# proxy for the real question (which collection is installed).
+#
+#   community.mysql.*      broadest current support and the short-name redirect
+#                          target; deprecated on 5.x but still functional, and
+#                          (unlike ansible.mysql 5.x) supported on core 2.14.
+#   ansible.mysql.*        the renamed successor collection; picked once
+#                          community.mysql is gone (removed in its 6.0).
+#   mysql_db / mysql_user  legacy built-in, only on monolithic Ansible < 2.10.
+#
+# A name counts as usable only if ansible-doc can resolve the module, so a
+# stub/empty collection or a missing one never gets selected. Run on every
+# controller (not just the primary) so the module-name facts are always defined
+# even where the DB-mutating tasks below are skipped.
+- name: Probe which mysql module namespace resolves on the control node
+  shell: |
+    for ns in community.mysql ansible.mysql; do
+      if ansible-doc -t module "${ns}.mysql_db" 2>/dev/null | grep -qi "^> ${ns}.mysql_db"; then
+        echo "$ns"; exit 0
+      fi
+    done
+    if ansible-doc -t module mysql_db 2>/dev/null | grep -qi "^> .*mysql_db"; then
+      echo builtin; exit 0
+    fi
+    echo none
+  register: mysql_ns_probe
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  run_once: true
+
+- name: Select mysql module names
+  set_fact:
+    mysql_module_namespace: "{{ mysql_ns_probe.stdout | trim }}"
+    mysql_db_module: "{{ 'mysql_db' if (mysql_ns_probe.stdout | trim) in ['builtin', 'none'] else (mysql_ns_probe.stdout | trim) ~ '.mysql_db' }}"
+    mysql_user_module: "{{ 'mysql_user' if (mysql_ns_probe.stdout | trim) in ['builtin', 'none'] else (mysql_ns_probe.stdout | trim) ~ '.mysql_user' }}"
+
 - block:
   - name: Start MariaDB service
     service:
@@ -63,42 +101,6 @@
       state: started
 
   - meta: flush_handlers
-
-  # Pick the mysql module namespace by what actually RESOLVES on the control
-  # node, in order of preference - never by Ansible/OS version, which is only a
-  # proxy for the real question (which collection is installed).
-  #
-  #   community.mysql.*      broadest current support and the short-name redirect
-  #                          target; deprecated on 5.x but still functional, and
-  #                          (unlike ansible.mysql 5.x) supported on core 2.14.
-  #   ansible.mysql.*        the renamed successor collection; picked once
-  #                          community.mysql is gone (removed in its 6.0).
-  #   mysql_db / mysql_user  legacy built-in, only on monolithic Ansible < 2.10.
-  #
-  # A name counts as usable only if ansible-doc can resolve the module, so a
-  # stub/empty collection or a missing one never gets selected.
-  - name: Probe which mysql module namespace resolves on the control node
-    shell: |
-      for ns in community.mysql ansible.mysql; do
-        if ansible-doc -t module "${ns}.mysql_db" 2>/dev/null | grep -qi "^> ${ns}.mysql_db"; then
-          echo "$ns"; exit 0
-        fi
-      done
-      if ansible-doc -t module mysql_db 2>/dev/null | grep -qi "^> .*mysql_db"; then
-        echo builtin; exit 0
-      fi
-      echo none
-    register: mysql_ns_probe
-    changed_when: false
-    failed_when: false
-    delegate_to: localhost
-    run_once: true
-
-  - name: Select mysql module names
-    set_fact:
-      mysql_module_namespace: "{{ mysql_ns_probe.stdout | trim }}"
-      mysql_db_module: "{{ 'mysql_db' if (mysql_ns_probe.stdout | trim) in ['builtin', 'none'] else (mysql_ns_probe.stdout | trim) ~ '.mysql_db' }}"
-      mysql_user_module: "{{ 'mysql_user' if (mysql_ns_probe.stdout | trim) in ['builtin', 'none'] else (mysql_ns_probe.stdout | trim) ~ '.mysql_user' }}"
 
   - name: Ensure a usable mysql module set is available
     assert:
