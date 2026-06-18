@@ -427,6 +427,7 @@
           basic_auth:
             enabled: true
             credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      prometheus_server_web_open_port: "{{ firewall_open_prometheus | default(False) }}"
       prometheus_server_tls:
         enabled: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
@@ -456,6 +457,7 @@
       # below depends on the above 
       #   role: trinity/prometheus-server -> prometheus_server_tls/enabled: true == https
       prometheus_alertmanager_web_protocol: "https"
+      prometheus_alertmanager_web_open_port: "{{ firewall_open_prometheus | default(False) }}"
       tags: prometheus-alertmanager, prometheus, monitoring, admin-change
 
     - role: trinity/prometheus-node-exporter
