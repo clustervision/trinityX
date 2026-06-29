@@ -8,8 +8,23 @@ if [ -f /etc/trinity/airgap_install ]; then
     export IS_AIRGAP=1
     AG_SERVER=$(cat /etc/trinity/airgap_server)
     export AG_SERVER
+    if grep -q 'Red Hat Enterprise' /etc/redhat-release 2>/dev/null; then
+        AG_DISTRIBUTION='RedHat'
+    elif grep -q 'Rocky' /etc/redhat-release 2>/dev/null; then
+        AG_DISTRIBUTION='Rocky'
+    elif grep -q 'AlmaLinux' /etc/redhat-release 2>/dev/null; then
+        AG_DISTRIBUTION='AlmaLinux'
+    fi
+    AG_RELEASE=$(grep VERSION_ID /etc/os-release | awk -F '=' '{ print $2 }' | grep -oE '[0-9\.]+' | awk -F'.' '{ print $1 }')
+    AG_REPO="${AG_DISTRIBUTION:-}-${AG_RELEASE}"
+    export AG_REPO
 fi
 
+
+echo $AG_REPO
+echo $AG_RELEASE
+echo $AG_DISTRIBUTION
+exit 1
 # --------------------------------------------------------------------------------------
 
 function add_message() {
@@ -140,7 +155,7 @@ if [ ! "$GITLAB_CI" ]; then
     ARCH=$(uname -m)
     TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml* 2> /dev/null | grep -oE '[0-9\.]+' | sort -n | tail -n1 | grep -v '^$' || echo '15')
     if [ "$IS_AIRGAP" ]; then
-      wget --directory-prefix site/ https://${AG_SERVER}/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
+      wget --directory-prefix site/ https://${AG_SERVER}/${AG_REPO}/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
     else
       wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
     fi
