@@ -20,11 +20,6 @@ if [ -f /etc/trinity/airgap_install ]; then
     export AG_REPO
 fi
 
-
-echo $AG_REPO
-echo $AG_RELEASE
-echo $AG_DISTRIBUTION
-exit 1
 # --------------------------------------------------------------------------------------
 
 function add_message() {
