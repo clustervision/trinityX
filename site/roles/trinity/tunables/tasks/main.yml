@@ -60,9 +60,10 @@
   when: in_image | default(False)
 
 - name: Setting compute performance tuned profile
-  shell: "tuned-adm profile {{ compute_tuned_profile | default('hpc-compute') }}"
+  copy:
+    dest: /etc/tuned/active_profile
+    content: "{{ compute_tuned_profile | default('hpc-compute') }}\n"
   when: in_image | default(False)
-  ignore_errors: true
 
 - name: Setting controller performance tuned profile
   shell: "tuned-adm profile {{ controller_tuned_profile | default('throughput-performance') }}"
