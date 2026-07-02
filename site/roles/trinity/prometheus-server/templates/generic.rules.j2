@@ -288,19 +288,20 @@ groups:
   # infiniband:*:map recording rules (see recording.rules.j2), which extract
   # it from the ibnetdiscover NodeDescription. Each rule covers both ends of
   # a link: HCA ports match the first join, switch ports the second, where
-  # hostname is the node connected to that port. The inner sum combines the
-  # counters of the class (increase drops the metric name), the outer max
-  # dedupes the two controllers scanning the same fabric in HA.
+  # hostname is the node connected to that port. The infiniband:*_total
+  # metrics (recording.rules.j2) union the raw counters of each class; the
+  # inner sum combines them per port, the outer max dedupes the two
+  # controllers scanning the same fabric in HA.
 
   - alert: InfinibandLinkDegraded
     expr: |
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
-            {__name__=~"infiniband_(hca|switch)_port_(symbol_error|receive_errors|link_error_recovery|excessive_buffer_overrun_errors|receive_remote_physical_errors)_total"}[1h])))
+            infiniband:link_degraded_total[1h])))
           > {{ prometheus_ib_link_degraded_1h_threshold | default(100) }} )
         * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
       or
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
-            {__name__=~"infiniband_(hca|switch)_port_(symbol_error|receive_errors|link_error_recovery|excessive_buffer_overrun_errors|receive_remote_physical_errors)_total"}[1h])))
+            infiniband:link_degraded_total[1h])))
           > {{ prometheus_ib_link_degraded_1h_threshold | default(100) }} )
         * on (guid, port) group_left (switch, uplink, hostname) infiniband:switch_port_peer:map )
     labels:
@@ -317,12 +318,12 @@ groups:
   - alert: InfinibandLinkFailing
     expr: |
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
-            {__name__=~"infiniband_(hca|switch)_port_(local_link_integrity_errors|link_downed)_total"}[1h])))
+            infiniband:link_failing_total[1h])))
           > {{ prometheus_ib_link_failing_1h_threshold | default(2) }} )
         * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
       or
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
-            {__name__=~"infiniband_(hca|switch)_port_(local_link_integrity_errors|link_downed)_total"}[1h])))
+            infiniband:link_failing_total[1h])))
           > {{ prometheus_ib_link_failing_1h_threshold | default(2) }} )
         * on (guid, port) group_left (switch, uplink, hostname) infiniband:switch_port_peer:map )
     labels:
@@ -341,17 +342,17 @@ groups:
   - alert: InfinibandTrafficLoss
     expr: |
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
-            {__name__=~"infiniband_(hca|switch)_port_(transmit_discards|transmit_constraint_errors|receive_constraint_errors)_total"}[15m])))
+            infiniband:traffic_loss_total[15m])))
           > 0 )
         * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
       or
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
-            {__name__=~"infiniband_(hca|switch)_port_(transmit_discards|transmit_constraint_errors|receive_constraint_errors)_total"}[15m])))
+            infiniband:traffic_loss_total[15m])))
           > 0 )
         * on (guid, port) group_left (switch, uplink, hostname) infiniband:switch_port_peer:map )
       or
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
-            {__name__=~"infiniband_(hca|switch)_port_(transmit_discards|transmit_constraint_errors|receive_constraint_errors)_total"}[15m])))
+            infiniband:traffic_loss_total[15m])))
           > 0 )
         unless on (guid) infiniband:hca_hostname:map
         unless on (guid, port) infiniband:switch_port_peer:map )
