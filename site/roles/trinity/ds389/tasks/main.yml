@@ -175,16 +175,25 @@
     creates: "/etc/dirsrv/slapd-local/dse.ldif"
   when: primary | default(True)
 
-- name: Create paths for DS389
+- name: Create DS389 log directory for non-primary
   file:
-    path: "{{ item }}"
+    path: /var/log/dirsrv/slapd-local
     state: directory
     owner: '{{ ds389_default_user }}'
     group: '{{ ds389_default_group }}'
-  with_items:
-    - /var/log/dirsrv/slapd-local
-    - /run/lock/dirsrv/slapd-local
-    - /run/dirsrv
+  when: not primary | default(False)
+
+# dscreate (primary only) drops this tmpfiles.d file so systemd recreates the runtime
+# dirs on every boot. The secondary never runs dscreate, and /run is tmpfs, so a plain
+# mkdir would vanish on reboot -- ship the same drop-in instead.
+- name: Install DS389 runtime tmpfiles drop-in for non-primary
+  copy:
+    src: dirsrv-local.conf
+    dest: /etc/tmpfiles.d/dirsrv-local.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: create ds389 runtime dirs
   when: not primary | default(False)
 
 - block:
