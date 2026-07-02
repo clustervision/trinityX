@@ -234,3 +234,33 @@ groups:
         or label_replace(infiniband_switch_port_transmit_constraint_errors_total, "counter", "switch_transmit_constraint", "", "")
         or label_replace(infiniband_hca_port_receive_constraint_errors_total, "counter", "hca_receive_constraint", "", "")
         or label_replace(infiniband_switch_port_receive_constraint_errors_total, "counter", "switch_receive_constraint", "", "")
+
+    # Pre-computed 5m throughput/congestion rates for the infiniband Grafana
+    # dashboard (TRIX-513): rate once over the raw counters, HA-deduped via
+    # max, hostname/switch joined - keeps panel queries cheap on large
+    # clusters.
+    - record: infiniband:hca_transmit_bytes:rate5m
+      expr: |
+        max by (guid, port) (rate(infiniband_hca_port_transmit_data_bytes_total[5m]))
+        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map
+
+    - record: infiniband:hca_receive_bytes:rate5m
+      expr: |
+        max by (guid, port) (rate(infiniband_hca_port_receive_data_bytes_total[5m]))
+        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map
+
+    - record: infiniband:node_transmit_bytes:rate5m
+      expr: sum by (hostname) (infiniband:hca_transmit_bytes:rate5m)
+
+    - record: infiniband:node_receive_bytes:rate5m
+      expr: sum by (hostname) (infiniband:hca_receive_bytes:rate5m)
+
+    - record: infiniband:switch_port_transmit_bytes:rate5m
+      expr: |
+        max by (guid, port) (rate(infiniband_switch_port_transmit_data_bytes_total[5m]))
+        * on (guid) group_left (switch) max by (guid, switch) (infiniband_switch_info)
+
+    - record: infiniband:switch_port_transmit_wait:rate5m
+      expr: |
+        max by (guid, port) (rate(infiniband_switch_port_transmit_wait_total[5m]))
+        * on (guid) group_left (switch) max by (guid, switch) (infiniband_switch_info)
