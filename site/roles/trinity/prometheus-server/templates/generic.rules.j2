@@ -278,3 +278,90 @@ groups:
         The node has recorded at least 50 uncorrectable ECC memory errors during the last 1 hour.
         Multiple uncorrectable memory errors strongly indicate failing memory hardware and the node
         should be investigated immediately. Current count in the last 1 hour: {{ '{{ $value }}' }}.
+
+
+  # Infiniband fabric error detection (TRIX-1655), three rules by impact:
+  # - InfinibandLinkDegraded (warning): early physical-layer degradation
+  # - InfinibandLinkFailing (danger): hardware that needs replacement
+  # - InfinibandTrafficLoss (warning): packets being dropped, jobs affected
+  # Counters only carry {guid, port}; hostname is joined in from the
+  # infiniband:*:map recording rules (see recording.rules.j2), which extract
+  # it from the ibnetdiscover NodeDescription. Each rule covers both ends of
+  # a link: HCA ports match the first join, switch ports the second, where
+  # hostname is the node connected to that port. The inner sum combines the
+  # counters of the class (increase drops the metric name), the outer max
+  # dedupes the two controllers scanning the same fabric in HA.
+
+  - alert: InfinibandLinkDegraded
+    expr: |
+      ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
+            {__name__=~"infiniband_(hca|switch)_port_(symbol_error|receive_errors|link_error_recovery|excessive_buffer_overrun_errors|receive_remote_physical_errors)_total"}[1h])))
+          > {{ prometheus_ib_link_degraded_1h_threshold | default(100) }} )
+        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
+      or
+      ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
+            {__name__=~"infiniband_(hca|switch)_port_(symbol_error|receive_errors|link_error_recovery|excessive_buffer_overrun_errors|receive_remote_physical_errors)_total"}[1h])))
+          > {{ prometheus_ib_link_degraded_1h_threshold | default(100) }} )
+        * on (guid, port) group_left (switch, uplink, hostname) infiniband:switch_port_peer:map )
+    labels:
+      severity: warning
+      category: generic
+    annotations:
+      description: >
+        Infiniband link degrading on {{ '{{ $labels.hostname }}' }}
+        ({{ '{{ $labels.hca }}' }}{{ '{{ $labels.switch }}' }} port {{ '{{ $labels.port }}' }}):
+        {{ '{{ $value | printf "%.0f" }}' }} link errors (symbol, receive, link recovery,
+        buffer overrun, remote physical) in the last 1 hour. Check cable, connector and
+        transceiver.
+
+  - alert: InfinibandLinkFailing
+    expr: |
+      ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
+            {__name__=~"infiniband_(hca|switch)_port_(local_link_integrity_errors|link_downed)_total"}[1h])))
+          > {{ prometheus_ib_link_failing_1h_threshold | default(2) }} )
+        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
+      or
+      ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
+            {__name__=~"infiniband_(hca|switch)_port_(local_link_integrity_errors|link_downed)_total"}[1h])))
+          > {{ prometheus_ib_link_failing_1h_threshold | default(2) }} )
+        * on (guid, port) group_left (switch, uplink, hostname) infiniband:switch_port_peer:map )
+    labels:
+      severity: danger
+      category: generic
+    annotations:
+      description: >
+        Infiniband link failing on {{ '{{ $labels.hostname }}' }}
+        ({{ '{{ $labels.hca }}' }}{{ '{{ $labels.switch }}' }} port {{ '{{ $labels.port }}' }}):
+        {{ '{{ $value | printf "%.0f" }}' }} link down or integrity errors in the last 1 hour
+        (more than expected from a reboot). Failing cable, connector or port - replace.
+
+  # The last branch keeps the alert alive for switch ports missing from the
+  # current topology: a dead peer drops out of ibnetdiscover, and that is
+  # exactly when transmit discards fire. Such alerts carry no hostname.
+  - alert: InfinibandTrafficLoss
+    expr: |
+      ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
+            {__name__=~"infiniband_(hca|switch)_port_(transmit_discards|transmit_constraint_errors|receive_constraint_errors)_total"}[15m])))
+          > 0 )
+        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
+      or
+      ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
+            {__name__=~"infiniband_(hca|switch)_port_(transmit_discards|transmit_constraint_errors|receive_constraint_errors)_total"}[15m])))
+          > 0 )
+        * on (guid, port) group_left (switch, uplink, hostname) infiniband:switch_port_peer:map )
+      or
+      ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
+            {__name__=~"infiniband_(hca|switch)_port_(transmit_discards|transmit_constraint_errors|receive_constraint_errors)_total"}[15m])))
+          > 0 )
+        unless on (guid) infiniband:hca_hostname:map
+        unless on (guid, port) infiniband:switch_port_peer:map )
+    labels:
+      severity: warning
+      category: generic
+    annotations:
+      description: >
+        Infiniband traffic loss on {{ '{{ $labels.hostname }}' }}
+        ({{ '{{ $labels.hca }}' }}{{ '{{ $labels.switch }}' }} port {{ '{{ $labels.port }}' }}):
+        {{ '{{ $value | printf "%.0f" }}' }} discarded or rejected packets in the last 15
+        minutes. Running jobs are affected - congestion, unreachable peer or partition
+        misconfiguration.
