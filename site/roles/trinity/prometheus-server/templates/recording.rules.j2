@@ -175,3 +175,28 @@ groups:
 
   - record: power_consumption_per_gpu_watts
     expr: power_consumption_gpu_watts / node_gpus
+
+- name: infiniband_hostname_mapping
+  rules:
+    # Infiniband counters only carry {guid, port}; these maps let alert
+    # rules join the hostname (TRIX-1655). The hca/uplink labels hold the
+    # ibnetdiscover NodeDescription ("<hostname> mlx5_0"), the hostname is
+    # its first token.
+    - record: infiniband:hca_hostname:map
+      expr: |
+        label_replace(
+          max by (guid, hca) (infiniband_hca_info),
+          "hostname", "$1", "hca", "^([^ ]+).*"
+        )
+
+    # Switch port -> connected peer. Ports facing a HCA get the node
+    # hostname; inter-switch links keep only the peer name in the uplink
+    # label.
+    - record: infiniband:switch_port_peer:map
+      expr: |
+        label_replace(
+          max by (guid, port, switch, uplink) (infiniband_switch_uplink_info{uplink_type="CA"}),
+          "hostname", "$1", "uplink", "^([^ ]+).*"
+        )
+        or
+        max by (guid, port, switch, uplink) (infiniband_switch_uplink_info{uplink_type!="CA"})
