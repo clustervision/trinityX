@@ -252,14 +252,34 @@ write_value_with_example_comments() {
     ' "$example_block" > "$output_block"
 }
 
+# Keys whose configured value in all.yml is authoritative and must be
+# preserved on migration regardless of type. HA, fencing and the LDAP
+# backend describe the deployed cluster; all.yml is the truth (TRIX-1905).
+ALL_YML_AUTHORITATIVE_KEYS="ha enable_ipmilan_fencing enable_heartbeat_link trinity_ldap_backend"
+
+is_authoritative_key() {
+    local wanted=$1
+    local key
+    for key in $ALL_YML_AUTHORITATIVE_KEYS; do
+        [ "$key" = "$wanted" ] && return 0
+    done
+    return 1
+}
+
 suggested_value() {
     local key=$1
     local kind=$2
     local old_block=$3
     local example_block=$4
 
-    if [ "$kind" = "string" ] && [ "$key" != "trix_version" ] && [ -n "$old_block" ] && [ -f "$old_block" ]; then
+    if is_authoritative_key "$key" && [ -n "$old_block" ] && [ -f "$old_block" ]; then
         first_value "$old_block"
+    elif [ "$kind" = "string" ] && [ "$key" != "trix_version" ] && [ -n "$old_block" ] && [ -f "$old_block" ]; then
+        first_value "$old_block"
+    elif [ "$key" = "trinity_ldap_backend" ]; then
+        # Backend key absent from all.yml means a pre-16 cluster, which ran
+        # openldap; never migrate it onto the new ds389 default (TRIX-1905).
+        printf "%s\n" "'openldap'"
     else
         first_value "$example_block"
     fi
@@ -270,8 +290,12 @@ suggestion_source() {
     local kind=$2
     local old_block=$3
 
-    if [ "$kind" = "string" ] && [ "$key" != "trix_version" ] && [ -n "$old_block" ] && [ -f "$old_block" ]; then
+    if is_authoritative_key "$key" && [ -n "$old_block" ] && [ -f "$old_block" ]; then
         printf '%s\n' "all.yml"
+    elif [ "$kind" = "string" ] && [ "$key" != "trix_version" ] && [ -n "$old_block" ] && [ -f "$old_block" ]; then
+        printf '%s\n' "all.yml"
+    elif [ "$key" = "trinity_ldap_backend" ]; then
+        printf '%s\n' "migration default"
     else
         printf '%s\n' "all.yml.example"
     fi
