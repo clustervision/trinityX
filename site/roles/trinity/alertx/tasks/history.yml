@@ -161,6 +161,14 @@
     - not ha | default(False) or primary | default(True)
 
 - name: Install AlertX history ini file
+  ansible.builtin.shell: |
+    source {{ trix_local }}/python/bin/activate
+    pip3 install --upgrade pymysql==1.2.0
+    exit $?
+  args:
+    executable: /bin/bash
+
+- name: Install Alertx History dependency
   template:
     src: 'history.ini.j2'
     dest: '{{ alertx_history_ini_dir }}/history.ini'
