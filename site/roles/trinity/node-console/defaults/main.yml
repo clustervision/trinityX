@@ -28,6 +28,15 @@ netconsole_route_wait_timeout: 60
 serial_console_device: ttyS0
 serial_console_speed: 115200
 
+# --- booted-notify (post-install "booted" state) ---
+
+# One-shot deployed into the compute image. At first boot after provisioning it POSTs
+# state "booted" to Luna, then self-disables. It reads its node-scoped provision token
+# from the env file the Luna installer (templ_install.cfg) drops into the installed root.
+booted_notify_script: /usr/local/sbin/trinity-booted-notify.sh
+booted_notify_service_name: trinity-booted-notify
+booted_notify_env: /etc/trinity/booted-notify.env
+
 # --- lconsole handoff marker ---
 
 # Written to /dev/kmsg by the node once netconsole loads.

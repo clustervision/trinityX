@@ -72,6 +72,32 @@
     enabled: true
   when: in_image | default(False)
 
+# --- image: booted-notify one-shot ("booted" state at first boot) ---
+
+- name: Deploy booted-notify script into image
+  template:
+    src: booted-notify.sh.j2
+    dest: "{{ booted_notify_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+  when: in_image | default(False)
+
+- name: Deploy booted-notify systemd service into image
+  template:
+    src: booted-notify.service.j2
+    dest: "/etc/systemd/system/{{ booted_notify_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  when: in_image | default(False)
+
+- name: Enable booted-notify service in image
+  systemd:
+    name: "{{ booted_notify_service_name }}"
+    enabled: true
+  when: in_image | default(False)
+
 - name: Add kernel modules to Luna osimage
   shell: >
     luna osimage change
