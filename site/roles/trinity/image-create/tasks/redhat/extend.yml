@@ -68,10 +68,16 @@
       path: "{{ image_path }}/etc/rhsm/ca/"
       state: directory
 
+  # Copy the whole /etc/rhsm/ca/ directory rather than only redhat-uep.pem.
+  # On a Satellite (Katello) managed controller the generated redhat.repo points
+  # sslcacert at /etc/rhsm/ca/katello-server-ca.pem; copying the entire directory
+  # captures that CA (and any other), so dnf inside the chroot can reach the
+  # Satellite. On a Red Hat CDN host this still copies redhat-uep.pem as before.
   - name: Sync RHEL subscription certificates
     copy:
-      src: /etc/rhsm/ca/redhat-uep.pem
-      dest: "{{ image_path }}/etc/rhsm/ca/redhat-uep.pem"
+      remote_src: true
+      src: /etc/rhsm/ca/
+      dest: "{{ image_path }}/etc/rhsm/ca/"
     ignore_errors: true
 
   - synchronize:
