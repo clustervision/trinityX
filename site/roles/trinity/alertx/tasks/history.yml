@@ -1,10 +1,9 @@
 ---
 
-- name: Install AlertX history dependencies
-  yum:
-    name:
-      - python3-PyMySQL
-    state: present
+- name: Install AlertX history dependencies into the TrinityX python environment
+  ansible.builtin.pip:
+    name: pymysql
+    virtualenv: "{{ trix_local }}/python"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
   when: alertx_history_enable
