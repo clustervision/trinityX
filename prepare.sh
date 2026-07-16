@@ -186,8 +186,26 @@ dnf install ansible-core -y
 dnf install ansible-collection-community-general -y 2> /dev/null
 dnf install ansible-collection-ansible-posix -y 2> /dev/null
 if [ ! "$IS_AIRGAP" ]; then
-  ansible-galaxy collection install community.mysql community.crypto
-  ansible-galaxy install OndrejHome.pcs-modules-2
+  # EOL ansible-core (2.14) builds its own TLS context and cannot reach the
+  # Galaxy API against newer OpenSSL (ASN1 error), though git and dnf over
+  # HTTPS are fine. Fall back to EPEL for the collections and to the git
+  # source for the role (no package exists). Distros with a matched
+  # ansible-core/OpenSSL pairing keep using Galaxy untouched.
+  if ! ansible-galaxy collection install community.mysql community.crypto; then
+    add_message "Galaxy collection install failed; falling back to EPEL packages for community.mysql and community.crypto."
+    dnf install ansible-collection-community-mysql ansible-collection-community-crypto -y
+  fi
+  if ! ansible-galaxy install OndrejHome.pcs-modules-2; then
+    add_message "Galaxy role install failed; falling back to git source for OndrejHome.pcs-modules-2."
+    pcs_req=$(mktemp)
+    cat > "$pcs_req" <<EOF
+- src: https://github.com/OndrejHome/ansible.pcs-modules-2.git
+  scm: git
+  name: OndrejHome.pcs-modules-2
+EOF
+    ansible-galaxy install -r "$pcs_req"
+    rm -f "$pcs_req"
+  fi
 fi
 
 # Bulletproof gate (online and airgap): the mariadb/alertx roles need a
