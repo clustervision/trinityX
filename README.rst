@@ -156,28 +156,33 @@ You can also choose which components to exclude from the installation by modifyi
 HA or High Availability
 =======================
 
-To make HA work properly, services need to understand the HA concept. Many services do, however not all. To still support HA for these services, a shared disk is required, where the active controller has access to this disk and start those services. The disk can be DRBD (default), but also iSCSI, a DAS or NAS, or combinations of. The configuration or combinations of need to provide at least the following volumes:
-
-* {{ trix_ha }}
-* {{ trix_home }}
-* {{ trix_shared }}
-* {{ trix_ohpc }} (if OpenHPC is enabled)
-* {{ trix_easybuild }} (if Easybuild is enabled)
+To make HA work properly, services need to understand the HA concept. Many services do, however not all. To still support HA for these services, a shared disk is required, where the active controller has access to this disk and start those services. The disk can be DRBD (default), but also iSCSI, a DAS or NAS, or combinations of. Please refer to the documentation covering this subject in detail: https://docs.clustervision.com/install/preinstall/#ha-architecture
 
 LVM and ZFS are supported, where partitions can be made on top of the shared disk. On top of these partitions all regular filesystems, like xfs and ext4 are supported.
 
-Fencing is supported by enforcing stonith. The BMC-s of each controller need to be configured to match the settings for ip address, name and password in the HA section. A mismatch will result in a non proper working HA setup. Alternatively, fencing can be disabled but is not recommended.
+Air-Gapped installation support
+===============================
+
+TrinityX 16 comes with support for Air-Gapped or Non-internet based installations. Please contact us at sales@clustervision.com for options and possibilities.
+
+EasyBuild
+=========
+
+EasyBuild as a mechanism offer great flexibility, providing applications, libraries and tools for most popular scientific, AI and HPC applications. TrinityX provides the framework that allow for building and expanding this ecosystem. In order to enable this integration, set the flag ``enable_easybuild`` in ``group_vars/all.yml`` to ``true``.
 
 OpenHPC Support
 ===============
 
-The OpenHPC project provides a framework for building, managing and maintain HPC clusters. This project provides packages for most popular scientific and HPC applications. TrinityX can integrate this effort into it's ecosystem. In order to enable this integration set the flag ``enable_openhpc`` in ``group_vars/all`` to ``true`` (default). 
+The OpenHPC project provides a framework for building, managing and maintain HPC clusters. It's marked deprecated for TrinityX 16 going forward, but available for migration purposes. In order to enable this integration set the flag ``enable_openhpc`` in ``group_vars/all.yml`` to ``true``.
+
+TrinityX Slurm
+==============
+
+TrinityX comes by default, through ``enable_trinityx_slurm`` set to ``true`` in ``group_vars/all.yml``, bundled with an optimized Slurm build to offer support cross distribution and architecture. This allows an end-to-end Scheduler integration for heterogenous Cluster environments.
 
 Documentation
 =============
-A pre-built PDF is provided in the main directory.
 Please visit https://docs.clustervision.com for more documentation on the TrinityX project.
-An URL with the Luna REST API documentation will follow.
 
 Contributing
 ============
@@ -186,7 +191,7 @@ To contribute to TrinityX:
 
 1. Get familiar with our `code guidelines <Guidelines.rst>`_
 2. Clone TrinityX repository
-3. Commit your changes in your repository and create a pull request to the ``dev`` branch in ours.
+3. Commit your changes in your repository and create a pull request to the ``develpment`` branch in ours.
 
 TrinityX Support
 ================

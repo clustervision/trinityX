@@ -54,16 +54,20 @@
   - name: Pulling docker image
     shell: "docker pull {{ image_download_distribution }}"
 
+  - name: Derive filesystem-safe docker image name
+    set_fact:
+      docker_image_tarname: "{{ image_download_distribution | regex_replace('[/:]', '_') }}"
+
   - name: Creating placeholder container
     shell: "docker create {{ image_download_distribution }}"
     register: docker_container_id
 
   - name: Creating docker image tarball
-    shell: "docker export {{ docker_container_id.stdout }} > {{ trix_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
+    shell: "docker export {{ docker_container_id.stdout }} > {{ trix_root }}/downloads/docker-image-{{ docker_image_tarname }}.tar"
 
   - name: Extracting docker image
     unarchive:
-      src: "{{ trix_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
+      src: "{{ trix_root }}/downloads/docker-image-{{ docker_image_tarname }}.tar"
       dest: "{{ image_path }}"
     tags: install-only
 
