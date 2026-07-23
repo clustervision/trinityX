@@ -175,3 +175,92 @@ groups:
 
   - record: power_consumption_per_gpu_watts
     expr: power_consumption_gpu_watts / node_gpus
+
+- name: infiniband_hostname_mapping
+  rules:
+    # Infiniband counters only carry {guid, port}; these maps let alert
+    # rules join the hostname (TRIX-1655). The hca/uplink labels hold the
+    # ibnetdiscover NodeDescription ("<hostname> mlx5_0"), the hostname is
+    # its first token.
+    - record: infiniband:hca_hostname:map
+      expr: |
+        label_replace(
+          max by (guid, hca) (infiniband_hca_info),
+          "hostname", "$1", "hca", "^([^ ]+).*"
+        )
+
+    # Switch port -> connected peer. Ports facing a HCA get the node
+    # hostname; inter-switch links keep only the peer name in the uplink
+    # label.
+    - record: infiniband:switch_port_peer:map
+      expr: |
+        label_replace(
+          max by (guid, port, switch, uplink) (infiniband_switch_uplink_info{uplink_type="CA"}),
+          "hostname", "$1", "uplink", "^([^ ]+).*"
+        )
+        or
+        max by (guid, port, switch, uplink) (infiniband_switch_uplink_info{uplink_type!="CA"})
+
+    # Per-impact-class error totals (TRIX-1655). The alert rules need each
+    # class as one series set, but increase() over a __name__ regex fails at
+    # runtime once the metric name is dropped and label sets collide. The
+    # label_replace tags every counter first, so the union stays distinct
+    # and the alert rules can sum over it.
+    - record: infiniband:link_degraded_total
+      expr: |
+        label_replace(infiniband_hca_port_symbol_error_total, "counter", "hca_symbol_error", "", "")
+        or label_replace(infiniband_switch_port_symbol_error_total, "counter", "switch_symbol_error", "", "")
+        or label_replace(infiniband_hca_port_receive_errors_total, "counter", "hca_receive_errors", "", "")
+        or label_replace(infiniband_switch_port_receive_errors_total, "counter", "switch_receive_errors", "", "")
+        or label_replace(infiniband_hca_port_link_error_recovery_total, "counter", "hca_link_error_recovery", "", "")
+        or label_replace(infiniband_switch_port_link_error_recovery_total, "counter", "switch_link_error_recovery", "", "")
+        or label_replace(infiniband_hca_port_excessive_buffer_overrun_errors_total, "counter", "hca_buffer_overrun", "", "")
+        or label_replace(infiniband_switch_port_excessive_buffer_overrun_errors_total, "counter", "switch_buffer_overrun", "", "")
+        or label_replace(infiniband_hca_port_receive_remote_physical_errors_total, "counter", "hca_remote_physical", "", "")
+        or label_replace(infiniband_switch_port_receive_remote_physical_errors_total, "counter", "switch_remote_physical", "", "")
+
+    - record: infiniband:link_failing_total
+      expr: |
+        label_replace(infiniband_hca_port_link_downed_total, "counter", "hca_link_downed", "", "")
+        or label_replace(infiniband_switch_port_link_downed_total, "counter", "switch_link_downed", "", "")
+        or label_replace(infiniband_hca_port_local_link_integrity_errors_total, "counter", "hca_link_integrity", "", "")
+        or label_replace(infiniband_switch_port_local_link_integrity_errors_total, "counter", "switch_link_integrity", "", "")
+
+    - record: infiniband:traffic_loss_total
+      expr: |
+        label_replace(infiniband_hca_port_transmit_discards_total, "counter", "hca_transmit_discards", "", "")
+        or label_replace(infiniband_switch_port_transmit_discards_total, "counter", "switch_transmit_discards", "", "")
+        or label_replace(infiniband_hca_port_transmit_constraint_errors_total, "counter", "hca_transmit_constraint", "", "")
+        or label_replace(infiniband_switch_port_transmit_constraint_errors_total, "counter", "switch_transmit_constraint", "", "")
+        or label_replace(infiniband_hca_port_receive_constraint_errors_total, "counter", "hca_receive_constraint", "", "")
+        or label_replace(infiniband_switch_port_receive_constraint_errors_total, "counter", "switch_receive_constraint", "", "")
+
+    # Pre-computed 5m throughput/congestion rates for the infiniband Grafana
+    # dashboard (TRIX-513): rate once over the raw counters, HA-deduped via
+    # max, hostname/switch joined - keeps panel queries cheap on large
+    # clusters.
+    - record: infiniband:hca_transmit_bytes:rate5m
+      expr: |
+        max by (guid, port) (rate(infiniband_hca_port_transmit_data_bytes_total[5m]))
+        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map
+
+    - record: infiniband:hca_receive_bytes:rate5m
+      expr: |
+        max by (guid, port) (rate(infiniband_hca_port_receive_data_bytes_total[5m]))
+        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map
+
+    - record: infiniband:node_transmit_bytes:rate5m
+      expr: sum by (hostname) (infiniband:hca_transmit_bytes:rate5m)
+
+    - record: infiniband:node_receive_bytes:rate5m
+      expr: sum by (hostname) (infiniband:hca_receive_bytes:rate5m)
+
+    - record: infiniband:switch_port_transmit_bytes:rate5m
+      expr: |
+        max by (guid, port) (rate(infiniband_switch_port_transmit_data_bytes_total[5m]))
+        * on (guid) group_left (switch) max by (guid, switch) (infiniband_switch_info)
+
+    - record: infiniband:switch_port_transmit_wait:rate5m
+      expr: |
+        max by (guid, port) (rate(infiniband_switch_port_transmit_wait_total[5m]))
+        * on (guid) group_left (switch) max by (guid, switch) (infiniband_switch_info)
