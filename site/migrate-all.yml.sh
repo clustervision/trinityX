@@ -8,7 +8,11 @@
 #   - for booleans, suggest/use the all.yml.example value;
 #   - for strings, suggest/use the all.yml value when present;
 #   - for trix_version, suggest/use the all.yml.example value;
+#   - for the firewall interface/port lists and the DNS forwarders, suggest/use
+#     the all.yml value when present (they describe the deployed cluster);
 #   - keep comments/order and the current yml check marker from all.yml.example.
+# Boolean prompts accept yes/y/true and no/n/false (any case) and re-ask on any
+# other answer.
 # For retained string values, only the value is reused; comments come from
 # all.yml.example. Before writing, the original all.yml is copied to all.yml.bkp
 # next to all.yml.
@@ -266,6 +270,48 @@ is_authoritative_key() {
     return 1
 }
 
+# Firewall interface and port lists describe the deployed cluster's network
+# layout; the example's [ens3]/[ens6] defaults would wipe the real NICs, so
+# all.yml is the truth (TRIX-1905). These are single-line inline lists and go
+# through the normal suggest/prompt path with all.yml as the source.
+FIREWALL_ALL_YML_KEYS="firewalld_public_interfaces firewalld_trusted_interfaces firewalld_public_tcp_ports firewalld_public_udp_ports"
+
+# DNS forwarders (the cluster's nameservers) likewise come from the deployed
+# cluster (TRIX-1905). This is a multi-line block list, so the whole block is
+# taken from all.yml rather than offered for inline editing.
+NAMESERVER_ALL_YML_KEYS="trix_dns_forwarders"
+
+key_in_list() {
+    local wanted=$1
+    local list=$2
+    local key
+    for key in $list; do
+        [ "$key" = "$wanted" ] && return 0
+    done
+    return 1
+}
+
+is_firewall_key() {
+    key_in_list "$1" "$FIREWALL_ALL_YML_KEYS"
+}
+
+is_nameserver_key() {
+    key_in_list "$1" "$NAMESERVER_ALL_YML_KEYS"
+}
+
+# Normalise a boolean answer. Accepts yes/y/true and no/n/false in any case;
+# prints the canonical true/false. Returns non-zero for anything else so the
+# caller can re-ask.
+normalize_bool() {
+    local answer
+    answer=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+    case "$answer" in
+        y|yes|true) printf 'true\n' ;;
+        n|no|false) printf 'false\n' ;;
+        *) return 1 ;;
+    esac
+}
+
 suggested_value() {
     local key=$1
     local kind=$2
@@ -309,25 +355,39 @@ prompt_value() {
     local suggested=$5
     local source=$6
     local output_block=$7
-    local current_text answer
+    local kind=$8
+    local current_text answer normalized
 
     current_text=""
     if [ -n "$current_block" ] && [ -f "$current_block" ]; then
         current_text=$(render_default_prompt "$current_block")
     fi
 
-    if [ -n "$current_text" ]; then
-        printf '%s %s (current: %s, suggested from %s: %s): ' "$reason" "$key" "$current_text" "$source" "$suggested" >&2
-    else
-        printf '%s %s [suggested from %s: %s]: ' "$reason" "$key" "$source" "$suggested" >&2
-    fi
-    IFS= read -r answer || answer=""
+    while :; do
+        if [ -n "$current_text" ]; then
+            printf '%s %s (current: %s, suggested from %s: %s): ' "$reason" "$key" "$current_text" "$source" "$suggested" >&2
+        else
+            printf '%s %s [suggested from %s: %s]: ' "$reason" "$key" "$source" "$suggested" >&2
+        fi
+        IFS= read -r answer || answer=""
 
-    if [ -z "$answer" ]; then
-        write_value_with_example_comments "$key" "$suggested" "$example_block" "$output_block"
-    else
+        if [ -z "$answer" ]; then
+            write_value_with_example_comments "$key" "$suggested" "$example_block" "$output_block"
+            return
+        fi
+
+        if [ "$kind" = "bool" ]; then
+            if normalized=$(normalize_bool "$answer"); then
+                write_value_with_example_comments "$key" "$normalized" "$example_block" "$output_block"
+                return
+            fi
+            printf 'Please answer yes/y/true or no/n/false.\n' >&2
+            continue
+        fi
+
         write_value_with_example_comments "$key" "$answer" "$example_block" "$output_block"
-    fi
+        return
+    done
 }
 
 should_prompt() {
@@ -349,7 +409,26 @@ while IFS= read -r key <&3; do
     if [ -f "$old_block" ]; then
         old_value=$(first_value "$old_block")
         example_value=$(first_value "$example_block")
-        if [ "$kind" != "string" ] && [ "$kind" != "bool" ]; then
+        if is_nameserver_key "$key"; then
+            # Multi-line block list: keep the deployed cluster's forwarders
+            # verbatim; comments still come from all.yml.example around it.
+            cp -- "$old_block" "$new_block"
+            if ! diff -q -- "$old_block" "$example_block" >/dev/null 2>&1; then
+                printf '%s\n' "$key" >> "$CHANGED_KEYS"
+            fi
+        elif is_firewall_key "$key"; then
+            # Single-line inline list: suggest the deployed cluster's value.
+            suggested=$old_value
+            source="all.yml"
+            if [ "$old_value" != "$example_value" ]; then
+                printf '%s\n' "$key" >> "$CHANGED_KEYS"
+            fi
+            if should_prompt; then
+                prompt_value "Firewall option" "$key" "$old_block" "$example_block" "$suggested" "$source" "$new_block" "$kind"
+            else
+                write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
+            fi
+        elif [ "$kind" != "string" ] && [ "$kind" != "bool" ]; then
             cp -- "$example_block" "$new_block"
         else
             suggested=$(suggested_value "$key" "$kind" "$old_block" "$example_block")
@@ -357,7 +436,7 @@ while IFS= read -r key <&3; do
             if [ "$old_value" != "$example_value" ]; then
                 printf '%s\n' "$key" >> "$CHANGED_KEYS"
                 if should_prompt; then
-                    prompt_value "Changed option" "$key" "$old_block" "$example_block" "$suggested" "$source" "$new_block"
+                    prompt_value "Changed option" "$key" "$old_block" "$example_block" "$suggested" "$source" "$new_block" "$kind"
                 else
                     write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
                 fi
@@ -371,7 +450,7 @@ while IFS= read -r key <&3; do
             suggested=$(suggested_value "$key" "$kind" "" "$example_block")
             source=$(suggestion_source "$key" "$kind" "")
             if should_prompt; then
-                prompt_value "New option" "$key" "" "$example_block" "$suggested" "$source" "$new_block"
+                prompt_value "New option" "$key" "" "$example_block" "$suggested" "$source" "$new_block" "$kind"
             else
                 write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
             fi
@@ -427,7 +506,7 @@ print_key_list() {
 }
 
 print_key_list "New options added" "$NEW_KEYS"
-print_key_list "Changed string/boolean options reviewed" "$CHANGED_KEYS"
+print_key_list "Changed options reviewed" "$CHANGED_KEYS"
 print_key_list "Dropped obsolete options" "$DROPPED_KEYS"
 
 if [ ! -s "$NEW_KEYS" ] && [ ! -s "$CHANGED_KEYS" ] && [ ! -s "$DROPPED_KEYS" ]; then
