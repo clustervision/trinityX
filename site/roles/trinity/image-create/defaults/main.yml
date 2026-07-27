@@ -1,13 +1,20 @@
 ---
+
+# lpart/offline-repo: base URL of the ClusterVision-published TrinityX layer
+# (trix / luna2 / additional / slurm / monitoring). Default = upstream, so stock
+# behaviour is unchanged. Point it at a local mirror to build without depending on
+# updates.clustervision.com being reachable (see offline-repo/ in the lpart installer):
+#   -e trix_repo_baseurl=http://<controller>:7060/trinityx
+trix_repo_baseurl: "https://updates.clustervision.com/trinityx"
 trinityx_repositories:
   - name: trix
-    repo: https://updates.clustervision.com/trinityx/{{ trix_version }}/os/{{ ansible_distribution|lower }}/{{ ansible_distribution_major_version }}/{{ system_arch }}
+    repo: "{{ trix_repo_baseurl }}/{{ trix_version }}/os/{{ ansible_distribution|lower }}/{{ ansible_distribution_major_version }}/{{ system_arch }}"
     gpgcheck: False
   - name: luna2
-    repo: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/{{ ansible_distribution|lower }}/{{ ansible_distribution_major_version }}/{{ system_arch }}
+    repo: "{{ trix_repo_baseurl }}/{{ trix_version }}/luna2/{{ ansible_distribution|lower }}/{{ ansible_distribution_major_version }}/{{ system_arch }}"
     gpgcheck: False
   - name: luna2-noarch
-    repo: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/noarch/rpms
+    repo: "{{ trix_repo_baseurl }}/{{ trix_version }}/luna2/noarch/rpms"
     gpgcheck: False
 
 image_core_packages:
