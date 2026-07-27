@@ -6,7 +6,10 @@
   #
   - name: Set image name
     set_fact:
-      image_name: "compute-image"
+      # default keeps stock behaviour; -e image_name=<name> builds a named image
+      # (rocky8-image / rocky9-image / ...) from this same playbook, which is what
+      # the campaign's separate compute-redhat-lpart.yml existed to do.
+      image_name: "{{ image_name | default('compute-image') }}"
     tags: always
 
 - import_playbook: imports/trinity-redhat-image-create.yml
