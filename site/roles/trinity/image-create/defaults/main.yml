@@ -1,5 +1,20 @@
 ---
 
+# lpart / RHEL-178642 -- pin the openssl stack away from the asn1_d2i_read_bio regression
+# in openssl-libs-3.5.5-5.el9_8 (full analysis in the "Pin packages in the image" task in
+# tasks/redhat/extend.yml). EL9 ONLY.
+#
+# The effective EL version of the IMAGE, evaluated on the CONTROLLER (image-create base +
+# extend run there, so ansible_distribution_major_version is the CONTROLLER version, not
+# the image one). A cross-major build sets image_el_releasever (8 / 10); a native build
+# leaves it unset and the image is the controller major. Keying off this -- rather than
+# off the controller facts -- is what keeps rocky8/rocky10 (which are built ON an el9
+# controller) correctly UNPINNED.
+image_el_effective_version: "{{ image_el_releasever | default(ansible_distribution_major_version) | string }}"
+image_package_pins: "{{ ['openssl-libs-3.5.5-4.el9_8'] if image_el_effective_version == '9' else [] }}"
+image_dnf_excludes: "{{ ['openssl-3.5.5-5.el9_8*', 'openssl-libs-3.5.5-5.el9_8*', 'openssl-fips-provider-3.5.5-5.el9_8*'] if image_el_effective_version == '9' else [] }}"
+
+
 # lpart/offline-repo: base URL of the ClusterVision-published TrinityX layer
 # (trix / luna2 / additional / slurm / monitoring). Default = upstream, so stock
 # behaviour is unchanged. Point it at a local mirror to build without depending on
