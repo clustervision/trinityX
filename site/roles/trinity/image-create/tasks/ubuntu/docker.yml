@@ -47,11 +47,9 @@
   tags: install-only
 
 - name: Download luna2-client package
-  get_url:
-    url: "{{ luna2_client_package }}"
-    dest: "/tmp/{{ luna2_client_package|split('/')|last }}"
+  command: "curl -fsSL {{ luna2_client_package }} -o /tmp/{{ luna2_client_package|split('/')|last }}"
   tags: install-only
 
 - name: install luna2-client package
-  shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
+  shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }} ; apt-get install -y --fix-broken"
 
