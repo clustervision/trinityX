@@ -3,3 +3,8 @@
 
 - name: activate sysctls
   command: sysctl --system
+  # Skip the live-kernel apply during OFFLINE image builds: under lchroot (unprivileged
+  # bwrap) `sysctl --system` cannot set kernel keys (e.g. el10's kernel.kptr_restrict ->
+  # "Operation not permitted") and it is meaningless when building a filesystem. The
+  # sysctl.d files are written regardless; the installed node applies them at boot.
+  when: not in_image | default(False)
