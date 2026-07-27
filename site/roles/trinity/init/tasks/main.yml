@@ -78,7 +78,7 @@
 
   - name: Set in_image variable
     set_fact:
-      in_image: '{{ True if ansible_connection in "chroot" else False }}'
+      in_image: '{{ True if ansible_connection is search("chroot") else False }}'
 
   - name: Check if i am on real hardware or inside cloud
     shell: dmidecode -s system-manufacturer | grep -iE "microsoft|google|amazon" || true
@@ -296,6 +296,7 @@
     when:
       - not ha | default(False)
       - trix_ctrl_hostname != ansible_hostname
+  when: not in_image | default(False)  # lpart: skip on image build
   tags: always,verify-host
 
 - block:

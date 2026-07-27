@@ -159,7 +159,7 @@
 - name: Prepare zypper to work
   block:
   - name: Running shell commands inside image
-    shell: "chroot {{ image_path }} {{ item }}"
+    shell: "{{ image_chroot_cmd }} {{ item }}"
     with_items:
       - mount proc -t proc /proc
       - /usr/sbin/update-ca-certificates
@@ -175,7 +175,7 @@
     delay: 10
   rescue:
   - name: Tasks in image before leaving playbook
-    shell: "chroot {{ image_path }} {{ item }}"
+    shell: "{{ image_chroot_cmd }} {{ item }}"
     with_items:
       - umount /proc
 
