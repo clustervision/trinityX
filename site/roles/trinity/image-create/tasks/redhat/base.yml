@@ -131,9 +131,15 @@
     group: root
 
 - name: Create basic /dev files
-  command: "/usr/bin/mknod {{ image_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }} creates={{ image_path }}/dev/{{ item.dev }}"
-  args:
-    creates: "{{ image_path }}/dev/{{ item.dev }}"
+  # test -c, not creates: a bootstrap can pre-create these as REGULAR files
+  # (seen: /dev/null as an 86-byte ASCII file in built images), and creates=
+  # then skips mknod forever. Runtime is unaffected (devtmpfs shadows it) but
+  # every chroot/lchroot-context user gets a broken /dev/null.
+  shell: |
+    test -c {{ image_path }}/dev/{{ item.dev }} || {
+      rm -f {{ image_path }}/dev/{{ item.dev }}
+      /usr/bin/mknod -m {{ item.mo }} {{ image_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }}
+    }
   with_items:
     - {dev: "null", mo: "666", t: 'c', ma: 1, mi: 3}  # device, mode, type, major, minor
     - {dev: "zero", mo: "666", t: 'c', ma: 1, mi: 5}
