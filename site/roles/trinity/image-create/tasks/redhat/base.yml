@@ -56,7 +56,46 @@
     - /etc/resolv.conf
   when: ansible_distribution == "RedHat"
 
+# Optional cross-major EL bootstrap (e.g. el9 controller -> el10 image): install
+# the target release from the target mirror into the image and pin its releasever,
+# instead of the controller's release rpm. Mirrors the opensuse base.yml
+# dnf --installroot bootstrap (repo lives on the CONTROLLER so the controller's
+# dnf resolves it; the image then carries el10 repos via rocky-repos). Off unless
+# -e image_el_baseurl=<mirror> -e image_el_releasever=<N> are set.
+- name: Seed a cross-major EL base into {{ image_path }}
+  when: image_el_baseurl is defined
+  block:
+    - name: Add the el-bootstrap repo on the controller (disabled by default)
+      copy:
+        dest: "/etc/yum.repos.d/el-bootstrap-{{ image_el_releasever }}.repo"
+        content: |
+          [el-bootstrap-{{ image_el_releasever }}-baseos]
+          name=el-bootstrap {{ image_el_releasever }} BaseOS
+          baseurl={{ image_el_baseurl }}/BaseOS/{{ system_arch }}/os/
+          gpgcheck=0
+          enabled=0
+          [el-bootstrap-{{ image_el_releasever }}-appstream]
+          name=el-bootstrap {{ image_el_releasever }} AppStream
+          baseurl={{ image_el_baseurl }}/AppStream/{{ system_arch }}/os/
+          gpgcheck=0
+          enabled=0
+    - name: Pin the target releasever in the image
+      file: { path: "{{ image_path }}/etc/dnf/vars", state: directory }
+    - copy: { content: "{{ image_el_releasever }}", dest: "{{ image_path }}/etc/dnf/vars/releasever" }
+    - name: Install the target release into the image from el-bootstrap
+      dnf:
+        name: [rocky-release, rocky-repos, rocky-gpg-keys, python3]
+        installroot: "{{ image_path }}"
+        releasever: "{{ image_el_releasever }}"
+        disablerepo: "*"
+        enablerepo: "el-bootstrap-{{ image_el_releasever }}-*"
+        disable_gpg_check: true
+        state: present
+      retries: "{{ rpm_retries | default(3) }}"
+      delay: "{{ rpm_delay | default(15) }}"
+
 - name: Install {{ os_release_rpm.stdout }} package in {{ image_path }}
+  when: image_el_baseurl is not defined
   dnf:
     disable_gpg_check: true
     name: "{{ os_release_rpm.stdout }}"
