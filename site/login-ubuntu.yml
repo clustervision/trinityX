@@ -16,7 +16,11 @@
   #
   - name: Set image name
     set_fact:
-      image_name: "login-ubuntu-image"
+      # default keeps stock behaviour; -e image_name=<name> builds a named image so
+      # releases can live side by side (login-ubuntu2204-image / login-ubuntu2404-image), which matters
+      # now that -e ubuntu_version selects 22.04 / 24.04 / 26.04 -- without it every
+      # release would overwrite the same login-ubuntu-image.
+      image_name: "{{ image_name | default('login-ubuntu-image') }}"
     tags: always
 
 - import_playbook: imports/trinity-ubuntu-image-create.yml
@@ -27,7 +31,7 @@
     #
     image_password:
     #
-    # Alternative distribution build. Supported are Ubuntu, version 20, 22 and 24
+    # Alternative distribution build. Supported are Ubuntu, version 20, 22, 24 and 26
     # or any docker image, e.g. ubuntu:rolling
     #alternative_distribution: Ubuntu-22
     # 
