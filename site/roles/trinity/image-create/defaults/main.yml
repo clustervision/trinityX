@@ -97,8 +97,11 @@ image_chroot_cmd: "chroot {{ image_path }}"
 # client ships both and the daemon packs with whichever the image has, so changing
 # this line is all that is needed.
 ubuntu_releases:
-  "22.04": jammy
-  "24.04": noble
-  "26.04": resolute
-ubuntu_version: "22.04"
-ubuntu_distribution_release: "{{ ubuntu_releases[ubuntu_version] | default('jammy') }}"
+  "22": jammy
+  "24": noble
+  "26": resolute
+ubuntu_version: "22"
+# regex_replace so 24 and 24.04 both work -- nobody types the .04, but a mirror path
+# or an old command line might carry it, and silently falling back to jammy because
+# the key missed would build the wrong release without saying so.
+ubuntu_distribution_release: "{{ ubuntu_releases[ubuntu_version | string | regex_replace('\\..*$','')] | default('jammy') }}"
