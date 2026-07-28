@@ -4,21 +4,30 @@
   #
   # the image name can be set in the below fact.
   #
+  - name: Set Ubuntu release
+    set_fact:
+      # The Ubuntu release to build: 22 (jammy), 24 (noble) or 26 (resolute).
+      # The codename is looked up from this number in trinity/image-create.
+      ubuntu_version: "{{ ubuntu_version | default('24') }}"
+    tags: always
+
   - name: Set image name
     set_fact:
-      # The image name follows the release, so -e ubuntu_version=24 alone is enough
-      # and releases live side by side (ubuntu22 vs ubuntu24). 22 keeps the historic
-      # name 'ubuntu-image', so existing clusters are untouched.
-      # -e image_name=<name> still overrides both.
+      # The default release keeps the historic name 'ubuntu-image', which is what
+      # existing groups and nodes already point at -- so re-running this playbook
+      # rebuilds the image they use rather than a new one nothing references.
+      # Any other release builds beside it: 22 gives 'ubuntu22-image'.
+      # -e image_name=<name> overrides both.
       image_name: "{{ image_name | default(
-          'ubuntu-image' if (ubuntu_version | default('22')) == '22'
-          else 'ubuntu' ~ (ubuntu_version | default('22')) ~ '-image'
+          'ubuntu-image' if ubuntu_version == '24'
+          else 'ubuntu' ~ ubuntu_version ~ '-image'
         ) }}"
     tags: always
 
 - import_playbook: imports/trinity-ubuntu-image-create.yml
   vars:
     image_name: "{{ hostvars['localhost']['image_name'] }}"
+    ubuntu_version: "{{ hostvars['localhost']['ubuntu_version'] }}"
     # The password to set up for the root user in the image.
     # If empty, it will be generated at random.
     #
