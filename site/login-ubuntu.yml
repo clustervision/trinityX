@@ -16,13 +16,13 @@
   #
   - name: Set image name
     set_fact:
-      # The image name follows the release, so -e ubuntu_version=24.04 alone is enough
-      # and releases live side by side (login-ubuntu2204 vs login-ubuntu2404). 22.04 keeps the
-      # historic name 'login-ubuntu-image', so existing clusters are untouched.
+      # The image name follows the release, so -e ubuntu_version=24 alone is enough
+      # and releases live side by side (login-ubuntu22 vs login-ubuntu24). 22 keeps the historic
+      # name 'login-ubuntu-image', so existing clusters are untouched.
       # -e image_name=<name> still overrides both.
       image_name: "{{ image_name | default(
-          'login-ubuntu-image' if (ubuntu_version | default('22.04')) == '22.04'
-          else 'login-ubuntu' ~ (ubuntu_version | default('22.04') | replace('.','')) ~ '-image'
+          'login-ubuntu-image' if (ubuntu_version | default('22') | string | regex_replace('\\..*$','')) == '22'
+          else 'login-ubuntu' ~ (ubuntu_version | default('22') | string | regex_replace('\\..*$','')) ~ '-image'
         ) }}"
     tags: always
 

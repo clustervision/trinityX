@@ -6,13 +6,13 @@
   #
   - name: Set image name
     set_fact:
-      # The image name follows the release, so -e ubuntu_version=24.04 alone is enough
-      # and releases live side by side (k3s-ubuntu2204 vs k3s-ubuntu2404). 22.04 keeps the
-      # historic name 'k3s-ubuntu-image', so existing clusters are untouched.
+      # The image name follows the release, so -e ubuntu_version=24 alone is enough
+      # and releases live side by side (k3s-ubuntu22 vs k3s-ubuntu24). 22 keeps the historic
+      # name 'k3s-ubuntu-image', so existing clusters are untouched.
       # -e image_name=<name> still overrides both.
       image_name: "{{ image_name | default(
-          'k3s-ubuntu-image' if (ubuntu_version | default('22.04')) == '22.04'
-          else 'k3s-ubuntu' ~ (ubuntu_version | default('22.04') | replace('.','')) ~ '-image'
+          'k3s-ubuntu-image' if (ubuntu_version | default('22') | string | regex_replace('\\..*$','')) == '22'
+          else 'k3s-ubuntu' ~ (ubuntu_version | default('22') | string | regex_replace('\\..*$','')) ~ '-image'
         ) }}"
     tags: always
 
