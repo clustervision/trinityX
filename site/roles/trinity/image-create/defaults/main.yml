@@ -88,17 +88,20 @@ image_remove_packages: []
 # chroot; lchroot(bwrap) targets override via -e image_chroot_cmd (build-image.sh).
 image_chroot_cmd: "chroot {{ image_path }}"
 
-# Ubuntu release selection. Pass -e ubuntu_version=24.04 (or 22.04 / 26.04) to pick
-# one; the codename is looked up here so nobody has to remember it. Passing
+# Ubuntu release selection. Pass -e ubuntu_version=22 (or 26) to pick one; the
+# codename is looked up here so nobody has to remember it. Passing
 # -e ubuntu_distribution_release=<codename> directly still works and wins, which is
 # how a release not listed here gets built without editing this file.
 #
-# 22.04 and 24.04 default to initramfs-tools; 26.04 defaults to dracut. The luna2
-# client ships both and the daemon packs with whichever the image has, so changing
-# this line is all that is needed.
+# 22 and 24 default to initramfs-tools; 26 defaults to dracut. The luna2 client
+# ships both and the daemon packs with whichever the image has, so changing this
+# line is all that is needed.
+#
+# The *-ubuntu.yml playbooks declare their own default and pass it in, so this
+# value only applies when the role is used outside them. Keep the two in step.
 ubuntu_releases:
   "22": jammy
   "24": noble
   "26": resolute
-ubuntu_version: "22"
-ubuntu_distribution_release: "{{ ubuntu_releases[ubuntu_version] | default('jammy') }}"
+ubuntu_version: "24"
+ubuntu_distribution_release: "{{ ubuntu_releases[ubuntu_version] | default('noble') }}"
