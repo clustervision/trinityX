@@ -6,11 +6,14 @@
   #
   - name: Set image name
     set_fact:
-      # default keeps stock behaviour; -e image_name=<name> builds a named image so
-      # releases can live side by side (ubuntu2204-image / ubuntu2404-image), which matters
-      # now that -e ubuntu_version selects 22.04 / 24.04 / 26.04 -- without it every
-      # release would overwrite the same ubuntu-image.
-      image_name: "{{ image_name | default('ubuntu-image') }}"
+      # The image name follows the release, so -e ubuntu_version=24.04 alone is enough
+      # and releases live side by side (ubuntu2204 vs ubuntu2404). 22.04 keeps the
+      # historic name 'ubuntu-image', so existing clusters are untouched.
+      # -e image_name=<name> still overrides both.
+      image_name: "{{ image_name | default(
+          'ubuntu-image' if (ubuntu_version | default('22.04')) == '22.04'
+          else 'ubuntu' ~ (ubuntu_version | default('22.04') | replace('.','')) ~ '-image'
+        ) }}"
     tags: always
 
 - import_playbook: imports/trinity-ubuntu-image-create.yml
