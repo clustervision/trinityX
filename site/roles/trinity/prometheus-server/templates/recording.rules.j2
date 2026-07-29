@@ -180,23 +180,81 @@ groups:
   rules:
     # Infiniband counters only carry {guid, port}; these maps let alert
     # rules join the hostname (TRIX-1655). The hca/uplink labels hold the
-    # ibnetdiscover NodeDescription ("<hostname> mlx5_0"), the hostname is
-    # its first token.
+    # ibnetdiscover NodeDescription ("<hostname> mlx5_0"), whose first token
+    # is whatever the node's uname -n was when the HCA came up - short on
+    # some clusters, the FQDN on others. Luna is the authority on a node's
+    # name, so the two sides are matched on the part before the first dot,
+    # which is independent of the cluster's domain however many dots it has,
+    # and the name luna knows is the one that comes out. Taking the fabric's
+    # token verbatim instead fails silently: the alert still fires, but its
+    # hostname matches nothing else in the stack and no join reports that.
+    - record: infiniband:hca_luna_hostname:map
+      expr: |
+        max by (guid, hca, hostname) (
+          label_replace(
+            max by (guid, hca) (infiniband_hca_info),
+            "shortname", "$1", "hca", "^([^ .]+).*"
+          )
+          * on (shortname) group_left (hostname)
+          label_replace(
+            max by (hostname) (up{job=~"luna_nodes|luna_controllers"}),
+            "shortname", "$1", "hostname", "^([^.]+).*"
+          )
+        )
+
+    # Controllers are part of the authority set above, so their HCAs are
+    # named by luna too. Endpoints luna knows nothing about - a login node, a
+    # host on a shared fabric - keep the name the fabric reports, unchanged
+    # from the behaviour before this join existed. device is the
+    # NodeDescription with the hostname removed ("mlx5_0"), so alert text can
+    # name the port without repeating the node.
     - record: infiniband:hca_hostname:map
       expr: |
         label_replace(
-          max by (guid, hca) (infiniband_hca_info),
-          "hostname", "$1", "hca", "^([^ ]+).*"
+          infiniband:hca_luna_hostname:map,
+          "device", "$1", "hca", "^[^ ]+ +(.*)$"
+        )
+        or
+        (
+          label_replace(
+            label_replace(
+              max by (guid, hca) (infiniband_hca_info),
+              "hostname", "$1", "hca", "^([^ ]+).*"
+            ),
+            "device", "$1", "hca", "^[^ ]+ +(.*)$"
+          )
+          unless on (guid) infiniband:hca_luna_hostname:map
         )
 
     # Switch port -> connected peer. Ports facing a HCA get the node
-    # hostname; inter-switch links keep only the peer name in the uplink
-    # label.
+    # hostname, anchored on luna the same way; inter-switch links keep only
+    # the peer name in the uplink label.
+    - record: infiniband:switch_luna_peer:map
+      expr: |
+        max by (guid, port, switch, uplink, hostname) (
+          label_replace(
+            max by (guid, port, switch, uplink) (infiniband_switch_uplink_info{uplink_type="CA"}),
+            "shortname", "$1", "uplink", "^([^ .]+).*"
+          )
+          * on (shortname) group_left (hostname)
+          label_replace(
+            max by (hostname) (up{job=~"luna_nodes|luna_controllers"}),
+            "shortname", "$1", "hostname", "^([^.]+).*"
+          )
+        )
+
     - record: infiniband:switch_port_peer:map
       expr: |
-        label_replace(
-          max by (guid, port, switch, uplink) (infiniband_switch_uplink_info{uplink_type="CA"}),
-          "hostname", "$1", "uplink", "^([^ ]+).*"
+        (
+          infiniband:switch_luna_peer:map
+          or
+          (
+            label_replace(
+              max by (guid, port, switch, uplink) (infiniband_switch_uplink_info{uplink_type="CA"}),
+              "hostname", "$1", "uplink", "^([^ ]+).*"
+            )
+            unless on (guid, port) infiniband:switch_luna_peer:map
+          )
         )
         or
         max by (guid, port, switch, uplink) (infiniband_switch_uplink_info{uplink_type!="CA"})
