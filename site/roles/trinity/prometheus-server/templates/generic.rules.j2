@@ -231,6 +231,12 @@ groups:
         {% raw %}The floating IP "trinity-ip" has changed its host node compared to 5 minutes ago. (current host: {{ $labels.node }}).{% endraw %}
 
 
+  # {% raw %}Everything from here to the end of the file is literal: the {{ }}
+  # below is Prometheus's own templating, fenced off so Ansible leaves it
+  # alone. That keeps this section valid rules text on its own, so it can be
+  # loaded straight into alertx or a rules file without being rendered first.
+  # Do not put Ansible variables inside the fence - they would survive into
+  # the output and Prometheus rejects the whole file, not just the rule.
   - alert: ECCCorrectableWarning
     expr: 'increase(node_edac_correctable_errors_total[1h]) >= 10'
     for: 10m
@@ -241,7 +247,7 @@ groups:
       description: >
         The node has recorded at least 10 correctable ECC memory errors during the last 1 hour.
         Correctable ECC errors were corrected by the memory subsystem but may indicate degrading
-        memory hardware. Current count in the last 1 hour: {{ '{{ $value }}' }}.
+        memory hardware. Current count in the last 1 hour: {{ $value }}.
 
   - alert: ECCCorrectableCritical
     expr: 'increase(node_edac_correctable_errors_total[1h]) >= 100'
@@ -253,7 +259,7 @@ groups:
       description: >
         The node has recorded at least 100 correctable ECC memory errors during the last 1 hour.
         This may indicate failing memory hardware and should be investigated. Current count in
-        the last 1 hour: {{ '{{ $value }}' }}.
+        the last 1 hour: {{ $value }}.
 
   - alert: ECCUncorrectableWarning
     expr: 'increase(node_edac_uncorrectable_errors_total[1h]) >= 10'
@@ -265,7 +271,7 @@ groups:
       description: >
         The node has recorded at least 10 uncorrectable ECC memory errors during the last 1 hour.
         Uncorrectable ECC errors cannot be repaired by the memory subsystem and may affect
-        application stability or data integrity. Current count in the last 1 hour: {{ '{{ $value }}' }}.
+        application stability or data integrity. Current count in the last 1 hour: {{ $value }}.
 
   - alert: ECCUncorrectableCritical
     expr: 'increase(node_edac_uncorrectable_errors_total[1h]) >= 50'
@@ -277,7 +283,7 @@ groups:
       description: >
         The node has recorded at least 50 uncorrectable ECC memory errors during the last 1 hour.
         Multiple uncorrectable memory errors strongly indicate failing memory hardware and the node
-        should be investigated immediately. Current count in the last 1 hour: {{ '{{ $value }}' }}.
+        should be investigated immediately. Current count in the last 1 hour: {{ $value }}.
 
 
   # Infiniband fabric error detection (TRIX-1655), three rules by impact:
@@ -297,21 +303,21 @@ groups:
     expr: |
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:link_degraded_total[1h])))
-          > {{ prometheus_ib_link_degraded_1h_threshold | default(100) }} )
+          > 100 )
         * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
       or
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:link_degraded_total[1h])))
-          > {{ prometheus_ib_link_degraded_1h_threshold | default(100) }} )
+          > 100 )
         * on (guid, port) group_left (switch, uplink, hostname) infiniband:switch_port_peer:map )
     labels:
       severity: warning
       category: generic
     annotations:
       description: >
-        Infiniband link degrading on {{ '{{ $labels.hostname }}' }}
-        ({{ '{{ $labels.hca }}' }}{{ '{{ $labels.switch }}' }} port {{ '{{ $labels.port }}' }}):
-        {{ '{{ $value | printf "%.0f" }}' }} link errors (symbol, receive, link recovery,
+        Infiniband link degrading on {{ $labels.hostname }}
+        ({{ $labels.hca }}{{ $labels.switch }} port {{ $labels.port }}):
+        {{ $value | printf "%.0f" }} link errors (symbol, receive, link recovery,
         buffer overrun, remote physical) in the last 1 hour. Check cable, connector and
         transceiver.
 
@@ -319,21 +325,21 @@ groups:
     expr: |
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:link_failing_total[1h])))
-          > {{ prometheus_ib_link_failing_1h_threshold | default(2) }} )
+          > 2 )
         * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
       or
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:link_failing_total[1h])))
-          > {{ prometheus_ib_link_failing_1h_threshold | default(2) }} )
+          > 2 )
         * on (guid, port) group_left (switch, uplink, hostname) infiniband:switch_port_peer:map )
     labels:
       severity: danger
       category: generic
     annotations:
       description: >
-        Infiniband link failing on {{ '{{ $labels.hostname }}' }}
-        ({{ '{{ $labels.hca }}' }}{{ '{{ $labels.switch }}' }} port {{ '{{ $labels.port }}' }}):
-        {{ '{{ $value | printf "%.0f" }}' }} link down or integrity errors in the last 1 hour
+        Infiniband link failing on {{ $labels.hostname }}
+        ({{ $labels.hca }}{{ $labels.switch }} port {{ $labels.port }}):
+        {{ $value | printf "%.0f" }} link down or integrity errors in the last 1 hour
         (more than expected from a reboot). Failing cable, connector or port - replace.
 
   # The last branch keeps the alert alive for switch ports missing from the
@@ -361,8 +367,9 @@ groups:
       category: generic
     annotations:
       description: >
-        Infiniband traffic loss on {{ '{{ $labels.hostname }}' }}
-        ({{ '{{ $labels.hca }}' }}{{ '{{ $labels.switch }}' }} port {{ '{{ $labels.port }}' }}):
-        {{ '{{ $value | printf "%.0f" }}' }} discarded or rejected packets in the last 15
+        Infiniband traffic loss on {{ $labels.hostname }}
+        ({{ $labels.hca }}{{ $labels.switch }} port {{ $labels.port }}):
+        {{ $value | printf "%.0f" }} discarded or rejected packets in the last 15
         minutes. Running jobs are affected - congestion, unreachable peer or partition
         misconfiguration.
+  # {% endraw %} end of the literal Prometheus templating block
