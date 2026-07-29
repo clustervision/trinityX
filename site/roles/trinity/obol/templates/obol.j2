@@ -613,8 +613,18 @@ class Obol:
         if username not in usernames:
             raise LookupError(f"User '{username}' does not exist")
 
-        # Delete the user
+        # Remove the user from all groups first, so no dangling member
+        # reference is left behind blocking the groups from deletion
         user_dn = f"uid={username},ou=People,{self.base_dn}"
+        for group in self.group_list():
+            if username in group.get("{{ member }}", []):
+                group_dn = f"cn={group['cn']},ou=Group,{self.base_dn}"
+                self.conn.modify_s(
+                    group_dn,
+                    [(ldap.MOD_DELETE, "{{ member }}", user_dn.encode("utf-8"))],
+                )
+
+        # Delete the user
         self.conn.delete_s(user_dn)
 
         # Delete the default group if it exists and has no other members
