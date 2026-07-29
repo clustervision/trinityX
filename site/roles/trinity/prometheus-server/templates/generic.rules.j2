@@ -304,7 +304,7 @@ groups:
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:link_degraded_total[1h])))
           > 100 )
-        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
+        * on (guid) group_left (hostname, hca, device) infiniband:hca_hostname:map )
       or
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:link_degraded_total[1h])))
@@ -316,7 +316,7 @@ groups:
     annotations:
       description: >
         Infiniband link degrading on {{ $labels.hostname }}
-        ({{ $labels.hca }}{{ $labels.switch }} port {{ $labels.port }}):
+        ({{ $labels.device }}{{ $labels.switch }} port {{ $labels.port }}):
         {{ $value | printf "%.0f" }} link errors (symbol, receive, link recovery,
         buffer overrun, remote physical) in the last 1 hour. Check cable, connector and
         transceiver.
@@ -326,7 +326,7 @@ groups:
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:link_failing_total[1h])))
           > 2 )
-        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
+        * on (guid) group_left (hostname, hca, device) infiniband:hca_hostname:map )
       or
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:link_failing_total[1h])))
@@ -338,7 +338,7 @@ groups:
     annotations:
       description: >
         Infiniband link failing on {{ $labels.hostname }}
-        ({{ $labels.hca }}{{ $labels.switch }} port {{ $labels.port }}):
+        ({{ $labels.device }}{{ $labels.switch }} port {{ $labels.port }}):
         {{ $value | printf "%.0f" }} link down or integrity errors in the last 1 hour
         (more than expected from a reboot). Failing cable, connector or port - replace.
 
@@ -350,7 +350,7 @@ groups:
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:traffic_loss_total[15m])))
           > 0 )
-        * on (guid) group_left (hostname, hca) infiniband:hca_hostname:map )
+        * on (guid) group_left (hostname, hca, device) infiniband:hca_hostname:map )
       or
       ( ( max by (guid, port) (sum by (guid, port, instance) (increase(
             infiniband:traffic_loss_total[15m])))
@@ -368,7 +368,7 @@ groups:
     annotations:
       description: >
         Infiniband traffic loss on {{ $labels.hostname }}
-        ({{ $labels.hca }}{{ $labels.switch }} port {{ $labels.port }}):
+        ({{ $labels.device }}{{ $labels.switch }} port {{ $labels.port }}):
         {{ $value | printf "%.0f" }} discarded or rejected packets in the last 15
         minutes. Running jobs are affected - congestion, unreachable peer or partition
         misconfiguration.
