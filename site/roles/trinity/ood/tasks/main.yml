@@ -27,6 +27,10 @@
 
 # The OS minor decides which Open OnDemand release can run at all, and dnf
 # reports a missing module stream far too late to be recognisable. Refuse here.
+#
+# Rolling releases report no minor at all -- CentOS Stream 9 is version "9" --
+# and they run ahead of the point releases rather than behind them, so a minor
+# floor cannot be applied to them and must not be guessed at either.
 - name: Verify this OS version can run an Open OnDemand release
   ansible.builtin.assert:
     that:
@@ -41,6 +45,7 @@
   when:
     - ansible_os_family == "RedHat"
     - ansible_distribution_major_version in ood_os_minimum_versions
+    - ansible_distribution_version != ansible_distribution_major_version
 
 # The release RPM URL is written out for the airgap build to harvest, so it can
 # drift from ood_release, which is what decides the module streams.
