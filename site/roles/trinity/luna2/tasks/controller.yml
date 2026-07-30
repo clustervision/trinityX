@@ -341,11 +341,10 @@
 
   - name: Generate default BMC setup password value
     set_fact:
-      luna_bmcsetup_password: |
-        "{{ lookup('password', '/dev/null', length=3, chars='ascii_uppercase') +
-          lookup('password', '/dev/null', length=6, chars='ascii_lowercase') +
-          lookup('password', '/dev/null', length=2, chars='digits') +
-          lookup('password', '/dev/null', length=2, chars='_!@#%^.') }}"
+      luna_bmcsetup_password: "{{ lookup('password', '/dev/null', length=3, chars='ascii_uppercase') +
+        lookup('password', '/dev/null', length=6, chars='ascii_lowercase') +
+        lookup('password', '/dev/null', length=2, chars='digits') +
+        lookup('password', '/dev/null', length=2, chars='_!@#%^.') }}"
   when: (luna_bmcsetup_password is not defined) or luna_bmcsetup_password | length == 0
 
 - block:
