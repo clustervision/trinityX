@@ -1,11 +1,30 @@
 ---
 # vars file for ood-portal
 
+# The airgap build harvests release RPM URLs literally out of these files, so
+# the URL is written out rather than derived from ood_release.
+#
+# Each Open OnDemand release fixes its own runtime requirements: 4.x needs
+# ruby 3.3, 3.1 needs ruby 3.1.  Deriving the module streams from the release
+# keeps the two from disagreeing -- a vars file previously asked for 4.0 with
+# ruby 3.1, which cannot resolve.  Override ood_release per OS minor in vars/.
+ood_release: '4.1'
+ood_release_runtimes:
+  '3.1': ["@nodejs:18", "@ruby:3.1"]
+  '4.0': ["@nodejs:20", "@ruby:3.3"]
+  '4.1': ["@nodejs:22", "@ruby:3.3"]
+# Oldest OS minor that offers the module streams some Open OnDemand release
+# needs.  Below these, TrinityX installs with enable_ood set to false.
+ood_os_minimum_versions:
+  '8': '8.7'
+  '9': '9.3'
+  '10': '10.0'
+
 ood_packages:
   - name: epel-release
   - name: https://yum.osc.edu/ondemand/4.1/ondemand-release-web-4.1-1.el{{ ansible_distribution_major_version }}.noarch.rpm
     no_gpgcheck: true
-  - name: ["httpd", "@nodejs:22", "@ruby:3.3", "ondemand", "luna2-python"]
+  - name: "{{ ['httpd'] + ood_release_runtimes[ood_release] + ['ondemand', 'luna2-python'] }}"
 
 ood_dex_packages:
   - name: ondemand-dex

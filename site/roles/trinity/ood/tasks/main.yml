@@ -5,6 +5,7 @@
   include_vars: "{{ item }}"
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_version}}.yaml"
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
   no_log: true
@@ -14,6 +15,7 @@
   include_vars: "{{ item }}"
   with_first_found:
     - "airgap/{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
+    - "airgap/{{ ansible_os_family }}{{ ansible_distribution_version}}.yaml"
     - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
     - "airgap/{{ ansible_distribution }}.yaml"
@@ -22,6 +24,37 @@
   no_log: true
   ignore_errors: true
   when: is_airgap | default(False)
+
+# The OS minor decides which Open OnDemand release can run at all, and dnf
+# reports a missing module stream far too late to be recognisable. Refuse here.
+- name: Verify this OS version can run an Open OnDemand release
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_version is version(ood_os_minimum_versions[ansible_distribution_major_version], '>=')
+    fail_msg: >-
+      Open OnDemand is not supported on {{ ansible_distribution }} {{ ansible_distribution_version }}:
+      no Open OnDemand release TrinityX ships can run on it. The oldest supported minor for
+      {{ ansible_distribution }} {{ ansible_distribution_major_version }} is
+      {{ ood_os_minimum_versions[ansible_distribution_major_version] }}. Set enable_ood to false to
+      install TrinityX without the web portal.
+    success_msg: "Open OnDemand {{ ood_release }} on {{ ansible_distribution }} {{ ansible_distribution_version }}"
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version in ood_os_minimum_versions
+
+# The release RPM URL is written out for the airgap build to harvest, so it can
+# drift from ood_release, which is what decides the module streams.
+- name: Verify the Open OnDemand repository matches the release being installed
+  ansible.builtin.assert:
+    that:
+      - _ood_web_releases | difference([ood_release]) | length == 0
+    fail_msg: >-
+      ood_release is {{ ood_release }} but ood_packages points at Open OnDemand
+      {{ _ood_web_releases | join(', ') }}. The repository and the nodejs/ruby module streams
+      would not match, and the ondemand packages cannot resolve.
+  vars:
+    _ood_web_releases: "{{ ood_packages | to_json | regex_findall('ondemand/([0-9.]+)/ondemand-release-web') | unique }}"
+  when: ansible_os_family == "RedHat"
 
 # ---- when using DS389
 - block:
