@@ -26,11 +26,15 @@
                                                           'path': _path|from_yaml|default(item.path,true)})] }}"
   loop: "{{ nfs_exports }}"
   vars:
+      # 'name' is optional in shared_fs_disks (an entry may carry only 'mount'),
+      # so the mask must be read attribute-safe or templating aborts the play.
+      _mask_names: "{{ nfs_remote_mask | selectattr('name', 'defined') | map(attribute='name') | list }}"
+      _mask_mounts: "{{ nfs_remote_mask | selectattr('mount', 'defined') | map(attribute='mount') | list }}"
       _path: |
         {% if nfs_use_mask %}
-          {% if item.path in nfs_remote_mask | map(attribute="name") or item.path in nfs_remote_mask | map(attribute="mount",default="__undefined__") %}
+          {% if item.path in _mask_names or item.path in _mask_mounts %}
             {% for disk in nfs_remote_mask %}
-              {% if disk.name == item.path or (disk.mount is defined and disk.mount == item.path) %}
+              {% if disk.name | default(none) == item.path or (disk.mount is defined and disk.mount == item.path) %}
                 {% if disk["xmount"] is defined and disk["xmount"] %}
                   {{ nfs_prefix_path+item.path }}
                 {% else %}
@@ -58,9 +62,9 @@
         {% endif %}
       _type: |
         {% if nfs_use_mask %}
-          {% if item.path in nfs_remote_mask | map(attribute="name") or item.path in nfs_remote_mask | map(attribute="mount",default="__undefined__") %}
+          {% if item.path in _mask_names or item.path in _mask_mounts %}
             {% for disk in nfs_remote_mask %}
-              {% if disk.name == item.path or (disk.mount is defined and disk.mount == item.path) %}
+              {% if disk.name | default(none) == item.path or (disk.mount is defined and disk.mount == item.path) %}
                 {% if disk["type"] is defined %}
                   {{ disk["type"] }}
                 {% endif %}
