@@ -317,7 +317,7 @@
   with_items: "{{ slurm_services if on_controller else slurm_services_image }}"
 
 - name: Enable slurm controller services
-  service:
+  ansible.builtin.systemd:
     daemon_reload: "yes"
     name: '{{ item }}'
     enabled: "{{ not ha|default(True) }}"
@@ -428,7 +428,7 @@
 
 
 - name: Start slurm compute services
-  service:
+  ansible.builtin.systemd:
     daemon_reload: "yes"
     name: '{{ item }}'
     state: started
@@ -540,7 +540,7 @@
       when: enable_slurm_pam
 
     - name: Start slurmdbd services
-      service:
+      ansible.builtin.systemd:
         daemon_reload: true
         name: '{{ item }}'
         state: started
@@ -553,7 +553,7 @@
         timeout: 10
 
     - name: Start slurmctld services
-      service:
+      ansible.builtin.systemd:
         daemon_reload: "yes"
         name: '{{ item }}'
         state: started
@@ -579,7 +579,7 @@
 
 
 - name: Start munge service on all controllers
-  service:
+  ansible.builtin.systemd:
     daemon_reload: true
     name: '{{ item }}'
     state: started
