@@ -38,7 +38,7 @@
   # a chroot on the controller, so fetch locally and push through the connection.
   get_url:
     url: "{{ prometheus_slurm_exporter_binary_url }}"
-    dest: "/tmp/{{ prometheus_slurm_exporter_binary_url | hash('sha1') }}-{{ prometheus_slurm_exporter_binary_url | basename }}"
+    dest: "{{ prometheus_slurm_exporter_download_dir }}/{{ prometheus_slurm_exporter_binary_url | hash('sha1') }}-{{ prometheus_slurm_exporter_binary_url | basename }}"
     mode: 0755
     validate_certs: false
   delegate_to: localhost
@@ -50,7 +50,7 @@
 
 - name: "Install prometheus-slurm-exporter binary"
   copy:
-    src: "/tmp/{{ prometheus_slurm_exporter_binary_url | hash('sha1') }}-{{ prometheus_slurm_exporter_binary_url | basename }}"
+    src: "{{ prometheus_slurm_exporter_download_dir }}/{{ prometheus_slurm_exporter_binary_url | hash('sha1') }}-{{ prometheus_slurm_exporter_binary_url | basename }}"
     dest: "{{prometheus_slurm_exporter_binary_install_dir}}/prometheus-slurm-exporter"
     mode: 0755
   tags: install-only
