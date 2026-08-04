@@ -44,7 +44,7 @@
   # a chroot on the controller, so fetch locally and push through the connection.
   get_url:
     url: "{{ prometheus_infiniband_exporter_binary_url }}"
-    dest: "/tmp/{{ prometheus_infiniband_exporter_binary_url | hash('sha1') }}-{{ prometheus_infiniband_exporter_binary_url | basename }}"
+    dest: "{{ prometheus_infiniband_exporter_download_dir }}/{{ prometheus_infiniband_exporter_binary_url | hash('sha1') }}-{{ prometheus_infiniband_exporter_binary_url | basename }}"
     mode: 0755
   delegate_to: localhost
   register: _download_archive
@@ -55,7 +55,7 @@
 
 - name: "Install prometheus-infiniband-exporter binary"
   copy:
-    src: "/tmp/{{ prometheus_infiniband_exporter_binary_url | hash('sha1') }}-{{ prometheus_infiniband_exporter_binary_url | basename }}"
+    src: "{{ prometheus_infiniband_exporter_download_dir }}/{{ prometheus_infiniband_exporter_binary_url | hash('sha1') }}-{{ prometheus_infiniband_exporter_binary_url | basename }}"
     dest: "{{prometheus_infiniband_exporter_binary_install_dir}}/prometheus-infiniband-exporter"
     mode: 0755
   tags: install-only
