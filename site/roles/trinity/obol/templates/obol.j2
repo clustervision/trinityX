@@ -614,15 +614,24 @@ class Obol:
             raise LookupError(f"User '{username}' does not exist")
 
         # Remove the user from all groups first, so no dangling member
-        # reference is left behind blocking the groups from deletion
+        # reference is left behind blocking the groups from deletion.
+        # Any LDAP failure here aborts before the account itself is touched;
+        # a member entry with an unexpected DN is warned about and skipped,
+        # as removing it by our DN shape would fail.
         user_dn = f"uid={username},ou=People,{self.base_dn}"
         for group in self.group_list():
             if username in group.get("{{ member }}", []):
                 group_dn = f"cn={group['cn']},ou=Group,{self.base_dn}"
-                self.conn.modify_s(
-                    group_dn,
-                    [(ldap.MOD_DELETE, "{{ member }}", user_dn.encode("utf-8"))],
-                )
+                try:
+                    self.conn.modify_s(
+                        group_dn,
+                        [(ldap.MOD_DELETE, "{{ member }}", user_dn.encode("utf-8"))],
+                    )
+                except ldap.NO_SUCH_ATTRIBUTE:
+                    print_warning(
+                        f"User {username} is listed in group {group['cn']} "
+                        f"under a different DN; not removed from that group"
+                    )
 
         # Delete the user
         self.conn.delete_s(user_dn)
@@ -824,7 +833,7 @@ class Obol:
             users_to_del = [
                 u
                 for u in existing_group.get("{{ member }}", [])
-                if (u not in existing_primary_group_usernames)
+                if (u not in users) and (u not in existing_primary_group_usernames)
             ]
 
         # Modify the group
