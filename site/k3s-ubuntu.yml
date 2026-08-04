@@ -53,6 +53,10 @@
       tags: kubernetes, k3s
 
 - hosts: controllers
+  pre_tasks:
+    - name: Unmount the image /proc before packing
+      shell: "! mountpoint -q {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc || umount {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc"
+      tags: always
   roles:
     - role: luna/osimage-pack
       vars:

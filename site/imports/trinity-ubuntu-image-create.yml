@@ -78,6 +78,13 @@
     luna_image_distribution: Ubuntu
     tags: image-create
 
+  post_tasks:
+  - name: Mount /proc in the image for the in-image plays
+    # Ubuntu 26 ships rust coreutils, which abort without /proc, and the chroot
+    # connection provides none. The playbook unmounts it again before packing.
+    shell: "mountpoint -q {{ trix_images }}/{{ image_name }}/proc || mount -t proc proc {{ trix_images }}/{{ image_name }}/proc"
+    tags: always
+
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
     NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
