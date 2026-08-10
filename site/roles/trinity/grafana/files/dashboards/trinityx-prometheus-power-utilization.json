@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Measured electrical power in watts from existing Prometheus recording rule power_consumption_watts (sum by hostname,luna_group of ipmi_dcmi_power_consumption_watts). Group means Luna group. Physical rack aggregation is not shown: power series expose hostname and luna_group but no authoritative rack label or node-to-rack mapping. Missing BMC/IPMI collection results in No data (not 0 W). Percentage utilization is unavailable without a real capacity metric.",
+  "description": "Measured electrical power in watts from power_consumption_watts (sum by hostname,luna_group of ipmi_dcmi_power_consumption_watts). Use this dashboard to answer: cluster total power, power per Luna group (watts and share of measured total), and the highest-consuming nodes (top 10% by current watts). Group means Luna group, not physical rack. Missing BMC/IPMI collection results in No data (not 0 W). Percentage here is share of measured power, not capacity utilization.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -25,7 +25,9 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["home"],
+      "tags": [
+        "home"
+      ],
       "targetBlank": false,
       "title": "TrinityX Home",
       "tooltip": "",
@@ -37,7 +39,9 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["dashboard"],
+      "tags": [
+        "dashboard"
+      ],
       "targetBlank": false,
       "title": "TrinityX Dashboards",
       "tooltip": "",
@@ -49,28 +53,48 @@
   "panels": [
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "id": 100,
       "panels": [],
       "title": "Power Overview",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "Sum of chassis power across all series currently present for power_consumption_watts. No data means no live IPMI DCMI samples.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "watt"
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
       "id": 1,
       "options": {
         "colorMode": "value",
@@ -78,7 +102,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -87,7 +113,10 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "exemplar": false,
           "expr": "sum(power_consumption_watts)",
@@ -101,21 +130,36 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "Average of per-hostname summed chassis power among hosts that currently report power_consumption_watts.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "watt"
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
       "id": 2,
       "options": {
         "colorMode": "value",
@@ -123,7 +167,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -132,7 +178,10 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "avg(sum by (hostname) (power_consumption_watts))",
           "instant": true,
@@ -144,21 +193,36 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "Maximum of the cluster total power series over the selected dashboard time range.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "watt"
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
       "id": 3,
       "options": {
         "colorMode": "value",
@@ -166,7 +230,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["max"],
+          "calcs": [
+            "max"
+          ],
           "fields": "",
           "values": false
         },
@@ -175,7 +241,10 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "sum(power_consumption_watts)",
           "legendFormat": "peak",
@@ -187,24 +256,40 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "Number of distinct hostnames currently present in power_consumption_watts.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
       "id": 4,
       "options": {
         "colorMode": "value",
@@ -212,7 +297,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -221,7 +308,10 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "count(count by (hostname) (power_consumption_watts))",
           "instant": true,
@@ -234,29 +324,49 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
       "id": 101,
       "panels": [],
       "title": "Luna Groups",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
-      "description": "Aggregated measured chassis power per Luna group (not physical rack).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Current measured chassis power for each Luna group. Use this to answer: how much power is each group drawing right now?",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "mappings": [],
           "min": 0,
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "watt"
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 7 },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 7
+      },
       "id": 5,
       "options": {
         "displayMode": "gradient",
@@ -265,7 +375,9 @@
         "namePlacement": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -275,7 +387,10 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "sum by (luna_group) (power_consumption_watts{luna_group=~\"$luna_group\"})",
           "instant": true,
@@ -283,60 +398,186 @@
           "refId": "A"
         }
       ],
-      "title": "Current Power by Luna Group",
+      "title": "Power per Luna Group",
       "type": "bargauge"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
-      "description": "Share of current measured power across Luna groups (not capacity utilization).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Per Luna group: current watts and share of the currently measured cluster total. Share is of measured power only, not nameplate/capacity utilization. With one reporting group this will show 100%.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "thresholds"
+          },
           "custom": {
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false }
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
           },
           "mappings": [],
-          "unit": "watt"
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Power"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "watt"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "gauge"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Share of measured total"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "gauge"
+                }
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "min",
+                "value": 0
+              }
+            ]
+          }
+        ]
       },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 7 },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 7
+      },
       "id": 6,
       "options": {
-        "displayLabels": ["name", "percent"],
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "pieType": "donut",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
           "fields": "",
-          "values": false
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "tooltip": { "mode": "single", "sort": "none" }
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Power"
+          }
+        ]
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum by (luna_group) (power_consumption_watts{luna_group=~\"$luna_group\"})",
+          "format": "table",
           "instant": true,
-          "legendFormat": "{{luna_group}}",
-          "refId": "A"
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "Power"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum by (luna_group) (power_consumption_watts{luna_group=~\"$luna_group\"}) / scalar(sum(power_consumption_watts{luna_group=~\"$luna_group\"}))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "Share"
         }
       ],
-      "title": "Current Power Distribution by Group",
-      "type": "piechart"
+      "title": "Power by Group (watts and share)",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "__name__": true,
+              "__name__ 1": true,
+              "__name__ 2": true
+            },
+            "indexByName": {
+              "luna_group": 0,
+              "Value #Power": 1,
+              "Value #Share": 2
+            },
+            "renameByName": {
+              "luna_group": "Luna group",
+              "Value #Power": "Power",
+              "Value #Share": "Share of measured total"
+            }
+          }
+        }
+      ],
+      "type": "table"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
-      "description": "Measured chassis power summed by Luna group over time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Trend of measured chassis power per Luna group over the selected time range. Useful when a manager asks whether a group is rising or falling.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
@@ -346,41 +587,72 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "watt"
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 7 },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 7
+      },
       "id": 7,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull", "mean", "max"],
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "sum by (luna_group) (power_consumption_watts{luna_group=~\"$luna_group\"})",
           "legendFormat": "{{luna_group}}",
@@ -393,29 +665,49 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
       "id": 102,
       "panels": [],
       "title": "Nodes",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
-      "description": "Highest current per-node chassis power within the selected Luna groups.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Highest-consuming nodes: top 10% of currently reporting hosts by chassis watts (at least 1). Answers: which nodes are using the most power right now?",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "mappings": [],
           "min": 0,
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "watt"
         },
         "overrides": []
       },
-      "gridPos": { "h": 9, "w": 8, "x": 0, "y": 16 },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      },
       "id": 8,
       "options": {
         "displayMode": "gradient",
@@ -424,7 +716,9 @@
         "namePlacement": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -434,23 +728,31 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
-          "expr": "topk(15, sum by (luna_group, hostname) (power_consumption_watts{luna_group=~\"$luna_group\"}))",
+          "expr": "topk(clamp_min(ceil(scalar(count(sum by (hostname) (power_consumption_watts{luna_group=~\"$luna_group\"}))) * 0.1), 1), sum by (luna_group, hostname) (power_consumption_watts{luna_group=~\"$luna_group\"}))",
           "instant": true,
           "legendFormat": "{{luna_group}} / {{hostname}}",
           "refId": "A"
         }
       ],
-      "title": "Top Power-consuming Nodes",
+      "title": "Top 10% Nodes by Power",
       "type": "bargauge"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "Per-node chassis power over time for the selected Luna groups and hostnames.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
@@ -460,41 +762,72 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "watt"
         },
         "overrides": []
       },
-      "gridPos": { "h": 9, "w": 8, "x": 8, "y": 16 },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 16
+      },
       "id": 9,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull", "mean", "max"],
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "sum by (luna_group, hostname) (power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
           "legendFormat": "{{hostname}}",
@@ -506,47 +839,85 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
-      "description": "Current chassis power per hostname and Luna group.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Current chassis power for every reporting hostname in the selection, sorted high to low. Use with Top 10% Nodes for the heaviest consumers.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "custom": {
             "align": "auto",
-            "cellOptions": { "type": "auto" },
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "watt"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Power" },
+            "matcher": {
+              "id": "byName",
+              "options": "Power"
+            },
             "properties": [
               {
                 "id": "custom.cellOptions",
-                "value": { "mode": "gradient", "type": "gauge" }
+                "value": {
+                  "mode": "gradient",
+                  "type": "gauge"
+                }
               }
             ]
           }
         ]
       },
-      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 16 },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 16
+      },
       "id": 10,
       "options": {
         "cellHeight": "sm",
-        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Power" }]
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Power"
+          }
+        ]
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "exemplar": false,
           "expr": "sum by (luna_group, hostname) (power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
@@ -557,7 +928,7 @@
           "refId": "A"
         }
       ],
-      "title": "Node Power Details",
+      "title": "All Reporting Nodes",
       "transformations": [
         {
           "id": "organize",
@@ -583,23 +954,41 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
       "id": 103,
       "panels": [],
       "title": "Data Availability",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "1 when at least one power_consumption_watts series exists; No data / empty when collection is absent.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "mappings": [
             {
               "options": {
-                "0": { "color": "red", "index": 1, "text": "No series" },
-                "1": { "color": "green", "index": 0, "text": "Available" }
+                "0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "No series"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Available"
+                }
               },
               "type": "value"
             }
@@ -607,15 +996,26 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 26 },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 26
+      },
       "id": 11,
       "options": {
         "colorMode": "background",
@@ -623,7 +1023,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -632,7 +1034,10 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "clamp_max(count(power_consumption_watts), 1)",
           "instant": true,
@@ -644,25 +1049,41 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "Count of power_consumption_watts series with an empty hostname label. 0 means all reporting series include hostname.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "mappings": [],
           "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 26 },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 26
+      },
       "id": 12,
       "options": {
         "colorMode": "value",
@@ -670,7 +1091,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -679,7 +1102,10 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "count(power_consumption_watts{hostname=\"\"}) or vector(0)",
           "instant": true,
@@ -691,25 +1117,41 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "Count of power_consumption_watts series with an empty luna_group label. 0 means all reporting series include luna_group.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "mappings": [],
           "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 26 },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 26
+      },
       "id": 13,
       "options": {
         "colorMode": "value",
@@ -717,7 +1159,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -726,7 +1170,10 @@
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "count(power_consumption_watts{luna_group=\"\"}) or vector(0)",
           "instant": true,
@@ -738,36 +1185,63 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "Age in seconds of the oldest current power samples (time() - timestamp).",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "custom": {
             "align": "auto",
-            "cellOptions": { "type": "auto" },
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "s"
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 26 },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 26
+      },
       "id": 14,
       "options": {
         "cellHeight": "sm",
-        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
           "editorMode": "code",
           "expr": "topk(20, time() - timestamp(power_consumption_watts))",
           "format": "table",
@@ -804,7 +1278,11 @@
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["dashboard", "power", "luna_group"],
+  "tags": [
+    "dashboard",
+    "power",
+    "luna_group"
+  ],
   "templating": {
     "list": [
       {
@@ -830,10 +1308,17 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
-        "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus_datasource}"
+        },
         "definition": "label_values(power_consumption_watts,luna_group)",
         "hide": 0,
         "includeAll": true,
@@ -855,10 +1340,17 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
-        "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus_datasource}"
+        },
         "definition": "label_values(power_consumption_watts{luna_group=~\"$luna_group\"},hostname)",
         "hide": 0,
         "includeAll": true,
@@ -886,6 +1378,6 @@
   "timezone": "",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 3,
+  "version": 4,
   "weekStart": ""
 }
