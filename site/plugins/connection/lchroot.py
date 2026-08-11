@@ -1,17 +1,18 @@
 # lchroot ansible connection plugin -- run an image's in-image phase inside the
 # lchroot-bwrap sandbox, falling back to a raw chroot when lchroot is absent.
 #
-# COPY OF the plugin luna2-utils ships (utils/lchroot/ansible/connection/lchroot.py),
-# with ONE deliberate difference: the upstream one raises when lchroot is missing,
-# this one degrades to a plain chroot. It lives here rather than being symlinked into
-# site-packages so the image build works before the luna2 role has ever run -- at
-# which point there is no luna2-utils on the box and a symlink would simply dangle.
-# Keep the fallback in mind when syncing changes back from upstream.
+# THIS IS THE ONLY COPY. It began life inside luna2-utils, beside the engine it
+# drives, and was removed from there once it landed here: it is build glue with no
+# tie to the lchroot package, and two copies nobody diffs is a fork waiting to
+# happen. It has to live in this tree rather than be symlinked into site-packages,
+# because a controller that has not yet run the luna2 role has no luna2-utils at
+# all -- the symlink would dangle and take the whole plugin directory down with it.
 #
-# This plugin ships WITH lchroot (luna2-utils) rather than as build glue, so a
-# `pip install luna2-utils` puts it on disk next to the engine it drives. Point
-# Ansible at it with ANSIBLE_CONNECTION_PLUGINS=<this dir> (or an ansible.cfg
-# connection_plugins entry) and select it with ansible_connection=lchroot.
+# Wired through site/ansible.cfg (connection_plugins) and site/dynamic_hosts, and
+# selected with ansible_connection=lchroot (LUNA_IMAGE_CONNECTION=lchroot).
+#
+# Unlike a raw chroot it degrades rather than fails: with no lchroot on the box it
+# falls back to plain chroot, which is exactly the pre-lchroot behaviour.
 #
 # TrinityX's image build enters the image via ansible_connection=chroot
 # (site/dynamic_hosts). This is a drop-in that executes every command through
