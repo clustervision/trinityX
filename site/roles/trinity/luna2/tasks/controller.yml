@@ -189,7 +189,9 @@
 
 - name: Resolve each luna util to the executable that should be linked
   # pip writes a console script into bin/ for every util that declares an entry
-  # point, and that is what /usr/sbin should point at. The old discovery listed
+  # point, and that is what /usr/sbin should point at. Note bin/ sits beside lib/
+  # ({{ trix_local }}/python/bin), NOT under luna2_python_dir, which is the
+  # versioned lib dir. The old discovery listed
   # site-packages/utils and matched names, which only works while every util is
   # a single flat file: lchroot became a package, the bare name still matched, and
   # /usr/sbin/lchroot was linked to the package DIRECTORY -- so `command -v lchroot`
@@ -198,8 +200,8 @@
   # to the flat file for the utils that still ship as one.
   shell: |
     for name in {{ luna2_utils | join(' ') }}; do
-      if [ -f "{{ luna2_python_dir.stdout }}/bin/$name" ]; then
-        echo "$name {{ luna2_python_dir.stdout }}/bin/$name"
+      if [ -f "{{ trix_local }}/python/bin/$name" ]; then
+        echo "$name {{ trix_local }}/python/bin/$name"
         continue
       fi
       for candidate in "$name" "$name.py" "$name.sh"; do
