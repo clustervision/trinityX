@@ -77,7 +77,7 @@
       },
       "id": 99,
       "options": {
-        "content": "**How to read this screen**\n\n- **Current Power** = sum of IPMI watts now.\n- **Change 15m** = vs 15 minutes ago.\n- **Budget (variable)** = value you type in top-bar **Power budget (W)**. `0` means unset.\n- **Headroom** = `Budget \u2212 Current` (only if Budget > 0). Same budget number, different meaning: Budget is the ceiling; Headroom is how much is left.\n- **Data trust** = (hosts with watts) \u00f7 (IPMI targets). One ratio for \u201cis power data complete?\u201d\n- **Watts hosts** = absolute count of hosts that have a watts series (complements Data trust %).\n",
+        "content": "**How to read this screen**\n\n- **Current Power** = sum of IPMI watts now.\n- **Change 15m** = vs 15 minutes ago.\n- **Budget (variable)** = top-bar **Power budget (W)**. Type a number (e.g. `5000`) and press **Enter** to apply.\n- **Headroom** = `Budget \u2212 Current` (only when Budget > 0). Budget is the ceiling; Headroom is watts remaining.\n- **Data trust** = (hosts with watts) \u00f7 (IPMI targets).\n- **Watts hosts** = count of hosts reporting watts.\n",
         "mode": "markdown"
       },
       "title": "",
@@ -357,7 +357,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "($power_budget_watts > bool 0) * ($power_budget_watts - (sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))) and on() ($power_budget_watts > bool 0)",
+          "expr": "(${power_budget_watts} - (sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))) unless (${power_budget_watts} == bool 0)",
           "legendFormat": "headroom",
           "refId": "A",
           "instant": true,
@@ -643,7 +643,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "vector($power_budget_watts)",
+          "expr": "vector(${power_budget_watts})",
           "legendFormat": "Power budget",
           "refId": "B",
           "instant": false,
@@ -723,7 +723,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "vector($power_budget_watts)",
+          "expr": "vector(${power_budget_watts})",
           "legendFormat": "budget",
           "refId": "A",
           "instant": true,
@@ -2604,10 +2604,11 @@
           "text": "0",
           "value": "0"
         },
-        "description": "Real cluster/facility limit in watts (e.g. 5000). Leave 0 if unset \u2014 Headroom shows n/a.",
+        "description": "Real cluster/facility limit in watts (e.g. 5000). Press Enter after typing. Leave 0 if unset.",
         "hide": 0,
         "label": "Power budget (W)",
         "name": "power_budget_watts",
+        "refresh": 1,
         "options": [
           {
             "selected": true,
@@ -2629,6 +2630,6 @@
   "timezone": "",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 10,
+  "version": 11,
   "weekStart": ""
 }
