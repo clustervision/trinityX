@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Power risk cockpit for TrinityX admins. Raw prometheus-ipmi-exporter metrics (ipmi_dcmi_power_consumption_watts, else ipmi_power_watts). Compares against 15m change, group median, optional power budget, and IPMI\u2192DCMI\u2192watts coverage. No fake capacity gauges without budget. No rack view without position labels.",
+  "description": "Admin power cockpit: safety (budget), trend, where to act (group breakdown), and data quality. Raw IPMI metrics. Sections 1-3 only.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -30,7 +30,6 @@
       ],
       "targetBlank": false,
       "title": "TrinityX Home",
-      "tooltip": "",
       "type": "dashboards",
       "url": ""
     },
@@ -44,7 +43,6 @@
       ],
       "targetBlank": false,
       "title": "TrinityX Dashboards",
-      "tooltip": "",
       "type": "dashboards",
       "url": ""
     }
@@ -65,10 +63,6 @@
       "type": "row"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
       "gridPos": {
         "h": 2,
         "w": 24,
@@ -77,7 +71,23 @@
       },
       "id": 99,
       "options": {
-        "content": "**How to read this screen**\n\n- **Current Power** = sum of IPMI watts now.\n- **Change 15m** = vs 15 minutes ago.\n- **Budget (variable)** = top-bar **Power budget (W)**. Type a number (e.g. `5000`) and press **Enter** to apply.\n- **Headroom** = `Budget \u2212 Current` (only when Budget > 0). Budget is the ceiling; Headroom is watts remaining.\n- **Data trust** = (hosts with watts) \u00f7 (IPMI targets).\n- **Watts hosts** = count of hosts reporting watts.\n",
+        "content": "**Admin view** \u2014 Is it safe? Is data complete? Where to act?\n\nSet **Power budget (W)** in the top bar (press **Enter**). Leave `0` for *Not configured* (no red warnings, no budget line on chart). Per-group budget is not in Prometheus yet \u2014 group **Budget W / Used % / Remaining** use the cluster budget as reference only.",
+        "mode": "markdown"
+      },
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
+      "id": 90,
+      "options": {
+        "content": "**Power status**",
         "mode": "markdown"
       },
       "title": "",
@@ -89,7 +99,6 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -110,10 +119,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
         "w": 5,
         "x": 0,
-        "y": 3
+        "y": 4
       },
       "id": 1,
       "options": {
@@ -153,42 +162,48 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Not configured",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "text",
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 100
-              },
-              {
-                "color": "red",
-                "value": 1000
+                "color": "orange",
+                "value": 1
               }
             ]
           },
           "unit": "watt",
-          "decimals": 0
+          "noValue": "Not configured"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
         "w": 4,
         "x": 5,
-        "y": 3
+        "y": 4
       },
-      "id": 2,
+      "id": 8,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -211,87 +226,14 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m)))",
-          "legendFormat": "delta",
-          "refId": "A",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "title": "Change 15m (W)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.05
-              },
-              {
-                "color": "red",
-                "value": 0.15
-              }
-            ]
-          },
-          "unit": "percentunit",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 3,
-        "x": 9,
-        "y": 3
-      },
-      "id": 3,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "((sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m))) / clamp_min(abs(sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m))), 1e-9))",
+          "expr": "vector(${power_budget_watts})",
           "legendFormat": "v",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Change 15m (%)",
+      "title": "Power budget",
       "type": "stat"
     },
     {
@@ -299,7 +241,6 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -310,29 +251,102 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "text",
                 "value": null
               },
               {
                 "color": "yellow",
-                "value": 0
+                "value": 0.8
               },
               {
-                "color": "blue",
-                "value": 1
+                "color": "red",
+                "value": 0.95
               }
             ]
           },
-          "unit": "watt",
-          "noValue": "n/a (set budget)"
+          "unit": "percentunit",
+          "noValue": "Not configured",
+          "decimals": 1
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
         "w": 4,
-        "x": 12,
-        "y": 3
+        "x": 9,
+        "y": 4
+      },
+      "id": 21,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "((sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) / (${power_budget_watts})) unless (${power_budget_watts} == bool 0)",
+          "legendFormat": "v",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Budget used",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.8
+              },
+              {
+                "color": "red",
+                "value": 0.95
+              }
+            ]
+          },
+          "unit": "watt",
+          "noValue": "Not configured"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 13,
+        "y": 4
       },
       "id": 4,
       "options": {
@@ -347,7 +361,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -357,14 +371,26 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(${power_budget_watts} - (sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))) unless (${power_budget_watts} == bool 0)",
-          "legendFormat": "headroom",
+          "expr": "((${power_budget_watts}) - (sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))) unless (${power_budget_watts} == bool 0)",
+          "legendFormat": "remaining W",
           "refId": "A",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "((${power_budget_watts} - (sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))) / (${power_budget_watts})) unless (${power_budget_watts} == bool 0)",
+          "legendFormat": "remaining %",
+          "refId": "B",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Headroom",
+      "title": "Budget remaining",
       "type": "stat"
     },
     {
@@ -372,7 +398,6 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -393,10 +418,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 16,
-        "y": 3
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 4
       },
       "id": 5,
       "options": {
@@ -428,7 +453,7 @@
           "range": true
         }
       ],
-      "title": "Peak (range)",
+      "title": "Peak in selected period",
       "type": "stat"
     },
     {
@@ -436,7 +461,86 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "dateTimeAsIso",
+          "noValue": "n/a"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 4
+      },
+      "id": 22,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "timestamp(max_over_time((sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))[$__range:]))",
+          "legendFormat": "v",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Peak at",
+      "type": "stat"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 91,
+      "options": {
+        "content": "**Data quality**",
+        "mode": "markdown"
+      },
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -452,6 +556,313 @@
               },
               {
                 "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "yellow",
+                "value": 0.8
+              },
+              {
+                "color": "blue",
+                "value": 0.95
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 9
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "count(count by (hostname) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) or vector(0)",
+          "legendFormat": "reporting",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "count(count by (hostname) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) or vector(0)",
+          "legendFormat": "expected",
+          "refId": "B",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(count(count by (hostname) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) or vector(0)) / clamp_min(count(count by (hostname) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) or vector(0), 1)",
+          "legendFormat": "coverage",
+          "refId": "C",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Power data coverage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 9
+      },
+      "id": 23,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(count(count by (hostname) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) or vector(0) - count(count by (hostname) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) or vector(0))",
+          "legendFormat": "v",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Missing power data",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 9
+      },
+      "id": 24,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "count(count by (hostname) ((time() - timestamp((sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))) > 300)) or vector(0)",
+          "legendFormat": "v",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Stale samples (>5m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s",
+          "noValue": "n/a"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 9
+      },
+      "id": 25,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(time() - timestamp((sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))))",
+          "legendFormat": "v",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Oldest sample age",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "yellow",
                 "value": 0.8
               },
               {
@@ -461,17 +872,18 @@
             ]
           },
           "unit": "percentunit",
-          "noValue": "0%"
+          "noValue": "n/a",
+          "decimals": 1
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
         "w": 4,
         "x": 20,
-        "y": 3
+        "y": 9
       },
-      "id": 6,
+      "id": 10,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
@@ -494,22 +906,37 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(count(count by (hostname) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) or vector(0)) / clamp_min(count(count by (hostname) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) or vector(0), 1)",
-          "legendFormat": "trust",
+          "expr": "bottomk(1, (count by (luna_group) (count by (hostname, luna_group) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) / clamp_min(count by (luna_group) (count by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})), 1)))",
+          "legendFormat": "{{luna_group}}",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Data trust",
+      "title": "Group with lowest data coverage",
       "type": "stat"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 92,
+      "options": {
+        "content": "**Trend**",
+        "mode": "markdown"
+      },
+      "title": "",
+      "transparent": true,
+      "type": "text"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -518,24 +945,12 @@
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
             "axisPlacement": "auto",
-            "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 40,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
+            "fillOpacity": 35,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
             "showPoints": "never",
             "spanNulls": false,
             "stacking": {
@@ -545,16 +960,6 @@
             "thresholdsStyle": {
               "mode": "off"
             }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
           },
           "unit": "watt"
         },
@@ -594,18 +999,22 @@
                 }
               },
               {
-                "id": "custom.axisPlacement",
-                "value": "right"
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 10,
+        "h": 9,
         "w": 16,
         "x": 0,
-        "y": 8
+        "y": 14
       },
       "id": 7,
       "options": {
@@ -643,7 +1052,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "vector(${power_budget_watts})",
+          "expr": "vector(${power_budget_watts}) and on() ((${power_budget_watts} > bool 0))",
           "legendFormat": "Power budget",
           "refId": "B",
           "instant": false,
@@ -658,229 +1067,6 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "unset (0)",
-                  "index": 0,
-                  "color": "text"
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "watt",
-          "noValue": "0"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 16,
-        "y": 8
-      },
-      "id": 8,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "vector(${power_budget_watts})",
-          "legendFormat": "budget",
-          "refId": "A",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "title": "Budget (variable)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "blue",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "short",
-          "noValue": "0"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 20,
-        "y": 8
-      },
-      "id": 9,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "count(count by (hostname) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) or vector(0)",
-          "legendFormat": "watts_hosts",
-          "refId": "A",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "title": "Watts hosts",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.8
-              },
-              {
-                "color": "blue",
-                "value": 0.95
-              }
-            ]
-          },
-          "unit": "percentunit",
-          "noValue": "n/a"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 16,
-        "y": 13
-      },
-      "id": 10,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "bottomk(1, (count by (luna_group) (count by (hostname, luna_group) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) / clamp_min(count by (luna_group) (count by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})), 1)))",
-          "legendFormat": "{{luna_group}}",
-          "refId": "A",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "title": "Highest-risk group",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -904,20 +1090,96 @@
               }
             ]
           },
-          "unit": "watt",
-          "noValue": "n/a"
+          "unit": "watt"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 14
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m)))",
+          "legendFormat": "W",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "((sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m))) / clamp_min(abs(sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m))), 1e-9))",
+          "legendFormat": "%",
+          "refId": "B",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Change 15m",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "watt",
+          "noValue": "n/a",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
         "w": 4,
         "x": 20,
-        "y": 13
+        "y": 14
       },
       "id": 11,
       "options": {
-        "colorMode": "background",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
@@ -938,125 +1200,37 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "topk(1, abs(((sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m)))))",
+          "expr": "topk(1, (sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - sum(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m))))",
           "legendFormat": "{{hostname}}",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Highest-change node",
+      "title": "Largest 15m power change",
       "type": "stat"
     },
     {
-      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 23
       },
-      "id": 101,
-      "panels": [],
-      "title": "2 - Power by Luna Group",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "unit": "watt"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 10,
-        "x": 0,
-        "y": 19
-      },
-      "id": 12,
+      "id": 93,
       "options": {
-        "barRadius": 0,
-        "barWidth": 0.7,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "orientation": "horizontal",
-        "showValue": "auto",
-        "stacking": "none",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
+        "content": "**Where to act**",
+        "mode": "markdown"
       },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "topk(50, (sum by (luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))",
-          "legendFormat": "{{luna_group}}",
-          "refId": "A",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "title": "Group power ranking",
-      "type": "barchart"
+      "title": "",
+      "transparent": true,
+      "type": "text"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1069,7 +1243,6 @@
             },
             "inspect": false
           },
-          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1091,7 +1264,7 @@
                 "id": "links",
                 "value": [
                   {
-                    "title": "Focus this group",
+                    "title": "Focus group",
                     "url": "/d/trixpowerbygroup/power-utilization?orgId=1&var-luna_group=${__data.fields.Luna group:percentencode}&var-hostname=All&${__url_time_range}"
                   }
                 ]
@@ -1101,12 +1274,60 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Current"
+              "options": "Current W"
             },
             "properties": [
               {
                 "id": "unit",
                 "value": "watt"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Budget W"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "watt"
+              },
+              {
+                "id": "noValue",
+                "value": "\u2014"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "noValue",
+                "value": "\u2014"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Remaining W"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "watt"
+              },
+              {
+                "id": "noValue",
+                "value": "\u2014"
               }
             ]
           },
@@ -1114,30 +1335,6 @@
             "matcher": {
               "id": "byName",
               "options": "Change 15m"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "watt"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "W/node"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "watt"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "P95/node"
             },
             "properties": [
               {
@@ -1167,6 +1364,10 @@
                     },
                     {
                       "color": "yellow",
+                      "value": 0.5
+                    },
+                    {
+                      "color": "yellow",
                       "value": 0.8
                     },
                     {
@@ -1183,16 +1384,55 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "OK",
+                        "color": "blue",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "Low coverage",
+                        "color": "yellow",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "Critical",
+                        "color": "red",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
           }
         ]
       },
       "gridPos": {
-        "h": 9,
-        "w": 14,
-        "x": 10,
-        "y": 19
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
       },
-      "id": 13,
+      "id": 30,
       "options": {
         "cellHeight": "sm",
         "footer": {
@@ -1207,7 +1447,7 @@
         "sortBy": [
           {
             "desc": true,
-            "displayName": "W/node"
+            "displayName": "Current W"
           }
         ]
       },
@@ -1222,9 +1462,48 @@
           "expr": "(sum by (luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))",
           "legendFormat": "__auto",
           "refId": "A",
+          "format": "table",
           "instant": true,
-          "range": false,
-          "format": "table"
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "vector(${power_budget_watts})",
+          "legendFormat": "__auto",
+          "refId": "B",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "((sum by (luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) / vector(${power_budget_watts})) unless (${power_budget_watts} == bool 0)",
+          "legendFormat": "__auto",
+          "refId": "C",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(vector(${power_budget_watts}) - on(luna_group) group_left() (sum by (luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) unless (${power_budget_watts} == bool 0)",
+          "legendFormat": "__auto",
+          "refId": "D",
+          "format": "table",
+          "instant": true,
+          "range": false
         },
         {
           "datasource": {
@@ -1234,10 +1513,10 @@
           "editorMode": "code",
           "expr": "((sum by (luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - (sum by (luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m)))",
           "legendFormat": "__auto",
-          "refId": "B",
+          "refId": "E",
+          "format": "table",
           "instant": true,
-          "range": false,
-          "format": "table"
+          "range": false
         },
         {
           "datasource": {
@@ -1245,25 +1524,12 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "((sum by (luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) / clamp_min(count by (luna_group) (count by (hostname, luna_group) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))), 1))",
+          "expr": "count by (luna_group) (count by (hostname, luna_group) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))",
           "legendFormat": "__auto",
-          "refId": "C",
+          "refId": "F",
+          "format": "table",
           "instant": true,
-          "range": false,
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "quantile by (luna_group) (0.95, (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))",
-          "legendFormat": "__auto",
-          "refId": "D",
-          "instant": true,
-          "range": false,
-          "format": "table"
+          "range": false
         },
         {
           "datasource": {
@@ -1273,13 +1539,26 @@
           "editorMode": "code",
           "expr": "(count by (luna_group) (count by (hostname, luna_group) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) / clamp_min(count by (luna_group) (count by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})), 1))",
           "legendFormat": "__auto",
-          "refId": "E",
+          "refId": "G",
+          "format": "table",
           "instant": true,
-          "range": false,
-          "format": "table"
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "((count by (luna_group) (count by (hostname, luna_group) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) / clamp_min(count by (luna_group) (count by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})), 1)) < bool 0.5) * 2 or ((count by (luna_group) (count by (hostname, luna_group) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) / clamp_min(count by (luna_group) (count by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})), 1)) < bool 0.8) * 1 or on(luna_group) (count by (luna_group) (count by (hostname, luna_group) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) * 0)",
+          "legendFormat": "__auto",
+          "refId": "H",
+          "format": "table",
+          "instant": true,
+          "range": false
         }
       ],
-      "title": "Group operations table",
+      "title": "Group breakdown",
       "transformations": [
         {
           "id": "joinByField",
@@ -1298,38 +1577,29 @@
               "Time 3": true,
               "Time 4": true,
               "Time 5": true,
-              "__name__": true,
-              "__name__ 1": true,
-              "__name__ 2": true,
-              "__name__ 3": true,
-              "__name__ 4": true,
-              "__name__ 5": true
-            },
-            "indexByName": {
-              "luna_group": 0,
-              "Value #A": 1,
-              "Value A": 1,
-              "Value #B": 2,
-              "Value B": 2,
-              "Value #C": 3,
-              "Value C": 3,
-              "Value #D": 4,
-              "Value D": 4,
-              "Value #E": 5,
-              "Value E": 5
+              "Time 6": true,
+              "Time 7": true,
+              "Time 8": true,
+              "__name__": true
             },
             "renameByName": {
               "luna_group": "Luna group",
-              "Value #A": "Current",
-              "Value A": "Current",
-              "Value #B": "Change 15m",
-              "Value B": "Change 15m",
-              "Value #C": "W/node",
-              "Value C": "W/node",
-              "Value #D": "P95/node",
-              "Value D": "P95/node",
-              "Value #E": "Coverage",
-              "Value E": "Coverage"
+              "Value #A": "Current W",
+              "Value A": "Current W",
+              "Value #B": "Budget W",
+              "Value B": "Budget W",
+              "Value #C": "Used %",
+              "Value C": "Used %",
+              "Value #D": "Remaining W",
+              "Value D": "Remaining W",
+              "Value #E": "Change 15m",
+              "Value E": "Change 15m",
+              "Value #F": "Hosts reporting",
+              "Value F": "Hosts reporting",
+              "Value #G": "Coverage",
+              "Value G": "Coverage",
+              "Value #H": "Status",
+              "Value H": "Status"
             }
           }
         },
@@ -1337,35 +1607,56 @@
           "id": "renameByRegex",
           "options": {
             "regex": "^Value #A$",
-            "renamePattern": "Current"
+            "renamePattern": "Current W"
           }
         },
         {
           "id": "renameByRegex",
           "options": {
             "regex": "^Value #B$",
-            "renamePattern": "Change 15m"
+            "renamePattern": "Budget W"
           }
         },
         {
           "id": "renameByRegex",
           "options": {
             "regex": "^Value #C$",
-            "renamePattern": "W/node"
+            "renamePattern": "Used %"
           }
         },
         {
           "id": "renameByRegex",
           "options": {
             "regex": "^Value #D$",
-            "renamePattern": "P95/node"
+            "renamePattern": "Remaining W"
           }
         },
         {
           "id": "renameByRegex",
           "options": {
             "regex": "^Value #E$",
+            "renamePattern": "Change 15m"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Value #F$",
+            "renamePattern": "Hosts reporting"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Value #G$",
             "renamePattern": "Coverage"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Value #H$",
+            "renamePattern": "Status"
           }
         }
       ],
@@ -1377,7 +1668,149 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 32
+      },
+      "id": 101,
+      "panels": [],
+      "title": "2 - Power by Luna Group",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 0,
+        "y": 33
+      },
+      "id": 12,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "topk(50, (sum by (luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})))",
+          "legendFormat": "{{luna_group}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Group power ranking",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 14,
+        "x": 10,
+        "y": 33
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(sum by (luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))",
+          "legendFormat": "{{luna_group}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Power by Luna Group over time",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
       },
       "id": 102,
       "panels": [],
@@ -1389,72 +1822,29 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
           },
           "unit": "watt"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 10,
+        "h": 9,
         "w": 8,
         "x": 0,
-        "y": 29
+        "y": 42
       },
       "id": 14,
       "options": {
         "barRadius": 0,
-        "barWidth": 0.7,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
         "orientation": "horizontal",
         "showValue": "auto",
-        "stacking": "none",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
+        "legend": {
+          "showLegend": false
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -1479,28 +1869,10 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
           "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
+            "align": "auto"
           }
         },
         "overrides": [
@@ -1514,7 +1886,7 @@
                 "id": "links",
                 "value": [
                   {
-                    "title": "Focus this node",
+                    "title": "Focus node",
                     "url": "/d/trixpowerbygroup/power-utilization?orgId=1&var-luna_group=${__data.fields.Luna group:percentencode}&var-hostname=${__data.fields.Hostname:percentencode}&${__url_time_range}"
                   }
                 ]
@@ -1524,24 +1896,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Luna group"
-            },
-            "properties": [
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "title": "Focus this group",
-                    "url": "/d/trixpowerbygroup/power-utilization?orgId=1&var-luna_group=${__data.fields.Luna group:percentencode}&var-hostname=All&${__url_time_range}"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Current"
+              "options": "Current W"
             },
             "properties": [
               {
@@ -1577,98 +1932,17 @@
                 "value": "watt"
               }
             ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "IPMI"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "down",
-                        "color": "red",
-                        "index": 0
-                      },
-                      "1": {
-                        "text": "up",
-                        "color": "blue",
-                        "index": 1
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "DCMI"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "fail",
-                        "color": "orange",
-                        "index": 0
-                      },
-                      "1": {
-                        "text": "ok",
-                        "color": "blue",
-                        "index": 1
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
-              },
-              {
-                "id": "noValue",
-                "value": "n/a"
-              }
-            ]
           }
         ]
       },
       "gridPos": {
-        "h": 10,
+        "h": 9,
         "w": 8,
         "x": 8,
-        "y": 29
+        "y": 42
       },
       "id": 15,
       "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
         "showHeader": true,
         "sortBy": [
           {
@@ -1688,9 +1962,9 @@
           "expr": "(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))",
           "legendFormat": "__auto",
           "refId": "A",
+          "format": "table",
           "instant": true,
-          "range": false,
-          "format": "table"
+          "range": false
         },
         {
           "datasource": {
@@ -1701,9 +1975,9 @@
           "expr": "((sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m)))",
           "legendFormat": "__auto",
           "refId": "B",
+          "format": "table",
           "instant": true,
-          "range": false,
-          "format": "table"
+          "range": false
         },
         {
           "datasource": {
@@ -1714,35 +1988,9 @@
           "expr": "((sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - on(luna_group) group_left() quantile by (luna_group) (0.5, (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))))",
           "legendFormat": "__auto",
           "refId": "C",
+          "format": "table",
           "instant": true,
-          "range": false,
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "max by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
-          "legendFormat": "__auto",
-          "refId": "D",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "max by (hostname, luna_group) (ipmi_up{collector=\"dcmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
-          "legendFormat": "__auto",
-          "refId": "E",
-          "instant": true,
-          "range": false,
-          "format": "table"
+          "range": false
         }
       ],
       "title": "Node power anomalies",
@@ -1762,46 +2010,19 @@
               "Time 1": true,
               "Time 2": true,
               "Time 3": true,
-              "Time 4": true,
-              "Time 5": true,
               "__name__": true,
-              "__name__ 1": true,
-              "__name__ 2": true,
-              "__name__ 3": true,
-              "__name__ 4": true,
-              "__name__ 5": true,
               "luna_group 2": true,
-              "luna_group 3": true,
-              "luna_group 4": true,
-              "luna_group 5": true
-            },
-            "indexByName": {
-              "luna_group": 0,
-              "hostname": 1,
-              "Value #A": 2,
-              "Value A": 2,
-              "Value #B": 3,
-              "Value B": 3,
-              "Value #C": 4,
-              "Value C": 4,
-              "Value #D": 5,
-              "Value D": 5,
-              "Value #E": 6,
-              "Value E": 6
+              "luna_group 3": true
             },
             "renameByName": {
               "luna_group": "Luna group",
               "hostname": "Hostname",
-              "Value #A": "Current",
-              "Value A": "Current",
+              "Value #A": "Current W",
+              "Value A": "Current W",
               "Value #B": "Change 15m",
               "Value B": "Change 15m",
               "Value #C": "vs group median",
-              "Value C": "vs group median",
-              "Value #D": "IPMI",
-              "Value D": "IPMI",
-              "Value #E": "DCMI",
-              "Value E": "DCMI"
+              "Value C": "vs group median"
             }
           }
         },
@@ -1809,7 +2030,7 @@
           "id": "renameByRegex",
           "options": {
             "regex": "^Value #A$",
-            "renamePattern": "Current"
+            "renamePattern": "Current W"
           }
         },
         {
@@ -1825,20 +2046,6 @@
             "regex": "^Value #C$",
             "renamePattern": "vs group median"
           }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "^Value #D$",
-            "renamePattern": "IPMI"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "^Value #E$",
-            "renamePattern": "DCMI"
-          }
         }
       ],
       "type": "table"
@@ -1848,62 +2055,27 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 15,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
+            "fillOpacity": 15,
             "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
+            "spanNulls": false
           },
           "unit": "watt"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 10,
+        "h": 9,
         "w": 8,
         "x": 16,
-        "y": 29
+        "y": 42
       },
       "id": 16,
       "options": {
@@ -1917,8 +2089,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "multi"
         }
       },
       "pluginVersion": "10.1.2",
@@ -1929,7 +2100,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) and on(hostname, luna_group) topk(3, abs(((sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m)))))",
+          "expr": "(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) and on(hostname, luna_group) topk(3, abs((sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) - (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} offset 15m))))",
           "legendFormat": "{{luna_group}} / {{hostname}}",
           "refId": "A",
           "instant": false,
@@ -1938,541 +2109,6 @@
       ],
       "title": "Selected / focus node power",
       "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 39
-      },
-      "id": 103,
-      "panels": [],
-      "title": "4 - IPMI / DCMI Coverage chain",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 40
-      },
-      "id": 98,
-      "options": {
-        "content": "**Coverage funnel** (one place only \u2014 no duplicate table)\n\n`1 Expected` = IPMI scrape targets Prometheus knows about (service discovery).\n`2 IPMI Up` = those targets currently healthy (`up==1`).\n`3 DCMI OK` = DCMI collector succeeded.\n`4 Watts present` = a watts metric exists.\n`5 Non-zero` = watts > 0.\n\n**Example:** Expected **7**, IPMI Up **5** is normal if 2 targets are down (timeout / no route) \u2014 see **Exceptions first** (IPMI down rows).\nA drop **3\u21924** usually means BMC `Power Measurement: Not Available`.\n",
-        "mode": "markdown"
-      },
-      "title": "",
-      "transparent": true,
-      "type": "text"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 17,
-      "options": {
-        "displayMode": "gradient",
-        "minVizHeight": 10,
-        "minVizWidth": 0,
-        "namePlacement": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true,
-        "valueMode": "color"
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "count(count by (hostname) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) or vector(0)",
-          "instant": true,
-          "legendFormat": "1 Expected",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "count(count by (hostname) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"} == 1)) or vector(0)",
-          "instant": true,
-          "legendFormat": "2 IPMI Up",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "count(count by (hostname) (ipmi_up{collector=\"dcmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"} == 1)) or vector(0)",
-          "instant": true,
-          "legendFormat": "3 DCMI OK",
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "count(count by (hostname) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) or vector(0)",
-          "instant": true,
-          "legendFormat": "4 Watts present",
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "count(count by (hostname) ((sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) > 0)) or vector(0)",
-          "instant": true,
-          "legendFormat": "5 Non-zero",
-          "refId": "E"
-        }
-      ],
-      "title": "Coverage funnel",
-      "type": "bargauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Hostname"
-            },
-            "properties": [
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "title": "Focus this node",
-                    "url": "/d/trixpowerbygroup/power-utilization?orgId=1&var-luna_group=${__data.fields.Luna group:percentencode}&var-hostname=${__data.fields.Hostname:percentencode}&${__url_time_range}"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Risk"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "healthy",
-                        "color": "blue",
-                        "index": 0
-                      },
-                      "1": {
-                        "text": "chassis off",
-                        "color": "yellow",
-                        "index": 1
-                      },
-                      "2": {
-                        "text": "watts zero",
-                        "color": "yellow",
-                        "index": 2
-                      },
-                      "3": {
-                        "text": "DCMI OK, no watts",
-                        "color": "orange",
-                        "index": 3
-                      },
-                      "4": {
-                        "text": "DCMI fail",
-                        "color": "orange",
-                        "index": 4
-                      },
-                      "5": {
-                        "text": "IPMI down",
-                        "color": "red",
-                        "index": 5
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Power"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "watt"
-              },
-              {
-                "id": "noValue",
-                "value": "No series"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "IPMI"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "down",
-                        "color": "red",
-                        "index": 0
-                      },
-                      "1": {
-                        "text": "up",
-                        "color": "blue",
-                        "index": 1
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "DCMI"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "fail",
-                        "color": "orange",
-                        "index": 0
-                      },
-                      "1": {
-                        "text": "ok",
-                        "color": "blue",
-                        "index": 1
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "noValue",
-                "value": "n/a"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Chassis"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "off",
-                        "color": "red",
-                        "index": 0
-                      },
-                      "1": {
-                        "text": "on",
-                        "color": "blue",
-                        "index": 1
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "noValue",
-                "value": "n/a"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 42
-      },
-      "id": 19,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Risk"
-          }
-        ]
-      },
-      "pluginVersion": "10.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "((max by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"} == bool 0) * 5) or ((max by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"} == bool 1) unless on (hostname, luna_group) (ipmi_up{collector=\"dcmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"} == bool 1)) * 4) or ((max by (hostname, luna_group) (ipmi_up{collector=\"dcmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"} == bool 1) unless on (hostname, luna_group) (sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))) * 3) or (max by (hostname, luna_group) ((sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})) == bool 0) * 2) or (max by (hostname, luna_group) (ipmi_chassis_power_state{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} == bool 0) * 1) or (max by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) * 0))",
-          "legendFormat": "__auto",
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "max by (hostname, luna_group) (up{exporter=\"ipmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
-          "legendFormat": "__auto",
-          "refId": "B",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "max by (hostname, luna_group) (ipmi_up{collector=\"dcmi\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
-          "legendFormat": "__auto",
-          "refId": "C",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "max by (hostname, luna_group) (ipmi_chassis_power_state{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
-          "legendFormat": "__auto",
-          "refId": "D",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "editorMode": "code",
-          "expr": "(sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))",
-          "legendFormat": "__auto",
-          "refId": "E",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        }
-      ],
-      "title": "Exceptions first",
-      "transformations": [
-        {
-          "id": "joinByField",
-          "options": {
-            "byField": "hostname",
-            "mode": "outer"
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "Time 1": true,
-              "Time 2": true,
-              "Time 3": true,
-              "Time 4": true,
-              "Time 5": true,
-              "__name__": true,
-              "__name__ 1": true,
-              "__name__ 2": true,
-              "__name__ 3": true,
-              "__name__ 4": true,
-              "__name__ 5": true,
-              "luna_group 2": true,
-              "luna_group 3": true,
-              "luna_group 4": true,
-              "luna_group 5": true
-            },
-            "renameByName": {
-              "luna_group": "Luna group",
-              "hostname": "Hostname",
-              "Value #A": "Risk",
-              "Value A": "Risk",
-              "Value #B": "IPMI",
-              "Value B": "IPMI",
-              "Value #C": "DCMI",
-              "Value C": "DCMI",
-              "Value #D": "Chassis",
-              "Value D": "Chassis",
-              "Value #E": "Power",
-              "Value E": "Power"
-            }
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "^Value #A$",
-            "renamePattern": "Risk"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "^Value #B$",
-            "renamePattern": "IPMI"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "^Value #C$",
-            "renamePattern": "DCMI"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "^Value #D$",
-            "renamePattern": "Chassis"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "^Value #E$",
-            "renamePattern": "Power"
-          }
-        }
-      ],
-      "type": "table"
     }
   ],
   "refresh": "30s",
@@ -2482,7 +2118,6 @@
     "dashboard",
     "power",
     "ipmi",
-    "dcmi",
     "luna_group"
   ],
   "templating": {
@@ -2494,15 +2129,10 @@
           "value": "trixprometheus"
         },
         "hide": 2,
-        "includeAll": false,
         "label": "Prometheus data source",
-        "multi": false,
         "name": "prometheus_datasource",
-        "options": [],
         "query": "prometheus",
         "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
         "type": "datasource"
       },
       {
@@ -2521,12 +2151,10 @@
           "uid": "${prometheus_datasource}"
         },
         "definition": "label_values(up{exporter=\"ipmi\"},luna_group)",
-        "description": "Luna groups from IPMI scrape targets.",
         "includeAll": true,
         "label": "Luna group",
         "multi": true,
         "name": "luna_group",
-        "options": [],
         "query": {
           "query": "label_values(up{exporter=\"ipmi\"},luna_group)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
@@ -2551,12 +2179,10 @@
           "uid": "${prometheus_datasource}"
         },
         "definition": "label_values(up{exporter=\"ipmi\",luna_group=~\"$luna_group\"},hostname)",
-        "description": "Hostnames from IPMI targets. Pin one for single-node history.",
         "includeAll": true,
         "label": "Hostname",
         "multi": true,
         "name": "hostname",
-        "options": [],
         "query": {
           "query": "label_values(up{exporter=\"ipmi\",luna_group=~\"$luna_group\"},hostname)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
@@ -2571,11 +2197,7 @@
           "text": "10",
           "value": "10"
         },
-        "description": "Fixed Top-N for node ranking (not dynamic top 10%).",
-        "hide": 0,
-        "includeAll": false,
         "label": "Top-N",
-        "multi": false,
         "name": "top_n",
         "options": [
           {
@@ -2595,7 +2217,6 @@
           }
         ],
         "query": "10,20,50",
-        "skipUrlSync": false,
         "type": "custom"
       },
       {
@@ -2604,11 +2225,10 @@
           "text": "0",
           "value": "0"
         },
-        "description": "Real cluster/facility limit in watts (e.g. 5000). Press Enter after typing. Leave 0 if unset.",
+        "description": "Cluster/facility limit in watts. Press Enter. 0 = Not configured.",
         "hide": 0,
         "label": "Power budget (W)",
         "name": "power_budget_watts",
-        "refresh": 1,
         "options": [
           {
             "selected": true,
@@ -2617,7 +2237,7 @@
           }
         ],
         "query": "0",
-        "skipUrlSync": false,
+        "refresh": 1,
         "type": "textbox"
       }
     ]
@@ -2630,6 +2250,6 @@
   "timezone": "",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 11,
+  "version": 12,
   "weekStart": ""
 }
