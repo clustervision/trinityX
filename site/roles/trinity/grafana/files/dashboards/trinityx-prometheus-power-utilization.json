@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Power overview + one section per Luna group (always expanded). Inventory from Luna http_sd (up{{job=luna_nodes}}). Power from IPMI / recording rule.",
+  "description": "Power overview + one section per Luna group. Inventory from Luna SD. Power from IPMI / recording rule.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -51,17 +51,17 @@
   "panels": [
     {
       "gridPos": {
-        "h": 2,
+        "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 99,
       "options": {
-        "content": "**1. Power Overview** \u2014 groups by **Luna group**, not hostname prefix. Node counts from Luna Prometheus SD (`up{{job=\"luna_nodes\"}}`, includes down nodes). Power from IPMI / `power_consumption_watts`. Empty Luna groups (zero nodes) do not appear \u2014 Prometheus has no scrape target for them. Set **Power budget (W)** / **Group budget (W)** (`0` = Not configured).",
+        "content": "### 1. Power Overview\n<small>By Luna group \u00b7 inventory from Luna SD \u00b7 empty groups (0 nodes) are hidden \u00b7 budget `0` = Not configured</small>",
         "mode": "markdown"
       },
-      "title": "Power Overview",
+      "title": "",
       "transparent": true,
       "type": "text"
     },
@@ -94,7 +94,7 @@
         "h": 4,
         "w": 3,
         "x": 0,
-        "y": 2
+        "y": 1
       },
       "id": 2,
       "options": {
@@ -109,7 +109,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 28,
+          "titleSize": 13
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -159,7 +163,7 @@
         "h": 4,
         "w": 3,
         "x": 3,
-        "y": 2
+        "y": 1
       },
       "id": 3,
       "options": {
@@ -174,7 +178,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 28,
+          "titleSize": 13
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -236,7 +244,7 @@
         "h": 4,
         "w": 3,
         "x": 6,
-        "y": 2
+        "y": 1
       },
       "id": 4,
       "options": {
@@ -251,7 +259,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 28,
+          "titleSize": 13
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -309,7 +321,7 @@
         "h": 4,
         "w": 3,
         "x": 9,
-        "y": 2
+        "y": 1
       },
       "id": 5,
       "options": {
@@ -324,7 +336,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 28,
+          "titleSize": 13
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -391,7 +407,7 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 2
+        "y": 1
       },
       "id": 6,
       "options": {
@@ -406,7 +422,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "value"
+        "textMode": "value",
+        "text": {
+          "valueSize": 28,
+          "titleSize": 13
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -467,7 +487,7 @@
         "h": 4,
         "w": 3,
         "x": 15,
-        "y": 2
+        "y": 1
       },
       "id": 7,
       "options": {
@@ -482,7 +502,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 28,
+          "titleSize": 13
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -536,7 +560,7 @@
         "h": 4,
         "w": 3,
         "x": 18,
-        "y": 2
+        "y": 1
       },
       "id": 8,
       "options": {
@@ -551,7 +575,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 28,
+          "titleSize": 13
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -593,7 +621,7 @@
             ]
           },
           "noValue": "n/a",
-          "unit": "dateTimeAsIso"
+          "unit": "dateTime:YYYY-MM-DD HH:mm"
         },
         "overrides": []
       },
@@ -601,7 +629,7 @@
         "h": 4,
         "w": 3,
         "x": 21,
-        "y": 2
+        "y": 1
       },
       "id": 1,
       "options": {
@@ -616,7 +644,10 @@
           "fields": "/^Peak$/",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 18
+        }
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -643,23 +674,26 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "Auto-scaled so small changes are visible. Legend: Current / Min / Max / Mean. Budget line hidden from legend when configured.",
+      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when set.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "#3b82f6",
+            "mode": "fixed"
           },
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 18,
+            "lineInterpolation": "smooth",
+            "fillOpacity": 22,
             "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "mode": "none",
               "group": "A"
             },
-            "lineWidth": 2
+            "lineWidth": 2,
+            "axisBorderShow": false,
+            "axisLabel": ""
           },
           "unit": "watt",
           "decimals": 0
@@ -675,8 +709,8 @@
                 "id": "custom.lineStyle",
                 "value": {
                   "dash": [
-                    10,
-                    10
+                    8,
+                    8
                   ],
                   "fill": "dash"
                 }
@@ -686,9 +720,13 @@
                 "value": 0
               },
               {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
                 "id": "color",
                 "value": {
-                  "fixedColor": "red",
+                  "fixedColor": "#ef4444",
                   "mode": "fixed"
                 }
               },
@@ -696,7 +734,7 @@
                 "id": "custom.hideFrom",
                 "value": {
                   "legend": true,
-                  "tooltip": true,
+                  "tooltip": false,
                   "viz": false
                 }
               }
@@ -705,10 +743,10 @@
         ]
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 5
       },
       "id": 9,
       "options": {
@@ -764,11 +802,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 15
+        "y": 13
       },
       "id": 200,
       "panels": [],
-      "title": "$luna_group",
+      "title": "Group \u00b7 $luna_group",
       "type": "row",
       "repeat": "luna_group",
       "repeatDirection": "v"
@@ -802,7 +840,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 16
+        "y": 14
       },
       "id": 10,
       "options": {
@@ -867,7 +905,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 16
+        "y": 14
       },
       "id": 11,
       "options": {
@@ -931,7 +969,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 16
+        "y": 14
       },
       "id": 12,
       "options": {
@@ -1007,7 +1045,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 16
+        "y": 14
       },
       "id": 13,
       "options": {
@@ -1081,7 +1119,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 16
+        "y": 14
       },
       "id": 14,
       "options": {
@@ -1163,7 +1201,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 16
+        "y": 14
       },
       "id": 15,
       "options": {
@@ -1215,15 +1253,16 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "Top consumers by current watts. Nodes with no IPMI watts show as 0 W.",
+      "description": "Top consumers by current watts. Nodes without IPMI show as 0 W.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "#3b82f6",
+            "mode": "fixed"
           },
           "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 1,
+            "fillOpacity": 90,
+            "lineWidth": 0,
             "scaleDistribution": {
               "type": "linear"
             }
@@ -1237,12 +1276,12 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 18
       },
       "id": 16,
       "options": {
-        "barRadius": 0,
-        "barWidth": 0.7,
+        "barRadius": 0.05,
+        "barWidth": 0.65,
         "groupWidth": 0.7,
         "legend": {
           "displayMode": "list",
@@ -1256,7 +1295,8 @@
           "mode": "single",
           "sort": "none"
         },
-        "xField": "Node"
+        "xField": "Node",
+        "yTickLabelMaxWidth": 180
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -1274,7 +1314,7 @@
           "format": "table"
         }
       ],
-      "title": "Top Rank Nodes",
+      "title": "Top Rank Nodes (by Current Power)",
       "transformations": [
         {
           "id": "organize",
@@ -1312,23 +1352,26 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "Auto-scaled so small changes are visible. Legend: Current / Min / Max / Mean. Budget line hidden from legend when configured.",
+      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when set.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "#3b82f6",
+            "mode": "fixed"
           },
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 18,
+            "lineInterpolation": "smooth",
+            "fillOpacity": 22,
             "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "mode": "none",
               "group": "A"
             },
-            "lineWidth": 2
+            "lineWidth": 2,
+            "axisBorderShow": false,
+            "axisLabel": ""
           },
           "unit": "watt",
           "decimals": 0
@@ -1344,8 +1387,8 @@
                 "id": "custom.lineStyle",
                 "value": {
                   "dash": [
-                    10,
-                    10
+                    8,
+                    8
                   ],
                   "fill": "dash"
                 }
@@ -1355,9 +1398,13 @@
                 "value": 0
               },
               {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
                 "id": "color",
                 "value": {
-                  "fixedColor": "red",
+                  "fixedColor": "#ef4444",
                   "mode": "fixed"
                 }
               },
@@ -1365,7 +1412,7 @@
                 "id": "custom.hideFrom",
                 "value": {
                   "legend": true,
-                  "tooltip": true,
+                  "tooltip": false,
                   "viz": false
                 }
               }
@@ -1377,7 +1424,7 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 20
+        "y": 18
       },
       "id": 17,
       "options": {
@@ -1468,7 +1515,7 @@
         },
         "definition": "label_values(up{exporter!=\"prometheus\", luna_group!=\"controller\"}, luna_group)",
         "includeAll": true,
-        "label": "Luna group",
+        "label": "Group",
         "multi": true,
         "name": "luna_group",
         "query": {
@@ -1477,8 +1524,7 @@
         },
         "refresh": 2,
         "sort": 1,
-        "type": "query",
-        "description": "Luna groups from Luna Prometheus SD (job=luna_nodes). Empty groups with zero nodes are not in SD and cannot appear. Do not set allValue to a regex \u2014 that collapses All into one fake row."
+        "type": "query"
       },
       {
         "current": {
@@ -1486,8 +1532,7 @@
           "text": "7d",
           "value": "7d"
         },
-        "description": "Window for Average Power.",
-        "label": "Avg window",
+        "label": "Avg",
         "name": "avg_window",
         "options": [
           {
@@ -1543,9 +1588,7 @@
           "text": "0",
           "value": "0"
         },
-        "description": "Cluster budget in watts. 0 = Not configured.",
-        "hide": 0,
-        "label": "Power budget (W)",
+        "label": "Budget (W)",
         "name": "power_budget_watts",
         "options": [
           {
@@ -1563,8 +1606,6 @@
           "text": "0",
           "value": "0"
         },
-        "description": "Budget applied to every Luna group row (shared). 0 = Not configured.",
-        "hide": 0,
         "label": "Group budget (W)",
         "name": "group_budget_watts",
         "options": [
@@ -1613,6 +1654,6 @@
   "timezone": "",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 28,
+  "version": 29,
   "weekStart": ""
 }
