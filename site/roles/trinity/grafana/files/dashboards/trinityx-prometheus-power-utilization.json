@@ -577,6 +577,7 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
+      "description": "Timestamp of max Total Power in the selected range (same series as Total Power Trend).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -595,7 +596,32 @@
           "noValue": "n/a",
           "unit": "dateTimeAsIso"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Metric"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 4,
@@ -613,10 +639,10 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "/^(Peak|Value)$/",
+          "fields": "/^Time$/",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "value"
       },
       "pluginVersion": "10.1.2",
       "targets": [
@@ -626,35 +652,41 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(max_over_time(((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) * 1e12 + timestamp(sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))))[$__range:1m]) % 1e12) * 1000",
-          "legendFormat": "Peak",
+          "expr": "sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))",
+          "legendFormat": "Total Power",
           "refId": "A",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "interval": "1m"
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "maxDataPoints": 10080
         }
       ],
       "title": "Peak Time",
-      "type": "stat",
-      "description": "Time of max reported power in the selected Grafana range (matches Total Power Trend).",
       "transformations": [
         {
-          "id": "convertFieldType",
+          "id": "seriesToRows",
+          "options": {}
+        },
+        {
+          "id": "sortBy",
           "options": {
-            "conversions": [
+            "fields": {},
+            "sort": [
               {
-                "destinationType": "time",
-                "targetField": "Value"
-              },
-              {
-                "destinationType": "time",
-                "targetField": "Peak"
+                "desc": true,
+                "field": "Value"
               }
             ]
           }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 1
+          }
         }
-      ]
+      ],
+      "type": "stat"
     },
     {
       "datasource": {
@@ -1625,6 +1657,6 @@
   "timezone": "",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 30,
+  "version": 31,
   "weekStart": ""
 }
