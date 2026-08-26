@@ -3,9 +3,11 @@
 #ubuntu_distribution_source: https://ftp.nluug.nl/pub/os/Linux/distr/ubuntu/
 ubuntu_distribution_source: https://ftp.snt.utwente.nl/pub/os/linux/ubuntu/
 
-ubuntu_distribution_release: jammy
 
 image_core_packages:                                                                                                                                                                         
+  - shim-signed           # lpart: signed UEFI shim, staged by lpart-bootloader-finalise
+  - grub-efi-amd64-signed # lpart: signed grub for the ESP EFI/<distro>/ pair
+  - grub-efi-amd64        # lpart: grub-install/update-grub toolchain in the image
   - python3
   - mc
   - e2fsprogs
@@ -45,4 +47,4 @@ image_core_packages:
   - libtpm2-pkcs11-1
   - tpm2-tools
 
-luna2_client_package: "https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/ubuntu/{{ system_arch }}/luna2-client.deb"
+luna2_client_package: "{{ trix_repo_baseurl }}/{{ trix_version }}/luna2/ubuntu/{{ system_arch }}/luna2-client.deb"

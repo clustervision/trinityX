@@ -48,6 +48,17 @@
   delay: "{{ rpm_delay | default(15) }}"
   tags: install-only
 
+# Optional lpart client override: when a luna2_client_package URL is supplied,
+# replace the repo luna2-client with it (mirrors ubuntu/osgrab.yml).
+- name: Download luna2-client package
+  command: "curl -fsSL {{ luna2_client_package }} -o /tmp/{{ luna2_client_package|split('/')|last }}"
+  when: luna2_client_package is defined
+  tags: install-only
+
+- name: install luna2-client package
+  shell: "dnf install -y --nogpgcheck --allowerasing /tmp/{{ luna2_client_package|split('/')|last }}"
+  when: luna2_client_package is defined
+
 - name: Install missing elfutils-libs on RedHat
   dnf:
     disable_gpg_check: true

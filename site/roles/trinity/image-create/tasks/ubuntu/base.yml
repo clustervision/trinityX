@@ -26,10 +26,22 @@
     - jammy
     - noble
   when: debootstrap_version.stdout.startswith('1.0.136') or debootstrap_version.stdout.startswith('1.0.137')
-  
+
+- name: Check whether debootstrap knows the requested release
+  stat:
+    path: "/usr/share/debootstrap/scripts/{{ ubuntu_distribution_release }}"
+  register: debootstrap_release_script
+
+- name: Copy the debootstrap script for a release the installed debootstrap predates
+  copy:
+    src: "files/ubuntu/{{ ubuntu_distribution_release }}"
+    dest: "/usr/share/debootstrap/scripts/"
+    mode: 0755
+  when: not debootstrap_release_script.stat.exists
+
 
 - name: Build basic Ubuntu image
-  shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ image_path }} {{ ubuntu_distribution_source }} | tee {{ trix_tmpdir }}/debootstrap.log"
+  shell: "debootstrap --variant=buildd {{ image_debootstrap_flags | default('') }} {{ ubuntu_distribution_release }} {{ image_path }} {{ ubuntu_distribution_source }} | tee {{ trix_tmpdir }}/debootstrap.log"
   retries: 10
   delay: 15
   register: ubuntu_base_image_result
@@ -43,6 +55,31 @@
   fail:
     msg: "Ubuntu basic image build failed. please rerun playbook or look at {{ trix_tmpdir }}/debootstrap.log"
   when: ubuntu_base_image_verify.stdout == 'fail'
+
+- name: Second-stage the foreign-arch debootstrap (in-image, binfmt emulation)
+  # container=mmdebstrap-unshare (lowercase, the systemd convention detect_container reads) takes debootstrap's designed container path:
+  # check_sane_mount's mknod/bind probe cannot work in the bwrap sandbox
+  # (CAP_MKNOD dropped) and would false-report noexec. No tee pipe: rc must be
+  # debootstrap's own (a pipe masked the first failure with tee's rc 0).
+  shell: "{{ image_chroot_cmd }} env container=mmdebstrap-unshare /debootstrap/debootstrap --second-stage >> {{ trix_tmpdir }}/debootstrap.log 2>&1"
+  when: image_debootstrap_flags is defined and '--foreign' in image_debootstrap_flags
+  register: ubuntu_second_stage_result
+  retries: 2
+  delay: 10
+  until: ubuntu_second_stage_result.rc == 0
+
+- name: Pin flash-kernel out of the image (foreign-arch build)
+  # flash-kernel manages on-board boot media of ARM SBCs; in a netboot
+  # compute image it is useless, and its postinst cannot identify a board
+  # inside the build sandbox ('Unsupported platform') -- it poisoned the
+  # whole dpkg configure chain. Pin BEFORE any apt run so it never installs.
+  copy:
+    dest: "{{ image_path }}/etc/apt/preferences.d/no-flash-kernel"
+    content: |
+      Package: flash-kernel
+      Pin: release *
+      Pin-Priority: -1
+  when: image_debootstrap_flags is defined and '--foreign' in image_debootstrap_flags
 
 - name: Create {{ image_path }}/dev
   file:
@@ -72,7 +109,18 @@
     mode: "0666"
 
 - name: Install bootstrap packages in {{ image_path }}
-  shell: "chroot {{ image_path }} apt-get install -y {{ item }}"
-  with_items:
-    - python3
+  block:
+  - name: Running apt-get inside image
+    shell: "{{ image_chroot_cmd }} {{ item }}"
+    # Ubuntu 26 ships rust coreutils, which abort without /proc in the chroot;
+    # image_proc_mount=false under lchroot(bwrap), which already provides /proc; the
+    # explicit mount/umount (which unprivileged bwrap cannot do) are dropped from the list.
+    with_items: "{{ (['mount proc -t proc /proc'] if image_proc_mount | default(True) | bool else []) + ['apt-get install -y python3'] + (['umount /proc'] if image_proc_mount | default(True) | bool else []) }}"
+  rescue:
+  - name: Tasks in image before leaving playbook
+    shell: "{{ image_chroot_cmd }} {{ item }}"
+    with_items: "{{ ['umount /proc'] if image_proc_mount | default(True) | bool else [] }}"
+  - name: Fail the build after unmounting
+    fail:
+      msg: "Bootstrap package install failed in {{ image_path }}. See the apt output above."
   tags: install-only
