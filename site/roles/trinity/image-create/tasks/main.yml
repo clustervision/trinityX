@@ -9,6 +9,39 @@
     set_fact:
       image_path: "{{ trix_images }}/{{ image_name }}"
 
+  - name: Check whether lchroot is usable for the image build
+    # image_chroot_cmd may ask for lchroot (bwrap). lchroot needs the bubblewrap
+    # binary; a controller that predates it, or a pip-only install of luna2-utils,
+    # will not have one. Detect it here rather than failing part-way through a build.
+    shell: "command -v lchroot >/dev/null 2>&1 && command -v bwrap >/dev/null 2>&1"
+    register: lchroot_probe
+    changed_when: false
+    failed_when: false
+    when: "'lchroot' in image_chroot_cmd"
+
+  - name: Fall back to a native chroot when lchroot is unavailable
+    # Report loudly and keep building. An image built natively is a usable image;
+    # an aborted build is not, and the operator can see exactly why in the output.
+    when:
+      - "'lchroot' in image_chroot_cmd"
+      - lchroot_probe.rc is defined and lchroot_probe.rc != 0
+    block:
+      - name: WARNING - lchroot requested but not available
+        debug:
+          msg: >-
+            lchroot was requested for this image build but lchroot and/or bwrap are
+            not available on this controller. FALLING BACK to a native chroot.
+            Foreign-architecture builds will not work. Install the bubblewrap package
+            and a luna2-utils that provides lchroot to use it.
+      - name: Use a native chroot instead
+        set_fact:
+          image_chroot_cmd: "chroot {{ image_path }}"
+          # and put /proc back. image_proc_mount is only ever set false because
+          # lchroot provides /proc itself; falling back to a native chroot without
+          # restoring it would leave the build with no /proc at all, which is worse
+          # than either mode on its own.
+          image_proc_mount: true
+
   - name: Create dir for compute image
     file:
       name: "{{ image_path }}"

@@ -35,15 +35,25 @@
   delay: "{{ rpm_delay | default(15) }}"
   tags: install-only
 
+- name: Resolve the luna2-client package URL
+  # ubuntu has no apt repository in the update tree, only the deb under a fixed
+  # name, so unlike the rpm families the client cannot come from a repo and this
+  # variable is required rather than an override. Derived from the same base and
+  # version as the repositories so it cannot point at a different release, and
+  # from image_arch where a foreign-architecture build set one -- the controller's
+  # own architecture is the wrong answer when building an arm image on x86.
+  # Set luna2_client_package explicitly to override it.
+  set_fact:
+    luna2_client_package: "{{ luna2_client_package | default(trix_repo_baseurl ~ '/' ~ trix_version ~ '/luna2/ubuntu/' ~ (image_arch | default(system_arch)) ~ '/luna2-client.deb', true) }}"
+  tags: install-only
+
 - name: Download luna2-client package
-  get_url:
-    url: "{{ luna2_client_package }}"
-    dest: "/tmp/{{ luna2_client_package|split('/')|last }}"
+  command: "curl -fsSL {{ luna2_client_package }} -o /tmp/{{ luna2_client_package|split('/')|last }}"
   tags: install-only
 #    validate_certs: false
 
 - name: install luna2-client package
-  shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
+  shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }} || apt-get install -y --fix-broken"
 
 - name: Disable unwanted/unneeded services
   ansible.builtin.systemd:

@@ -46,6 +46,16 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+# Optional lpart client override (mirrors ubuntu/osgrab.yml).
+- name: Download luna2-client package
+  command: "curl -fsSL {{ luna2_client_package }} -o /tmp/{{ luna2_client_package|split('/')|last }}"
+  when: luna2_client_package is defined
+  tags: install-only
+
+- name: install luna2-client package
+  shell: "zypper --non-interactive install --allow-unsigned-rpm --force /tmp/{{ luna2_client_package|split('/')|last }}"
+  when: luna2_client_package is defined
+
 - name: Enabling services
   ansible.builtin.systemd:
     name: "{{ item }}"

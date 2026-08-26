@@ -1,13 +1,13 @@
 ---
 trinityx_repositories:
   - name: trix
-    repo: https://updates.clustervision.com/trinityx/{{ trix_version }}/os/opensuse/{{ opensuse_release.split('/')|last }}/{{ system_arch }}
+    repo: "{{ trix_repo_baseurl }}/{{ trix_version }}/os/opensuse/{{ opensuse_release.split('/')|last }}/{{ system_arch }}"
     gpgcheck: False
   - name: luna2
-    repo: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/opensuse/{{ opensuse_release.split('/')|last }}/{{ system_arch }}
+    repo: "{{ trix_repo_baseurl }}/{{ trix_version }}/luna2/opensuse/{{ opensuse_release.split('/')|last }}/{{ system_arch }}"
     gpgcheck: False
   - name: luna2-noarch
-    repo: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/noarch/rpms
+    repo: "{{ trix_repo_baseurl }}/{{ trix_version }}/luna2/noarch/rpms"
     gpgcheck: False
 
 image_bootstrap_packages:
@@ -21,6 +21,8 @@ image_bootstrap_packages:
   - "p11-kit-tools"
 
 image_core_packages:
+  - "jq"                # lpart: dracut_install needs jq in the initramfs
+  - "gptfdisk"          # lpart: provides sgdisk for the initramfs partitioner
   - "NetworkManager"
   - "audit"
   - "bash"
@@ -35,6 +37,8 @@ image_core_packages:
   - "nss_wrapper"
   - "glibc"
   - "grubby"
+  - "shim"              # lpart: signed UEFI shim (staged into the ESP by lpart-bootloader-finalise)
+  - "grub2-x86_64-efi"  # lpart: signed grub EFI binary in /usr/lib64/efi + /usr/share/grub2
   - "hostname"
   - "iproute"
   - "iputils"

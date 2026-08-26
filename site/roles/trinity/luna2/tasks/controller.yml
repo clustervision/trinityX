@@ -187,41 +187,78 @@
     executable: /bin/bash
   when: luna2_utils_pip is undefined
 
-- name: Prepare utils file names
-  set_fact:
-     luna2_utils_grep: "{{ luna2_utils | join('|') }}"
-
-- name: Collect utils file names
-  shell: "ls {{ luna2_python_dir.stdout }}/site-packages/utils/ | grep -E '{{ luna2_utils_grep }}' | grep -E '^([a-zA-Z0-9\\-]+|.+\\.py|.+\\.sh)$'"
-  register: luna2_utils_names
+- name: Resolve each luna util to the executable that should be linked
+  # pip writes a console script into bin/ for every util that declares an entry
+  # point, and that is what /usr/sbin should point at. Note bin/ sits beside lib/
+  # ({{ trix_local }}/python/bin), NOT under luna2_python_dir, which is the
+  # versioned lib dir. The old discovery listed
+  # site-packages/utils and matched names, which only works while every util is
+  # a single flat file: lchroot became a package, the bare name still matched, and
+  # /usr/sbin/lchroot was linked to the package DIRECTORY -- so `command -v lchroot`
+  # found nothing and image-create silently fell back to a native chroot. Ask for
+  # the declared names instead of listing the directory, prefer bin/, and fall back
+  # to the flat file for the utils that still ship as one.
+  shell: |
+    for name in {{ luna2_utils | join(' ') }}; do
+      if [ -f "{{ trix_local }}/python/bin/$name" ]; then
+        echo "$name {{ trix_local }}/python/bin/$name"
+        continue
+      fi
+      for candidate in "$name" "$name.py" "$name.sh"; do
+        target="{{ luna2_python_dir.stdout }}/site-packages/utils/$candidate"
+        if [ -f "$target" ]; then
+          echo "$name $target"
+          break
+        fi
+      done
+    done
+  args:
+    executable: /bin/bash
+  register: luna2_utils_resolved
   changed_when: false
-  when: luna2_utils_grep is defined
+
+- name: WARNING - a declared luna util ships no executable
+  # A util named here but absent from the install gets no /usr/sbin entry. That
+  # used to pass unremarked; say it, so a missing tool is noticed at install time
+  # rather than by whoever types the command months later.
+  ansible.builtin.debug:
+    msg: >-
+      luna2_utils lists {{ luna2_utils | difference(luna2_utils_resolved.stdout_lines
+      | map('split', ' ') | map('first') | list) | join(', ') }},
+      but no console script or utils file was found for
+      {{ 'it' if (luna2_utils | difference(luna2_utils_resolved.stdout_lines
+      | map('split', ' ') | map('first') | list) | length) == 1 else 'them' }}
+      -- no /usr/sbin symlink will be created.
+  when:
+    - luna2_utils_resolved is defined
+    - (luna2_utils | difference(luna2_utils_resolved.stdout_lines
+       | map('split', ' ') | map('first') | list) | length) > 0
 
 - name: Ensuring luna utils files are unix
-  shell: "dos2unix {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+  shell: "dos2unix {{ item.split(' ') | last }}"
   with_items:
-    - "{{ luna2_utils_names.stdout_lines }}"
-  when: luna2_utils_names is defined
+    - "{{ luna2_utils_resolved.stdout_lines }}"
+  when: luna2_utils_resolved is defined
 
 - name: Ensuring luna utils files are executable
   ansible.builtin.file:
-    path: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+    path: "{{ item.split(' ') | last }}"
     owner: root
     group: root
     mode: '0755'
   with_items:
-    - "{{ luna2_utils_names.stdout_lines }}"
-  when: luna2_utils_names is defined
+    - "{{ luna2_utils_resolved.stdout_lines }}"
+  when: luna2_utils_resolved is defined
 
-- name: Create symlink from site-pacakges/utils to /usr/sbin
+- name: Create symlink from the luna utils to /usr/sbin
   file:
-    src: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
-    dest: "/usr/sbin/{{ 'trix-diag' if item == 'trinity_diagnosis.py' else item.split('.') | first }}"
+    src: "{{ item.split(' ') | last }}"
+    dest: "/usr/sbin/{{ 'trix-diag' if (item.split(' ') | first) == 'trinity_diagnosis' else (item.split(' ') | first) }}"
     state: link
     force: true
   with_items:
-    - "{{ luna2_utils_names.stdout_lines }}"
-  when: luna2_utils_names is defined
+    - "{{ luna2_utils_resolved.stdout_lines }}"
+  when: luna2_utils_resolved is defined
 
 #  shell: "ln -s {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }} /usr/local/bin/{{ item.split('.') | first }}"
 #  with_items:
