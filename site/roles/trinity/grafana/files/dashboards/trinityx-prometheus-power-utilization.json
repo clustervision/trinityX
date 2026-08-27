@@ -716,7 +716,7 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when set.",
+      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when set. Y-axis auto-scales to non-zero power so small changes stay visible; 0 W periods appear as a gap (series stops).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -725,19 +725,36 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "fillOpacity": 18,
-            "showPoints": "never",
+            "fillOpacity": 20,
+            "showPoints": "auto",
+            "pointSize": 5,
             "spanNulls": false,
             "stacking": {
               "mode": "none",
               "group": "A"
             },
-            "lineWidth": 2
+            "lineWidth": 2,
+            "axisBorderShow": false
           },
           "unit": "watt",
           "decimals": 0
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Power"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byName",
@@ -757,6 +774,10 @@
               {
                 "id": "custom.fillOpacity",
                 "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
               },
               {
                 "id": "color",
@@ -809,7 +830,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) or vector(0)",
+          "expr": "(sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0",
           "legendFormat": "Total Power",
           "refId": "A",
           "instant": false,
@@ -1385,7 +1406,7 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when set.",
+      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when set. Y-axis auto-scales to non-zero power so small changes stay visible; 0 W periods appear as a gap (series stops).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1394,19 +1415,36 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "fillOpacity": 18,
-            "showPoints": "never",
+            "fillOpacity": 20,
+            "showPoints": "auto",
+            "pointSize": 5,
             "spanNulls": false,
             "stacking": {
               "mode": "none",
               "group": "A"
             },
-            "lineWidth": 2
+            "lineWidth": 2,
+            "axisBorderShow": false
           },
           "unit": "watt",
           "decimals": 0
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Power"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byName",
@@ -1426,6 +1464,10 @@
               {
                 "id": "custom.fillOpacity",
                 "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
               },
               {
                 "id": "color",
@@ -1478,7 +1520,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=\"$luna_group\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=\"$luna_group\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=\"$luna_group\"})))) or vector(0)",
+          "expr": "(sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=\"$luna_group\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=\"$luna_group\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=\"$luna_group\"})))) > 0",
           "legendFormat": "Total Power",
           "refId": "A",
           "instant": false,
@@ -1680,6 +1722,6 @@
   "timezone": "browser",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 34,
+  "version": 35,
   "weekStart": ""
 }
