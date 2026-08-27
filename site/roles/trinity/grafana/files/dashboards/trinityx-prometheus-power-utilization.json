@@ -58,7 +58,7 @@
       },
       "id": 99,
       "options": {
-        "content": "**1. Power Overview** \u2014 groups by **Luna group**, not hostname prefix. Node counts from Luna Prometheus SD (`up{{job=\"luna_nodes\"}}`, includes down nodes). Power from IPMI / `power_consumption_watts`. Empty Luna groups (zero nodes) do not appear \u2014 Prometheus has no scrape target for them. Set **Power budget (W)** / **Group budget (W)** (`0` = Not configured).",
+        "content": "**1. Power Overview** \u2014 groups by **Luna group**, not hostname prefix. Node counts from Luna Prometheus SD (`up{{job=\"luna_nodes\"}}`, includes down nodes). Power from IPMI / `power_consumption_watts`. Empty Luna groups (zero nodes) do not appear \u2014 Prometheus has no scrape target for them. Set **Power budget (W)** / **Group budget (W)** (`0` = Not configured). **Peak Time** = highest Total Power sample in the **dashboard time range** (top-right picker; same series as Total Power Trend \u2014 not Avg window).",
         "mode": "markdown"
       },
       "title": "Power Overview",
@@ -577,7 +577,7 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "Time of the highest Total Power sample in the selected range (same watts filter as Total Power Trend). If several samples share the max, the latest is shown.",
+      "description": "When Total Power was highest in the **dashboard time range** (top-right picker, e.g. Last 7 days) \u2014 same query as Total Power Trend. Independent of Avg window. If several samples share the max watts, the latest time is shown. Hover the trend Max to cross-check.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -593,10 +593,46 @@
               }
             ]
           },
-          "unit": "dateTimeAsIso",
           "noValue": "n/a"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Metric"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Power"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 4,
@@ -614,7 +650,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/^Time$/",
           "values": false
         },
         "textMode": "value"
@@ -627,14 +663,51 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "max_over_time((timestamp((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0) and ((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0) == scalar(max_over_time(((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0)[$__range:1m])))[$__range:1m]) * 1000",
-          "legendFormat": "Peak Time",
+          "expr": "((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0) == scalar(max_over_time(((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0)[$__range:1m] @ end()))",
+          "legendFormat": "Total Power",
           "refId": "A",
-          "instant": true,
-          "range": false
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "maxDataPoints": 10080
         }
       ],
       "title": "Peak Time",
+      "transformations": [
+        {
+          "id": "seriesToRows",
+          "options": {}
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "number",
+                "targetField": "Value"
+              }
+            ]
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Time",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 1
+          }
+        }
+      ],
       "type": "stat"
     },
     {
@@ -760,7 +833,8 @@
           "legendFormat": "Total Power",
           "refId": "A",
           "instant": false,
-          "range": true
+          "range": true,
+          "maxDataPoints": 10080
         },
         {
           "datasource": {
@@ -1450,7 +1524,8 @@
           "legendFormat": "Total Power",
           "refId": "A",
           "instant": false,
-          "range": true
+          "range": true,
+          "maxDataPoints": 10080
         },
         {
           "datasource": {
@@ -1648,6 +1723,6 @@
   "timezone": "browser",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 37,
+  "version": 38,
   "weekStart": ""
 }
