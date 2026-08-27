@@ -577,7 +577,7 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "When Total Power was highest in the **dashboard time range** (top-right picker, e.g. Last 7 days) \u2014 same series as Total Power Trend. Not Avg window. Ties \u2192 the first max sample Grafana returns after sort.",
+      "description": "Timestamp of Max Total Power in the **dashboard time range** (top-right picker; same watts as Total Power Trend / legend Max). Not Avg window. Ties \u2192 latest sample at that max.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -595,44 +595,7 @@
           },
           "noValue": "n/a"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Value"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Metric"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total Power"
-            },
-            "properties": [
-              {
-                "id": "custom.hidden",
-                "value": true
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -647,9 +610,11 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [],
-          "fields": "/^Time$/",
-          "values": true
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
         "textMode": "value"
       },
@@ -661,48 +626,28 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0",
-          "legendFormat": "Total Power",
+          "expr": "max_over_time((timestamp((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0) and (((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0) == scalar(max_over_time(((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0)[$__range:1m]))))[$__range:1m]) * 1000",
+          "legendFormat": "Peak Time",
           "refId": "A",
-          "instant": false,
-          "range": true,
-          "format": "time_series",
-          "maxDataPoints": 10080
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Peak Time",
       "transformations": [
         {
-          "id": "seriesToRows",
-          "options": {}
-        },
-        {
           "id": "convertFieldType",
           "options": {
             "conversions": [
               {
-                "destinationType": "number",
+                "destinationType": "time",
+                "targetField": "Peak Time"
+              },
+              {
+                "destinationType": "time",
                 "targetField": "Value"
               }
             ]
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "field": "Value",
-                "desc": true
-              }
-            ]
-          }
-        },
-        {
-          "id": "limit",
-          "options": {
-            "limitField": 1
           }
         }
       ],
@@ -1721,6 +1666,6 @@
   "timezone": "browser",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 39,
+  "version": 40,
   "weekStart": ""
 }
