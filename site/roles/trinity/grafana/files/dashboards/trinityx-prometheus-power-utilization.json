@@ -577,7 +577,7 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "Time of the highest Total Power sample in the selected range (same query as Total Power Trend). If several samples share the max, the latest is shown.",
+      "description": "Time of the highest Total Power sample in the selected range (same watts query as Total Power Trend, 1m resolution). If several samples share the max, the latest is shown.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -663,12 +663,13 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))",
+          "expr": "((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0) and (((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0) == bool scalar(max_over_time(((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0)[$__range:1m] @ end())))",
           "legendFormat": "Total Power",
           "refId": "A",
           "instant": false,
           "range": true,
           "format": "time_series",
+          "interval": "1m",
           "maxDataPoints": 10080
         }
       ],
@@ -681,23 +682,11 @@
         {
           "id": "sortBy",
           "options": {
+            "fields": {},
             "sort": [
               {
                 "field": "Time",
-                "desc": true,
-                "index": 0
-              }
-            ]
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "sort": [
-              {
-                "field": "Value",
-                "desc": true,
-                "index": 2
+                "desc": true
               }
             ]
           }
@@ -716,7 +705,7 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when set. Y-axis auto-scales to non-zero power so small changes stay visible; 0 W periods appear as a gap (series stops).",
+      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when it falls near the load band (otherwise omitted so Y-axis can zoom). 0 W periods appear as a gap.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -725,7 +714,7 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "fillOpacity": 20,
+            "fillOpacity": 10,
             "showPoints": "auto",
             "pointSize": 5,
             "spanNulls": false,
@@ -842,7 +831,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "vector(${power_budget_watts}) and on() (vector(${power_budget_watts}) > 0)",
+          "expr": "vector(${power_budget_watts}) and on() (vector(${power_budget_watts}) > 0) and on() (vector(${power_budget_watts}) <= scalar(max_over_time(((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0)[$__range:1m] @ end()) * 1.2)) and on() (vector(${power_budget_watts}) >= scalar(min_over_time(((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0)[$__range:1m] @ end()) * 0.8))",
           "legendFormat": "Power Budget",
           "refId": "B",
           "instant": false,
@@ -1406,7 +1395,7 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
-      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when set. Y-axis auto-scales to non-zero power so small changes stay visible; 0 W periods appear as a gap (series stops).",
+      "description": "Legend: Current / Min / Max / Mean. Red dashed line = budget when it falls near the load band (otherwise omitted so Y-axis can zoom). 0 W periods appear as a gap.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1415,7 +1404,7 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "fillOpacity": 20,
+            "fillOpacity": 10,
             "showPoints": "auto",
             "pointSize": 5,
             "spanNulls": false,
@@ -1532,7 +1521,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "vector(${group_budget_watts}) and on() (vector(${group_budget_watts}) > 0)",
+          "expr": "vector(${group_budget_watts}) and on() (vector(${group_budget_watts}) > 0) and on() (vector(${group_budget_watts}) <= scalar(max_over_time(((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=\"$luna_group\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=\"$luna_group\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=\"$luna_group\"})))) > 0)[$__range:1m] @ end()) * 1.2)) and on() (vector(${group_budget_watts}) >= scalar(min_over_time(((sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=\"$luna_group\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=\"$luna_group\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=\"$luna_group\"})))) > 0)[$__range:1m] @ end()) * 0.8))",
           "legendFormat": "Power Budget",
           "refId": "B",
           "instant": false,
@@ -1722,6 +1711,6 @@
   "timezone": "browser",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 35,
+  "version": 36,
   "weekStart": ""
 }
