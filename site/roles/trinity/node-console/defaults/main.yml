@@ -2,46 +2,33 @@
 # trinity/node-console defaults.
 # Override in group_vars or at role invocation.
 
-# --- netconsole (UDP kernel log transport) ---
- 
-# UDP port nodes send to; lconsole listens on the same port
-netconsole_port: 6666
-
-# Controller cluster IP (defaults to trix_ctrl_ip from group_vars/all.yml)
-netconsole_ctrl_ip: "{{ trix_ctrl_ip }}"
-
-# Controller cluster interface MAC — auto-resolved at runtime from trix_ctrl_ip.
-# Set explicitly only if auto-detection fails.
-netconsole_ctrl_mac: ""
-
-# Boot script and systemd unit deployed inside the compute image
-netconsole_setup_script: /usr/local/sbin/node-console-setup.sh
-netconsole_service_name: netconsole-setup
-
-# Seconds the boot script waits for a usable route to the controller
-netconsole_route_wait_timeout: 60
-
 # --- serial console (SOL) ---
 
-# Serial device and baud rate for kernel early-boot output and SOL.
-# Override to ttyS1/ttyS2 if the platform uses a different port.
-serial_console_device: ttyS0
+# The serial port the BMC's SOL actually taps — a per-board property (BIOS
+# Console Redirection decides it; Supermicro boards are commonly COM2 =
+# ttyS1). Set this per cluster/hardware profile. The rendered kernel cmdline
+# lists BOTH legacy ports with this one last (primary), so a wrong value
+# still shows the kernel boot over SOL — only the installer/systemd lines go
+# missing, which points straight at this setting. Detection recipe is in
+# tasks/main.yml next to the task.
+serial_console_device: ttyS1
 serial_console_speed: 115200
 
-# --- booted-notify (post-install "booted" state) ---
+# --- sol-grab (on-demand, bounded SOL capture feeding the nodeboot GUI's
+# console panel) ---
 
-# One-shot deployed into the compute image. At first boot after provisioning it POSTs
-# state "booted" to Luna, then self-disables. It reads its node-scoped provision token
-# from the env file the Luna installer (templ_install.cfg) drops into the installed root.
-booted_notify_script: /usr/local/sbin/trinity-booted-notify.sh
-booted_notify_service_name: trinity-booted-notify
-booted_notify_env: /etc/trinity/booted-notify.env
-
-# --- lconsole handoff marker ---
-
-# Written to /dev/kmsg by the node once netconsole loads.
-# lconsole default hybrid mode watches for this to close SOL.
-netconsole_ready_marker: TRINITYX_LCONSOLE_NETCONSOLE_READY
+# Controller-side only, on the provisioning controller (BMC network access).
+# Deliberately NOT always-on: SOL is one exclusive BMC session per node, so
+# holding it fleet-wide would mean thousands of concurrent logins. Grabbed
+# only on request, bounded by sol_grab_max_workers, held for
+# sol_grab_duration_secs, then dropped. See sol_grab.py's docstring.
+sol_grab_port: 6667
+sol_grab_service_name: sol-grab
+sol_grab_max_workers: 15
+sol_grab_duration_secs: 8
+sol_grab_max_lines: 500
+sol_grab_backend: ipmi
+sol_grab_log_dir: /var/log/luna/console
 
 # --- packages ---
 
@@ -49,7 +36,3 @@ netconsole_ready_marker: TRINITYX_LCONSOLE_NETCONSOLE_READY
 node_console_packages:
   - ipmitool
   - sshpass
-
-# --- Luna osimage kernel modules ---
-
-node_console_kernel_modules: "netconsole,ipmi_devintf,ipmi_si,ipmi_msghandler"

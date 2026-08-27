@@ -1,5 +1,6 @@
 ---
-# trinity/node-console — full console access for TrinityX compute nodes.
+# trinity/node-console — console access for TrinityX compute nodes, over
+# Serial-over-LAN through each node's BMC.
 
 # --- controller: packages ---
 - name: Install packages on controller
@@ -8,134 +9,76 @@
     state: present
   when: on_controller | default(False)
 
-# --- resolve controller MAC address ---
-# Mirrors trinity/init find-interface.yml: gather network facts via
-# delegate_to so it works from both controller and chroot play contexts.
+# --- osimage: serial console on the kernel command line ---
 
-- name: Gather controller network facts
-  setup:
-    gather_subset: ['!all', 'network']
-  delegate_to: localhost
-  delegate_facts: true
-  run_once: true
-  when: netconsole_ctrl_mac == ""
-
-- name: Resolve controller MAC from primary IPv4
-  set_fact:
-    netconsole_ctrl_mac: "{{ hostvars['localhost']['ansible_' + item]['macaddress'] }}"
-  when:
-    - netconsole_ctrl_mac == ""
-    - hostvars['localhost']['ansible_' + item]['ipv4'] is defined
-    - hostvars['localhost']['ansible_' + item]['ipv4']['address'] == trix_ctrl_ip
-  with_items: "{{ hostvars['localhost']['ansible_interfaces'] }}"
-
-- name: Resolve controller MAC from secondary IPv4
-  set_fact:
-    netconsole_ctrl_mac: "{{ hostvars['localhost']['ansible_' + item]['macaddress'] }}"
-  when:
-    - netconsole_ctrl_mac == ""
-    - hostvars['localhost']['ansible_' + item]['ipv4_secondaries'] is defined
-    - hostvars['localhost']['ansible_' + item]['ipv4_secondaries']
-      | selectattr('address', 'equalto', trix_ctrl_ip) | list | length > 0
-  with_items: "{{ hostvars['localhost']['ansible_interfaces'] }}"
-
-- name: Fail if controller MAC could not be resolved
-  fail:
-    msg: >
-      No interface on the controller carries {{ trix_ctrl_ip }}.
-      Set netconsole_ctrl_mac explicitly in group_vars or defaults/main.yml.
-  when: netconsole_ctrl_mac == ""
-
-# --- image: netconsole setup script and service ---
-
-- name: Deploy node-console setup script into image
-  template:
-    src: netconsole-setup.sh.j2
-    dest: "{{ netconsole_setup_script }}"
-    owner: root
-    group: root
-    mode: "0755"
-  when: in_image | default(False)
-
-- name: Deploy node-console systemd service into image
-  template:
-    src: netconsole-setup.service.j2
-    dest: "/etc/systemd/system/{{ netconsole_service_name }}.service"
-    owner: root
-    group: root
-    mode: "0644"
-  when: in_image | default(False)
-
-- name: Enable node-console-setup service in image
-  systemd:
-    name: "{{ netconsole_service_name }}"
-    enabled: true
-  when: in_image | default(False)
-
-# --- image: booted-notify one-shot ("booted" state at first boot) ---
-
-- name: Deploy booted-notify script into image
-  template:
-    src: booted-notify.sh.j2
-    dest: "{{ booted_notify_script }}"
-    owner: root
-    group: root
-    mode: "0755"
-  when: in_image | default(False)
-
-- name: Deploy booted-notify systemd service into image
-  template:
-    src: booted-notify.service.j2
-    dest: "/etc/systemd/system/{{ booted_notify_service_name }}.service"
-    owner: root
-    group: root
-    mode: "0644"
-  when: in_image | default(False)
-
-- name: Enable booted-notify service in image
-  systemd:
-    name: "{{ booted_notify_service_name }}"
-    enabled: true
-  when: in_image | default(False)
-
-- name: Add kernel modules to Luna osimage
-  shell: >
-    luna osimage change
-    --kernelmodules "{{ node_console_kernel_modules }}"
-    {{ inventory_hostname | regex_replace('\.osimages\.luna$', '') }}
-  delegate_to: localhost
-  when: in_image | default(False)
-
-- name: Inject serial console + netconsole kernel cmdline into Luna osimage
-  # console=ttyS0,115200n8  — serial console active from first kernel message (IPMI/Redfish SOL)
-  # netconsole=6666@/,...   — static netconsole fallback; @ / means kernel auto-detects src-IP
+- name: Inject serial console kernel cmdline into Luna osimage
+  # The SOL port is listed TWICE, deliberately:
+  #   console=uart,io,<addr>  — binds by IO address at the first kernel
+  #     instruction; immune to port-probe timing, carries printk always.
+  #   console=ttyS<n> (last)  — the real console with a tty device behind
+  #     it; /dev/console resolves to it, so installer and systemd output
+  #     reach SOL too (a bootconsole alone cannot carry /dev/console).
+  # Do NOT add the other legacy port as a third console: two *named* 8250
+  # consoles on the cmdline stop the second one from binding at all
+  # (observed on an EL8 kernel — console=ttyS0 console=ttyS1 leaves ttyS1
+  # dead), which silently reverts the whole setup.
+  # Which port the BMC taps is a per-board property (Supermicro is commonly
+  # COM2/ttyS1); this firmware publishes no ACPI SPCR, so it cannot be
+  # auto-detected from the OS. To find it on new hardware: attach lconsole
+  # to a booted node and on that node run
+  #   stty -F /dev/ttyS<N> 115200 -crtscts raw; echo test > /dev/ttyS<N>
+  # — the port whose 'test' appears in the SOL session is the one.
   shell: >
     luna osimage change
     --quick-kerneloptions
-    "console=tty0 console={{ serial_console_device }},{{ serial_console_speed }}n8 netconsole={{ netconsole_port }}@/,{{ netconsole_port }}@{{ netconsole_ctrl_ip }}/{{ netconsole_ctrl_mac }}"
+    "console=tty0
+    console=uart,io,{{ '0x3f8' if serial_console_device == 'ttyS0' else '0x2f8' }},{{ serial_console_speed }}n8
+    console={{ serial_console_device }},{{ serial_console_speed }}n8"
     {{ inventory_hostname | regex_replace('\.osimages\.luna$', '') }}
   delegate_to: localhost
   when: in_image | default(False)
 
-# --- controller: firewall / SELinux ---
+# --- controller: sol-grab (on-demand SOL capture for the nodeboot GUI's
+# console panel) ---
+# The script itself (sol_grab.py) is NOT deployed by this role — it imports
+# utils.lconsole and so ships with luna2-utils, installed the same way
+# lconsole.py itself is. This role only owns the systemd unit that runs it.
 
-- name: Open netconsole UDP port in firewalld
+- name: Create console capture log directory
+  file:
+    path: "{{ sol_grab_log_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: on_controller | default(False)
+
+- name: Deploy sol-grab systemd service
+  template:
+    src: sol-grab.service.j2
+    dest: "/etc/systemd/system/{{ sol_grab_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  when: on_controller | default(False)
+  notify: restart sol-grab
+
+- name: Enable and start sol-grab
+  systemd:
+    name: "{{ sol_grab_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: on_controller | default(False)
+
+# --- controller: firewall ---
+
+- name: Open sol-grab TCP port in firewalld
   firewalld:
     zone: trusted
-    port: "{{ netconsole_port }}/udp"
+    port: "{{ sol_grab_port }}/tcp"
     state: enabled
     permanent: true
     immediate: true
   when: on_controller | default(False)
-  ignore_errors: true
-
-- name: Add SELinux label for netconsole UDP port
-  seport:
-    ports: "{{ netconsole_port }}"
-    proto: udp
-    setype: syslogd_port_t
-    state: present
-  when:
-    - on_controller | default(False)
-    - ansible_selinux.status == "enabled"
   ignore_errors: true

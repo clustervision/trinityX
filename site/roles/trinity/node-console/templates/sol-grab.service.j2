@@ -1,0 +1,21 @@
+[Unit]
+Description=TrinityX on-demand SOL capture (feeds the nodeboot GUI's console panel)
+After=network-online.target luna2-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=SOL_GRAB_PORT={{ sol_grab_port }}
+Environment=SOL_GRAB_MAX_WORKERS={{ sol_grab_max_workers }}
+Environment=SOL_GRAB_DURATION_SECS={{ sol_grab_duration_secs }}
+Environment=SOL_GRAB_LOG_DIR={{ sol_grab_log_dir }}
+Environment=SOL_GRAB_MAX_LINES={{ sol_grab_max_lines }}
+Environment=SOL_GRAB_BACKEND={{ sol_grab_backend }}
+ExecStart=/trinity/local/python/bin/python3 /trinity/local/python/lib/python3.10/site-packages/utils/sol_grab.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
