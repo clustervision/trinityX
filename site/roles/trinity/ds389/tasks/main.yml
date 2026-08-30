@@ -205,6 +205,18 @@
 
 # ----------------------------------------------------------------
 
+# dscreate starts the instance; it must be stopped before its config and data
+# directories are relocated below. A live ns-slapd rewrites dse.ldif into the
+# directory during the state=absent deletes, so the rmtree fails with ENOTEMPTY.
+# The instance is brought back up by the 'restart ds389' handler / 'Start DS389
+# service' tasks once the symlinks are in place. The only other stop lives in the
+# override-gated destroy block, which is skipped on a fresh install.
+- name: Stop DS389 before relocating its directories
+  systemd:
+    name: dirsrv@local
+    state: stopped
+  when: primary | default(True)
+
 - name: Get /etc/dirsrv/slapd status
   stat:
     path: '/etc/dirsrv/slapd-local'
