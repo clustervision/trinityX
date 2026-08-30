@@ -1,0 +1,25 @@
+---
+
+# Same shape as find-interface.yml, for the BMC network: the interface carrying
+# this controller's address on it. The fact key is spelled the way Ansible
+# publishes it - a dash in the device name becomes an underscore.
+
+- set_fact:
+    trix_bmc_interface: '{{ item }}'
+  when:
+    - trix_bmc_interface is not defined
+    - inner_loop_var != ""
+    - hostvars[inventory_hostname]['ansible_' + (item | replace('-', '_'))]['ipv4'] is defined
+    - hostvars[inventory_hostname]['ansible_' + (item | replace('-', '_'))]['ipv4']['address'] == inner_loop_var
+  with_items:
+    - "{{ ansible_interfaces }}"
+
+- set_fact:
+    trix_bmc_interface: '{{ item }}'
+  when:
+    - trix_bmc_interface is not defined
+    - inner_loop_var != ""
+    - hostvars[inventory_hostname]['ansible_' + (item | replace('-', '_'))]['ipv4_secondaries'] is defined
+    - hostvars[inventory_hostname]['ansible_' + (item | replace('-', '_'))]['ipv4_secondaries'] | selectattr('address','equalto',inner_loop_var) | list | length > 0
+  with_items:
+    - "{{ ansible_interfaces }}"
