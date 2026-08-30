@@ -62,33 +62,18 @@
 
 # A BMC has to reach the controller for out-of-band work - fetching a firmware image
 # among others - and opening single ports is fragile, so the whole BMC-facing
-# interface is trusted, as the cluster interface is above. The interface is the one
-# carrying this controller's address on the BMC network (trix_ctrlX_bmcip, collected
-# by init). Where the BMC network rides the cluster interface this resolves to the
-# same name and |unique folds it away. The fact key is spelled the way Ansible
-# publishes it - a dash in the device name becomes an underscore - as
-# init/find-interface.yml does.
-- name: Find the interface carrying this controller's BMC-network address
-  set_fact:
-    firewalld_bmc_interface: '{{ item.0 }}'
-  with_nested:
-    - '{{ ansible_interfaces }}'
-    - '{{ all_ctrl_bmcip | default([]) }}'
-  when:
-    - firewalld_bmc_interface is not defined
-    - item.1 != ""
-    - hostvars[inventory_hostname]['ansible_' + (item.0 | replace('-', '_'))]['ipv4'] is defined
-    - (hostvars[inventory_hostname]['ansible_' + (item.0 | replace('-', '_'))]['ipv4']['address'] == item.1)
-      or (hostvars[inventory_hostname]['ansible_' + (item.0 | replace('-', '_'))]['ipv4_secondaries'] | default([]) | selectattr('address', 'equalto', item.1) | list | length > 0)
-
+# interface is trusted, as the cluster interface is above. Which interface that is
+# was answered by init (find-bmc-interface.yml): the one carrying this controller's
+# address on the BMC network. Where the BMC network rides the cluster interface it
+# is the same name and |unique folds it away.
 - name: Add the BMC-facing interface to the trusted zone
   set_fact:
-    firewalld_trusted_interfaces: "{{ firewalld_trusted_interfaces + [firewalld_bmc_interface] }}"
-  when: firewalld_bmc_interface is defined
+    firewalld_trusted_interfaces: "{{ firewalld_trusted_interfaces + [trix_bmc_interface] }}"
+  when: trix_bmc_interface is defined and trix_bmc_interface != ""
 
 - debug:
     msg: "No interface on this controller carries a BMC-network address ({{ all_ctrl_bmcip | default([]) | join(', ') }}); BMCs will not be able to reach it unless their interface is listed in firewalld_trusted_interfaces"
-  when: firewalld_bmc_interface is not defined
+  when: trix_bmc_interface is not defined or trix_bmc_interface == ""
 
 - name: Assign interfaces to the trusted zone
   firewalld:
