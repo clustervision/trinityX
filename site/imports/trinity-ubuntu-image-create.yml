@@ -46,8 +46,7 @@
       - alternative_image_source is defined
       - alternative_image_source != 'osgrab'
 
-  - name:
-    debug:
+  - debug:
       msg: "Downloading for {{ alternative_distribution }} using {{ alternative_image_source|default('base') }}"
     when: download_base_image is defined
 
@@ -62,21 +61,29 @@
   - role: trinity/image-download
     image_download_distribution: "{{ alternative_distribution }}"
     image_download_source: "{{ alternative_image_source|default('base') }}"
+    image_architecture: "{{ system_arch }}"
     when: download_base_image is defined
-    tags: image-create
+    tags: image-create, install-only
 
   - role: ansible/write_facts
     tags: always
 
   - role: trinity/image-create
     image_create_distribution: 'ubuntu'
-    tags: image-create
+    tags: image-create, install-only
 
   - role: luna/osimage-create
     luna_image_path: "{{ trix_images }}/{{ image_name }}"
     luna_image_name: "{{ image_name }}"
     luna_image_distribution: Ubuntu
     tags: image-create
+
+  post_tasks:
+  - name: Mount /proc in the image for the in-image plays
+    # Ubuntu 26 ships rust coreutils, which abort without /proc, and the chroot
+    # connection provides none. The playbook unmounts it again before packing.
+    shell: "mountpoint -q {{ trix_images }}/{{ image_name }}/proc || mount -t proc proc {{ trix_images }}/{{ image_name }}/proc"
+    tags: always
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
@@ -134,7 +141,7 @@
 
   - role: trinity/image-create
     image_create_distribution: 'ubuntu'
-    tags: image-create
+    tags: image-create, install-only
 
   environment:
     no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"

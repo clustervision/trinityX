@@ -1,13 +1,34 @@
 ---
 
-- name: Install AlertX history dependencies
-  yum:
-    name:
-      - python3-PyMySQL
-    state: present
+- name: Install AlertX history dependencies into the TrinityX python environment
+  ansible.builtin.pip:
+    name: pymysql
+    virtualenv: "{{ trix_local }}/python"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
   when: alertx_history_enable
+
+- block:
+  - name: Ensure AlertX history password directory exists
+    file:
+      path: '/etc/trinity/passwords/mysql'
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Copy AlertX history DB password from sync
+    copy:
+      remote_src: true
+      src: '{{ trix_sync }}/alertx/{{ alertx_history_sql_user }}.txt'
+      dest: '/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt'
+      owner: root
+      group: root
+      mode: '0600'
+  when:
+    - alertx_history_enable
+    - not primary | default(False)
+    - ha | default(False)
 
 - name: Generate password for AlertX history database user and save it to /etc/trinity/passwords
   set_fact:
@@ -15,6 +36,24 @@
                            "/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt
                             chars=ascii_letters,digits,hexdigits") }}'
   when: alertx_history_enable
+
+
+- block:
+  - name: Ensure AlertX history sync directory exists
+    file:
+      path: '{{ trix_sync }}/alertx'
+      state: directory
+
+  - name: Add AlertX history DB password to sync
+    copy:
+      remote_src: true
+      src: '/etc/trinity/passwords/mysql/{{ alertx_history_sql_user }}.txt'
+      dest: '{{ trix_sync }}/alertx/'
+  when:
+    - alertx_history_enable
+    - primary | default(True)
+    - ha | default(False)
+
 
 - name: Ensure alertX history daemon directory exists
   file:
@@ -48,25 +87,77 @@
     logrotate_logdir: '{{ alertx_history_log_dir }}'
     logrotate_emptyfile: 'history.log'
 
-- name: Create AlertX history database
-  mysql_db:
-    config_file: '/root/.my.cnf'
-    name: '{{ alertx_history_sql_db }}'
-    state: present
-  when: alertx_history_enable
+# Pick the mysql module namespace by what actually RESOLVES on the control
+# node, in order of preference - never by Ansible/OS version, which is only a
+# proxy for the real question (which collection is installed).
+#
+#   community.mysql.*      broadest current support and the short-name redirect
+#                          target; deprecated on 5.x but still functional, and
+#                          (unlike ansible.mysql 5.x) supported on core 2.14.
+#   ansible.mysql.*        the renamed successor collection; picked once
+#                          community.mysql is gone (removed in its 6.0).
+#   mysql_db / mysql_user  legacy built-in, only on monolithic Ansible < 2.10.
+#
+# A name counts as usable only if ansible-doc can resolve the module, so a
+# stub/empty collection or a missing one never gets selected.
+- name: Probe which mysql module namespace resolves on the control node
+  shell: |
+    for ns in community.mysql ansible.mysql; do
+      if ansible-doc -t module "${ns}.mysql_db" 2>/dev/null | grep -qi "^> ${ns}.mysql_db"; then
+        echo "$ns"; exit 0
+      fi
+    done
+    if ansible-doc -t module mysql_db 2>/dev/null | grep -qi "^> .*mysql_db"; then
+      echo builtin; exit 0
+    fi
+    echo none
+  register: mysql_ns_probe
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  run_once: true
 
-- name: Create AlertX history database user
-  mysql_user:
-    config_file: '/root/.my.cnf'
-    name: '{{ alertx_history_sql_user }}'
-    host: '{{ item }}'
-    password: '{{ alertx_history_sql_pwd }}'
-    priv: '{{ alertx_history_sql_db }}.*:ALL'
-    state: present
-  with_items:
-    - localhost
-    - 127.0.0.1
-  when: alertx_history_enable
+- name: Select mysql module names
+  set_fact:
+    mysql_module_namespace: "{{ mysql_ns_probe.stdout | trim }}"
+    mysql_db_module: "{{ 'mysql_db' if (mysql_ns_probe.stdout | trim) in ['builtin', 'none'] else (mysql_ns_probe.stdout | trim) ~ '.mysql_db' }}"
+    mysql_user_module: "{{ 'mysql_user' if (mysql_ns_probe.stdout | trim) in ['builtin', 'none'] else (mysql_ns_probe.stdout | trim) ~ '.mysql_user' }}"
+
+- block:
+  - name: Ensure a usable mysql module set is available
+    assert:
+      that: mysql_module_namespace != 'none'
+      fail_msg: >-
+        No mysql module resolves on this control node: neither the ansible.mysql
+        nor the community.mysql collection is installed and Ansible
+        {{ ansible_version.full }} has no built-in mysql modules. Install the
+        community.mysql collection (online via galaxy) or stage its collection
+        RPM in the airgap mirror, then re-run.
+      success_msg: >-
+        Using '{{ mysql_db_module }}' / '{{ mysql_user_module }}'.
+
+  - name: Create AlertX history database
+    action:
+      module: "{{ mysql_db_module }}"
+      config_file: '/root/.my.cnf'
+      name: '{{ alertx_history_sql_db }}'
+      state: present
+
+  - name: Create AlertX history database user
+    action:
+      module: "{{ mysql_user_module }}"
+      config_file: '/root/.my.cnf'
+      name: '{{ alertx_history_sql_user }}'
+      host: '{{ item }}'
+      password: '{{ alertx_history_sql_pwd }}'
+      priv: '{{ alertx_history_sql_db }}.*:ALL'
+      state: present
+    with_items:
+      - localhost
+      - 127.0.0.1
+  when:
+    - alertx_history_enable
+    - not ha | default(False) or primary | default(True)
 
 - name: Install AlertX history ini file
   template:
@@ -97,9 +188,38 @@
     group: root
     mode: '0644'
 
-- name: Reload daemon for alertx history service
+- name: Manage AlertX history systemd service on non-HA controllers
   systemd:
     name: alertx-history.service
     state: "{{ 'restarted' if alertx_history_enable else 'stopped' }}"
     enabled: "{{ True if alertx_history_enable else False }}"
     daemon_reload: true
+  when: not ha | default(False)
+
+- name: Disable AlertX history direct systemd autostart on HA controllers
+  systemd:
+    name: alertx-history.service
+    enabled: false
+    daemon_reload: true
+  when: ha | default(False)
+
+- name: Stop AlertX history direct systemd service on HA controllers when disabled
+  systemd:
+    name: alertx-history.service
+    state: stopped
+    daemon_reload: true
+  when:
+    - ha | default(False)
+    - not alertx_history_enable
+
+- name: Add AlertX history pacemaker resource
+  pcs_resource:
+    name: 'alertx-history'
+    resource_class: 'systemd'
+    resource_type: 'systemd:alertx-history.service'
+    options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
+    state: "{{ 'present' if alertx_history_enable else 'absent' }}"
+  when:
+    - ha | default(False)
+    - primary | default(True)
+  tags: pcs

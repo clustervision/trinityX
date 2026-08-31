@@ -24,7 +24,13 @@ ssl_ca_cert_store:
     update_trust: update-ca-certificates
   - name: Suse
     location: /etc/pki/trust/anchors/
-    update_trust: mount -t proc none /proc; update-ca-certificates; umount -l /proc
+    # suse needs /proc for update-ca-certificates. Mount it tolerantly: under a
+    # plain chroot this is required and works; under lchroot(bwrap) /proc is
+    # already provided and the mount simply fails, harmlessly.
+    update_trust: mount -t proc none /proc 2>/dev/null; update-ca-certificates; umount -l /proc 2>/dev/null
   - name: SLE
     location: /etc/pki/trust/anchors/
-    update_trust: mount -t proc none /proc; update-ca-certificates; umount -l /proc
+    # suse needs /proc for update-ca-certificates. Mount it tolerantly: under a
+    # plain chroot this is required and works; under lchroot(bwrap) /proc is
+    # already provided and the mount simply fails, harmlessly.
+    update_trust: mount -t proc none /proc 2>/dev/null; update-ca-certificates; umount -l /proc 2>/dev/null

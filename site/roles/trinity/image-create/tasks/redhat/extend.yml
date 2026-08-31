@@ -68,10 +68,16 @@
       path: "{{ image_path }}/etc/rhsm/ca/"
       state: directory
 
+  # Copy the whole /etc/rhsm/ca/ directory rather than only redhat-uep.pem.
+  # On a Satellite (Katello) managed controller the generated redhat.repo points
+  # sslcacert at /etc/rhsm/ca/katello-server-ca.pem; copying the entire directory
+  # captures that CA (and any other), so dnf inside the chroot can reach the
+  # Satellite. On a Red Hat CDN host this still copies redhat-uep.pem as before.
   - name: Sync RHEL subscription certificates
     copy:
-      src: /etc/rhsm/ca/redhat-uep.pem
-      dest: "{{ image_path }}/etc/rhsm/ca/redhat-uep.pem"
+      remote_src: true
+      src: /etc/rhsm/ca/
+      dest: "{{ image_path }}/etc/rhsm/ca/"
     ignore_errors: true
 
   - synchronize:
@@ -101,3 +107,37 @@
     ignore_errors: true
   when: ansible_distribution == "RedHat"
   tags: subscription
+
+# lpart / RHEL-178642 -- openssl-libs-3.5.5-5.el9_8 regressed asn1_d2i_read_bio ("Patch
+# asn1_d2i_read_bio to read headers without blocking"), which breaks d2i_X509_bio over an
+# in-memory BIO. python then fails ssl.load_verify_locations(cadata=<DER>) with
+# "[ASN1: NOT_ENOUGH_DATA] not enough data". That call is what ansible module_utils.urls
+# make_context() makes, EAGERLY, for every request -- so once an el9 image carries -5,
+# EVERY ansible URL fetch executed INSIDE that image (get_url, dnf-from-a-URL) dies, on
+# ANY scheme, plain http included. First symptom here: trinity/repos "Install external
+# repo RPMS" failing on elrepo-release. The openssl CLI is unaffected (file BIO, not the
+# memory BIO the regression hits), and dnf installing the same URL by hand works -- which
+# is what proves this is the ansible/python path and not the network.
+# -4 carries ALL 15 CVE fixes; -5 adds only the regressing non-security patch, so pinning
+# back to -4 gives up no security fix. Guarded + data-driven: image_package_pins defaults
+# to [] (a no-op => stock behaviour unchanged); drop the pin when upstream ships a fix.
+- name: Pin packages in the image (documented upstream regressions)
+  dnf:
+    name: "{{ image_package_pins }}"
+    installroot: "{{ image_path }}"
+    releasever: "{{ image_el_releasever | default(omit) }}"
+    state: present
+    allow_downgrade: true
+    disable_gpg_check: true
+  when: image_package_pins | default([]) | length > 0 and image_arch is not defined
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Keep the pin (exclude the regressed builds from in-image dnf)
+  community.general.ini_file:
+    path: "{{ image_path }}/etc/dnf/dnf.conf"
+    section: main
+    option: exclude
+    value: "{{ image_dnf_excludes | join(\",\") }}"
+    state: present
+  when: image_dnf_excludes | default([]) | length > 0

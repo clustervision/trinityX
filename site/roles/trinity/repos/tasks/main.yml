@@ -63,6 +63,7 @@
       state: present
       use: dnf
     ignore_errors: true
+    tags: install-only
 
   # - name: Add GPG keys to RPM DB. normally NOT needed - Antoine
   #   ansible.builtin.rpm_key:
@@ -82,6 +83,8 @@
     delay: "{{ rpm_delay | default(15) }}"
     with_items: "{{ external_repository_rpms }}"
     when: item.name is defined
+    tags: install-only
+
 #    notify:
 #      - Disable repos
 #      - Mend repos
@@ -105,6 +108,8 @@
     delay: "{{ rpm_delay | default(15) }}"
     with_items: "{{ package_based_repositories }}"
     when: item.name is defined
+    tags: install-only
+
 #    notify:
 #      - Disable repos
 #      - Mend repos

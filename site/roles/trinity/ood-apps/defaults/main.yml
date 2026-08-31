@@ -11,6 +11,10 @@ ood_apps_arch_map:
 
 ood_apps_arch: "{{ ood_apps_arch_map[system_arch] | default(system_arch) }}"
 
+ood_apps_absent:
+  - monitor
+  - service
+
 ood_apps_enabled_default:
   - jupyter
   - codeserver
@@ -23,12 +27,12 @@ ood_apps_enabled_default:
   - osimage
   - otherdev
   - secrets
-  - service
+  # - service
   - switch
   - control
   - users
   - osimagetag
-  - monitor
+  # - monitor
   - dns
   - slurm
   - infiniband
@@ -79,10 +83,12 @@ ood_apps_catalog:
     type: trinity
     icon: bmc-setup.png
     mode: "0750"
+    tasks: ["bmcsetup.yml"]
   cluster:
     type: trinity
     icon: cluster.png
     mode: "0750"
+    tasks: ["cluster.yml"]
   group:
     type: trinity
     icon: groups.png
@@ -92,6 +98,7 @@ ood_apps_catalog:
     type: trinity
     icon: network.png
     mode: "0750"
+    tasks: ["network.yml"]
   node:
     type: trinity
     icon: nodes.png
@@ -106,22 +113,26 @@ ood_apps_catalog:
     type: trinity
     icon: other-devices.png
     mode: "0750"
+    tasks: ["otherdev.yml"]
   secrets:
     type: trinity
     icon: secrets.png
     mode: "0750"
-  service:
-    type: trinity
-    icon: service.png
-    mode: "0750"
+    tasks: ["secrets.yml"]
+  # service:
+  #   type: trinity
+  #   icon: service.png
+  #   mode: "0750"
   switch:
     type: trinity
     icon: switch.png
     mode: "0750"
+    tasks: ["switch.yml"]
   control:
     type: trinity
     icon: control.png
     mode: "0750"
+    tasks: ["control.yml"]
   users:
     type: trinity
     icon: users.png
@@ -130,14 +141,16 @@ ood_apps_catalog:
     type: trinity
     icon: os-images-tags.png
     mode: "0750"
-  monitor:
-    type: trinity
-    icon: monitoring.png
-    mode: "0750"
+    tasks: ["osimagetag.yml"]
+  # monitor:
+  #   type: trinity
+  #   icon: monitoring.png
+  #   mode: "0750"
   dns:
     type: trinity
     icon: dns.png
     mode: "0750"
+    tasks: ["dns.yml"]
   slurm:
     type: trinity
     icon: slurm.png

@@ -46,8 +46,7 @@
       - alternative_image_source is defined
       - alternative_image_source != 'osgrab'
 
-  - name:
-    debug:
+  - debug:
       msg: "Downloading for {{ alternative_distribution }} using {{ alternative_image_source|default('base') }}"
     when: download_base_image is defined
 
@@ -63,14 +62,14 @@
     image_download_distribution: "{{ alternative_distribution }}"
     image_download_source: "{{ alternative_image_source|default('base') }}"
     when: download_base_image is defined
-    tags: image-create
+    tags: image-create, install-only
 
   - role: ansible/write_facts
     tags: always
 
   - role: trinity/image-create
     image_create_distribution: 'opensuse'
-    tags: image-create
+    tags: image-create, install-only
 
   - role: luna/osimage-create
     luna_image_path: "{{ trix_images }}/{{ image_name }}"
@@ -79,8 +78,8 @@
     tags: image-create
 
   environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    no_proxy: "{{ ['.' ~ trix_domain, trix_ctrl_ip, trix_external_fqdn, trix_ctrl_hostname, trix_ctrl1_hostname, trix_ctrl2_hostname, trix_ctrl3_hostname|default(trix_ctrl1_hostname), trix_ctrl4_hostname|default(trix_ctrl2_hostname)] | select | join(',') }}"
+    NO_PROXY: "{{ ['.' ~ trix_domain, trix_ctrl_ip, trix_external_fqdn, trix_ctrl_hostname, trix_ctrl1_hostname, trix_ctrl2_hostname, trix_ctrl3_hostname|default(trix_ctrl1_hostname), trix_ctrl4_hostname|default(trix_ctrl2_hostname)] | select | join(',') }}"
   tags: image-create-ctrl
 
 
@@ -128,11 +127,11 @@
 
   - role: trinity/image-create
     image_create_distribution: 'opensuse'
-    tags: image-create
+    tags: image-create, install-only
 
   environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    no_proxy: "{{ ['.' ~ trix_domain, trix_ctrl_ip, trix_external_fqdn, trix_ctrl_hostname, trix_ctrl1_hostname, trix_ctrl2_hostname, trix_ctrl3_hostname|default(trix_ctrl1_hostname), trix_ctrl4_hostname|default(trix_ctrl2_hostname)] | select | join(',') }}"
+    NO_PROXY: "{{ ['.' ~ trix_domain, trix_ctrl_ip, trix_external_fqdn, trix_ctrl_hostname, trix_ctrl1_hostname, trix_ctrl2_hostname, trix_ctrl3_hostname|default(trix_ctrl1_hostname), trix_ctrl4_hostname|default(trix_ctrl2_hostname)] | select | join(',') }}"
   tags: image-create-chroot
 
 
@@ -148,6 +147,6 @@
     luna_image_distribution: OpenSuse
 
   environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    no_proxy: "{{ ['.' ~ trix_domain, trix_ctrl_ip, trix_external_fqdn, trix_ctrl_hostname, trix_ctrl1_hostname, trix_ctrl2_hostname, trix_ctrl3_hostname|default(trix_ctrl1_hostname), trix_ctrl4_hostname|default(trix_ctrl2_hostname)] | select | join(',') }}"
+    NO_PROXY: "{{ ['.' ~ trix_domain, trix_ctrl_ip, trix_external_fqdn, trix_ctrl_hostname, trix_ctrl1_hostname, trix_ctrl2_hostname, trix_ctrl3_hostname|default(trix_ctrl1_hostname), trix_ctrl4_hostname|default(trix_ctrl2_hostname)] | select | join(',') }}"
   tags: image-create-luna-tasks

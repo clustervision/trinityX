@@ -17,3 +17,15 @@
       msg: "Airgap repo location: {{ ag_repo }}"
   when: is_airgap | default(False)
   tags: always
+
+- name: Check if playbook already ran to completion prior
+  ansible.builtin.stat:
+    path: /etc/trinity/image.done
+  register: init_image_done
+  tags: always
+
+- name: Setting fact that playbook was indeed done prior
+  ansible.builtin.set_fact:
+    playbook_done_prior: true
+  when: init_image_done.stat.exists
+  tags: always

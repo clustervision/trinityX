@@ -16,16 +16,16 @@
     enablerepo:
       - powertools
       - crb
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install needed pip packages
   pip:
     name: '{{ cv_support_pip_packages }}'
     executable: pip3
-  tags: install-only
   ignore_errors: True
+  tags: install-only
 
 - block:
   - name: Install diagnostics tools
@@ -36,6 +36,16 @@
       owner: root
       group: root
     with_items: "{{ trix_tools }}"
+
+  - name: Install remote-assistance configuration defaults
+    copy:
+      src: "{{ item }}"
+      dest: "/etc/{{ item }}"
+      mode: 0600
+      owner: root
+      group: root
+      force: no
+    with_items: "{{ cv_support_config_files }}"
 
   - name: Configure remote-assistance tunnel service
     copy:

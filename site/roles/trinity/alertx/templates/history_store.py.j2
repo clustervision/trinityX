@@ -1,21 +1,35 @@
+import hashlib
 import json
-from datetime import datetime, timezone
+import re
+import socket
+from datetime import datetime, timedelta, timezone
 
 import pymysql
 import pymysql.cursors
 
-from history_config import DB_HOST, DB_NAME, DB_PORT, DB_TABLE, DB_USER, read_database_password
+from history_config import DB_HOST, DB_NAME, DB_PORT, DB_RETENTION_DAYS, DB_TABLE, DB_USER, read_database_password
 from history_logger import Logger
 
 log = Logger.get_logger("TRIX-HISTORY: store")
 _VIEW_NAME = "alert_history_latest"
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]+$")
+
+
+def _quote_identifier(value):
+    if not _IDENTIFIER_RE.match(value or ""):
+        raise ValueError(f"Invalid SQL identifier: {value!r}")
+    return f"`{value}`"
 
 
 class HistoryStore:
     def __init__(self):
         self.password = read_database_password()
         self.table = DB_TABLE
+        self.table_sql = _quote_identifier(self.table)
         self.view = _VIEW_NAME
+        self.view_sql = _quote_identifier(self.view)
+        self.writer_controller = socket.getfqdn() or socket.gethostname()
+        self.retention_days = max(int(DB_RETENTION_DAYS), 0)
         self._ensure_schema()
 
     def _connection(self, database=None):
@@ -30,116 +44,162 @@ class HistoryStore:
             cursorclass=pymysql.cursors.DictCursor,
         )
 
-    def _ensure_schema(self):
-        statements = [
-            f"""
-            CREATE TABLE IF NOT EXISTS `{self.table}` (
-              id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-              fingerprint VARCHAR(255) DEFAULT NULL,
-              alertname VARCHAR(255) DEFAULT NULL,
-              status VARCHAR(32) NOT NULL,
-              payload_status VARCHAR(32) DEFAULT NULL,
-              alertmanager_state VARCHAR(32) DEFAULT NULL,
-              is_suppressed TINYINT(1) NOT NULL DEFAULT 0,
-              receiver VARCHAR(255) DEFAULT NULL,
-              group_key TEXT DEFAULT NULL,
-              hostname VARCHAR(255) DEFAULT NULL,
-              severity VARCHAR(32) DEFAULT NULL,
-              job VARCHAR(255) DEFAULT NULL,
-              exporter VARCHAR(255) DEFAULT NULL,
-              description TEXT DEFAULT NULL,
-              summary TEXT DEFAULT NULL,
-              value_text TEXT DEFAULT NULL,
-              starts_at DATETIME(6) DEFAULT NULL,
-              ends_at DATETIME(6) DEFAULT NULL,
-              event_at DATETIME(6) NOT NULL,
-              updated_at DATETIME(6) DEFAULT NULL,
-              created_at DATETIME(6) NOT NULL,
-              source ENUM('webhook','poll') NOT NULL DEFAULT 'webhook',
-              labels_json LONGTEXT NOT NULL,
-              annotations_json LONGTEXT NOT NULL,
-              payload_json LONGTEXT NOT NULL,
-              PRIMARY KEY (id),
-              KEY idx_event_at (event_at),
-              KEY idx_created_at (created_at),
-              KEY idx_updated_at (updated_at),
-              KEY idx_hostname (hostname),
-              KEY idx_alertname (alertname),
-              KEY idx_status (status),
-              KEY idx_severity (severity),
-              KEY idx_fingerprint (fingerprint),
-              KEY idx_source (source),
-              KEY idx_host_event (hostname, event_at),
-              KEY idx_alert_event (alertname, event_at)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    def _column_exists(self, cursor, column_name):
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = %s
             """,
-            f"""
-            CREATE OR REPLACE VIEW `{self.view}` AS
-            SELECT
-              latest.id,
-              latest.fingerprint,
-              latest.alertname,
-              latest.status,
-              latest.payload_status,
-              latest.alertmanager_state,
-              latest.is_suppressed,
-              latest.receiver,
-              latest.group_key,
-              latest.hostname,
-              latest.severity,
-              latest.job,
-              latest.exporter,
-              latest.description,
-              latest.summary,
-              latest.value_text,
-              latest.starts_at,
-              latest.ends_at,
-              latest.event_at,
-              latest.updated_at,
-              latest.created_at,
-              latest.source
-            FROM `{self.table}` AS latest
-            INNER JOIN (
-              SELECT fingerprint, MAX(id) AS max_id
-              FROM `{self.table}`
-              WHERE fingerprint IS NOT NULL AND fingerprint != ''
-              GROUP BY fingerprint
-            ) AS dedup
-              ON latest.fingerprint = dedup.fingerprint AND latest.id = dedup.max_id
-            UNION ALL
-            SELECT
-              nofp.id,
-              nofp.fingerprint,
-              nofp.alertname,
-              nofp.status,
-              nofp.payload_status,
-              nofp.alertmanager_state,
-              nofp.is_suppressed,
-              nofp.receiver,
-              nofp.group_key,
-              nofp.hostname,
-              nofp.severity,
-              nofp.job,
-              nofp.exporter,
-              nofp.description,
-              nofp.summary,
-              nofp.value_text,
-              nofp.starts_at,
-              nofp.ends_at,
-              nofp.event_at,
-              nofp.updated_at,
-              nofp.created_at,
-              nofp.source
-            FROM `{self.table}` AS nofp
-            WHERE nofp.fingerprint IS NULL OR nofp.fingerprint = ''
-            """,
-        ]
+            (DB_NAME, self.table, column_name),
+        )
+        return bool(cursor.fetchone()["count"])
 
+    def _index_exists(self, cursor, index_name):
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM information_schema.STATISTICS
+            WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND INDEX_NAME = %s
+            """,
+            (DB_NAME, self.table, index_name),
+        )
+        return bool(cursor.fetchone()["count"])
+
+    def _ensure_column(self, cursor, column_name, definition):
+        if not self._column_exists(cursor, column_name):
+            cursor.execute(f"ALTER TABLE {self.table_sql} ADD COLUMN {definition}")
+            log.info("Added missing %s column to %s", column_name, self.table)
+
+    def _ensure_index(self, cursor, index_name, definition):
+        if not self._index_exists(cursor, index_name):
+            cursor.execute(f"ALTER TABLE {self.table_sql} ADD {definition}")
+            log.info("Added missing %s index to %s", index_name, self.table)
+
+    def _ensure_schema(self):
         conn = self._connection()
         try:
             with conn.cursor() as cursor:
-                for statement in statements:
-                    cursor.execute(statement)
+                cursor.execute(
+                    f"""
+                    CREATE TABLE IF NOT EXISTS {self.table_sql} (
+                      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                      event_key CHAR(64) NOT NULL,
+                      fingerprint VARCHAR(255) DEFAULT NULL,
+                      alertname VARCHAR(255) DEFAULT NULL,
+                      status VARCHAR(32) NOT NULL,
+                      payload_status VARCHAR(32) DEFAULT NULL,
+                      alertmanager_state VARCHAR(32) DEFAULT NULL,
+                      is_suppressed TINYINT(1) NOT NULL DEFAULT 0,
+                      receiver VARCHAR(255) DEFAULT NULL,
+                      group_key TEXT DEFAULT NULL,
+                      writer_controller VARCHAR(255) DEFAULT NULL,
+                      hostname VARCHAR(255) DEFAULT NULL,
+                      severity VARCHAR(32) DEFAULT NULL,
+                      job VARCHAR(255) DEFAULT NULL,
+                      exporter VARCHAR(255) DEFAULT NULL,
+                      description TEXT DEFAULT NULL,
+                      summary TEXT DEFAULT NULL,
+                      value_text TEXT DEFAULT NULL,
+                      starts_at DATETIME(6) DEFAULT NULL,
+                      ends_at DATETIME(6) DEFAULT NULL,
+                      event_at DATETIME(6) NOT NULL,
+                      updated_at DATETIME(6) DEFAULT NULL,
+                      created_at DATETIME(6) NOT NULL,
+                      source ENUM('webhook','poll') NOT NULL DEFAULT 'webhook',
+                      labels_json LONGTEXT NOT NULL,
+                      annotations_json LONGTEXT NOT NULL,
+                      payload_json LONGTEXT NOT NULL,
+                      PRIMARY KEY (id),
+                      UNIQUE KEY uq_event_key (event_key),
+                      KEY idx_event_at (event_at),
+                      KEY idx_created_at (created_at),
+                      KEY idx_updated_at (updated_at),
+                      KEY idx_hostname (hostname),
+                      KEY idx_alertname (alertname),
+                      KEY idx_status (status),
+                      KEY idx_severity (severity),
+                      KEY idx_fingerprint (fingerprint),
+                      KEY idx_source (source),
+                      KEY idx_writer_controller (writer_controller),
+                      KEY idx_host_event (hostname, event_at),
+                      KEY idx_alert_event (alertname, event_at)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                    """
+                )
+
+                # Online-safe schema upgrades for installations created before HA hardening.
+                self._ensure_column(cursor, "event_key", "event_key CHAR(64) DEFAULT NULL AFTER id")
+                self._ensure_column(cursor, "writer_controller", "writer_controller VARCHAR(255) DEFAULT NULL AFTER group_key")
+                self._ensure_index(cursor, "uq_event_key", "UNIQUE KEY uq_event_key (event_key)")
+                self._ensure_index(cursor, "idx_writer_controller", "KEY idx_writer_controller (writer_controller)")
+
+                cursor.execute(
+                    f"""
+                    CREATE OR REPLACE VIEW {self.view_sql} AS
+                    SELECT
+                      latest.id,
+                      latest.event_key,
+                      latest.fingerprint,
+                      latest.alertname,
+                      latest.status,
+                      latest.payload_status,
+                      latest.alertmanager_state,
+                      latest.is_suppressed,
+                      latest.receiver,
+                      latest.group_key,
+                      latest.writer_controller,
+                      latest.hostname,
+                      latest.severity,
+                      latest.job,
+                      latest.exporter,
+                      latest.description,
+                      latest.summary,
+                      latest.value_text,
+                      latest.starts_at,
+                      latest.ends_at,
+                      latest.event_at,
+                      latest.updated_at,
+                      latest.created_at,
+                      latest.source
+                    FROM {self.table_sql} AS latest
+                    INNER JOIN (
+                      SELECT fingerprint, MAX(id) AS max_id
+                      FROM {self.table_sql}
+                      WHERE fingerprint IS NOT NULL AND fingerprint != ''
+                      GROUP BY fingerprint
+                    ) AS dedup
+                      ON latest.fingerprint = dedup.fingerprint AND latest.id = dedup.max_id
+                    UNION ALL
+                    SELECT
+                      nofp.id,
+                      nofp.event_key,
+                      nofp.fingerprint,
+                      nofp.alertname,
+                      nofp.status,
+                      nofp.payload_status,
+                      nofp.alertmanager_state,
+                      nofp.is_suppressed,
+                      nofp.receiver,
+                      nofp.group_key,
+                      nofp.writer_controller,
+                      nofp.hostname,
+                      nofp.severity,
+                      nofp.job,
+                      nofp.exporter,
+                      nofp.description,
+                      nofp.summary,
+                      nofp.value_text,
+                      nofp.starts_at,
+                      nofp.ends_at,
+                      nofp.event_at,
+                      nofp.updated_at,
+                      nofp.created_at,
+                      nofp.source
+                    FROM {self.table_sql} AS nofp
+                    WHERE nofp.fingerprint IS NULL OR nofp.fingerprint = ''
+                    """
+                )
         finally:
             conn.close()
 
@@ -147,8 +207,24 @@ class HistoryStore:
         if not value:
             return None
         try:
-            normalized = str(value).strip().replace("Z", "+00:00")
-            dt = datetime.fromisoformat(normalized)
+            s = str(value).strip().replace("Z", "+00:00")
+            try:
+                dt = datetime.fromisoformat(s)
+            except AttributeError:
+                m = re.match(
+                    r'^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?([+-]\d{2}:\d{2})?$',
+                    s,
+                )
+                if not m:
+                    raise ValueError(f"Unrecognised datetime format: {s!r}")
+                date_p, time_p, frac, tz_p = m.groups()
+                microseconds = int(frac.ljust(6, "0")[:6]) if frac else 0
+                dt = datetime.strptime(f"{date_p} {time_p}", "%Y-%m-%d %H:%M:%S").replace(microsecond=microseconds)
+                if tz_p:
+                    sign = 1 if tz_p[0] == "+" else -1
+                    dt = dt.replace(tzinfo=timezone(timedelta(hours=sign * int(tz_p[1:3]), minutes=sign * int(tz_p[4:6]))))
+                else:
+                    dt = dt.replace(tzinfo=timezone.utc)
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt.astimezone(timezone.utc).replace(tzinfo=None)
@@ -161,6 +237,55 @@ class HistoryStore:
             return self._parse_datetime(ends_at) or self._parse_datetime(updated_at) or self._parse_datetime(starts_at)
         return self._parse_datetime(updated_at) or self._parse_datetime(starts_at) or self._parse_datetime(ends_at) or datetime.utcnow()
 
+    def _alert_state_parts(self, alert, status_value, alertmanager_state):
+        raw_state = alert.get("status")
+        if isinstance(raw_state, dict):
+            inhibited = sorted(raw_state.get("inhibitedBy", []) or [])
+            silenced = sorted(raw_state.get("silencedBy", []) or [])
+        else:
+            inhibited = []
+            silenced = []
+
+        return {
+            "alertmanager_state": alertmanager_state or "",
+            "fingerprint": alert.get("fingerprint") or "",
+            "startsAt": alert.get("startsAt") or "",
+            "endsAt": alert.get("endsAt") or "",
+            "updatedAt": alert.get("updatedAt") or "",
+            "inhibitedBy": inhibited,
+            "silencedBy": silenced,
+            "labels": alert.get("labels", {}) or {},
+        }
+
+    def _event_key(self, alert, source, status_value, alertmanager_state):
+        # Deliberately do not include source, writer_controller or webhook
+        # payload status. The same Alertmanager state change may arrive by
+        # webhook and polling, or from more than one controller during HA
+        # transitions; it is still one event.
+        identity = self._alert_state_parts(alert, status_value, alertmanager_state)
+        serialized = json.dumps(identity, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+    def purge_old_events(self):
+        if self.retention_days <= 0:
+            log.debug("Alert history retention disabled because RETENTION_DAYS=%s", self.retention_days)
+            return 0
+
+        delete_sql = f"""
+            DELETE FROM {self.table_sql}
+            WHERE created_at < UTC_TIMESTAMP(6) - INTERVAL {self.retention_days} DAY
+        """
+        conn = self._connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(delete_sql)
+                deleted = cursor.rowcount or 0
+                if deleted:
+                    log.info("Purged %s alert history events older than %s days", deleted, self.retention_days)
+                return deleted
+        finally:
+            conn.close()
+
     def insert_alerts(self, payload, source="webhook"):
         receiver = payload.get("receiver")
         group_key = payload.get("groupKey")
@@ -169,16 +294,16 @@ class HistoryStore:
         inserted = 0
 
         insert_sql = f"""
-            INSERT INTO `{self.table}` (
-              fingerprint, alertname, status, payload_status, alertmanager_state,
-              is_suppressed, receiver, group_key,
+            INSERT IGNORE INTO {self.table_sql} (
+              event_key, fingerprint, alertname, status, payload_status, alertmanager_state,
+              is_suppressed, receiver, group_key, writer_controller,
               hostname, severity, job, exporter,
               description, summary, value_text,
               starts_at, ends_at, event_at, updated_at, created_at,
               source, labels_json, annotations_json, payload_json
             ) VALUES (
-              %(fingerprint)s, %(alertname)s, %(status)s, %(payload_status)s, %(alertmanager_state)s,
-              %(is_suppressed)s, %(receiver)s, %(group_key)s,
+              %(event_key)s, %(fingerprint)s, %(alertname)s, %(status)s, %(payload_status)s, %(alertmanager_state)s,
+              %(is_suppressed)s, %(receiver)s, %(group_key)s, %(writer_controller)s,
               %(hostname)s, %(severity)s, %(job)s, %(exporter)s,
               %(description)s, %(summary)s, %(value_text)s,
               %(starts_at)s, %(ends_at)s, %(event_at)s, %(updated_at)s, %(created_at)s,
@@ -205,6 +330,7 @@ class HistoryStore:
                     updated_at = self._parse_datetime(alert.get("updatedAt"))
                     event_at = self._event_time(status_value, alert.get("startsAt"), alert.get("endsAt"), alert.get("updatedAt"))
                     row = {
+                        "event_key": self._event_key(alert, source, status_value, alertmanager_state),
                         "fingerprint": alert.get("fingerprint"),
                         "alertname": labels.get("alertname"),
                         "status": status_value,
@@ -213,6 +339,7 @@ class HistoryStore:
                         "is_suppressed": is_suppressed,
                         "receiver": receiver,
                         "group_key": group_key,
+                        "writer_controller": self.writer_controller,
                         "hostname": labels.get("hostname"),
                         "severity": labels.get("severity"),
                         "job": labels.get("job"),
@@ -231,7 +358,7 @@ class HistoryStore:
                         "payload_json": json.dumps(alert, sort_keys=True),
                     }
                     cursor.execute(insert_sql, row)
-                    inserted += 1
+                    inserted += cursor.rowcount or 0
         finally:
             conn.close()
 

@@ -2,7 +2,7 @@
 # handler file for slurm
 
 - name: restart slurm
-  service:
+  ansible.builtin.systemd:
     name: '{{ item }}'
     state: restarted
   with_items:
@@ -10,10 +10,21 @@
     - slurmctld
   retries: 10
   delay: 15
-  when: primary|default(True)
+  when:
+    - primary|default(True)
+    - on_controller | default(False)
+
+- name: restart slurmd
+  ansible.builtin.systemd:
+    name: slurmd
+    state: restarted
+  retries: 10
+  delay: 15
+  when:
+    - on_node | default(False)
 
 - name: restart munge
-  service:
+  ansible.builtin.systemd:
     name: munge
     state: restarted
   retries: 10

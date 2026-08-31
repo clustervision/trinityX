@@ -1,0 +1,11 @@
+---
+
+- name: Check if playbook already ran to completion prior
+  ansible.builtin.stat:
+    path: /etc/trinity/controller.done
+  register: init_controller_done
+
+- name: Setting fact that playbook was indeed done prior
+  ansible.builtin.set_fact:
+    playbook_done_prior: true
+  when: init_controller_done.stat.exists

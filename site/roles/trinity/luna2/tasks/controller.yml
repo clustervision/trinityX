@@ -27,13 +27,15 @@
     enablerepo: luna2
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install required packages
   yum:
-    name: '{{ required_packages }}'
+    name: '{{ luna2_common_packages + luna2_os_packages }}'
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Ensure /var/log/luna exists
   file:
@@ -57,7 +59,7 @@
   service_facts:
 
 - name: Stop luna daemon
-  service:
+  ansible.builtin.systemd:
     name: luna2-daemon
     state: stopped
   when: ansible_facts.services['luna2-daemon.service'] is defined and ansible_facts.services['luna2-daemon.service'].status != 'not-found'
@@ -185,41 +187,78 @@
     executable: /bin/bash
   when: luna2_utils_pip is undefined
 
-- name: Prepare utils file names
-  set_fact:
-     luna2_utils_grep: "{{ luna2_utils | join('|') }}"
-
-- name: Collect utils file names
-  shell: "ls {{ luna2_python_dir.stdout }}/site-packages/utils/ | grep -E '{{ luna2_utils_grep }}' | grep -E '^([a-zA-Z0-9\\-]+|.+\\.py|.+\\.sh)$'"
-  register: luna2_utils_names
+- name: Resolve each luna util to the executable that should be linked
+  # pip writes a console script into bin/ for every util that declares an entry
+  # point, and that is what /usr/sbin should point at. Note bin/ sits beside lib/
+  # ({{ trix_local }}/python/bin), NOT under luna2_python_dir, which is the
+  # versioned lib dir. The old discovery listed
+  # site-packages/utils and matched names, which only works while every util is
+  # a single flat file: lchroot became a package, the bare name still matched, and
+  # /usr/sbin/lchroot was linked to the package DIRECTORY -- so `command -v lchroot`
+  # found nothing and image-create silently fell back to a native chroot. Ask for
+  # the declared names instead of listing the directory, prefer bin/, and fall back
+  # to the flat file for the utils that still ship as one.
+  shell: |
+    for name in {{ luna2_utils | join(' ') }}; do
+      if [ -f "{{ trix_local }}/python/bin/$name" ]; then
+        echo "$name {{ trix_local }}/python/bin/$name"
+        continue
+      fi
+      for candidate in "$name" "$name.py" "$name.sh"; do
+        target="{{ luna2_python_dir.stdout }}/site-packages/utils/$candidate"
+        if [ -f "$target" ]; then
+          echo "$name $target"
+          break
+        fi
+      done
+    done
+  args:
+    executable: /bin/bash
+  register: luna2_utils_resolved
   changed_when: false
-  when: luna2_utils_grep is defined
+
+- name: WARNING - a declared luna util ships no executable
+  # A util named here but absent from the install gets no /usr/sbin entry. That
+  # used to pass unremarked; say it, so a missing tool is noticed at install time
+  # rather than by whoever types the command months later.
+  ansible.builtin.debug:
+    msg: >-
+      luna2_utils lists {{ luna2_utils | difference(luna2_utils_resolved.stdout_lines
+      | map('split', ' ') | map('first') | list) | join(', ') }},
+      but no console script or utils file was found for
+      {{ 'it' if (luna2_utils | difference(luna2_utils_resolved.stdout_lines
+      | map('split', ' ') | map('first') | list) | length) == 1 else 'them' }}
+      -- no /usr/sbin symlink will be created.
+  when:
+    - luna2_utils_resolved is defined
+    - (luna2_utils | difference(luna2_utils_resolved.stdout_lines
+       | map('split', ' ') | map('first') | list) | length) > 0
 
 - name: Ensuring luna utils files are unix
-  shell: "dos2unix {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+  shell: "dos2unix {{ item.split(' ') | last }}"
   with_items:
-    - "{{ luna2_utils_names.stdout_lines }}"
-  when: luna2_utils_names is defined
+    - "{{ luna2_utils_resolved.stdout_lines }}"
+  when: luna2_utils_resolved is defined
 
 - name: Ensuring luna utils files are executable
   ansible.builtin.file:
-    path: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
+    path: "{{ item.split(' ') | last }}"
     owner: root
     group: root
     mode: '0755'
   with_items:
-    - "{{ luna2_utils_names.stdout_lines }}"
-  when: luna2_utils_names is defined
+    - "{{ luna2_utils_resolved.stdout_lines }}"
+  when: luna2_utils_resolved is defined
 
-- name: Create symlink from site-pacakges/utils to /usr/sbin
+- name: Create symlink from the luna utils to /usr/sbin
   file:
-    src: "{{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }}"
-    dest: "/usr/sbin/{{ 'trix-diag' if item == 'trinity_diagnosis.py' else item.split('.') | first }}"
+    src: "{{ item.split(' ') | last }}"
+    dest: "/usr/sbin/{{ 'trix-diag' if (item.split(' ') | first) == 'trinity_diagnosis' else (item.split(' ') | first) }}"
     state: link
     force: true
   with_items:
-    - "{{ luna2_utils_names.stdout_lines }}"
-  when: luna2_utils_names is defined
+    - "{{ luna2_utils_resolved.stdout_lines }}"
+  when: luna2_utils_resolved is defined
 
 #  shell: "ln -s {{ luna2_python_dir.stdout }}/site-packages/utils/{{ item }} /usr/local/bin/{{ item.split('.') | first }}"
 #  with_items:
@@ -333,6 +372,37 @@
 - debug:
     msg: "{{ luna2_cluster }}"
 
+- block:
+  - debug:
+      msg: "luna_bmcsetup_password is not defined, generating random password"
+
+  - name: Generate default BMC setup password value
+    set_fact:
+      luna_bmcsetup_password: "{{ lookup('password', '/dev/null', length=3, chars='ascii_uppercase') +
+        lookup('password', '/dev/null', length=6, chars='ascii_lowercase') +
+        lookup('password', '/dev/null', length=2, chars='digits') +
+        lookup('password', '/dev/null', length=2, chars='_!@#%^.') }}"
+  when: (luna_bmcsetup_password is not defined) or luna_bmcsetup_password | length == 0
+
+- block:
+  - debug:
+      msg: "luna_bmcsetup_user is not defined, using 'admin' as default"
+
+  - name: Setting default bmcsetup user
+    set_fact:
+      luna_bmcsetup_user: 'admin'
+  when: (luna_bmcsetup_user is not defined) or luna_bmcsetup_user | length == 0
+
+- name: Get installed named minor version
+  shell: "named -v 2>&1 | awk '{print $2}' | cut -d. -f2"
+  register: luna2_named_minor_raw
+  changed_when: false
+  failed_when: false
+
+- name: Set BIND_LEGACY fact
+  set_fact:
+    luna2_bind_legacy: "{{ 'true' if (luna2_named_minor_raw.stdout | trim != '' and (luna2_named_minor_raw.stdout | trim | int) <= 16) else 'false' }}"
+
 - name: Render /trinity/local/luna/daemon/config/bootstrap.ini
   template:
     src: 'bootstrap.ini.j2'
@@ -363,10 +433,31 @@
   copy:
     remote_src: true
     src: "{{ trix_luna }}/cli/addons/bash_completion.sh"
-    dest: '/etc/bash_completion.d/luna.sh' 
+    dest: '/etc/bash_completion.d/luna.sh'
     owner: root
     group: root
     mode: 0644
+
+# Any luna util shipping a *_completion.sh under its addons directory is picked up
+# here, so new tools get bash completion without touching this role. Older utils
+# without an addons directory simply yield no matches.
+- name: Discover bash completion scripts shipped by luna utils
+  find:
+    paths: "{{ luna2_python_dir.stdout }}/site-packages/utils/addons"
+    patterns: '*_completion.sh'
+  register: luna2_utils_completions
+
+- name: Install luna utils bash completion scripts
+  copy:
+    remote_src: true
+    src: "{{ item.path }}"
+    dest: "/etc/bash_completion.d/{{ item.path | basename | regex_replace('_completion\\.sh$', '.sh') }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items: "{{ luna2_utils_completions.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
 
 - block:
   - name: Copy tftp configuration to /etc/xinetd.d
@@ -397,6 +488,7 @@
         - snponly.efi
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
+      tags: install-only
     when: system_arch == "x86_64" or luna2_download_all_arch_ipxe_files|default(False)
 
   - name: Download ARM 64-bit iPXE EFI image to tftpboot
@@ -410,6 +502,7 @@
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
     when: system_arch == "aarch64" or luna2_download_all_arch_ipxe_files|default(False)
+    tags: install-only
   when: ansible_facts['os_family'] == "RedHat"
 
 #- name: Include luna's DNS zone file in named conf
@@ -419,7 +512,7 @@
 #  notify: restart named
 
 - name: Stop nginx
-  service:
+  ansible.builtin.systemd:
     name: nginx
     state: stopped
 
@@ -476,14 +569,14 @@
   when: luna_dns_placeholder.stat.exists == false
 
 - name: Enable luna services
-  service:
+  ansible.builtin.systemd:
     name: '{{ item }}'
     enabled: true
   with_items:
     - "{{ enable_services }}"
 
 - name: Start luna daemon
-  service:
+  ansible.builtin.systemd:
     name: 'luna2-daemon'
     state: started
     enabled: true
@@ -493,7 +586,7 @@
     timeout: 10
 
 - name: Start other luna services
-  service:
+  ansible.builtin.systemd:
     name: '{{ item }}'
     state: started
   with_items:
@@ -501,7 +594,7 @@
   when: not in_cloud | default(False)
 
 - name: Start other luna services for controller in cloud
-  service:
+  ansible.builtin.systemd:
     name: '{{ item }}'
     state: started
   with_items:
@@ -515,7 +608,6 @@
     owner: root
     group: root
     mode: '0600'
-  ignore_errors: true
 
 # -------------- H/A stuff ------------------
 
@@ -533,7 +625,7 @@
     service_facts:
 
   - name: Enable /etc/systemd/system/luna2-master.service
-    service:
+    ansible.builtin.systemd:
       name: 'luna2-master'
       state: restarted
       enabled: true

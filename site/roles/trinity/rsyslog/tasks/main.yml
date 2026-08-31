@@ -14,6 +14,7 @@
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Configure listeners
   blockinfile:
@@ -70,7 +71,7 @@
     enabled: true
 
 - name: Start rsyslog daemon
-  service:
+  ansible.builtin.systemd:
     name: "{{ rsyslog_service }}"
     state: restarted
   when: not in_image

@@ -50,7 +50,7 @@
   when:
     - not prometheus_server_agent_mode
   notify:
-    - reload prometheus-server 
+    - reload prometheus-server
 
 - name: Configure prometheus
   ansible.builtin.template:
@@ -62,7 +62,7 @@
     mode: 0640
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check config %s"
   notify:
-    - reload prometheus-server 
+    - reload prometheus-server
 
 - name: Configure Prometheus web
   ansible.builtin.template:
@@ -91,9 +91,23 @@
 
 - name: Configure firewalld
   firewalld:
-    state: enabled
+    state: "{{ 'enabled' if prometheus_server_web_open_port else 'disabled' }}"
     port: "{{ prometheus_server_web_listen_port }}/tcp"
     permanent: "yes"
     immediate: "yes"
+  tags: firewalld
 
-
+- name: Configure firewalld minimals
+  firewalld:
+    state: enabled
+    rich_rule: 'rule family="ipv4" source address="{{ item }}/32" port protocol="tcp" port="{{ prometheus_server_web_listen_port }}" accept'
+    permanent: "yes"
+    immediate: "yes"
+  with_items:
+    - "{{ ansible_default_ipv4.address | default() }}"
+    - "{{ trix_ctrl_external_ip | default() }}"
+    - "127.0.0.1"
+  when:
+    - not prometheus_server_web_open_port
+    - item | length > 0
+  tags: firewalld

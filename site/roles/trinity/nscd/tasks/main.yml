@@ -6,9 +6,9 @@
     yum:
       name: nscd
       state: present
-    tags: install-only
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
+    tags: install-only
 
   - name: Put config file in place
     template:
@@ -18,7 +18,7 @@
       - restart nscd
 
   - name: Enable nscd service
-    service:
+    ansible.builtin.systemd:
       name: nscd
       enabled: "yes"
   when: 

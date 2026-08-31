@@ -28,7 +28,7 @@
   - name: Remove deprecated mount path
     ansible.posix.mount:
       path: '{{ openhpc_home }}'
-      state: absent_from_fstab
+      state: absent
   when: in_image
 
 - name: Create trinity/ohpc dir for opt link to point at
@@ -75,6 +75,7 @@
   when: on_controller
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install ohpc-base-compute
   yum:
@@ -83,6 +84,7 @@
   when: on_controller
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - block:
   - name: Install pdsh-mod-genders-ohpc
@@ -91,6 +93,7 @@
       state: installed
     retries: "{{ rpm_retries | default(3) }}"
     delay: "{{ rpm_delay | default(15) }}"
+    tags: install-only
 
   - name: Get /etc/genders status
     stat:
@@ -128,6 +131,7 @@
   when: in_image
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Create symlinks for pdsh and pdcp
   file:
@@ -147,6 +151,7 @@
     enablerepo: powertools
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install profile for modules
   template:

@@ -8,12 +8,13 @@
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Populate service facts
   service_facts:
 
 - name: Stop aria2c
-  service:
+  ansible.builtin.systemd:
     name: aria2c
     state: stopped
   when: ansible_facts.services['aria2c.service'] is defined and ansible_facts.services['aria2c.service'].status != 'not-found'
@@ -38,7 +39,7 @@
     backup: false
 
 - name: Start aria2c
-  service:
+  ansible.builtin.systemd:
     name: aria2c
     enabled: true
     state: started

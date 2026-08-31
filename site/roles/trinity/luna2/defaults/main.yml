@@ -7,12 +7,23 @@ luna2_packages:
 #  - luna2-daemon
 #  - luna2-cli
 
-required_packages:
-  - dhcp-server
-  - xinetd
+# Packages every controller needs, whatever the OS. Per-OS deviations go in
+# luna2_os_packages (vars/<Distro><major>.yaml, kea.yaml); the install task
+# joins the two. Composed there, not here: a vars file replaces a whole list,
+# and the airgap parser renders defaults once, before any vars file is loaded.
+luna2_common_packages:
   - sqlite
   - dos2unix
   - tftp-server
+  # lchroot runs the image build inside a bubblewrap sandbox. It is a BaseOS
+  # package on el8/9/10 (so it is already in an airgap mirror), but nothing
+  # declared it -- it happened to be present because flatpak pulls it in.
+  - bubblewrap
+
+# EL8 shape, which is what a distro without its own vars file falls through to.
+luna2_os_packages:
+  - dhcp-server
+  - xinetd
   - net-snmp-utils
 
 enable_services:
@@ -27,27 +38,44 @@ start_services:
 luna2_use_kea: false
 
 # commenting out both next values will use index/repo defaults, i.e. latest, greatest
-luna2_daemon_pip: luna2_daemon-2.1-py3-none-any.whl
-luna2_cli_pip: luna2_cli-2.1-py3-none-any.whl
-luna2_utils_pip: luna2_utils-2.1-py3-none-any.whl
+#
+# These name the published '<name>-<major>.<minor>' link, and the publish tree keeps
+# one per major.minor side by side: a 2.2 build creates luna2_daemon-2.2... and leaves
+# luna2_daemon-2.1... pointing at the last 2.1 build. So the version here decides which
+# line a controller installs, and leaving it at 2.1 means 2.2 is published but never
+# picked up. Bump these together with the luna2 repositories.
+luna2_daemon_pip: luna2_daemon-2.2-py3-none-any.whl
+luna2_cli_pip: luna2_cli-2.2-py3-none-any.whl
+luna2_utils_pip: luna2_utils-2.2-py3-none-any.whl
 
 luna2_utils:
+  # The list is now the whole story: /usr/sbin gets exactly these names. It used
+  # to be a grep against a directory listing, so lchroot-legacy was linked purely
+  # because it shares a prefix with lchroot -- name it, or the next change to the
+  # discovery silently drops it.
   - lchroot
+  - lchroot-legacy
   - lcluster
   - lpower
   - bootutil
-  - limport
   - lexport
   - lnode
   - lslurm
+  - lrack
   - trinity_diagnosis
   - lmaster
   - lsosreport
+  - lconsole
 
 luna2_named_include_file: /etc/named.luna.zones
 luna2_named_zone_dir: /var/lib/named
 
 luna2_cluster:
+  cluster:
+    domain_search: 'cluster ib ipmi'
+    dns_forwarders:
+      - 8.8.8.8
+      - 8.8.4.4
   ha: false
   nosharedip: false
   controllers:

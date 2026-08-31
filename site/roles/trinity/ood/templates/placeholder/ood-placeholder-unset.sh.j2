@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PLACEHOLDER_ENABLE_FILE="{{ ood_placeholder_enable_file }}"
+PLACEHOLDER_REASON_FILE="{{ ood_placeholder_reason_file }}"
+APACHE_SERVICE="{{ ood_apache_service_name }}"
+
+rm -f "${PLACEHOLDER_ENABLE_FILE}" "${PLACEHOLDER_REASON_FILE}"
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl reload "${APACHE_SERVICE}" 2>/dev/null || systemctl restart "${APACHE_SERVICE}"
+fi
+
+echo "TrinityX OOD placeholder disabled."
+echo "If it reappears after rerunning the playbook, the OOD endpoint is still returning HTTP {{ ood_placeholder_trigger_status }}."

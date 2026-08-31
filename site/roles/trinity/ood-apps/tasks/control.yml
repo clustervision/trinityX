@@ -1,0 +1,38 @@
+---
+
+- block:
+  - name: Load Control variables.
+    ansible.builtin.include_vars: "../defaults/control.yml"
+
+  - name: Load Airgap Control variables.
+    ansible.builtin.include_vars: "../vars/airgap/control.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge Control asset variables.
+    ansible.builtin.set_fact:
+      control_assets: "{{ control_assets_default | combine(control_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading Control nodejs package
+    ansible.builtin.get_url:
+      url: "{{ control_assets.noarch_nodejs_repository }}/{{ control_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/control/{{ control_assets.gui_nodejs }}"
+
+  - name: Ensure Control assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/control/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Unpack Control nodejs files
+    ansible.builtin.unarchive:
+      src: "{{ trix_ood }}/3.0/control/{{ control_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/control/app/assets/"
+      keep_newer: false
+
+  - name: Cleanup Control nodejs package
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/control/{{ control_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image

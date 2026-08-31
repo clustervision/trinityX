@@ -6,7 +6,6 @@
   changed_when: true
   notify:
     - Restart httpd
-    - Restart htcacheclean
     - Restart ondemand-dex
 
 - name: Restart ondemand-dex
@@ -16,10 +15,11 @@
 
 - name: Restart httpd
   ansible.builtin.systemd:
-    name: httpd
+    name: "{{ ood_apache_service_name }}"
     state: restarted
 
 - name: Restart htcacheclean
   ansible.builtin.systemd:
-    name: htcacheclean
+    name: "{{ ood_htcacheclean_service_name }}"
     state: restarted
+  when: ansible_os_family == "RedHat"

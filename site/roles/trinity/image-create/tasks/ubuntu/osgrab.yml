@@ -7,7 +7,7 @@
 - name: Configure repos
   lineinfile:
     path: "/etc/apt/sources.list"
-    line: "deb http://archive.ubuntu.com/ubuntu {{ ubuntu_distribution_release }} main universe"
+    line: "deb {{ ubuntu_distribution_source }} {{ ubuntu_distribution_release }} main universe"
     state: present
     create: 'yes'
 
@@ -21,21 +21,64 @@
     name: "{{ item }}"
     state: present
   with_items: "{{ image_core_packages }}"
+  when: not playbook_done_prior | default(False)
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+- name: Install core packages - @core, kernel and grub2
+  ansible.builtin.apt:
+    name: "{{ image_core_packages }}"
+    state: present
+  when: playbook_done_prior | default(False)
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+- name: Resolve the luna2-client package URL
+  # ubuntu has no apt repository in the update tree, only the deb under a fixed
+  # name, so unlike the rpm families the client cannot come from a repo and this
+  # variable is required rather than an override. Derived from the same base and
+  # version as the repositories so it cannot point at a different release, and
+  # from image_arch where a foreign-architecture build set one -- the controller's
+  # own architecture is the wrong answer when building an arm image on x86.
+  # Set luna2_client_package explicitly to override it.
+  set_fact:
+    luna2_client_package: "{{ luna2_client_package | default(trix_repo_baseurl ~ '/' ~ trix_version ~ '/luna2/ubuntu/' ~ (image_arch | default(system_arch)) ~ '/luna2-client.deb', true) }}"
+  tags: install-only
 
 - name: Download luna2-client package
-  get_url:
-    url: "{{ luna2_client_package }}"
-    dest: "/tmp/{{ luna2_client_package|split('/')|last }}"
+  command: "curl -fsSL {{ luna2_client_package }} -o /tmp/{{ luna2_client_package|split('/')|last }}"
+  tags: install-only
 #    validate_certs: false
 
 - name: install luna2-client package
-  shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }}"
+  shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package|split('/')|last }} || apt-get install -y --fix-broken"
 
-- name: Disable tinysshd if it is there
-  service:
+- name: Disable unwanted/unneeded services
+  ansible.builtin.systemd:
     name: "{{ item }}"
     enabled: false
+  with_items:
+    - tinysshd
   ignore_errors: true
+
+# The SSSD responders are listed in the 'services =' line of sssd.conf (in-process
+# responders), so the socket-activation units conflict and fail at boot with
+# "configured to be socket-activated but still mentioned in the services line"
+# (exit 17), which trips the ServiceFailedSystemdGeneric alert. 'enabled: false' is
+# not enough: it omits sssd-pam-priv.socket, does not take effect in the image chroot,
+# is re-asserted by the package preset, and a disabled-but-failed unit still alerts.
+# Mask all three responder sockets via a /dev/null symlink so systemd can never start
+# them (chroot-safe, survives into the booted image, cannot be re-enabled by preset).
+- name: Mask conflicting socket-activated SSSD responders
+  ansible.builtin.file:
+    src: /dev/null
+    dest: "/etc/systemd/system/{{ item }}"
+    state: link
+    force: true
+  with_items:
+    - sssd-nss.socket
+    - sssd-pam.socket
+    - sssd-pam-priv.socket
 

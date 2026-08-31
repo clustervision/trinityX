@@ -4,6 +4,20 @@
 # Keep in mind that this role applies to the controllers
 # as well as compute nodes and images
 
+- name: Playbook state
+  ansible.builtin.include_tasks:
+    file: playbook-state.yml
+    apply:
+      tags: always
+  tags: always
+
+- name: Check passwords
+  ansible.builtin.include_tasks:
+    file: check-passwords.yml
+    apply:
+      tags: always
+  tags: always
+
 - name: Set trix_tmpdir variable
   set_fact:
     trix_tmpdir: "{{ tmpdir if tmpdir is defined and tmpdir|length > 0 and tmpdir not in ['/',' '] else lookup('ansible.builtin.env', 'TMPDIR', default='/tmp') }}"
@@ -13,13 +27,13 @@
   yum:
     name: '{{ item }}'
     state: present
-  tags: install-only
   with_items: '{{ init_packages }}'
   when:
     - ansible_facts['os_family'] == "RedHat"
     - init_packages is defined
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 # -----------------------------
 
@@ -64,7 +78,7 @@
 
   - name: Set in_image variable
     set_fact:
-      in_image: '{{ True if ansible_connection in "chroot" else False }}'
+      in_image: '{{ True if ansible_connection is search("chroot") else False }}'
 
   - name: Check if i am on real hardware or inside cloud
     shell: dmidecode -s system-manufacturer | grep -iE "microsoft|google|amazon" || true
@@ -282,6 +296,7 @@
     when:
       - not ha | default(False)
       - trix_ctrl_hostname != ansible_hostname
+  when: not in_image | default(False)  # lpart: skip on image build
   tags: always,verify-host
 
 - block:
@@ -387,6 +402,17 @@
     fail:
       msg: "Interface with config set in 'trix_ctrl1_ip' ({{ trix_ctrl1_ip }}) or 'trix_ctrlX_ip' ({{ trix_ctrl2_ip }}, ...) not found. Please make sure the interface is configured and up"
     when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
+
+  # the same question for the BMC network. No fail when nothing carries one: a
+  # cluster without a BMC network is legal, and firewalld says what it means there
+  - name: Collecting controller BMC-facing interface information
+    include_tasks: find-bmc-interface.yml
+    with_items: "{{ all_ctrl_bmcip | default([]) }}"
+    loop_control:
+      loop_var: inner_loop_var
+
+  - debug:
+      msg: "trix_bmc_interface: {{ trix_bmc_interface|default('Undefined') }}"
 
     # we figure out our local ip. handy if we want local connection but through ip.
   - set_fact:

@@ -5,6 +5,7 @@
   include_vars: "{{ item }}"
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_version}}.yaml"
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
   no_log: true
@@ -14,6 +15,7 @@
   include_vars: "{{ item }}"
   with_first_found:
     - "airgap/{{ ansible_distribution }}{{ ansible_distribution_version}}.yaml"
+    - "airgap/{{ ansible_os_family }}{{ ansible_distribution_version}}.yaml"
     - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
     - "airgap/{{ ansible_distribution }}.yaml"
@@ -22,6 +24,42 @@
   no_log: true
   ignore_errors: true
   when: is_airgap | default(False)
+
+# The OS minor decides which Open OnDemand release can run at all, and dnf
+# reports a missing module stream far too late to be recognisable. Refuse here.
+#
+# Rolling releases report no minor at all -- CentOS Stream 9 is version "9" --
+# and they run ahead of the point releases rather than behind them, so a minor
+# floor cannot be applied to them and must not be guessed at either.
+- name: Verify this OS version can run an Open OnDemand release
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_version is version(ood_os_minimum_versions[ansible_distribution_major_version], '>=')
+    fail_msg: >-
+      Open OnDemand is not supported on {{ ansible_distribution }} {{ ansible_distribution_version }}:
+      no Open OnDemand release TrinityX ships can run on it. The oldest supported minor for
+      {{ ansible_distribution }} {{ ansible_distribution_major_version }} is
+      {{ ood_os_minimum_versions[ansible_distribution_major_version] }}. Set enable_ood to false to
+      install TrinityX without the web portal.
+    success_msg: "Open OnDemand {{ ood_release }} on {{ ansible_distribution }} {{ ansible_distribution_version }}"
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version in ood_os_minimum_versions
+    - ansible_distribution_version != ansible_distribution_major_version
+
+# The release RPM URL is written out for the airgap build to harvest, so it can
+# drift from ood_release, which is what decides the module streams.
+- name: Verify the Open OnDemand repository matches the release being installed
+  ansible.builtin.assert:
+    that:
+      - _ood_web_releases | difference([ood_release]) | length == 0
+    fail_msg: >-
+      ood_release is {{ ood_release }} but ood_packages points at Open OnDemand
+      {{ _ood_web_releases | join(', ') }}. The repository and the nodejs/ruby module streams
+      would not match, and the ondemand packages cannot resolve.
+  vars:
+    _ood_web_releases: "{{ ood_packages | to_json | regex_findall('ondemand/([0-9.]+)/ondemand-release-web') | unique }}"
+  when: ansible_os_family == "RedHat"
 
 # ---- when using DS389
 - block:
@@ -47,17 +85,51 @@
     external_repository_rpms: {}
     package_based_repositories: []
     use_baseurl_repositories: []
-  when: ood_repositories is defined
+  when:
+    - ood_repositories is defined
+    - ansible_os_family == "RedHat"
+
+- name: Install OOD apt repo keys
+  ansible.builtin.apt_key:
+    state: present
+    url: "{{ item.key_url }}"
+    id: "{{ item.key_id }}"
+  loop: "{{ ood_debs }}"
+  when: ansible_os_family == "Debian"
+
+- name: Install OOD apt repo packages
+  ansible.builtin.apt:
+    deb: "{{ item.deb }}"
+    state: present
+    update_cache: true
+    dpkg_options: force-confnew
+  loop: "{{ ood_deb_repos }}"
+  when: ansible_os_family == "Debian"
+  tags: install-only
 
 - name: Install required rpms
   ansible.builtin.dnf:
     name: "{{ item.name }}"
     state: present
     disable_gpg_check: "{{ item.no_gpgcheck | default(False) }}"
-  with_items: "{{ ood_rpms }}"
+  with_items: "{{ ood_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
   notify: Run update_ood
+  when: ansible_os_family == "RedHat"
+  tags: install-only
+
+- name: Install required apt packages
+  ansible.builtin.apt:
+    name: "{{ item.name }}"
+    state: present
+    update_cache: true
+  loop: "{{ ood_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  notify: Run update_ood
+  when: ansible_os_family == "Debian"
+  tags: install-only
 
 - name: Ensure ssl certificate and key exists
   ansible.builtin.file:
@@ -198,11 +270,12 @@
 
 - name: Configure firewalld
   ansible.posix.firewalld:
-    state: enabled
+    state: "{{ 'enabled' if ood_open_port else 'disabled' }}"
     port: "{{ ood_port }}/tcp"
     permanent: "yes"
     immediate: "yes"
   when: not in_login_image|default(False)
+  tags: firewalld
 
 - name: Ensure OOD layout folder exists
   ansible.builtin.file:
@@ -227,13 +300,73 @@
 
 - name: Include auth task
   ansible.builtin.include_tasks: dex-auth.yml
+  tags: install-only
+
 - name: Include auth task
   ansible.builtin.include_tasks: pam-auth.yml
+  tags: install-only
+
 - name: Include tasks for login image
   ansible.builtin.include_tasks: login.yml
 
+- name: Ensure OOD placeholder public directory exists
+  ansible.builtin.file:
+    path: "{{ ood_placeholder_public_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Render OOD placeholder page
+  ansible.builtin.template:
+    src: placeholder/index.html.j2
+    dest: "{{ ood_placeholder_public_dir }}/index.html"
+    mode: "0644"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Ensure OOD placeholder script directory exists
+  ansible.builtin.file:
+    path: "{{ ood_placeholder_script_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Render OOD placeholder check script
+  ansible.builtin.template:
+    src: placeholder/ood-placeholder-check.sh.j2
+    dest: "{{ ood_placeholder_check_script }}"
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Render OOD placeholder unset script
+  ansible.builtin.template:
+    src: placeholder/ood-placeholder-unset.sh.j2
+    dest: "{{ ood_placeholder_unset_script }}"
+    mode: "0755"
+    owner: root
+    group: root
+  when: ood_placeholder_check_enabled | default(True)
+
+- name: Apply pending OOD portal changes before endpoint check
+  ansible.builtin.meta: flush_handlers
+
 - name: Enable OOD webserver on startup
-  ansible.builtin.service:
-    name: httpd
+  ansible.builtin.systemd:
+    name: "{{ ood_apache_service_name }}"
     enabled: "yes"
     state: started
+
+- name: Run OOD placeholder HTTP 500 check
+  ansible.builtin.command: "{{ ood_placeholder_check_script }}"
+  register: ood_placeholder_check_result
+  changed_when: "'placeholder enabled' in ood_placeholder_check_result.stdout"
+  when:
+    - ood_placeholder_check_enabled | default(True)
+    - not in_login_image | default(False)

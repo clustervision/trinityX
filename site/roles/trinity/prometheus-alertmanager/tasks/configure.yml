@@ -28,7 +28,7 @@
 
 - name: "Collect prometheus_alertmanager_auth_password from prometheus_alertmanager_auth.credentials_file"
   ansible.builtin.set_fact:
-    prometheus_alertmanager_auth_password: "{{ lookup('password', prometheus_alertmanager_auth.credentials_file, chars=['ascii_letters','digits','hexdigits']) }}"
+    prometheus_alertmanager_auth_password: "{{ lookup('password', prometheus_alertmanager_auth.credentials_file, chars='ascii_letters,digits,hexdigits') }}"
   when: prometheus_alertmanager_auth.credentials_file is defined
 
 - name: "Hash prometheus_alertmanager_auth_password"
@@ -59,7 +59,7 @@
     copy:
       remote_src: true
       src: '{{ prometheus_alertmanager_auth.credentials_file }}'
-      dest: '{{ trix_sync }}//prometheus/'
+      dest: '{{ trix_sync }}/prometheus/'
   when:
     - primary | default(True)
     - ha | default(False)
@@ -102,7 +102,23 @@
 
 - name: Configure firewalld
   firewalld:
-    state: enabled
+    state: "{{ 'enabled' if prometheus_alertmanager_web_open_port else 'disabled' }}"
     port: "{{ prometheus_alertmanager_web_listen_port }}/tcp"
     permanent: "yes"
     immediate: "yes"
+  tags: firewalld
+
+- name: Configure firewalld minimals
+  firewalld:
+    state: enabled
+    rich_rule: 'rule family="ipv4" source address="{{ item }}/32" port protocol="tcp" port="{{ prometheus_alertmanager_web_listen_port }}" accept'
+    permanent: "yes"
+    immediate: "yes"
+  with_items:
+    - "{{ ansible_default_ipv4.address | default() }}"
+    - "{{ trix_ctrl_external_ip | default() }}"
+    - "127.0.0.1"
+  when:
+    - not prometheus_alertmanager_web_open_port
+    - item | length > 0
+  tags: firewalld

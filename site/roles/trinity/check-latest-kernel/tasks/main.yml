@@ -2,15 +2,11 @@
 
 - name: Clear yum cache
   shell: yum clean all
-  args:
-    warn: false
   changed_when: false
 
 - name: Get latest available kernel
   shell: yum list kernel | awk '$1=="kernel.{{ system_arch }}"{print $2}' | sort -V | tail -1
   register: yum_kernel_ver
-  args:
-    warn: false
   changed_when: false
 
 - name: Check if we running latest kernel

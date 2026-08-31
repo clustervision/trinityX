@@ -1,13 +1,35 @@
 ---
+
+# lpart / RHEL-178642 -- pin the openssl stack away from the asn1_d2i_read_bio regression
+# in openssl-libs-3.5.5-5.el9_8 (full analysis in the "Pin packages in the image" task in
+# tasks/redhat/extend.yml). EL9 ONLY.
+#
+# The effective EL version of the IMAGE, evaluated on the CONTROLLER (image-create base +
+# extend run there, so ansible_distribution_major_version is the CONTROLLER version, not
+# the image one). A cross-major build sets image_el_releasever (8 / 10); a native build
+# leaves it unset and the image is the controller major. Keying off this -- rather than
+# off the controller facts -- is what keeps rocky8/rocky10 (which are built ON an el9
+# controller) correctly UNPINNED.
+image_el_effective_version: "{{ image_el_releasever | default(ansible_distribution_major_version) | string }}"
+image_package_pins: "{{ ['openssl-libs-3.5.5-4.el9_8'] if image_el_effective_version == '9' else [] }}"
+image_dnf_excludes: "{{ ['openssl-3.5.5-5.el9_8*', 'openssl-libs-3.5.5-5.el9_8*', 'openssl-fips-provider-3.5.5-5.el9_8*'] if image_el_effective_version == '9' else [] }}"
+
+
+# lpart/offline-repo: base URL of the ClusterVision-published TrinityX layer
+# (trix / luna2 / additional / slurm / monitoring). Default = upstream, so stock
+# behaviour is unchanged. Point it at a local mirror to build without depending on
+# updates.clustervision.com being reachable (see offline-repo/ in the lpart installer):
+#   -e trix_repo_baseurl=http://<controller>:7060/trinityx
+trix_repo_baseurl: "https://updates.clustervision.com/trinityx"
 trinityx_repositories:
   - name: trix
-    repo: https://updates.clustervision.com/trinityx/{{ trix_version }}/os/{{ ansible_distribution|lower }}/{{ ansible_distribution_major_version }}/{{ system_arch }}
+    repo: "{{ trix_repo_baseurl }}/{{ trix_version }}/os/{{ ansible_distribution|lower }}/{{ ansible_distribution_major_version }}/{{ system_arch }}"
     gpgcheck: False
   - name: luna2
-    repo: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/{{ ansible_distribution|lower }}/{{ ansible_distribution_major_version }}/{{ system_arch }}
+    repo: "{{ trix_repo_baseurl }}/{{ trix_version }}/luna2/{{ ansible_distribution|lower }}/{{ ansible_distribution_major_version }}/{{ system_arch }}"
     gpgcheck: False
   - name: luna2-noarch
-    repo: https://updates.clustervision.com/trinityx/{{ trix_version }}/luna2/noarch/rpms
+    repo: "{{ trix_repo_baseurl }}/{{ trix_version }}/luna2/noarch/rpms"
     gpgcheck: False
 
 image_core_packages:
@@ -61,3 +83,25 @@ dracut_extras:
 
 image_reinstall_packages: []
 image_remove_packages: []
+
+# lpart: chroot command prefix for in-image shell tasks. Default = native
+# chroot; lchroot(bwrap) targets override via -e image_chroot_cmd (build-image.sh).
+image_chroot_cmd: "chroot {{ image_path }}"
+
+# Ubuntu release selection. Pass -e ubuntu_version=22 (or 26) to pick one; the
+# codename is looked up here so nobody has to remember it. Passing
+# -e ubuntu_distribution_release=<codename> directly still works and wins, which is
+# how a release not listed here gets built without editing this file.
+#
+# 22 and 24 default to initramfs-tools; 26 defaults to dracut. The luna2 client
+# ships both and the daemon packs with whichever the image has, so changing this
+# line is all that is needed.
+#
+# The *-ubuntu.yml playbooks declare their own default and pass it in, so this
+# value only applies when the role is used outside them. Keep the two in step.
+ubuntu_releases:
+  "22": jammy
+  "24": noble
+  "26": resolute
+ubuntu_version: "24"
+ubuntu_distribution_release: "{{ ubuntu_releases[ubuntu_version] | default('noble') }}"

@@ -5,9 +5,9 @@
   yum:
     name: '{{ fail2ban_packages }}'
     state: present
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Update fail2ban configuration file
   copy:
@@ -16,7 +16,7 @@
   notify: restart fail2ban
 
 - name: Start and enable fail2ban service
-  service:
+  ansible.builtin.systemd:
     name: fail2ban
     state: started
     enabled: 'yes'

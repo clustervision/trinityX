@@ -32,6 +32,7 @@
       - rhel-9-for-x86_64-highavailability-rpms
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Install additional packages
   yum:
@@ -39,6 +40,7 @@
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 # --- start syncing keys ---
 
@@ -92,7 +94,7 @@
   register: corosync_config
 
 - name: Restart corosync
-  service:
+  ansible.builtin.systemd:
     name: corosync
     state: restarted
     enabled: true
@@ -165,13 +167,13 @@
 # ---------------------- start pacemaker and corosync --------
 #
 - name: Start pacemaker service
-  service:
+  ansible.builtin.systemd:
     name: pacemaker
     state: started
     enabled: true
 
 - name: Start corosync service
-  service:
+  ansible.builtin.systemd:
     name: corosync
     state: started
     enabled: true
