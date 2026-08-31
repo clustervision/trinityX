@@ -1,6 +1,10 @@
 ---
-# trinity/node-console — console access for TrinityX compute nodes, over
-# Serial-over-LAN through each node's BMC.
+# trinity/node-console — controller-side console capture for TrinityX compute
+# nodes, over Serial-over-LAN through each node's BMC.
+#
+# The serial console kernel options on the images are NOT set here: since
+# TRIX-2040 the luna/osimage-create role puts them on every image
+# (luna_console_redirection / luna_console_kerneloptions).
 
 # --- controller: packages ---
 - name: Install packages on controller
@@ -8,35 +12,6 @@
     name: "{{ node_console_packages }}"
     state: present
   when: on_controller | default(False)
-
-# --- osimage: serial console on the kernel command line ---
-
-- name: Inject serial console kernel cmdline into Luna osimage
-  # The SOL port is listed TWICE, deliberately:
-  #   console=uart,io,<addr>  — binds by IO address at the first kernel
-  #     instruction; immune to port-probe timing, carries printk always.
-  #   console=ttyS<n> (last)  — the real console with a tty device behind
-  #     it; /dev/console resolves to it, so installer and systemd output
-  #     reach SOL too (a bootconsole alone cannot carry /dev/console).
-  # Do NOT add the other legacy port as a third console: two *named* 8250
-  # consoles on the cmdline stop the second one from binding at all
-  # (observed on an EL8 kernel — console=ttyS0 console=ttyS1 leaves ttyS1
-  # dead), which silently reverts the whole setup.
-  # Which port the BMC taps is a per-board property (Supermicro is commonly
-  # COM2/ttyS1); this firmware publishes no ACPI SPCR, so it cannot be
-  # auto-detected from the OS. To find it on new hardware: attach lconsole
-  # to a booted node and on that node run
-  #   stty -F /dev/ttyS<N> 115200 -crtscts raw; echo test > /dev/ttyS<N>
-  # — the port whose 'test' appears in the SOL session is the one.
-  shell: >
-    luna osimage change
-    --quick-kerneloptions
-    "console=tty0
-    console=uart,io,{{ '0x3f8' if serial_console_device == 'ttyS0' else '0x2f8' }},{{ serial_console_speed }}n8
-    console={{ serial_console_device }},{{ serial_console_speed }}n8"
-    {{ inventory_hostname | regex_replace('\.osimages\.luna$', '') }}
-  delegate_to: localhost
-  when: in_image | default(False)
 
 # --- controller: sol-grab (on-demand SOL capture for the nodeboot GUI's
 # console panel) ---
