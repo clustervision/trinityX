@@ -7,17 +7,24 @@ luna2_packages:
 #  - luna2-daemon
 #  - luna2-cli
 
-required_packages:
-  - dhcp-server
-  - xinetd
+# Packages every controller needs, whatever the OS. Per-OS deviations go in
+# luna2_os_packages (vars/<Distro><major>.yaml, kea.yaml); the install task
+# joins the two. Composed there, not here: a vars file replaces a whole list,
+# and the airgap parser renders defaults once, before any vars file is loaded.
+luna2_common_packages:
   - sqlite
   - dos2unix
   - tftp-server
-  - net-snmp-utils
   # lchroot runs the image build inside a bubblewrap sandbox. It is a BaseOS
   # package on el8/9/10 (so it is already in an airgap mirror), but nothing
   # declared it -- it happened to be present because flatpak pulls it in.
   - bubblewrap
+
+# EL8 shape, which is what a distro without its own vars file falls through to.
+luna2_os_packages:
+  - dhcp-server
+  - xinetd
+  - net-snmp-utils
 
 enable_services:
   - xinetd
