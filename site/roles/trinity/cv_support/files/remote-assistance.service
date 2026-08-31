@@ -1,14 +1,18 @@
 [Unit]
 Description=Remote assistance
-After=network.target
-StartLimitIntervalSec=0
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=3
 
 [Service]
-ExecStart=/usr/local/bin/request-remote-assistance-automated -c -l
 Type=simple
+EnvironmentFile=-/etc/remote-assistance.conf
+ExecStart=/usr/local/bin/remote-assistance.sh --non-interactive
 Restart=always
 RestartSec=3
-StandardOutput=null
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

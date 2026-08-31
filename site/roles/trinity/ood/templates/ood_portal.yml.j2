@@ -13,8 +13,14 @@ servername: {{ ood_login_host }}
 
 use_rewrites: true
 use_maintenance: true
+{% if ood_maintenance_ip_allowlist | length > 0 %}
 maintenance_ip_allowlist:
-- 10.*
+{% for item in ood_maintenance_ip_allowlist %}
+- {{ item }}
+{% endfor %}
+{% else %}
+maintenance_ip_allowlist: []
+{% endif %}
 
 pun_stage_cmd: 'sudo /opt/ood/nginx_stage/sbin/nginx_stage'
 
@@ -24,6 +30,7 @@ rnode_uri: '/rnode'
 node_uri: '/node'
 
 {% if ood_auth_provider == 'dex' %}
+oidc_crypto_passphrase: {{ ood_oidc_crypto_passphrase }}
 dex_uri: /dex
 
 dex:

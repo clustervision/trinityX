@@ -1,13 +1,16 @@
 [Unit]
 Description=AlertX history Service
-After=network.target mariadb.service
+After=network-online.target mariadb.service prometheus-alertmanager.service
+Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory={{ alertx_history_base_dir }}
-ExecStart=/usr/bin/python3 {{ alertx_history_daemon_dir }}/history_daemon.py
-Restart=always
-RestartSec=5
+ExecStart={{ trix_local }}/python/bin/python3 {{ alertx_history_daemon_dir }}/history_daemon.py
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+KillSignal=SIGTERM
 
 [Install]
 WantedBy=multi-user.target

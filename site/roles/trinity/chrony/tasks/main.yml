@@ -5,9 +5,9 @@
   yum:
     name: "{{ chrony_packages }}"
     state: present
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Update chrony configuration file
   template:
@@ -24,7 +24,7 @@
     enabled: 'yes'
 
 - name: Start chrony service
-  service:
+  ansible.builtin.systemd:
     name: chronyd
     state: started
   when: not in_image

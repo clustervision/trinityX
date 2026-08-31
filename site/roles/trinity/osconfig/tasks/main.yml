@@ -2,10 +2,13 @@
 
 
 - name: Disabling NetworkManager hostname-mode
-  lineinfile:
-    dest: "/etc/NetworkManager/NetworkManager.conf"
-    insertafter: '^\[main\]'
-    line: "hostname-mode=none"
+  community.general.ini_file:
+    path: "/etc/NetworkManager/NetworkManager.conf"
+    section: main
+    option: hostname-mode
+    value: none
+    create: true
+    mode: "0644"
   when: 
     - ansible_facts['os_family'] == "RedHat" or ansible_facts['os_family'] == "Suse" or ansible_facts['os_family'] == "SLE"
     - in_image or on_node|default(False)

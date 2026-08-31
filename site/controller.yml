@@ -43,6 +43,11 @@
         - "{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
       tags: noproxy
 
+    - role: trinity/resolv
+      bind_dns_forwarders: '{{ trix_dns_forwarders }}'
+      no_resolv_server: true
+      tags: resolv-first
+
     - role: trinity/repos
       tags: repos
 
@@ -54,7 +59,7 @@
 
     - role: trinity/sync-secrets
       sync_controller: '{{ primary_controller | default(trix_ctrl1_hostname) }}'
-      tags: ha,sync-secrets
+      tags: ha,sync-secrets,alertx
       when: ha | default(False)
 
     - role: trinity/pacemaker
@@ -83,22 +88,23 @@
         # trinityX shared ------------------------------------------------------------------
         - path: '{{ trix_shared }}'
           options: '*(ro)'
-          rwhosts: '{{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }}'
+          rwhosts: '{{ all_ctrl_hostname+[trix_ctrl_hostname] if ha else all_ctrl_hostname }}'
         # trinityX home --------------------------------------------------------------------
         - path: '{{ trix_home }}'
           options: '*(rw,async,no_root_squash)'
         # sync for non-primary controllers to sync once ------------------------------------
         - path: '{{ trix_sync }}'
-          options: '-ro,async,no_root_squash {{ all_ctrl_hostname | join(" ") }}'
+          options: 'ro,async,no_root_squash'
+          hosts: '{{ all_ctrl_hostname }}'
         # openhpc --------------------------------------------------------------------------
         - path: '{{ trix_ohpc }}'
           options: '*(ro,no_root_squash)'
-          rwhosts: '{{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }}'
+          rwhosts: '{{ all_ctrl_hostname+[trix_ctrl_hostname] if ha else all_ctrl_hostname }}'
           disabled: '{{ False if enable_openhpc else True }}'
         # easybuild ------------------------------------------------------------------------
         - path: '{{ trix_easybuild }}'
           options: '{{ "*(rw,sync,no_wdelay,no_root_squash)" if export_easybuild == "rw" else "*(ro,no_root_squash)" }}'
-          rwhosts: '{{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }}'
+          rwhosts: '{{ all_ctrl_hostname+[trix_ctrl_hostname] if ha else all_ctrl_hostname }}'
           disabled: '{{ False if enable_easybuild else True }}'
         # ----------------------------------------------------------------------------------
       nfs_remote_mask: '{{ shared_fs_disks }}'
@@ -170,7 +176,6 @@
         - authentication  
 
     - role: trinity/bind
-      bind_db_path: '{{ trix_local }}/var/lib/named'
       bind_dnssec_enable: "no"
       bind_dns_forwarders: '{{ trix_dns_forwarders }}'
       tags: bind
@@ -213,7 +218,7 @@
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
       when: enable_authentication|default(True)
-      tags: sssd, authentication, config-slurm
+      tags: sssd, authentication, admin-change, config-slurm
 
     - role: trinity/mariadb
       mariadb_db_path: "{{ trix_ha if ha else trix_local }}/var/lib/mysql"
@@ -267,10 +272,15 @@
       when: enable_easybuild
       tags: easybuild
 
+    - role: trinity/pdsh
+      trinityx_pdsh_genders_conf_path: '{{ trix_shared }}/etc'
+      when: not enable_openhpc
+      tags: pdsh
+
     - role: trinity/slurm
       slurm_ctrl: '{{ trix_ctrl_hostname }}'
       slurm_ctrl_ip: '{{ trix_ctrl_ip }}'
-      slurm_ctrl_list: '{{ all_ctrl_hostname | join(",") }}'
+      slurm_ctrl_list: '{{ all_ctrl_hostname }}'
       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
       slurm_spool_path: "{{ trix_ha if ha else trix_local }}/var/spool/slurm"
       munge_conf_path: '{{ trix_shared }}/etc/munge'
@@ -290,15 +300,15 @@
     - role: trinity/config-slurm
       cs_admin_group: "{{ admin_group }}"
       when: "'slurm' in workload_manager "
-      tags: slurm, config-slurm, ood-apps
+      tags: slurm, config-slurm, ood-apps, admin-change
 
     - role: trinity/config-genders
       cg_admin_group: "{{ admin_group }}"
-      tags: config-genders
+      tags: config-genders, admin-change
 
     - role: trinity/config-manager
       cm_admin_group: "{{ admin_group }}"
-      tags: config-manager
+      tags: config-manager, admin-change
 
       # We added kea for future reference
       # For now it's here as a reference
@@ -360,7 +370,7 @@
       syslog_file_template_rules:
         - name: controllers
           type: string
-          content: '/var/log/cluster-messages/%HOSTNAME%.messages'
+          content: '/var/log/cluster-messages/%hostname:F,46:1%.messages'
           field: '$fromhost-ip'
           criteria: startswith
           rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
@@ -371,6 +381,7 @@
 
     - role: trinity/ood
       ood_enable_ssl: true
+      ood_open_port: "{{ firewall_open_ood | default(False) }}"
       ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
       ood_use_ds389: '{{ trix_use_ds389 | default(False) }}'
       ood_ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
@@ -378,13 +389,13 @@
       ood_login_host: "{{ trix_external_fqdn }}"
       ood_ldap_host: "{{ trix_ctrl_ip }}"
       ood_admin_group: "{{ admin_group }}"
-      tags: ood, ood-core
+      tags: ood, ood-core, admin-change
       when: enable_ood
 
     - role: trinity/ood-apps
       ood_enable_ssl: true
       ood_apps_admin_group: "{{ admin_group }}"
-      tags: ood, ood-apps
+      tags: ood, ood-apps, admin-change
       when: enable_ood
 
     # - role: trinity/prometheus-auth
@@ -403,6 +414,11 @@
           - url: "{{ luna_protocol }}://localhost:7050/export/prometheus"
             tls_config:
               insecure_skip_verify: true
+          metric_relabel_configs:
+            # Drop transient systemd unit states to reduce cardinality.
+            - source_labels: ['__name__', 'state']
+              regex: 'node_systemd_unit_state;(activating|deactivating)'
+              action: drop
       prometheus_server_alertmanagers:
         - target: "localhost:9093"
           tls:
@@ -411,6 +427,7 @@
           basic_auth:
             enabled: true
             credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      prometheus_server_web_open_port: "{{ firewall_open_prometheus | default(False) }}"
       prometheus_server_tls:
         enabled: true
         cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
@@ -440,7 +457,8 @@
       # below depends on the above 
       #   role: trinity/prometheus-server -> prometheus_server_tls/enabled: true == https
       prometheus_alertmanager_web_protocol: "https"
-      tags: prometheus-alertmanager, prometheus, monitoring
+      prometheus_alertmanager_web_open_port: "{{ firewall_open_prometheus | default(False) }}"
+      tags: prometheus-alertmanager, prometheus, monitoring, admin-change
 
     - role: trinity/prometheus-node-exporter
       # Prometheus node exporter
@@ -507,7 +525,7 @@
       prometheus_lshw_exporter_system_user: root
       prometheus_lshw_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_lshw_exporter.yml"
       prometheus_lshw_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-lshw-exporter, prometheus, monitoring, lshw
+      tags: prometheus-lshw-exporter, prometheus, monitoring, lshw, alertx
 
     - role: trinity/prometheus-luna-exporter
       # Prometheus luna daemon related exporter
@@ -516,27 +534,28 @@
       prometheus_luna_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
       tags: prometheus-luna-exporter, prometheus, monitoring, luna
 
+    - role: trinity/alertx
+      alertx_drainer_enable: "{{ True if 'slurm' in workload_manager else False }}"
+      alertx_history_sql_db: 'alertx_history'
+      alertx_history_enable: true
+      tags: monitoring, alertx
+
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"
       grafana_enable_ssl: true
       grafana_ip_address: "{{ trix_ctrl_external_ip }}"
+      grafana_open_port: "{{ firewall_open_grafana | default(False) }}"
       grafana_admin_group: "{{ admin_group }}"
       grafana_prometheus_url: "https://{{ trix_ctrl_local_ip }}:9090"
       grafana_alertmanager_url: "https://{{ trix_ctrl_local_ip }}:9093"
       grafana_alertmanager_basic_auth_file: '/etc/trinity/passwords/prometheus/admin.txt'
+      grafana_alert_history_sql_auth_file: '/etc/trinity/passwords/mysql/alertx_history.txt'
+      grafana_alert_history_sql_db: 'alertx_history'
       grafana_alert_history_enable: true
-      grafana_alert_history_mysql_host: "127.0.0.1:3306"
-      grafana_alert_history_mysql_db: "{{ alertx_history_sql_db | default('alertx_history') }}"
-      grafana_alert_history_mysql_user: "{{ alertx_history_sql_user | default('alertx_history') }}"
-      grafana_alert_history_mysql_password: "{{ lookup('password', '/etc/trinity/passwords/mysql/' + (alertx_history_sql_user | default('alertx_history')) + '.txt chars=ascii_letters,digits,hexdigits') }}"
+      grafana_auto_upgrade: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      tags: grafana, monitoring
-
-    - role: trinity/alertx
-      alertx_drainer_enable: "{{ True if 'slurm' in workload_manager else False }}"
-      alertx_history_enable: true
-      tags: monitoring, alertx
+      tags: grafana, monitoring, admin-change
 
     - role: trinity/osconfig
       tags: osconfig
@@ -557,8 +576,8 @@
       tags: wrapup
 
   environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    no_proxy: "{{ ansible_env.no_proxy | default('') }},.{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: "{{ ansible_env.NO_PROXY | default('') }},.{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
 
 - import_playbook: imports/cloud.yml
   when: 

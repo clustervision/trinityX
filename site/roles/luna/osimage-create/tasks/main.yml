@@ -22,15 +22,35 @@
   register: luna_image_major_version
 
 - name: Creating image in luna
-  shell: "luna osimage add --path \"{{ luna_image_path }}\" --distribution {{ luna_image_distribution|lower }} --osrelease {{ luna_image_major_version.stdout }} --quick-kerneloptions \"_net.ifnames=0 _biosdevname=0\" {{ luna_image_name }}"
+  shell: "luna osimage add --path \"{{ luna_image_path }}\" --distribution {{ luna_image_distribution|lower }} --osrelease {{ luna_image_major_version.stdout }} --quick-kerneloptions \"_net.ifnames=0 _biosdevname=0{{ ' ' ~ luna_console_kerneloptions if luna_console_redirection | default(true) else '' }}\" {{ luna_image_name }}"
   when: luna_image_in_luna is defined and luna_image_in_luna.rc|int != 0
 
 - name: Setting release for image
   shell: "luna osimage change --distribution {{ luna_image_distribution|lower }} --osrelease {{ luna_image_major_version.stdout }} {{ luna_image_name }}"
   when: luna_image_in_luna is defined and luna_image_in_luna.rc|int == 0
 
+# The stock image is created by the daemon's bootstrap before this role ever
+# runs, so it takes the "already exists" path above and never saw the console
+# options on the add line. Append them here -- append, so a re-run keeps every
+# kernel option an administrator put on the image, and only when the image has
+# no console= at all, so a deliberate per-site choice is never overridden.
+- name: Reading kernel options of the existing image
+  shell: "luna osimage show {{ luna_image_name }} -R"
+  register: luna_image_raw
+  changed_when: false
+  when:
+    - luna_console_redirection | default(true)
+    - luna_image_in_luna is defined and luna_image_in_luna.rc|int == 0
+
+- name: Adding the serial console to the kernel options of the existing image
+  shell: "luna osimage change --quick-kerneloptions \"{{ ((luna_image_raw.stdout | from_json).kerneloptions | default('', true) ~ ' ' ~ luna_console_kerneloptions) | trim }}\" {{ luna_image_name }}"
+  when:
+    - luna_console_redirection | default(true)
+    - luna_image_in_luna is defined and luna_image_in_luna.rc|int == 0
+    - not ((luna_image_raw.stdout | from_json).kerneloptions | default('', true)) is search('(^| )console=')
+
 - name: Kernel version in image
-  shell: "find {{ luna_image_path }}/lib/modules -name modules.dep | awk -F 'modules/' '{ print $2 }' | awk -F '/modules' '{ print $1 }' | sort | tail -n1 | grep -v '^$' || ls {{ luna_image_path }}/lib/modules | sort | tail -n1"
+  shell: "find {{ luna_image_path }}/lib/modules -name modules.dep | awk -F 'modules/' '{ print $2 }' | awk -F '/modules' '{ print $1 }' | grep -v '+debug' | sort | tail -n1 | grep -v '^$' || ls {{ luna_image_path }}/lib/modules | grep -v '+debug' | sort | tail -n1"
   register: kernel_version
   changed_when: false
 

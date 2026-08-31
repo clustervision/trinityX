@@ -84,6 +84,10 @@
     set_fact:
        ag_server: "{{ data['ag_server'] }}"
 
+  - name: Set playbook_done_prior fact
+    set_fact:
+       playbook_done_prior: "{{ data['playbook_done_prior'] }}"
+
 
   - debug:
       msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
@@ -94,5 +98,5 @@
       state: absent
     when: read_facts_cleanup | default(True)
 
-  when: ansible_connection in 'chroot'
+  when: ansible_connection is search("chroot")
 

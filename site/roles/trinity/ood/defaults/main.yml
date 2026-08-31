@@ -1,20 +1,40 @@
 ---
 # vars file for ood-portal
 
-ood_rpms:
+# The airgap build harvests release RPM URLs literally out of these files, so
+# the URL is written out rather than derived from ood_release.
+#
+# Each Open OnDemand release fixes its own runtime requirements: 4.x needs
+# ruby 3.3, 3.1 needs ruby 3.1.  Deriving the module streams from the release
+# keeps the two from disagreeing -- a vars file previously asked for 4.0 with
+# ruby 3.1, which cannot resolve.  Override ood_release per OS minor in vars/.
+ood_release: '4.1'
+ood_release_runtimes:
+  '3.1': ["@nodejs:18", "@ruby:3.1"]
+  '4.0': ["@nodejs:20", "@ruby:3.3"]
+  '4.1': ["@nodejs:22", "@ruby:3.3"]
+# Oldest OS minor that offers the module streams some Open OnDemand release
+# needs.  Below these, TrinityX installs with enable_ood set to false.
+ood_os_minimum_versions:
+  '8': '8.7'
+  '9': '9.3'
+  '10': '10.0'
+
+ood_packages:
   - name: epel-release
   - name: https://yum.osc.edu/ondemand/4.1/ondemand-release-web-4.1-1.el{{ ansible_distribution_major_version }}.noarch.rpm
     no_gpgcheck: true
-  - name: ["httpd", "@nodejs:22", "@ruby:3.3", "ondemand", "luna2-python"]
+  - name: "{{ ['httpd'] + ood_release_runtimes[ood_release] + ['ondemand', 'luna2-python'] }}"
 
-ood_dex_rpms:
+ood_dex_packages:
   - name: ondemand-dex
 
-ood_pam_rpms:
+ood_pam_packages:
   - name: mod_authnz_pam
 
 ood_port: 8080
-ood_user: apache
+ood_open_port: false
+ood_user: 'apache'
 ood_cfg_path: /etc/ood/config/
 ood_brand: TrinityX
 ood_auth_provider: dex # 'pam' or 'dex' ( only openldap is configured for dex )
@@ -22,10 +42,39 @@ ood_cluster_name: TrinityX
 ood_login_host: localhost
 ood_ldap_host: localhost
 ood_enable_ssl: true
+ood_apache_service_name: 'httpd'
+ood_apache_modules_path: '/etc/httpd/conf.modules.d'
+ood_htcacheclean_service_name: 'htcacheclean'
 
 ood_footer_dir: "/etc/ood/config/apps/dashboard/views/layouts"
 ood_footer_file: "_footer.html.erb"
 ood_admin_group: admins
+
+# OOD maintenance/placeholder settings.  The placeholder check runs after the
+# role has rendered OOD and started the webserver.  If the endpoint returns the
+# trigger status, the standard OOD maintenance marker is created so users see a
+# TrinityX help page instead of the HTTP 500.
+ood_maintenance_ip_allowlist: []
+ood_placeholder_check_enabled: true
+ood_placeholder_trigger_status: 500
+ood_placeholder_check_timeout: 10
+ood_placeholder_check_follow_redirects: true
+ood_placeholder_check_validate_certs: false
+# Check the local Apache vhost directly.  This catches OOD/Dex/FQDN failures even
+# when the public OOD FQDN is not resolvable yet from the controller.
+ood_placeholder_check_url: "{{ 'https' if ood_enable_ssl else 'http' }}://127.0.0.1:{{ ood_port }}/pun/sys/dashboard"
+ood_placeholder_check_host_header: "{{ ood_login_host }}:{{ ood_port }}"
+ood_placeholder_display_url: "{{ 'https' if ood_enable_ssl else 'http' }}://{{ ood_login_host }}:{{ ood_port }}/"
+ood_placeholder_public_dir: /var/www/ood/public/maintenance
+ood_placeholder_enable_file: /etc/ood/maintenance.enable
+ood_placeholder_reason_file: /etc/ood/trinityx-ood-placeholder.reason
+ood_placeholder_script_dir: "{{ trix_sbin | default('/trinity/local/sbin') }}"
+ood_placeholder_check_script: "{{ ood_placeholder_script_dir }}/ood-placeholder-check.sh"
+ood_placeholder_unset_script: "{{ ood_placeholder_script_dir }}/ood-placeholder-unset.sh"
+ood_placeholder_docs_admin_url: https://docs.clustervision.com/admin/ood
+ood_placeholder_docs_user_url: https://docs.clustervision.com/user/ood-portal
+
+ood_oidc_crypto_passphrase: "{{ lookup('password', '/etc/trinity/passwords/ood/oidc_crypto_passphrase chars=ascii_letters,digits') }}"
 
 # Optional: custom logo and text in dashboard welcome area (TrinityX branding)
 # Set these in group_vars or extra vars to replace the grey placeholders.

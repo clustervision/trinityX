@@ -43,6 +43,7 @@
       delay: 15
       # run_once: true  # <-- this can't be set due to multi-arch support
       check_mode: false
+      tags: install-only
 
     - name: Unpack alertmanager binaries
       become: false
@@ -52,6 +53,7 @@
         mode: 0755
         creates: "{{ trix_tmpdir }}/alertmanager-{{ prometheus_alertmanager_version }}.linux-{{ go_arch }}/alertmanager"
       check_mode: false
+      tags: install-only
 
     - name: Propagate official alertmanager and amtool binaries
       ansible.builtin.copy:
@@ -76,7 +78,9 @@
   until: _download_archive is succeeded
   retries: 10
   delay: 15
-
+  tags: 
+    - install-only
+    - firewalld
 
 - name: Create log directory
   ansible.builtin.file:
@@ -90,9 +94,10 @@
   ansible.builtin.package:
     name: postfix
     state: present
+  tags: install-only
 
 - name: Start and enable postfix
-  ansible.builtin.service:
+  ansible.builtin.systemd:
     name: postfix
     state: started
     enabled: true

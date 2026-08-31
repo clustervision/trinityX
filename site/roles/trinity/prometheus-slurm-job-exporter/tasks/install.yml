@@ -38,16 +38,28 @@
   when:
     - prometheus_slurm_job_exporter_log_dir is defined
 
-- name: "Download prometheus-slurm-job-exporter binary from {{prometheus_slurm_job_exporter_binary_url}} to local folder"
+- name: "Download prometheus-slurm-job-exporter binary from {{prometheus_slurm_job_exporter_binary_url}} to the controller"
+  # get_url runs with the target's python; an image newer than what the
+  # controller's ansible-core supports (ubuntu 24/26) fails there. The image is
+  # a chroot on the controller, so fetch locally and push through the connection.
   get_url:
     url: "{{ prometheus_slurm_job_exporter_binary_url }}"
-    dest: "{{prometheus_slurm_job_exporter_binary_install_dir}}/prometheus-slurm-job-exporter"
+    dest: "{{ prometheus_slurm_job_exporter_download_dir }}/{{ prometheus_slurm_job_exporter_binary_url | hash('sha1') }}-{{ prometheus_slurm_job_exporter_binary_url | basename }}"
     mode: 0755
     validate_certs: false
+  delegate_to: localhost
   register: _download_archive
   until: _download_archive is succeeded
   retries: 10
   delay: 15
+  tags: install-only
+
+- name: "Install prometheus-slurm-job-exporter binary"
+  copy:
+    src: "{{ prometheus_slurm_job_exporter_download_dir }}/{{ prometheus_slurm_job_exporter_binary_url | hash('sha1') }}-{{ prometheus_slurm_job_exporter_binary_url | basename }}"
+    dest: "{{prometheus_slurm_job_exporter_binary_install_dir}}/prometheus-slurm-job-exporter"
+    mode: 0755
+  tags: install-only
 
 - name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
   include_vars: "{{ item }}"
@@ -64,4 +76,4 @@
   when: prometheus_slurm_job_exporter_packages is defined
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
-
+  tags: install-only

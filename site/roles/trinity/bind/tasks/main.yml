@@ -5,9 +5,9 @@
   yum:
     name: "{{ bind_packages }}"
     state: present
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - block:
   - name: Selinux fcontext on files
@@ -66,64 +66,8 @@
     - ' ::1; '
   notify: restart named
 
-- name: Toggle DNSSEC
-  lineinfile:
-    path: /etc/named.conf
-    line: 'dnssec-enable {{ bind_dnssec_enable }};'
-    regexp: "dnssec-enable"
-  notify: restart named
-  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int < 9
-
-- name: Toggle DNSSEC validation
-  lineinfile:
-    path: /etc/named.conf
-    line: 'dnssec-validation {{ bind_dnssec_enable }};'
-    regexp: "dnssec-validation"
-  notify: restart named
-
-# - name: Configure named forwarders
-#  blockinfile:
-#    path: /etc/named.conf
-#    insertafter: "recursion yes;"
-#    marker: "// {mark} forwarders"
-#    block: |
-#      {% if ansible_dns["nameservers"] is defined or bind_dns_forwarders %}
-#          forwarders {
-#            {% if bind_dns_forwarders %}
-#              {% for f in bind_dns_forwarders %}{{ f }}; {% endfor %}
-#            {% else %}
-#              {% for f in ansible_dns["nameservers"] %}{% if f not in ansible_all_ipv4_addresses%}{{ f }};{% endif %} {% endfor %}
-#            {% endif %}
-#          };
-#      {% endif %}
-#  notify: restart named
-
-- name: Render /etc/resolv.conf
-  template:
-    src: "resolv.conf.j2"
-    dest: "/etc/resolv.conf"
-    backup: "yes"
-
-# - name: Check if the directory exists
-#  stat:
-#    path: "{{ trix_local }}/etc/dhcp"
-#  register: dhcp_directory
-
-# - name: Ensure directory
-#  file:
-#    state: directory
-#    path: "{{ trix_local }}/etc/dhcp"
-#  when: not dhcp_directory.stat.exists
-
-- name: Preserve resolv.conf from being overwritten
-  copy:
-    src: dhclient-enter-hooks
-    dest: /etc/dhcp/dhclient-enter-hooks
-    mode: 0755
-    backup: "yes"
-
 - name: Enable named service
-  service:
+  ansible.builtin.systemd:
     name: named
     enabled: "yes"
 
@@ -139,7 +83,7 @@
   #    creates: "{{ bind_db_path }}/named.empty"
 
   - name: Start named service
-    service:
+    ansible.builtin.systemd:
       name: named
       state: started
 

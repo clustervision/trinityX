@@ -15,9 +15,9 @@
     state: present
     enablerepo: powertools
     disable_gpg_check: true
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
 - name: Copy 91-hpc-controller-limits.conf to /etc/security/limits.d
   template:
@@ -35,7 +35,7 @@
     owner: 'root'
     group: 'root'
     mode: '0644'
-  when: in_image | default(True)
+  when: in_image | default(False)
 
 - name: Copy 91-hpc-controller-sysctl.conf to /etc/sysctl.d/
   template:
@@ -57,16 +57,17 @@
     mode: '0644'
     backup: true
   notify: activate sysctls
-  when: in_image | default(True)
+  when: in_image | default(False)
 
 - name: Setting compute performance tuned profile
-  shell: "tuned-adm profile {{ compute_tuned_profile | default('hpc-compute') }}"
-  when: in_image
-  ignore_errors: true
+  copy:
+    dest: /etc/tuned/active_profile
+    content: "{{ compute_tuned_profile | default('hpc-compute') }}\n"
+  when: in_image | default(False)
 
 - name: Setting controller performance tuned profile
   shell: "tuned-adm profile {{ controller_tuned_profile | default('throughput-performance') }}"
-  when: on_controller
+  when: on_controller | default(False)
   ignore_errors: true
 
 - block:
@@ -80,4 +81,4 @@
       regexp: '^{{ nfs_threads.stdout }}'
       line: 'threads=256'
     when: nfs_threads is defined and nfs_threads.stdout_lines|length == 1
-  when: on_controller
+  when: on_controller | default(False)

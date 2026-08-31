@@ -8,6 +8,9 @@ prometheus_lshw_exporter_web_listen_host: "0.0.0.0"
 prometheus_lshw_exporter_log_dir: "/var/log/prometheus"
 
 prometheus_lshw_exporter_binary_install_dir: "/usr/local/bin"
+# Controller-side scratch for the delegated download. trix_tmpdir is only set
+# where trinity/init runs (the controller); image plays run init-nodes and do not.
+prometheus_lshw_exporter_download_dir: "{{ trix_tmpdir | default('/tmp', true) }}"
 
 prometheus_lshw_exporter_system_user: "root"
 prometheus_lshw_exporter_system_group: "root"
@@ -15,3 +18,5 @@ prometheus_lshw_exporter_additional_system_groups: []
 
 prometheus_lshw_exporter_packages:
   - lshw
+
+prometheus_lshw_exporter_refresh_interval: "5m"

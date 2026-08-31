@@ -1,6 +1,18 @@
 ---
 # tasks file for slurm
 
+- name: Airgap. Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_distribution }}.yaml"
+    - "airgap/{{ ansible_os_family }}.yaml"
+    - "airgap/main.yaml"
+  no_log: true
+  ignore_errors: true
+  when: is_airgap | default(False)
+
 - name: Configure OpenHPC repos
   ansible.builtin.yum_repository:
     name: "openhpc-{{ item.name }}"
@@ -10,27 +22,71 @@
     gpgkey: "{{ item.gpgkey | default('') }}"
   with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
   when:
-    - not is_airgap | default(False)
+    - ansible_os_family == 'RedHat'
     - enable_openhpc == true
+    - not enable_trinityx_slurm | default(True)
+    - not is_airgap | default(False)
 
-- name: Install PyMSQL
-  yum:
-    name: python3-PyMySQL
-    state: installed
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
+- name: Configure TrinityX-Slurm repos
+  ansible.builtin.yum_repository:
+    name: "trinityx-slurm-{{ ansible_os_family }}"
+    description: "trinityx-slurm-{{ ansible_os_family }}"
+    baseurl: "{{ item.repo }}/{{ system_arch }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ item.gpgkey | default('') }}"
+  with_items: "{{ trinityx_slurm_repositories }}"
+  when:
+    - ansible_os_family == 'RedHat'
+    - enable_trinityx_slurm | default(True)
+    - item.name == ansible_os_family
 
-- name: Generate password for DB user and save it to /etc/trinity/passwords
-  set_fact:
-    tmp_pwd: '{{ lookup("password",
+- name: Configure TrinityX-Slurm repos
+  ansible.builtin.apt_repository:
+    repo: "deb [trusted=yes] {{ item.repo }} trix main"
+  with_items: "{{ trinityx_slurm_repositories }}"
+  when:
+    - ansible_os_family == 'Debian'
+    - enable_trinityx_slurm | default(True)
+    - item.name == ansible_os_family
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version }}.yml"
+    - "{{ ansible_distribution }}.yml"
+    - "{{ ansible_os_family }}.yml"
+  no_log: true
+  ignore_errors: true
+
+- debug:
+    msg: "enable_openhpc: {{ enable_openhpc }}, enable_trinityx_slurm: {{ enable_trinityx_slurm }}"
+
+
+- set_fact:
+    slurm_os_family: '{{ ansible_os_family }}'
+
+- block:
+  - name: Install PyMSQL
+    dnf:
+      name: python3-PyMySQL
+      state: installed
+    retries: "{{ rpm_retries | default(3) }}"
+    delay: "{{ rpm_delay | default(15) }}"
+    tags: install-only
+
+  - name: Generate password for DB user and save it to /etc/trinity/passwords
+    set_fact:
+      tmp_pwd: '{{ lookup("password",
                            "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt
                             chars=ascii_letters,digits,hexdigits") }}'
 
-- name: Get password for DB user from /etc/trinity/passwords)
-  set_fact:
-    slurmdbd_sql_pwd: '{{ lookup("password",
+  - name: Get password for DB user from /etc/trinity/passwords)
+    set_fact:
+      slurmdbd_sql_pwd: '{{ lookup("password",
                            "/etc/trinity/passwords/mysql/{{ slurmdbd_sql_user }}.txt
                             chars=ascii_letters,digits,hexdigits") }}'
+  when: on_controller
 
 - name: Create groups for munge and slurm
   group:
@@ -55,65 +111,110 @@
     - ['{{ munge_user_id }}', '{{ slurm_user_id }}']
   tags: install-only
 
+# ---------------------------------------------------------------------------
+
+- name: Resolve slurm package flavor
+  set_fact:
+    slurm_packages_flavor: >-
+      {{
+        'slurm_packages_trx' if enable_trinityx_slurm | default(True)
+        else 'slurm_packages_ohpc' if enable_openhpc | default(False)
+        else 'slurm_packages'
+      }}
+  when: not in_image
+
+- name: Resolve slurm package flavor for images
+  set_fact:
+    slurm_packages_flavor: >-
+      {{
+        'slurm_packages_trx_image' if enable_trinityx_slurm | default(True)
+        else 'slurm_packages_ohpc_image' if enable_openhpc | default(False)
+        else 'slurm_packages_image'
+      }}
+  when: in_image
+
+# TRIX-1608 remove clashing slurm package flavors before install
+- name: Resolve slurm package flavors for removal
+  set_fact:
+    slurm_package_flavors_all:
+      - slurm_packages
+      - slurm_packages_trx
+      - slurm_packages_ohpc
+  when: not in_image
+
+- name: Resolve slurm package flavors for removal in images
+  set_fact:
+    slurm_package_flavors_all:
+      - slurm_packages_image
+      - slurm_packages_trx_image
+      - slurm_packages_ohpc_image
+  when: in_image
+
+- name: Resolve clashing slurm package flavors
+  set_fact:
+    slurm_package_flavors_clashing: "{{ slurm_package_flavors_all | difference([slurm_packages_flavor]) }}"
+
+- name: Resolve additional slurm packages to remove
+  set_fact:
+    slurm_packages_additional_to_remove: >-
+      {{
+        slurm_packages_additional_ohpc_remove
+        if 'slurm_packages_ohpc' in slurm_packages_flavor
+        else slurm_packages_additional_trx_remove
+        if 'slurm_packages_trx' in slurm_packages_flavor
+        else slurm_packages_additional_default_remove
+      }}
+
+- name: Build clashing slurm package list
+  set_fact:
+    slurm_packages_to_remove: >-
+      {{
+        (
+          (lookup('vars', slurm_package_flavors_clashing[0]) + lookup('vars', slurm_package_flavors_clashing[1]))
+          | difference(lookup('vars', slurm_packages_flavor))
+        )
+        + slurm_packages_additional_to_remove
+        | unique
+      }}
+
+- debug:
+    var: slurm_packages_to_remove
+
+- name: Remove clashing slurm packages
+  package:
+    name: "{{ slurm_packages_to_remove }}"
+    state: absent
+  when: slurm_packages_to_remove | length > 0
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+- debug:
+    var: lookup('vars', slurm_packages_flavor)
+
 - name: Install slurm packages
-  yum:
-    name: '{{ slurm_packages }}'
+  dnf:
+    name: "{{ lookup('vars', slurm_packages_flavor) }}"
     state: present
     enablerepo:
       - powertools
       - crb
-  tags: install-only
-  when: enable_openhpc == false
+      - epel
+      - appstream
+  when: ansible_os_family != 'Debian'
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
-
-- name: ensure legacy slurm rpms are not installed before configuring ohpc versions
-  yum:
-    name: '{{ slurm_packages }}'
-    state: removed
   tags: install-only
-  when: enable_openhpc == true
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
 
-- name: ensure legacy rpms are not installed before configuring ohpc versions
-  yum:
-    name:
-      - pmix
-      - pmix-devel
-    state: removed
-  tags: install-only
-  when: enable_openhpc == true
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Install ohpc slurm packages
-  yum:
-    name: '{{ slurm_packages_ohpc }}'
+- name: Install slurm packages
+  package:
+    name: "{{ lookup('vars', slurm_packages_flavor) }}"
     state: present
-  tags: install-only
-  when: enable_openhpc == true
+  when: ansible_os_family == 'Debian'
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
 
-- name: Create systemd unit dirs
-  file:
-    name: '/etc/systemd/system/{{ item }}.service.d'
-    state: directory
-  with_items:
-    - munge
-    - slurmdbd
-    - slurmctld
-
-- name: Render systemd units for slurm, slurmdbd and munge
-  template:
-    src: 'systemd/{{ item }}.service.d/trinity.conf.j2'
-    dest: '/etc/systemd/system/{{ item }}.service.d/trinity.conf'
-    backup: "yes"
-  with_items:
-    - munge
-    - slurmdbd
-    - slurmctld
 
 # ----------------- backup current slurm if requested -------------
 
@@ -200,64 +301,138 @@
     force: false
   when: default_slurm_path.stat.exists == false
 
+# ---------------------------------------------------------------------------
+
+- name: Create systemd unit dirs
+  file:
+    name: '/etc/systemd/system/{{ item }}.service.d'
+    state: directory
+  with_items: "{{ slurm_services if on_controller else slurm_services_image }}"
+
+- name: Render systemd units for slurm, slurmdbd and munge
+  template:
+    src: 'systemd/{{ item }}.service.d/trinity.conf.j2'
+    dest: '/etc/systemd/system/{{ item }}.service.d/trinity.conf'
+    backup: "yes"
+  with_items: "{{ slurm_services if on_controller else slurm_services_image }}"
+
 - name: Enable slurm controller services
-  service:
+  ansible.builtin.systemd:
     daemon_reload: "yes"
     name: '{{ item }}'
     enabled: "{{ not ha|default(True) }}"
   when: not ha|default(False)
         and primary|default(True)
         and on_controller
-  with_items:
-    - munge
-    - slurmdbd
-    - slurmctld
+  with_items: "{{ slurm_services }}"
 
 
 - block:
-    - name: Enable slurm compute services
-      systemd:
-        name: '{{ item }}'
-        enabled: true
-      with_items:
-        - slurmd
-        - munge
+  - name: Enable slurm compute services
+    systemd:
+      name: '{{ item }}'
+      enabled: true
+    with_items: "{{ slurm_services_image }}"
 
-    - name: Disable default After dependency for slurmd service
-      ansible.builtin.replace:
-        path: /usr/lib/systemd/system/slurmd.service
-        before: '[Service]'
-        regexp: '^(After=munge.+)$'
-        replace: '# \1'
+  - name: Render sshd PAM config file
+    template:
+      src: pam-sshd.j2
+      dest: '/etc/pam.d/sshd'
+      mode: '0644'
+      owner: root
+      force: false
 
-    - name: Ensure slurmd service starts after all other services are up
-      ansible.builtin.lineinfile:
-        path: /usr/lib/systemd/system/slurmd.service
-        insertafter: '^# After='
-        line: 'After=multi-user.target sssd.service'
+  - name: Update PAM configuration to enable slurm pam controls
+    copy:
+      src: '{{ item.0 }}'
+      dest: '/etc/pam.d/{{ item.1 }}'
+      owner: root
+      group: root
+      mode: 0644
+    with_together:
+      - ['pam-slurm']
+      - ['slurm']
+    when: enable_slurm_pam
 
-    - name: Update PAM configuration to enable slurm pam controls
-      copy:
-        src: '{{ item.0 }}'
-        dest: '/etc/pam.d/{{ item.1 }}'
-        owner: root
-        group: root
-        mode: 0644
-      with_together:
-        - ['pam-sshd', 'pam-slurm']
-        - ['sshd', 'slurm']
-      when: enable_slurm_pam
+  # cv-slurm packages install pam modules to /usr/lib/security/,
+  # but PAM on RHEL x86_64 searches /usr/lib64/security/.
+  # Symlink so pam_slurm_adopt.so is found. Tolerate if source is
+  # absent (EPEL/normal Slurm already puts module in lib64) or if
+  # destination already exists (force overwrites safely).
+  - name: Ensure pam_slurm_adopt.so is accessible from lib64 PAM path
+    file:
+      src: '{{ item.src }}'
+      dest: '{{ item.dest }}'
+      state: link
+      force: true
+    loop:
+      - src: /usr/lib/security/pam_slurm_adopt.so
+        dest: /usr/lib64/security/pam_slurm_adopt.so
+      - src: /usr/lib/security/pam_slurm.so
+        dest: /usr/lib64/security/pam_slurm.so
+    ignore_errors: true
+    when:
+      - enable_slurm_pam
+      - enable_slurm_pam_adopt | default(True)
+      - ansible_os_family == 'RedHat'
+      - ansible_architecture == 'x86_64'
+
+  # pam_slurm_adopt conflicts with pam_systemd.so.  On authselect-managed
+  # systems the commented lines may be reverted if authselect is re-run
+  # (e.g. during auth or sssd role execution).  This task should run after
+  # any authselect role, which is guaranteed by the controller.yml order.
+  - block:
+    - name: Disable pam_systemd.so in RedHat PAM stacks for pam_slurm_adopt
+      replace:
+        path: '/etc/pam.d/{{ item }}'
+        regexp: '^(\s*-?session\s+optional\s+pam_systemd\.so.*)$'
+        replace: '#\1'
+      loop:
+        - password-auth
+        - system-auth
+      when:
+        - slurm_pam_adopt_manage_pam_systemd | default(True)
+        - ansible_os_family == 'RedHat'
+
+    # Same as RedHat above — pam_systemd.so conflict with pam_slurm_adopt.
+    - name: Disable pam_systemd.so in Debian PAM stacks for pam_slurm_adopt
+      replace:
+        path: '/etc/pam.d/{{ item }}'
+        regexp: '^(\s*-?session\s+optional\s+pam_systemd\.so.*)$'
+        replace: '#\1'
+      loop:
+        - common-session
+        - common-session-noninteractive
+      when:
+        - slurm_pam_adopt_manage_pam_systemd | default(True)
+        - ansible_os_family == 'Debian'
+
+    - name: Disable keyboard-interactive ssh authentication for pam_slurm_adopt
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?\s*{{ item.key }}\s+'
+        line: '{{ item.key }} {{ item.value }}'
+      loop:
+        - key: UsePAM
+          value: 'yes'
+        - key: KbdInteractiveAuthentication
+          value: 'no'
+        - key: ChallengeResponseAuthentication
+          value: 'no'
+      when:
+        - slurm_pam_adopt_manage_sshd | default(True)
+    when:
+      - enable_slurm_pam | default(False)
+      - enable_slurm_pam_adopt | default(True)
   when: in_image or on_node|default(False)
 
 
 - name: Start slurm compute services
-  service:
+  ansible.builtin.systemd:
     daemon_reload: "yes"
     name: '{{ item }}'
     state: started
-  with_items:
-    - munge
-    - slurmd
+  with_items: "{{ slurm_services_image }}"
   when: on_node|default(False)
 
 
@@ -310,7 +485,7 @@
         priv: '{{ slurmdbd_sql_db }}.*:ALL'
         state: present
 
-    - name: Copy configuration files
+    - name: Copy static configuration files
       copy:
         src: '{{ item }}'
         dest: '{{ slurm_conf_path }}/{{ item }}'
@@ -318,8 +493,18 @@
       with_items:
         - slurm-health.conf
         - topology.conf
-        - cgroup.conf
       notify: restart slurm
+
+    - name: Render cgroup.conf
+      template:
+        src: cgroup.conf.j2
+        dest: '{{ slurm_conf_path }}/cgroup.conf'
+        mode: '0644'
+        owner: root
+        force: false
+      notify:
+        - restart slurm
+        - restart slurmd
 
     - name: Place SLURM scripts
       copy:
@@ -344,7 +529,9 @@
         - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'slurm-partitions.conf', 'gres.conf']
         - ['0644', '0600', '0644', '0644', '0644']
         - ['root', 'slurm', 'root', 'root', 'root']
-      notify: restart slurm
+      notify:
+        - restart slurm
+        - restart slurmd
 
     - name: Set UsePAM to 1 in slurm.conf
       lineinfile:
@@ -353,7 +540,7 @@
       when: enable_slurm_pam
 
     - name: Start slurmdbd services
-      service:
+      ansible.builtin.systemd:
         daemon_reload: true
         name: '{{ item }}'
         state: started
@@ -366,7 +553,7 @@
         timeout: 10
 
     - name: Start slurmctld services
-      service:
+      ansible.builtin.systemd:
         daemon_reload: "yes"
         name: '{{ item }}'
         state: started
@@ -375,16 +562,8 @@
         - slurmctld
 
     - name: Add slurm pacemaker resources
-      pcs_resource:
-        name: '{{ item }}'
-        resource_class: 'systemd'
-        resource_type: 'systemd:{{ item }}'
-        options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
-        state: present
+      include_tasks: ha.yml
       when: ha|default(False)
-      with_items:
-        - slurmdbd
-        - slurmctld
       tags: pcs
 
     - name: Register slurm cluster in slurmdbd
@@ -394,18 +573,18 @@
       until: '"Adding Cluster" in sacctmgr_success.stdout or "Not adding." in sacctmgr_success.stdout'
       retries: 10
       delay: 15
-  when: 
+  when:
     - primary|default(True)
     - on_controller
 
 
 - name: Start munge service on all controllers
-  service:
+  ansible.builtin.systemd:
     daemon_reload: true
     name: '{{ item }}'
     state: started
     enabled: true
-  when: 
+  when:
     - on_controller
   with_items:
     - munge
@@ -415,7 +594,7 @@
     name: '{{ item }}'
     enabled: true
     state: started
-  when: 
+  when:
     - not on_controller
     - not on_node|default(False)
     - not in_image
@@ -433,7 +612,7 @@
         group: root
         mode: 0644
       when: enable_slurm_pam
-  when: 
+  when:
     - primary|default(True)
     - on_controller
 

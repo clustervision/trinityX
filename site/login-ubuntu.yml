@@ -1,0 +1,80 @@
+---
+# Ubuntu login image wrapper.
+#
+# This mirrors the structure of login-default.yml, but uses the Ubuntu
+# image creation/setup flow from compute-ubuntu.yml.
+#
+# Note: full login-default parity for Ubuntu still requires Ubuntu support in
+# the trinity/ood and trinity/slurm roles. Today this playbook renders the
+# Ubuntu login-image entrypoint, while the role-level OOD/slurm work remains
+# a follow-up.
+
+- hosts: localhost
+  pre_tasks:
+  #
+  # the image name can be set in the below fact.
+  #
+  - name: Set Ubuntu release
+    set_fact:
+      # The Ubuntu release to build: 22 (jammy), 24 (noble) or 26 (resolute).
+      # The codename is looked up from this number in trinity/image-create.
+      ubuntu_version: "{{ ubuntu_version | default('24') }}"
+    tags: always
+
+  - name: Set image name
+    set_fact:
+      # The default release keeps the historic name 'login-ubuntu-image', which is what
+      # existing groups and nodes already point at -- so re-running this playbook
+      # rebuilds the image they use rather than a new one nothing references.
+      # Any other release builds beside it: 22 gives 'login-ubuntu22-image'.
+      # -e image_name=<name> overrides both.
+      image_name: "{{ image_name | default(
+          'login-ubuntu-image' if ubuntu_version == '24'
+          else 'login-ubuntu' ~ ubuntu_version ~ '-image'
+        ) }}"
+    tags: always
+
+- import_playbook: imports/trinity-ubuntu-image-create.yml
+  vars:
+    image_name: "{{ hostvars['localhost']['image_name'] }}"
+    ubuntu_version: "{{ hostvars['localhost']['ubuntu_version'] }}"
+    # The password to set up for the root user in the image.
+    # If empty, it will be generated at random.
+    #
+    image_password:
+    #
+    # Alternative distribution build. Supported are Ubuntu, version 20, 22, 24 and 26
+    # or any docker image, e.g. ubuntu:rolling
+    #alternative_distribution: Ubuntu-22
+    # 
+    # The alternative source can be 'base' or 'docker'
+    #alternative_image_source: 'base'
+
+- import_playbook: imports/trinity-ubuntu-login-setup.yml
+  vars:
+    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    in_login_image: true
+  tags: build
+
+- hosts:
+    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+  roles:
+    - role: trinity/slurm
+      slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+      slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+      munge_conf_path: '{{ trix_shared }}/etc/munge'
+      enable_slurm_pam: true
+      when: "'slurm' in workload_manager "
+      tags: slurm
+
+- hosts: controllers
+  pre_tasks:
+    - name: Unmount the image /proc before packing
+      shell: "! mountpoint -q {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc || umount {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc"
+      tags: always
+  roles:
+    - role: luna/osimage-pack
+      vars:
+         params:
+            image_name: "{{ hostvars['localhost']['image_name'] }}"
+      tags: pack-images
