@@ -361,14 +361,6 @@ luna_password: luna
 luna_protocol: https
 luna_verify_certificate: false
 
-# Put the serial console on the kernel command line of every OS image, so the
-# BMC's serial-over-LAN (lconsole, ipmitool sol) shows the boot, the installer
-# and the login prompt next to the VGA screen. Which port and speed is set in
-# roles/luna/osimage-create/defaults/main.yml; a re-run never removes kernel
-# options that are already on an image, and an image that already carries a
-# console= setting is left exactly as it is.
-luna_console_redirection: true
-
 
 #########################################################################
 #                     BMC Setup Credentials                             #
@@ -379,6 +371,23 @@ luna_console_redirection: true
 
 luna_bmcsetup_user: admin
 luna_bmcsetup_password: ''
+
+# Serial console on every OS image's kernel command line, so the BMC's
+# serial-over-LAN shows the boot and the login prompt. Off by default: a
+# console= naming a port the board does not have can hang the boot, not just
+# lose the output.
+#
+# Set it here only if you already know the port for certain. You cannot find it
+# out from here - the machine has to have booted once to tell you - so the
+# normal way round is to leave this off and set kerneloptions in Luna afterwards
+# (`luna osimage|group|node change`), per image, group or node, once a booted
+# node has shown you which port it actually uses.
+#
+# ttyS0 is COM1, the port most likely to exist at all; SOL usually sits on
+# COM2/ttyS1. The last console= is the one that gets the login prompt, so the
+# serial entry goes last.
+luna_console_redirection: false
+luna_console_kerneloptions: "console=tty0 console=ttyS0,115200n8"
 
 
 #########################################################################
