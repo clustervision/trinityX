@@ -5,8 +5,8 @@
   when: 
     - trix_ctrl_interface is not defined
     - inner_loop_var != ""
-    - hostvars[inventory_hostname]['ansible_'+item]['ipv4'] is defined
-    - hostvars[inventory_hostname]['ansible_'+item]['ipv4']['address'] == inner_loop_var
+    - hostvars[inventory_hostname]['ansible_' + (item | replace('-', '_'))]['ipv4'] is defined
+    - hostvars[inventory_hostname]['ansible_' + (item | replace('-', '_'))]['ipv4']['address'] == inner_loop_var
   with_items:
     - "{{ ansible_interfaces }}"
 
@@ -15,8 +15,8 @@
   when:
     - trix_ctrl_interface is not defined
     - inner_loop_var != ""
-    - hostvars[inventory_hostname]['ansible_'+item]['ipv4_secondaries'] is defined
-    - hostvars[inventory_hostname]['ansible_'+item]['ipv4_secondaries']|selectattr('address','equalto',inner_loop_var)
+    - hostvars[inventory_hostname]['ansible_' + (item | replace('-', '_'))]['ipv4_secondaries'] is defined
+    - hostvars[inventory_hostname]['ansible_' + (item | replace('-', '_'))]['ipv4_secondaries']|selectattr('address','equalto',inner_loop_var)
   with_items:
     - "{{ ansible_interfaces }}"
 

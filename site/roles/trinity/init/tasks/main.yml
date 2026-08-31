@@ -403,6 +403,17 @@
       msg: "Interface with config set in 'trix_ctrl1_ip' ({{ trix_ctrl1_ip }}) or 'trix_ctrlX_ip' ({{ trix_ctrl2_ip }}, ...) not found. Please make sure the interface is configured and up"
     when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
 
+  # the same question for the BMC network. No fail when nothing carries one: a
+  # cluster without a BMC network is legal, and firewalld says what it means there
+  - name: Collecting controller BMC-facing interface information
+    include_tasks: find-bmc-interface.yml
+    with_items: "{{ all_ctrl_bmcip | default([]) }}"
+    loop_control:
+      loop_var: inner_loop_var
+
+  - debug:
+      msg: "trix_bmc_interface: {{ trix_bmc_interface|default('Undefined') }}"
+
     # we figure out our local ip. handy if we want local connection but through ip.
   - set_fact:
       trix_ctrl_local_ip: '{{ item.1 }}'

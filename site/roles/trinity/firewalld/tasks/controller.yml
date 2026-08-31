@@ -60,6 +60,21 @@
      firewalld_trusted_interfaces: "{{ [trix_ctrl_interface] + firewalld_trusted_interfaces }}"
   when: trix_ctrl_interface is defined and trix_ctrl_interface != ""
 
+# A BMC has to reach the controller for out-of-band work - fetching a firmware image
+# among others - and opening single ports is fragile, so the whole BMC-facing
+# interface is trusted, as the cluster interface is above. Which interface that is
+# was answered by init (find-bmc-interface.yml): the one carrying this controller's
+# address on the BMC network. Where the BMC network rides the cluster interface it
+# is the same name and |unique folds it away.
+- name: Add the BMC-facing interface to the trusted zone
+  set_fact:
+    firewalld_trusted_interfaces: "{{ firewalld_trusted_interfaces + [trix_bmc_interface] }}"
+  when: trix_bmc_interface is defined and trix_bmc_interface != ""
+
+- debug:
+    msg: "No interface on this controller carries a BMC-network address ({{ all_ctrl_bmcip | default([]) | join(', ') }}); BMCs will not be able to reach it unless their interface is listed in firewalld_trusted_interfaces"
+  when: trix_bmc_interface is not defined or trix_bmc_interface == ""
+
 - name: Assign interfaces to the trusted zone
   firewalld:
     zone: trusted
