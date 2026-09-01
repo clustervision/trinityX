@@ -26,7 +26,7 @@
 - block:
   - name: Ensure sol-grab daemon directory exists
     file:
-      path: "{{ sol_grab_daemon_dir }}"
+      path: "{{ node_console_sol_grab_daemon_dir }}"
       state: directory
       owner: root
       group: root
@@ -34,7 +34,7 @@
 
   - name: Ensure sol-grab config directory exists
     file:
-      path: "{{ sol_grab_ini_dir }}"
+      path: "{{ node_console_sol_grab_ini_dir }}"
       state: directory
       owner: root
       group: root
@@ -42,7 +42,7 @@
 
   - name: Create console capture log directory
     file:
-      path: "{{ sol_grab_log_dir }}"
+      path: "{{ node_console_sol_grab_log_dir }}"
       state: directory
       owner: root
       group: root
@@ -51,7 +51,7 @@
   - name: Install sol-grab ini file
     template:
       src: 'sol-grab.ini.j2'
-      dest: "{{ sol_grab_ini_dir }}/sol-grab.ini"
+      dest: "{{ node_console_sol_grab_ini_dir }}/sol-grab.ini"
       owner: root
       group: root
       mode: '0640'
@@ -60,7 +60,7 @@
   - name: Install the sol-grab daemon
     template:
       src: 'sol_grab.py.j2'
-      dest: "{{ sol_grab_daemon_dir }}/sol_grab.py"
+      dest: "{{ node_console_sol_grab_daemon_dir }}/sol_grab.py"
       owner: root
       group: root
       mode: '0750'
@@ -69,7 +69,7 @@
   - name: Deploy sol-grab systemd service
     template:
       src: 'sol-grab.service.j2'
-      dest: "/etc/systemd/system/{{ sol_grab_service_name }}.service"
+      dest: "/etc/systemd/system/{{ node_console_sol_grab_service_name }}.service"
       owner: root
       group: root
       mode: '0644'
@@ -77,8 +77,8 @@
 
   - name: Manage the sol-grab service
     systemd:
-      name: "{{ sol_grab_service_name }}"
-      state: "{{ 'started' if sol_grab_enable else 'stopped' }}"
-      enabled: "{{ sol_grab_enable }}"
+      name: "{{ node_console_sol_grab_service_name }}"
+      state: "{{ 'started' if node_console_sol_grab_enable else 'stopped' }}"
+      enabled: "{{ node_console_sol_grab_enable }}"
       daemon_reload: true
   when: on_controller | default(False)
