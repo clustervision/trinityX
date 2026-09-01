@@ -1,0 +1,40 @@
+---
+# trinity/node-console defaults.
+# Override in group_vars or at role invocation.
+
+# --- sol-grab (on-demand, bounded SOL capture feeding the nodeboot GUI's
+# console panel) ---
+
+# Controller-side only, on the provisioning controller (BMC network access).
+# Deliberately NOT always-on: SOL is one exclusive BMC session per node, so
+# holding it fleet-wide would mean thousands of concurrent logins. Grabbed
+# only on request, bounded by node_console_sol_grab_max_workers, held for
+# node_console_sol_grab_duration_secs, then dropped.
+# See sol_grab.py's docstring.
+node_console_sol_grab_enable: true
+node_console_sol_grab_service_name: sol-grab
+
+# The daemon and its ini live side by side under one base, the same shape the
+# alertx drainer and history daemons use. sol_grab.py finds its ini relative to
+# itself, so these two stay in step without the path being repeated in the code.
+node_console_sol_grab_base_dir: '{{ trix_local }}/console/sol-grab'
+node_console_sol_grab_daemon_dir: '{{ node_console_sol_grab_base_dir }}/daemon'
+node_console_sol_grab_ini_dir: '{{ node_console_sol_grab_base_dir }}/config'
+
+# Loopback only: the nodeboot GUI runs on the controller and reaches this
+# locally, so there is no reason to expose an unauthenticated BMC-session
+# endpoint on the cluster network.
+node_console_sol_grab_listen_host: 127.0.0.1
+node_console_sol_grab_port: 6667
+node_console_sol_grab_max_workers: 15
+node_console_sol_grab_duration_secs: 8
+node_console_sol_grab_max_lines: 500
+node_console_sol_grab_backend: ipmi
+node_console_sol_grab_log_dir: /var/log/luna/console
+
+# --- packages ---
+
+# Installed on the controller only
+node_console_packages:
+  - ipmitool
+  - sshpass
