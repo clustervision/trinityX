@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# This code is part of the TrinityX software suite
+# Copyright (C) 2026  ClusterVision Solutions b.v.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>
+
+"""
+sol-grab — on-demand, ephemeral SOL capture for the nodeboot GUI's console
+panel. SOL is an exclusive, stateful IPMI session per node — holding one open
+per node, fleet-wide, would mean thousands of concurrent BMC logins. So SOL
+is grabbed only when asked, held only for DURATION_SECS seconds, then
+dropped.
+
+Runs on the provisioning controller (BMC network access), one small HTTP
+endpoint: GET /grab/<node> -> {"lines": [...]} or {"error": "..."}.
+
+Concurrency is bounded two ways:
+  - a fixed-size worker pool (MAX_WORKERS) — the rest queue rather than each
+    opening their own BMC connection at once.
+  - a per-node lock — two callers grabbing the same node join the one grab
+    already in flight instead of racing two SOL sessions against one BMC
+    (which only allows one SOL client at a time anyway).
+
+Before grabbing, checks for an already-running interactive `lconsole <node>`
+session and refuses if found — a human's live debug session must never be
+silently kicked off by this.
+
+Deployed by the trinity/node-console role. The SOL machinery itself lives in
+luna2-utils (utils.lconsole), installed into the same TrinityX python
+environment this runs under; the names imported below are the whole of that
+dependency.
+"""
+
+import configparser
+import json
+import os
+import re
+import subprocess
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import TimeoutError as FutureTimeout
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Dict
+from urllib.parse import urlsplit
+
+from utils.lconsole import (
+    Ini, IpmiSolBackend, RedfishSolBackend, resolve_node_details, terminal_size,
+    LUNA_CONFIG_PATH, DEFAULT_SOL_CIPHER,
+)
+
+# The role renders this file to <base>/daemon and its ini to <base>/config, so
+# the ini is located relative to this file rather than pinned to an absolute
+# path the role would then have to keep in step with its own variables.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+INI_FILE = os.environ.get('SOL_GRAB_INI',
+                          os.path.join(os.path.dirname(_HERE), 'config', 'sol-grab.ini'))
+
+_conf = configparser.ConfigParser()
+_conf.read(INI_FILE)
+
+HOST             = _conf.get('SERVER', 'HOST', fallback='0.0.0.0')
+PORT             = _conf.getint('SERVER', 'PORT', fallback=6667)
+MAX_WORKERS      = _conf.getint('GRAB', 'MAX_WORKERS', fallback=15)
+GRAB_DURATION    = _conf.getfloat('GRAB', 'DURATION_SECS', fallback=8)
+MAX_LINES        = _conf.getint('GRAB', 'MAX_LINES', fallback=500)
+SOL_BACKEND_NAME = _conf.get('GRAB', 'BACKEND', fallback='ipmi')
+LOG_DIR          = _conf.get('GRAB', 'LOG_DIR', fallback='/var/log/luna/console')
+
+_NODE_NAME_RE = re.compile(r'^[A-Za-z0-9_.-]+$')
+
+executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
+_inflight: Dict[str, Future] = {}
+_inflight_lock = threading.Lock()
+
+
+def live_session_running(node: str) -> bool:
+    """True if an interactive `lconsole <node> ...` process is already up —
+    grabbing SOL underneath it would silently steal the operator's session."""
+    try:
+        out = subprocess.run(['pgrep', '-af', 'lconsole'], capture_output=True,
+                              text=True, timeout=3).stdout
+    except (OSError, subprocess.SubprocessError):
+        return False  # can't tell -> don't block the grab over a check failure
+    pattern = re.compile(rf'\blconsole\s+{re.escape(node)}\b')
+    return any(pattern.search(line) for line in out.splitlines())
+
+
+def _build_backend(node: str):
+    conf = Ini.read_ini(ini_file=LUNA_CONFIG_PATH)
+    details = resolve_node_details(node, conf)
+    if not details['bmc_ip']:
+        raise RuntimeError(f'Node {node} has no BMC IP in Luna')
+    if not details['bmcsetup']:
+        raise RuntimeError(f'Node {node} has no bmcsetup in Luna')
+    if SOL_BACKEND_NAME == 'redfish':
+        return RedfishSolBackend(node, details['bmc_ip'], details['bmcsetup'])
+    return IpmiSolBackend(node, details['bmc_ip'], details['bmcsetup'], cipher=DEFAULT_SOL_CIPHER)
+
+
+def _grab_lines(node: str) -> list:
+    """Runs in a worker thread: open SOL, collect output for GRAB_DURATION
+    seconds, close it. Never left running past that window."""
+    backend = _build_backend(node)
+    backend.start(winsize=terminal_size())
+    try:
+        buf = bytearray()
+        deadline = time.monotonic() + GRAB_DURATION
+        while time.monotonic() < deadline:
+            chunk = backend.read()
+            if chunk:
+                buf += chunk
+            else:
+                time.sleep(0.2)
+    finally:
+        backend.stop()
+    text = buf.decode('utf-8', errors='replace')
+    lines = [ln.rstrip('\r') for ln in text.split('\n') if ln.strip()]
+    return lines[-MAX_LINES:]
+
+
+def _write_log(node: str, lines: list):
+    path = os.path.join(LOG_DIR, f'{node}.sol.log')
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write('\n'.join(lines) + ('\n' if lines else ''))
+    except OSError as exc:
+        sys.stderr.write(f'sol-grab: could not write {path}: {exc}\n')
+
+
+def _do_grab(node: str) -> dict:
+    try:
+        lines = _grab_lines(node)
+        _write_log(node, lines)
+        return {'node': node, 'lines': lines}
+    except Exception as exc:  # noqa: BLE001 — surfaced to the GUI, not a 500
+        return {'node': node, 'lines': [], 'error': str(exc)}
+
+
+def grab(node: str) -> dict:
+    if live_session_running(node):
+        return {'node': node, 'lines': [],
+                'error': 'console already open in an active lconsole session'}
+
+    with _inflight_lock:
+        fut = _inflight.get(node)
+        if fut is None:
+            fut = executor.submit(_do_grab, node)
+            _inflight[node] = fut
+
+    try:
+        # concurrent.futures.TimeoutError only became an alias of the builtin
+        # TimeoutError in python 3.11, and the TrinityX python follows the OS.
+        # Catching the builtin name alone lets a timed-out grab escape here on
+        # anything older, turning the intended JSON error into a 500.
+        result = fut.result(timeout=GRAB_DURATION + 15)
+    except FutureTimeout:
+        result = {'node': node, 'lines': [], 'error': 'SOL grab timed out'}
+    finally:
+        with _inflight_lock:
+            if _inflight.get(node) is fut:
+                del _inflight[node]
+
+    return result
+
+
+class SolGrabHandler(BaseHTTPRequestHandler):
+    """GET /grab/<node> and GET /healthz, both answering JSON."""
+
+    server_version = 'sol-grab'
+
+    def _reply(self, payload: dict, code: int = 200):
+        body = json.dumps(payload).encode('utf-8')
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):  # noqa: N802 — name fixed by BaseHTTPRequestHandler
+        # urlsplit, NOT urlparse: urlparse still strips a ';params' tail off the
+        # last path segment, so '/grab/node001;rm' would arrive here as node
+        # 'node001' with the rest silently discarded, and the name check below
+        # would never see what was actually asked for.
+        path = urlsplit(self.path).path
+        if path == '/healthz':
+            return self._reply({'status': 'ok', 'max_workers': MAX_WORKERS})
+        match = re.match(r'^/grab/(.+)$', path)
+        if not match or not _NODE_NAME_RE.match(match.group(1)):
+            return self._reply({'error': 'not found'}, code=404)
+        return self._reply(grab(match.group(1)))
+
+    def log_message(self, fmt, *args):
+        """Suppress the per-request access line. A GUI showing a rack polls one
+        request per node, so this is a journal line per node per refresh — and
+        it carries nothing the JSON body does not already report."""
+
+
+def main():
+    server = ThreadingHTTPServer((HOST, PORT), SolGrabHandler)
+    server.daemon_threads = True
+    server.serve_forever()
+
+
+if __name__ == '__main__':
+    main()
