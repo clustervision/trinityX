@@ -1,0 +1,16 @@
+[Unit]
+Description=TrinityX on-demand SOL capture (feeds the nodeboot GUI's console panel)
+After=network-online.target luna2-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ node_console_sol_grab_daemon_dir }}
+ExecStart={{ trix_local }}/python/bin/python3 {{ node_console_sol_grab_daemon_dir }}/sol_grab.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,84 @@
+---
+# trinity/node-console — controller-side console capture for TrinityX compute
+# nodes, over Serial-over-LAN through each node's BMC.
+#
+# The serial console kernel options on the images are NOT set here: since
+# TRIX-2040 the luna/osimage-create role puts them on every image
+# (luna_console_redirection / luna_console_kerneloptions).
+
+# --- controller: packages ---
+- name: Install packages on controller
+  ansible.builtin.package:
+    name: "{{ node_console_packages }}"
+    state: present
+  when: on_controller | default(False)
+
+# --- controller: sol-grab (on-demand SOL capture for the nodeboot GUI's
+# console panel) ---
+#
+# The daemon ships here, rendered from templates/sol_grab.py.j2, the same way
+# the alertx drainer and history daemons do. It imports the SOL machinery from
+# luna2-utils (utils.lconsole) out of the TrinityX python environment, so the
+# luna2 role must have installed luna2-utils first — controller.yml already
+# orders it that way. That import is the whole cross-repo dependency; the names
+# are listed at the top of sol_grab.py.
+
+- block:
+  - name: Ensure sol-grab daemon directory exists
+    file:
+      path: "{{ node_console_sol_grab_daemon_dir }}"
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Ensure sol-grab config directory exists
+    file:
+      path: "{{ node_console_sol_grab_ini_dir }}"
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Create console capture log directory
+    file:
+      path: "{{ node_console_sol_grab_log_dir }}"
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Install sol-grab ini file
+    template:
+      src: 'sol-grab.ini.j2'
+      dest: "{{ node_console_sol_grab_ini_dir }}/sol-grab.ini"
+      owner: root
+      group: root
+      mode: '0640'
+    notify: restart sol-grab
+
+  - name: Install the sol-grab daemon
+    template:
+      src: 'sol_grab.py.j2'
+      dest: "{{ node_console_sol_grab_daemon_dir }}/sol_grab.py"
+      owner: root
+      group: root
+      mode: '0750'
+    notify: restart sol-grab
+
+  - name: Deploy sol-grab systemd service
+    template:
+      src: 'sol-grab.service.j2'
+      dest: "/etc/systemd/system/{{ node_console_sol_grab_service_name }}.service"
+      owner: root
+      group: root
+      mode: '0644'
+    notify: restart sol-grab
+
+  - name: Manage the sol-grab service
+    systemd:
+      name: "{{ node_console_sol_grab_service_name }}"
+      state: "{{ 'started' if node_console_sol_grab_enable else 'stopped' }}"
+      enabled: "{{ node_console_sol_grab_enable }}"
+      daemon_reload: true
+  when: on_controller | default(False)
