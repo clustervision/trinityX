@@ -48,7 +48,6 @@ import configparser
 import json
 import os
 import re
-import subprocess
 import sys
 import threading
 import time
@@ -88,16 +87,47 @@ _inflight: Dict[str, Future] = {}
 _inflight_lock = threading.Lock()
 
 
+# lconsole reaches /usr/sbin under either name depending on how it was installed:
+# the pip console script (bin/lconsole), or a symlink straight to the module
+# (site-packages/utils/lconsole.py). Both are the same tool.
+_LCONSOLE_NAMES = ('lconsole', 'lconsole.py')
+
+
 def live_session_running(node: str) -> bool:
     """True if an interactive `lconsole <node> ...` process is already up —
-    grabbing SOL underneath it would silently steal the operator's session."""
+    grabbing SOL underneath it would silently steal the operator's session.
+
+    Identifies lconsole by the argv token naming the script, never by a
+    substring of the whole command line. lconsole is a python script, so the
+    process executable is the interpreter and the tool's identity lives in
+    argv[1]; searching the joined command line instead matches any process that
+    merely *mentions* the text — a shell running a script containing it, an
+    editor, an ansible task — and every one of those refuses a legitimate grab.
+    """
+    own = str(os.getpid())
     try:
-        out = subprocess.run(['pgrep', '-af', 'lconsole'], capture_output=True,
-                              text=True, timeout=3).stdout
-    except (OSError, subprocess.SubprocessError):
-        return False  # can't tell -> don't block the grab over a check failure
-    pattern = re.compile(rf'\blconsole\s+{re.escape(node)}\b')
-    return any(pattern.search(line) for line in out.splitlines())
+        entries = os.listdir('/proc')
+    except OSError as exc:
+        # can't tell -> don't block the grab over a check failure
+        sys.stderr.write(f'sol-grab: cannot read /proc, session check skipped: {exc}\n')
+        return False
+
+    for entry in entries:
+        if not entry.isdigit() or entry == own:
+            continue
+        try:
+            with open(f'/proc/{entry}/cmdline', 'rb') as fh:
+                raw = fh.read()
+        except OSError:
+            continue  # exited between listdir and open, or not ours to read
+        argv = [tok.decode('utf-8', 'replace') for tok in raw.split(b'\0') if tok]
+        for index, token in enumerate(argv):
+            if os.path.basename(token) in _LCONSOLE_NAMES:
+                # the node is a positional, so it may sit after option flags
+                if node in argv[index + 1:]:
+                    return True
+                break
+    return False
 
 
 def _build_backend(node: str):
