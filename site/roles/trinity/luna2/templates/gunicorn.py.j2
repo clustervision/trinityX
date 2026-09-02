@@ -11,8 +11,12 @@ bind = '0.0.0.0:7050'
 # n is the number of CPU cores present.
 workers = {{ [(ansible_processor_nproc * 0.8) | int, 1] | max }}
 
-# Number of threads per worker process
-# threads = 3
+# Threaded workers: a control action talks to the BMC inline, so a slow one holds
+# its slot for the whole timeout. A thread costs far less than a process slot,
+# which keeps long-pending calls from starving the API. Tested live; the database
+# layer is thread-safe (WAL, per-thread connections). TRIX-2049.
+worker_class = 'gthread'
+threads = 4
 
 # Timeout (in seconds) for a request to complete
 timeout = 600
