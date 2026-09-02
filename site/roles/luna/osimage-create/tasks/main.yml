@@ -22,7 +22,7 @@
   register: luna_image_major_version
 
 - name: Creating image in luna
-  shell: "luna osimage add --path \"{{ luna_image_path }}\" --distribution {{ luna_image_distribution|lower }} --osrelease {{ luna_image_major_version.stdout }} --quick-kerneloptions \"_net.ifnames=0 _biosdevname=0{{ ' ' ~ luna_console_kerneloptions if luna_console_redirection | default(true) else '' }}\" {{ luna_image_name }}"
+  shell: "luna osimage add --path \"{{ luna_image_path }}\" --distribution {{ luna_image_distribution|lower }} --osrelease {{ luna_image_major_version.stdout }} --quick-kerneloptions \"_net.ifnames=0 _biosdevname=0{{ ' ' ~ luna_console_kerneloptions if luna_console_redirection else '' }}\" {{ luna_image_name }}"
   when: luna_image_in_luna is defined and luna_image_in_luna.rc|int != 0
 
 - name: Setting release for image
@@ -39,13 +39,13 @@
   register: luna_image_raw
   changed_when: false
   when:
-    - luna_console_redirection | default(true)
+    - luna_console_redirection
     - luna_image_in_luna is defined and luna_image_in_luna.rc|int == 0
 
 - name: Adding the serial console to the kernel options of the existing image
   shell: "luna osimage change --quick-kerneloptions \"{{ ((luna_image_raw.stdout | from_json).kerneloptions | default('', true) ~ ' ' ~ luna_console_kerneloptions) | trim }}\" {{ luna_image_name }}"
   when:
-    - luna_console_redirection | default(true)
+    - luna_console_redirection
     - luna_image_in_luna is defined and luna_image_in_luna.rc|int == 0
     - not ((luna_image_raw.stdout | from_json).kerneloptions | default('', true)) is search('(^| )console=')
 
