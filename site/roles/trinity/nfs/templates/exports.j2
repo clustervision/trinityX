@@ -3,8 +3,10 @@
 {% set disabled = export.get('disabled', False) %}
 {% if not disabled and 'path' in export %}
 {% set export_type = export.get('type') %}
-{% if export_type in ['manual', 'nfs'] %}
-{# For manual or nfs type, just output the path and options #}
+{% if export_type in ['nfs','lustre','beegfs','mmfs','gpfs','panfs'] %}
+{# An external share is imported, never served: exporting it would re-export the mount #}
+{% elif export_type == 'manual' %}
+{# For manual type, just output the path and options #}
 
 {{ export.path }}   {{ export.options | default('') }}
 {% else %}
