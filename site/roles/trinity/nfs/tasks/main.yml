@@ -61,16 +61,14 @@
           {{ item.path }}
         {% endif %}
       _type: |
-        {% if nfs_use_mask %}
-          {% if item.path in _mask_names or item.path in _mask_mounts %}
-            {% for disk in nfs_remote_mask %}
-              {% if disk.name | default(none) == item.path or (disk.mount is defined and disk.mount == item.path) %}
-                {% if disk["type"] is defined %}
-                  {{ disk["type"] }}
-                {% endif %}
+        {% if item.path in _mask_names or item.path in _mask_mounts %}
+          {% for disk in nfs_remote_mask %}
+            {% if disk.name | default(none) == item.path or (disk.mount is defined and disk.mount == item.path) %}
+              {% if disk["type"] is defined and (nfs_use_mask or disk["type"] in ['nfs','lustre','beegfs','mmfs','gpfs','panfs']) %}
+                {{ disk["type"] }}
               {% endif %}
-            {% endfor %}
-          {% endif %}
+            {% endif %}
+          {% endfor %}
         {% endif %}
 
 - name: Overwrite nfs_mounts fact
