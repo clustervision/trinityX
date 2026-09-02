@@ -2,12 +2,19 @@
 
 luna_image_path: /trinity/images/nonexistent
 
-# Serial console for the BMC's serial-over-LAN, added to an image's kernel
-# options when luna_console_redirection is on. The last console= is what the
-# kernel makes /dev/console, so the serial port comes last: kernel messages go
-# to both, systemd output and the login prompt go to the serial port. ttyS0 is
-# COM1; boards that redirect COM2 want ttyS1, and the speed must match the
-# BMC's SOL bit rate (ipmitool sol info).
+# Off by default: a console= naming a port the board does not have can hang the
+# boot, not merely lose the output - the 8250 console waits on a transmit-ready
+# bit that never comes. We cannot know the right port before a node has booted,
+# so we do not guess at it on the boot that would be broken by guessing wrong.
+luna_console_redirection: false
+
+# Used only when the toggle is on. ttyS0 is COM1: on a board that has one serial
+# port at all it is that one, which makes it the least dangerous value to carry.
+# It is not where the BMC's serial-over-LAN usually sits - Supermicro, Dell iDRAC
+# and HPE iLO all put SOL on COM2/ttyS1 - so a site enabling this will often want
+# ttyS1 here, and should confirm the port on its hardware before setting it.
+# The last console= is the one the kernel makes /dev/console, hence the serial
+# entry last: kernel messages to both, login prompt to the serial port.
 luna_console_kerneloptions: "console=tty0 console=ttyS0,115200n8"
 
 luna_image_detect_major_version:
