@@ -40,7 +40,8 @@
       nfs_mounts_: "{{ nfs_mounts_|d([]) + [item|combine({'type': _type|from_yaml|default('nfs',true),
                                                             'remote': _remote|from_yaml|default(item.remote,true),
                                                             'options': _options|from_yaml|default(item.options,true),
-                                                            'xmount': _xmount|from_yaml|default(False,true)})] }}"
+                                                            'xmount': _xmount|from_yaml|default(False,true),
+                                                            'external': _external|from_yaml|default(False,true)})] }}"
     loop: "{{ nfs_mounts }}"
     vars:
       # 'name' is optional in shared_fs_disks (an entry may carry only 'mount'),
@@ -51,14 +52,12 @@
         {% if item.path in _mask_names or item.path in _mask_mounts %}
           {% for disk in nfs_remote_mask %}
             {% if disk.name | default(none) == item.path or (disk.mount is defined and disk.mount == item.path) %}
-              {% if disk["type"] == "nfs" %}
+              {% if disk["type"] in ['nfs','lustre','beegfs','mmfs','gpfs','panfs'] %}
                 {{ disk["remote"] }}
               {% elif nfs_use_mask %}
                 {% if disk["xmount"] is defined and disk["xmount"] %}
                   {% set _details = item["remote"].split(':') %}
                   {{ _details[0]+':'+nfs_prefix_path+_details[1] }}
-                {% elif disk["type"] in ['lustre','beegfs','mmfs','gpfs','panfs'] %}
-                  {{ disk["remote"] }}
                 {% elif item.remote is defined %}
                   {{ item.remote }}
                 {% endif %}
@@ -86,7 +85,7 @@
           {{ item.remote }}
         {% endif %}
       _options: |
-        {% if nfs_use_mask %}
+        {% if nfs_use_mask or _external|from_yaml %}
           {% if item.path in _mask_names or item.path in _mask_mounts %}
             {% for disk in nfs_remote_mask %}
               {% if disk.name | default(none) == item.path or (disk.mount is defined and disk.mount == item.path) %}
@@ -133,8 +132,20 @@
         {% else %}
           False
         {% endif %}
+      # An external share (nfs, lustre, ...) is imported, not cross-mounted, so xmount
+      # stays False for it; it still has to be mounted on every controller, HA or not.
+      _external: |
+        {% if item.path in _mask_names or item.path in _mask_mounts %}
+          {% for disk in nfs_remote_mask %}
+            {% if disk.name | default(none) == item.path or (disk.mount is defined and disk.mount == item.path) %}
+              {% if disk["type"] in ['nfs','lustre','beegfs','mmfs','gpfs','panfs'] %}
+                True
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
       _type: |
-        {% if nfs_use_mask %}
+        {% if nfs_use_mask or _external|from_yaml %}
           {% if item.path in _mask_names or item.path in _mask_mounts %}
             {% for disk in nfs_remote_mask %}
               {% if disk.name | default(none) == item.path or (disk.mount is defined and disk.mount == item.path) %}
@@ -177,7 +188,7 @@
     with_items: '{{ new_nfs_mounts }}'
     when:
       - (item.type is defined and item.type != 'manual') or item.type is not defined
-      - (in_image and not nfs_only_xmount) or (nfs_only_xmount and item.xmount)
+      - (in_image and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
 
   - name: Setup NFS mounts for RedHat family
     mount:
@@ -190,7 +201,7 @@
     when: 
       - ansible_facts['os_family'] == "RedHat"
       - (item.type is defined and item.type != 'manual') or item.type is not defined
-      - (in_image and not nfs_only_xmount) or (nfs_only_xmount and item.xmount)
+      - (in_image and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
 
   - name: Setup NFS mounts for Debian family
     mount:
@@ -203,5 +214,5 @@
     when: 
       - ansible_facts['os_family'] == "Debian"
       - (item.type is defined and item.type != 'manual') or item.type is not defined
-      - (in_image and not nfs_only_xmount) or (nfs_only_xmount and item.xmount)
+      - (in_image and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
   when: new_nfs_mounts is defined
