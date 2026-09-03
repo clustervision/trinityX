@@ -392,6 +392,30 @@
     set_fact:
       luna_bmcsetup_user: 'admin'
   when: (luna_bmcsetup_user is not defined) or luna_bmcsetup_user | length == 0
+- block:
+  - debug:
+      msg: "luna_redfish_password is not defined, generating random password"
+  - name: Generate default Redfish account password value
+    set_fact:
+      luna_redfish_password: "{{ lookup('password', '/dev/null', length=3, chars='ascii_uppercase') +
+        lookup('password', '/dev/null', length=6, chars='ascii_lowercase') +
+        lookup('password', '/dev/null', length=2, chars='digits') +
+        lookup('password', '/dev/null', length=2, chars='_!@#%^.') }}"
+  when: (luna_redfish_password is not defined) or luna_redfish_password | length == 0
+- block:
+  - debug:
+      msg: "luna_redfish_user is not defined, using 'rfadmin' as default"
+  - name: Setting default Redfish account user
+    set_fact:
+      luna_redfish_user: 'rfadmin'
+  when: (luna_redfish_user is not defined) or luna_redfish_user | length == 0
+- block:
+  - debug:
+      msg: "luna_redfish_role is not defined, using 'Administrator' as default"
+  - name: Setting default Redfish account role
+    set_fact:
+      luna_redfish_role: 'Administrator'
+  when: (luna_redfish_role is not defined) or luna_redfish_role | length == 0
 
 - name: Get installed named minor version
   shell: "named -v 2>&1 | awk '{print $2}' | cut -d. -f2"
