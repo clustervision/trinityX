@@ -58,7 +58,7 @@
       },
       "id": 99,
       "options": {
-        "content": "**1. Power Overview** \u2014 groups by **Luna group**, not hostname prefix. Node counts from Luna Prometheus SD (`up{{job=\"luna_nodes\"}}`, includes down nodes). Power from IPMI / `power_consumption_watts`. Empty Luna groups (zero nodes) do not appear \u2014 Prometheus has no scrape target for them. Set **Power budget (W)** / **Group budget (W)** (`0` = Not configured). Peak watts/time: use **Total Power Trend** legend Max and hover the spike.",
+        "content": "**1. Power Overview** \u2014 groups by **Luna group**, not hostname prefix. Node counts from Luna Prometheus SD (`up{{job=\"luna_nodes\"}}`, includes down nodes). Power from IPMI / `power_consumption_watts`. Empty Luna groups (zero nodes) do not appear \u2014 Prometheus has no scrape target for them. Set **Power budget (W)** / **Group budget (W)** (`0` = Not configured). **Peak Time** = max Total Power in the dashboard time range (same series as Total Power Trend; Grafana 12 sortBy + limit).",
         "mode": "markdown"
       },
       "title": "Power Overview",
@@ -111,7 +111,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -176,7 +176,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -253,7 +253,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -326,7 +326,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -389,7 +389,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
+        "w": 4,
         "x": 12,
         "y": 2
       },
@@ -408,7 +408,7 @@
         },
         "textMode": "value"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -465,8 +465,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 3,
-        "x": 17,
+        "w": 2,
+        "x": 16,
         "y": 2
       },
       "id": 6,
@@ -484,7 +484,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -535,7 +535,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 20,
+        "x": 18,
         "y": 2
       },
       "id": 7,
@@ -553,7 +553,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -571,6 +571,131 @@
       "title": "Nodes Up",
       "type": "stat",
       "description": "sum(max by hostname of up{job=\"luna_nodes\"})."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Time of the highest Total Power sample in the **dashboard time range** (top-right picker) \u2014 same series and resolution as Total Power Trend. Not Avg window. Cross-check: trend legend Max, then hover that spike. Equal max ties \u2192 latest sample (stable after seriesToRows time order).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "n/a"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Metric"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Power"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 2
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "/^Time$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "pluginVersion": "12.4.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(sum((sum by (hostname, luna_group) (power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"}) or sum by (hostname, luna_group) (ipmi_power_watts{luna_group=~\"$luna_group\", luna_group!=\"controller\"})))) > 0",
+          "legendFormat": "Total Power",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "maxDataPoints": 10080
+        }
+      ],
+      "title": "Peak Time",
+      "transformations": [
+        {
+          "id": "seriesToRows",
+          "options": {}
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Value",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 1
+          }
+        }
+      ],
+      "type": "stat"
     },
     {
       "datasource": {
@@ -665,7 +790,7 @@
         "x": 0,
         "y": 6
       },
-      "id": 8,
+      "id": 9,
       "options": {
         "legend": {
           "calcs": [
@@ -683,7 +808,7 @@
           "sort": "desc"
         }
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -760,7 +885,7 @@
         "x": 0,
         "y": 16
       },
-      "id": 9,
+      "id": 10,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -775,7 +900,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -825,7 +950,7 @@
         "x": 4,
         "y": 16
       },
-      "id": 10,
+      "id": 11,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -840,7 +965,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -889,7 +1014,7 @@
         "x": 8,
         "y": 16
       },
-      "id": 11,
+      "id": 12,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -904,7 +1029,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -965,7 +1090,7 @@
         "x": 12,
         "y": 16
       },
-      "id": 12,
+      "id": 13,
       "options": {
         "colorMode": "none",
         "graphMode": "none",
@@ -980,7 +1105,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -1039,7 +1164,7 @@
         "x": 16,
         "y": 16
       },
-      "id": 13,
+      "id": 14,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -1054,7 +1179,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -1121,7 +1246,7 @@
         "x": 20,
         "y": 16
       },
-      "id": 14,
+      "id": 15,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1136,7 +1261,7 @@
         },
         "textMode": "value"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -1195,7 +1320,7 @@
         "x": 0,
         "y": 20
       },
-      "id": 15,
+      "id": 16,
       "options": {
         "barRadius": 0,
         "barWidth": 0.7,
@@ -1214,7 +1339,7 @@
         },
         "xField": "Node"
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -1356,7 +1481,7 @@
         "x": 8,
         "y": 20
       },
-      "id": 16,
+      "id": 17,
       "options": {
         "legend": {
           "calcs": [
@@ -1374,7 +1499,7 @@
           "sort": "desc"
         }
       },
-      "pluginVersion": "10.1.2",
+      "pluginVersion": "12.4.3",
       "targets": [
         {
           "datasource": {
@@ -1585,6 +1710,6 @@
   "timezone": "browser",
   "title": "Power Utilization",
   "uid": "trixpowerbygroup",
-  "version": 43,
+  "version": 44,
   "weekStart": ""
 }
