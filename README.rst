@@ -168,7 +168,7 @@ TrinityX 16 comes with support for Air-Gapped or Non-internet based installation
 EasyBuild
 =========
 
-EasyBuild as a mechanism offer great flexibility, providing applications, libraries and tools for most popular scientific, AI and HPC applications. TrinityX provides the framework that allow for building and expanding this ecosystem. In order to enable this integration, set the flag ``enable_easybuild`` in ``group_vars/all.yml`` to ``true``. Optionally set ``easybuild_user`` (default ``easybuild``) to the account that owns and installs the EasyBuild tree. The account is resolved through NSS (``getent``) and may come from the local user database, LDAP, Active Directory/SSSD, or another identity source; an already resolvable account is reused, and creation via obol is only attempted when the name cannot be resolved and TrinityX authentication is enabled.
+EasyBuild as a mechanism offer great flexibility, providing applications, libraries and tools for most popular scientific, AI and HPC applications. TrinityX provides the framework that allow for building and expanding this ecosystem. In order to enable this integration, set the flag ``enable_easybuild`` in ``group_vars/all.yml`` to ``true``. Optionally set ``easybuild_user`` (default ``easybuild``) to the account that owns the EasyBuild tree; an existing local, LDAP or AD account is reused, otherwise it is created with obol.
 
 OpenHPC Support
 ===============
