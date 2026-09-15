@@ -7,14 +7,23 @@
   no_log: true
   ignore_errors: true
 
+# Resolve easybuild_user via NSS (local passwd, LDAP, AD/SSSD, ...), matching
+# the admin_group approach: getent first, only create when not resolvable.
 - block:
-  - name: Get EasyBuild user info
-    ansible.builtin.getent:
+  - name: Resolve EasyBuild user via NSS
+    getent:
       database: passwd
+      split: ':'
       key: '{{ easybuild_user }}'
-    register: easybuild_user_info
+    register: easybuild_nss_user
     ignore_errors: true
-    tags: easybuild-prepare
+
+  - name: Reuse EasyBuild user already resolvable via NSS
+    debug:
+      msg: >-
+        Using existing EasyBuild user '{{ easybuild_user }}' resolved via NSS
+        (local user database, LDAP, Active Directory/SSSD, or another identity source)
+    when: easybuild_nss_user is succeeded
 
   - block:
     - name: Generate random password for EasyBuild user
@@ -25,21 +34,59 @@
       shell: '/usr/local/sbin/obol user list'
       ignore_errors: true
       register: easybuild_obol_works
+      changed_when: false
 
-    - name: Ensure EasyBuild user exists
-      shell: '/usr/local/sbin/obol user add -p "{{ easybuild_password }}" "{{ easybuild_user }}"'
-      when: easybuild_obol_works.rc|int == 0
-
-    - fail:
-        msg: "{{ easybuild_user }} does not exist and i cannot create it with obol"
+    - name: Fail when EasyBuild user is not resolvable and cannot be created with obol
+      fail:
+        msg: >-
+          EasyBuild user '{{ easybuild_user }}' is not resolvable via NSS
+          (local user database, LDAP, Active Directory/SSSD, or another identity source)
+          and cannot be created because obol is unavailable.
+          Set easybuild_user in group_vars/all.yml to an account that already
+          exists in your identity source, or enable TrinityX authentication so
+          the account can be created with obol.
       when: easybuild_obol_works.rc|int != 0
 
-    - name: Wait 5s for user to become
-      wait_for:
-        timeout: 5
+    - name: Create EasyBuild user with obol
+      shell: '/usr/local/sbin/obol user add -p "{{ easybuild_password }}" "{{ easybuild_user }}"'
+      when: easybuild_obol_works.rc|int == 0
     when:
-      - easybuild_user_info['failed']
+      - easybuild_nss_user is failed
       - primary | default(False)
+      - enable_authentication | default(True)
+
+  - name: Fail when EasyBuild user is not resolvable and creation is not available
+    fail:
+      msg: >-
+        EasyBuild user '{{ easybuild_user }}' is not resolvable via NSS
+        (local user database, LDAP, Active Directory/SSSD, or another identity source).
+        With enable_authentication disabled, TrinityX will not create this account.
+        Set easybuild_user in group_vars/all.yml to an account that already
+        exists in your organisational identity source.
+    when:
+      - easybuild_nss_user is failed
+      - not (enable_authentication | default(True))
+
+  - name: Ensure EasyBuild user is resolvable via NSS before continuing
+    getent:
+      database: passwd
+      split: ':'
+      key: '{{ easybuild_user }}'
+    register: easybuild_nss_user_final
+    retries: 12
+    delay: 5
+    until: easybuild_nss_user_final is succeeded
+    ignore_errors: true
+
+  - name: Fail if EasyBuild user cannot be resolved via NSS
+    fail:
+      msg: >-
+        EasyBuild user '{{ easybuild_user }}' could neither be resolved via NSS
+        (local user database, LDAP, Active Directory/SSSD, or another identity source)
+        nor created successfully.
+        Verify that the account exists and is visible to getent passwd, or that
+        obol was able to create it when enable_authentication is true.
+    when: easybuild_nss_user_final is failed
   when: on_controller | default(False)
   tags: easybuild-prepare
 
