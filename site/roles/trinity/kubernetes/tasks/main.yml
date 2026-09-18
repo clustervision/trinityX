@@ -9,12 +9,6 @@
       state: directory
       mode: "0750"
 
-  - name: "Create {{ trix_shared }}/etc/k3s directory"
-    ansible.builtin.file:
-      path: "{{ trix_shared }}/etc/k3s"
-      state: directory
-      mode: '0755'
-
   - name: "Create {{ trix_sync }}/k3s directory"
     ansible.builtin.file:
       path: "{{ trix_sync }}/k3s/tls"
@@ -109,10 +103,34 @@
         state: directory
         mode: '0755'
 
-    - name: "Install k3s shell completions"
-      ansible.builtin.shell:
-        cmd: "{{ kubernetes_install_dir }}/k3s completion bash > /etc/bash_completion.d/k3s"
-        creates: /etc/bash_completion.d/k3s
+    # k3s is a multi-call binary: invoked as "kubectl"/"crictl"/"ctr" it behaves
+    # as that tool (same symlinks the official k3s install.sh creates)
+    - name: "Symlink k3s multi-call tools to the k3s binary"
+      ansible.builtin.file:
+        src: "{{ kubernetes_install_dir }}/k3s"
+        dest: "{{ kubernetes_install_dir }}/{{ item }}"
+        state: link
+      loop: "{{ kubernetes_k3s_symlinks }}"
+
+    - name: "Generate k3s tools shell completions"
+      ansible.builtin.command:
+        cmd: "{{ kubernetes_install_dir }}/{{ item }} completion bash"
+      environment:
+        CRI_CONFIG_FILE: /dev/null
+      loop: "{{ kubernetes_k3s_completions }}"
+      register: kubernetes_completions
+      changed_when: false
+      when: not in_image
+
+    - name: "Install k3s tools shell completions"
+      ansible.builtin.copy:
+        dest: "/etc/bash_completion.d/{{ item.item }}"
+        content: "{{ item.stdout }}\n"
+        mode: '0644'
+      loop: "{{ kubernetes_completions.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: not in_image
 
 
 - name: "Download and install helm"
@@ -191,7 +209,7 @@
       ansible.builtin.copy:
         remote_src: true
         src: "{{ trix_sync }}/k3s/token"
-        dest: /var/lib/rancher/k3s/server/token
+        dest: "/var/lib/rancher/k3s/server/token"
         mode: '0600'
       when: ha and not primary | default(True)
 
@@ -219,23 +237,40 @@
     - name: "Copy the token to {{ trix_sync }}/k3s/token"
       ansible.builtin.copy:
         remote_src: true
-        src: /var/lib/rancher/k3s/server/token
+        src: "/var/lib/rancher/k3s/server/token"
         dest: "{{ trix_sync }}/k3s/token"
         mode: '0600'
       when: ha and primary | default(True)
-
-    - name: "Copy the token to {{ kubernetes_k3s_agent_token_dir }}/token"
-      ansible.builtin.copy:
-        remote_src: true
-        src: /var/lib/rancher/k3s/server/token
-        dest: "{{ kubernetes_k3s_agent_token_dir }}/token"
-        mode: '0600'
-      when: primary | default(True)
 
 
 - name: "Configure k3s agent"
   when: in_image
   block:
+
+    - name: "Create {{ kubernetes_k3s_agent_token_dir }} directory in image"
+      ansible.builtin.file:
+        path: "{{ kubernetes_k3s_agent_token_dir }}"
+        state: directory
+        mode: '0755'
+
+    # luna writes the secret to {{ kubernetes_k3s_agent_token_dir }}/token (chmod 600)
+    # at provision time; the source is the node join token created by k3s-server,
+    # so controller.yml must have run before this playbook.
+    - name: "Check if k3s node token secret exists in luna"
+      ansible.builtin.command: "luna secrets show group {{ kubernetes_luna_group }} k3s-token"
+      register: kubernetes_luna_secret
+      ignore_errors: true
+      changed_when: false
+      no_log: true
+      delegate_to: localhost
+
+    - name: "Register k3s node token as luna secret for group {{ kubernetes_luna_group }}"
+      ansible.builtin.command: >-
+        luna secrets {{ 'change' if kubernetes_luna_secret.rc == 0 else 'add' }}
+        group {{ kubernetes_luna_group }} k3s-token
+        -qc /var/lib/rancher/k3s/server/node-token
+        -p {{ kubernetes_k3s_agent_token_dir }}/token
+      delegate_to: localhost
 
     - name: Render k3s-agent service file
       ansible.builtin.template:
