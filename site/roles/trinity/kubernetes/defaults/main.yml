@@ -1,14 +1,23 @@
 kubernetes_install_dir: "/usr/local/bin"
 
-kubernetes_k3s_version: "v1.30.2+k3s1"
+kubernetes_k3s_version: "v1.35.7+k3s1"
 kubernetes_k3s_url:
   - arch: x64
     url: "https://github.com/k3s-io/k3s/releases/download/{{ kubernetes_k3s_version }}/k3s"
   - arch: aa64
     url: "https://github.com/k3s-io/k3s/releases/download/{{ kubernetes_k3s_version }}/k3s-arm64"
-kubernetes_k3s_agent_token_dir: "{{ trix_shared }}/etc/k3s"
+# k3s is a multi-call binary: these tools are symlinks to it (same as official install.sh)
+kubernetes_k3s_symlinks: ["kubectl", "crictl", "ctr"]
+# tools with a "completion bash" subcommand (ctr has none)
+kubernetes_k3s_completions: ["k3s", "kubectl", "crictl"]
 
-kubernetes_helm_version: "v3.15.3"
+# Node-local path where luna places the k3s-token secret at provision time
+kubernetes_k3s_agent_token_dir: "/etc/k3s"
+# Luna group receiving the k3s-token secret; derived from the image play hostname
+# (e.g. k3s-rocky.osimages.luna -> k3s-rocky)
+kubernetes_luna_group: '{{ inventory_hostname | regex_replace("\.osimages\.luna$", "") }}'
+
+kubernetes_helm_version: "v4.2.4"
 kubernetes_helm_url: 
   - arch: x64
     url: https://get.helm.sh/helm-{{ kubernetes_helm_version }}-linux-amd64.tar.gz
