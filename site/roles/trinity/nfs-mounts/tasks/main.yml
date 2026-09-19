@@ -24,6 +24,21 @@
   when: ansible_facts['os_family'] == "Debian"
   tags: install-only
 
+# Images are built on the controller, so from inside one the question goes to it.
+- name: Ask luna whether it holds the network mounts document
+  shell: "luna cluster showmounts -R"
+  register: nfs_mounts_luna
+  changed_when: false
+  failed_when: false
+  no_log: true
+  delegate_to: "{{ 'localhost' if in_image | default(False) else inventory_hostname }}"
+
+# luna writes the fstab entries and mountpoints on every controller and on every
+# node at install; with no document, the legacy render below.
+- name: Leave the mounts to luna when it holds the document
+  set_fact:
+    nfs_mounts_by_luna: "{{ nfs_mounts_luna.rc == 0 and nfs_mounts_luna.stdout.startswith('{') and ((nfs_mounts_luna.stdout | from_json).mounts | default([]) | length > 0) }}"
+
 - name: Render nfs_mounts based on solely nfs_remote_mask info
   set_fact:
     new_nfs_mounts: "{{ new_nfs_mounts|d([]) + [item|combine({'path': item.mount if item.mount is defined else item.name})] }}"
@@ -215,4 +230,6 @@
       - ansible_facts['os_family'] == "Debian"
       - (item.type is defined and item.type != 'manual') or item.type is not defined
       - (in_image and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
-  when: new_nfs_mounts is defined
+  when:
+    - new_nfs_mounts is defined
+    - not nfs_mounts_by_luna

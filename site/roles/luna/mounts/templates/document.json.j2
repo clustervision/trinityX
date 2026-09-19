@@ -1,0 +1,30 @@
+{% set xmount = [] %}
+{% if ha | default(False) and shared_fs_prefix | default('') | length > 1 %}
+{%   for disk in shared_fs_disks | default([]) %}
+{%     for partition in disk.partitions | default([]) %}
+{%       if partition.xmount | default(False) and partition.mount is defined %}{% set _ = xmount.append(partition.mount) %}{% endif %}
+{%     endfor %}
+{%     if disk.xmount | default(False) and disk.mount is defined %}{% set _ = xmount.append(disk.mount) %}{% endif %}
+{%   endfor %}
+{% endif %}
+{% set controllers = (all_ctrl_hostname | default([])) + ([trix_ctrl_hostname] if ha | default(False) else []) %}
+{% set mounts = [] %}
+{% for share in luna_mounts if share is mapping %}
+{%   set entry = share | combine({}) %}
+{%   if share.path in xmount and share.source is not defined %}
+{%     set entry = entry | combine({'source': shared_fs_prefix ~ share.path}) %}
+{%   endif %}
+{%   if share.export is defined %}
+{%     set clients = [] %}
+{%     for client in share.export.clients | default([]) %}
+{%       if client.to == 'controllers' %}
+{%         for host in controllers %}{% set _ = clients.append(client | combine({'to': host})) %}{% endfor %}
+{%       else %}
+{%         set _ = clients.append(client) %}
+{%       endif %}
+{%     endfor %}
+{%     set entry = entry | combine({'export': share.export | combine({'clients': clients})}) %}
+{%   endif %}
+{%   set _ = mounts.append(entry) %}
+{% endfor %}
+{{ {'version': 1, 'mounts': mounts} | to_json }}
