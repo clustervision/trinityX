@@ -9,6 +9,19 @@
   delay: "{{ rpm_delay | default(15) }}"
   tags: install-only
 
+- name: Ask luna whether it holds the network mounts document
+  shell: "luna cluster showmounts -R"
+  register: nfs_luna_mounts
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+# luna renders the exports from its document on every controller; this role then
+# only installs and configures the server. With no document, the legacy render.
+- name: Leave the exports to luna when it holds the document
+  set_fact:
+    nfs_exports_by_luna: "{{ nfs_luna_mounts.rc == 0 and nfs_luna_mounts.stdout.startswith('{') and ((nfs_luna_mounts.stdout | from_json).mounts | default([]) | length > 0) }}"
+
 - name: Enable NFS over RDMA
   set_fact:
     nfs_proto: '{{ "rdma" if nfs_enable_rdma == true else "tcp" }}'
@@ -96,6 +109,7 @@
   template:
     src: 'exports.j2'
     dest: '{{ nfs_exports_path }}/trinity.exports'
+  when: not nfs_exports_by_luna
 
 - name: Add link to the exports file in /etc/exports.d
   file:
@@ -104,7 +118,9 @@
     state: link
     force: true
     follow: false
-  when: nfs_exports_path|string not in '/etc/exports.d'
+  when:
+    - not nfs_exports_by_luna
+    - nfs_exports_path|string not in '/etc/exports.d'
 
 - name: Render nfsmount.conf configuration file
   template:

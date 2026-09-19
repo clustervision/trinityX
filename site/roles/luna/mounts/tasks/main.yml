@@ -1,0 +1,36 @@
+---
+# Hands the cluster's shares to luna as its network mounts document. From then on
+# luna renders the exports, the fstab entries and the mountpoints on every
+# controller and on every node at install, and the nfs and nfs-mounts roles step
+# aside on their own (they ask luna whether it holds the document).
+
+- name: Resolve the shares into the document luna stores
+  set_fact:
+    luna_mounts_desired: "{{ lookup('template', 'document.json.j2') | from_json }}"
+
+- name: Read the document luna holds
+  shell: "luna cluster showmounts -R"
+  register: luna_mounts_current
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Fail when this luna cannot hold a mounts document
+  fail:
+    msg: "luna cluster showmounts failed (rc {{ luna_mounts_current.rc }}): this luna does not carry the network mounts document"
+  when: luna_mounts_current.rc != 0
+
+- name: Compare what luna holds with what the shares say
+  set_fact:
+    luna_mounts_stored: "{{ (luna_mounts_current.stdout | from_json) if luna_mounts_current.stdout.startswith('{') else {} }}"
+
+- block:
+  - name: Write the document
+    copy:
+      content: "{{ luna_mounts_desired | to_nice_json }}\n"
+      dest: '{{ luna_mounts_document }}'
+      mode: '0600'
+
+  - name: Hand the document to luna
+    shell: "luna cluster change -qmnt {{ luna_mounts_document }}"
+  when: luna_mounts_stored.get('mounts', []) != luna_mounts_desired.mounts
