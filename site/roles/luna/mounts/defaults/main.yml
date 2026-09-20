@@ -1,11 +1,15 @@
 ---
-# The shares of the cluster, one entry per mountpoint, in the network mounts
-# document grammar luna stores on the cluster (luna cluster showmounts).
-# Two words are resolved here before the document is pushed:
-#   - a client `to: controllers` becomes one client per controller hostname,
-#     the floating name included on an HA pair
-#   - a share whose path is a cross-mounted partition in shared_fs_disks gets
-#     `source: <shared_fs_prefix><path>`, the directory the export lives behind
-luna_mounts: []
+# A helper the nfs and nfs-mounts roles include: hands their entries to Luna's
+# network mounts document, one addmount each. It asks Luna whether it carries the
+# document at all and never fails on a Luna without it: it answers through
+# luna_mounts_available and the caller renders the legacy way instead.
+luna_mounts_entries: []
 
-luna_mounts_document: '{{ trix_tmpdir }}/luna-mounts.json'
+# where the luna CLI runs: the controller itself, or localhost when the caller
+# runs inside an image (images are built on the controller)
+luna_mounts_host: '{{ inventory_hostname }}'
+
+# only add what the document does not carry yet: an entry whose mountpoint is
+# already there is left alone (the image plays, whose view of a share must not
+# undo the controller's)
+luna_mounts_fill_only: false
