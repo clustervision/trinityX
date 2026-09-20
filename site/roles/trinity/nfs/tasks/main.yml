@@ -130,6 +130,17 @@
     dest: '{{ nfs_exports_path }}/trinity.exports'
   when: not luna_mounts_available
 
+# the hand-over: exportfs refuses a directory exported twice, so the file this role
+# wrote before Luna took over goes, link and all. Luna's luna.exports carries the same shares
+- name: Remove the exports file this role wrote before luna took over
+  file:
+    path: '{{ item }}'
+    state: absent
+  loop:
+    - '/etc/exports.d/trinity.exports'
+    - '{{ nfs_exports_path }}/trinity.exports'
+  when: luna_mounts_available
+
 - name: Add link to the exports file in /etc/exports.d
   file:
     src: '{{ nfs_exports_path }}/trinity.exports'
