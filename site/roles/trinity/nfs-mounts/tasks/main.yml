@@ -24,21 +24,6 @@
   when: ansible_facts['os_family'] == "Debian"
   tags: install-only
 
-# Images are built on the controller, so from inside one the question goes to it.
-- name: Ask luna whether it holds the network mounts document
-  shell: "luna cluster showmounts -R"
-  register: nfs_mounts_luna
-  changed_when: false
-  failed_when: false
-  no_log: true
-  delegate_to: "{{ 'localhost' if in_image | default(False) else inventory_hostname }}"
-
-# luna writes the fstab entries and mountpoints on every controller and on every
-# node at install; with no document, the legacy render below.
-- name: Leave the mounts to luna when it holds the document
-  set_fact:
-    nfs_mounts_by_luna: "{{ nfs_mounts_luna.rc == 0 and nfs_mounts_luna.stdout.startswith('{') and ((nfs_mounts_luna.stdout | from_json).mounts | default([]) | length > 0) }}"
-
 - name: Render nfs_mounts based on solely nfs_remote_mask info
   set_fact:
     new_nfs_mounts: "{{ new_nfs_mounts|d([]) + [item|combine({'path': item.mount if item.mount is defined else item.name})] }}"
@@ -192,6 +177,33 @@
     - nfs_mounts is defined
     - nfs_mounts | length > 0
 
+# --- luna: the same mounts as document entries. remote splits into server and
+# source at the path; the controller's own name is the word controller. Inside an
+# image the entries only fill what the document lacks: the controller's view of a
+# share, pushed first, is not undone by the image's, and the export decides who
+# may write.
+- name: Describe the mounts for luna
+  set_fact:
+    nfs_luna_entries: "{{ nfs_luna_entries | default([]) + [ {'path': item.path, 'server': ('controller' if _server in [trix_ctrl_hostname | default(''), 'controller'] else _server)}
+                          | combine({'source': _source} if (_source and _source != item.path) else {})
+                          | combine({'type': item.type} if item.type is defined else {})
+                          | combine({'options': item.options} if item.options is defined else {}) ] }}"
+  loop: "{{ new_nfs_mounts | default([]) }}"
+  loop_control:
+    label: '{{ item.path }}'
+  vars:
+    _server: "{{ item.remote | default('') | regex_replace('^(.*?):(/.*)$', '\\1') }}"
+    _source: "{{ item.remote | default('') | regex_search(':(/.*)$', '\\1') | first | default('') if ':/' in (item.remote | default('')) else '' }}"
+  when: item.path is defined
+
+- name: Hand the mounts to luna when it carries the document
+  include_role:
+    name: luna/mounts
+  vars:
+    luna_mounts_entries: '{{ nfs_luna_entries | default([]) }}'
+    luna_mounts_host: "{{ 'localhost' if in_image | default(False) else inventory_hostname }}"
+    luna_mounts_fill_only: '{{ in_image | default(False) }}'
+
 - block:
   - name: Ensure mountpoints exist
     file:
@@ -232,4 +244,4 @@
       - (in_image and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
   when:
     - new_nfs_mounts is defined
-    - not nfs_mounts_by_luna
+    - not luna_mounts_available

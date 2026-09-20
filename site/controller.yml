@@ -149,53 +149,6 @@
         shadow_networks: "{{ cloud_networks|default({}) }}"
       tags: luna
 
-    # the shares, declared once: luna renders exports, fstab and mountpoints from
-    # this on every controller and on every node at install. the nfs and
-    # nfs-mounts roles below keep their lists only for a luna without it.
-    - role: luna/mounts
-      luna_mounts:
-        # trinityX shared ------------------------------------------------------------------
-        - path: '{{ trix_shared }}'
-          server: controller
-          export:
-            clients:
-              - to: '*'
-                options: 'ro'
-              - to: controllers
-                options: 'rw,sync,no_wdelay,no_root_squash'
-          options: 'defaults,nfsvers=4,rw,retrans=4,_netdev'
-        # trinityX home --------------------------------------------------------------------
-        - path: '{{ trix_home }}'
-          server: controller
-          export:
-            clients:
-              - to: '*'
-                options: 'rw,async,no_root_squash'
-          options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
-        # sync for non-primary controllers to sync once: exported to them, mounted by
-        # the roles that need it, never from fstab ------------------------------------------
-        - path: '{{ trix_sync }}'
-          server: controller
-          export:
-            clients:
-              - to: controllers
-                options: 'ro,async,no_root_squash'
-          state: absent
-        # openhpc --------------------------------------------------------------------------
-        - "{{ {'path': trix_ohpc, 'server': 'controller',
-               'export': {'clients': [{'to': '*', 'options': 'ro,no_root_squash'},
-                                      {'to': 'controllers', 'options': 'rw,sync,no_wdelay,no_root_squash'}]},
-               'options': 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'}
-             if enable_openhpc | default(False) else omit }}"
-        # easybuild ------------------------------------------------------------------------
-        - "{{ {'path': trix_easybuild, 'server': 'controller',
-               'export': {'clients': [{'to': '*', 'options': 'rw,sync,no_wdelay,no_root_squash' if export_easybuild == 'rw' else 'ro,no_root_squash'},
-                                      {'to': 'controllers', 'options': 'rw,sync,no_wdelay,no_root_squash'}]},
-               'options': 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'}
-             if enable_easybuild | default(False) else omit }}"
-      when: primary | default(True)
-      tags: luna,nfs,nfs-mounts
-
     - role: trinity/nfs
       nfs_rpccount: 256
       nfs_enable_rdma: false

@@ -1,36 +1,29 @@
 ---
-# Hands the cluster's shares to luna as its network mounts document. From then on
-# luna renders the exports, the fstab entries and the mountpoints on every
-# controller and on every node at install, and the nfs and nfs-mounts roles step
-# aside on their own (they ask luna whether it holds the document).
-
-- name: Resolve the shares into the document luna stores
-  set_fact:
-    luna_mounts_desired: "{{ lookup('template', 'document.json.j2') | from_json }}"
-
-- name: Read the document luna holds
+- name: Ask luna whether it carries the network mounts document
   shell: "luna cluster showmounts -R"
-  register: luna_mounts_current
+  register: luna_mounts_probe
   changed_when: false
   failed_when: false
   no_log: true
+  delegate_to: '{{ luna_mounts_host }}'
 
-- name: Fail when this luna cannot hold a mounts document
-  fail:
-    msg: "luna cluster showmounts failed (rc {{ luna_mounts_current.rc }}): this luna does not carry the network mounts document"
-  when: luna_mounts_current.rc != 0
-
-- name: Compare what luna holds with what the shares say
+# rc 0 means the CLI knows the verb and the daemon answered; anything else is a
+# Luna without the document, and the caller renders as it always has
+- name: Luna's answer decides who renders
   set_fact:
-    luna_mounts_stored: "{{ (luna_mounts_current.stdout | from_json) if luna_mounts_current.stdout.startswith('{') else {} }}"
+    luna_mounts_available: "{{ luna_mounts_probe.rc == 0 }}"
 
-- block:
-  - name: Write the document
-    copy:
-      content: "{{ luna_mounts_desired | to_nice_json }}\n"
-      dest: '{{ luna_mounts_document }}'
-      mode: '0600'
-
-  - name: Hand the document to luna
-    shell: "luna cluster change -qmnt {{ luna_mounts_document }}"
-  when: luna_mounts_stored.get('mounts', []) != luna_mounts_desired.mounts
+# one addmount per entry: the daemon adds it or replaces the one at its path, so a
+# re-run is a no-op there. Inside an image only what the document lacks is added,
+# so the controller's view of a share, pushed first, is not undone by the image's
+- name: Hand each entry to luna
+  shell: "luna cluster addmount -qmnt {{ item | to_json | quote }}"
+  loop: "{{ luna_mounts_entries }}"
+  loop_control:
+    label: '{{ item.path }}'
+  vars:
+    _held: "{{ ((luna_mounts_probe.stdout | from_json).mounts if luna_mounts_probe.stdout.startswith('{') else []) | selectattr('path', 'equalto', item.path) | list }}"
+  when:
+    - luna_mounts_available
+    - not (luna_mounts_fill_only and _held)
+  delegate_to: '{{ luna_mounts_host }}'
