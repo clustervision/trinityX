@@ -13,17 +13,19 @@
   set_fact:
     luna_mounts_available: "{{ luna_mounts_probe.rc == 0 }}"
 
-# one addmount per entry: the daemon adds it or replaces the one at its path, so a
-# re-run is a no-op there. Inside an image only what the document lacks is added,
-# so the controller's view of a share, pushed first, is not undone by the image's
+# one addmount per entry: the daemon adds it, or updates the one at its path with the
+# fields given, so a re-run is a no-op there. Inside an image an entry that already
+# has its mount half (options) is left alone: the controller's view of a share,
+# pushed first, is not undone by the image's; one that has only its export half is
+# completed by the image
 - name: Hand each entry to luna
   shell: "luna cluster addmount -qmnt {{ item | to_json | quote }}"
   loop: "{{ luna_mounts_entries }}"
   loop_control:
     label: '{{ item.path }}'
   vars:
-    _held: "{{ ((luna_mounts_probe.stdout | from_json).mounts if luna_mounts_probe.stdout.startswith('{') else []) | selectattr('path', 'equalto', item.path) | list }}"
+    _mounted_already: "{{ ((luna_mounts_probe.stdout | from_json).mounts if luna_mounts_probe.stdout.startswith('{') else []) | selectattr('path', 'equalto', item.path) | selectattr('options', 'defined') | list }}"
   when:
     - luna_mounts_available
-    - not (luna_mounts_fill_only and _held)
+    - not (luna_mounts_fill_only and _mounted_already)
   delegate_to: '{{ luna_mounts_host }}'

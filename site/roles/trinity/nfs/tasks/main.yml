@@ -86,10 +86,12 @@
 
 # --- luna: the same exports as document entries. A fused '*(ro)' options string is
 # one client; rwhosts and hosts are one client each. The mountpoint is the entry's
-# path, the (masked) export path its source where the two differ.
+# path, the (masked) export path its source where the two differ. An export is
+# absent from every fstab until nfs-mounts describes who mounts it: a share only
+# the controllers may reach must never become a line on a node.
 - name: Describe the exports for luna
   set_fact:
-    nfs_luna_entries: "{{ nfs_luna_entries | default([]) + [ {'path': item.mountpoint | default(item.path), 'server': 'controller', 'export': {'clients': _clients | from_json}}
+    nfs_luna_entries: "{{ nfs_luna_entries | default([]) + [ {'path': item.mountpoint | default(item.path), 'server': 'controller', 'state': 'absent', 'export': {'clients': _clients | from_json}}
                           | combine({'source': item.path} if item.path != (item.mountpoint | default(item.path)) else {}) ] }}"
   loop: "{{ new_nfs_exports }}"
   loop_control:
