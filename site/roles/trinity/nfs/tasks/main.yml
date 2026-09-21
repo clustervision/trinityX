@@ -23,6 +23,7 @@
     nfs_exports_: "{{ nfs_exports_|d([]) + [item|combine({'disabled': item.disabled|default(False,true),
                                                           'rwhosts':  item.rwhosts|default('',true),
                                                           'type': _type|from_yaml,
+                                                          'mountpoint': item.path,
                                                           'path': _path|from_yaml|default(item.path,true)})] }}"
   loop: "{{ nfs_exports }}"
   vars:
@@ -83,6 +84,39 @@
     new_nfs_exports: "{{ nfs_exports }}"
   when: nfs_exports_ is not defined or nfs_exports_ | length == 0
 
+# --- luna: the same exports as document entries. A fused '*(ro)' options string is
+# one client; rwhosts and hosts are one client each. The mountpoint is the entry's
+# path, the (masked) export path its source where the two differ. An export is
+# absent from every fstab until nfs-mounts describes who mounts it: a share only
+# the controllers may reach must never become a line on a node.
+- name: Describe the exports for luna
+  set_fact:
+    nfs_luna_entries: "{{ nfs_luna_entries | default([]) + [ {'path': item.mountpoint | default(item.path), 'server': 'controller', 'state': 'absent', 'export': {'clients': _clients | from_json}}
+                          | combine({'source': item.path} if item.path != (item.mountpoint | default(item.path)) else {}) ] }}"
+  loop: "{{ new_nfs_exports }}"
+  loop_control:
+    label: '{{ item.path }}'
+  vars:
+    _clients: >-
+      {% set clients = [] %}
+      {% set rw = item.rwhosts | default([]) %}{% if rw is string %}{% set rw = rw.split(',') if rw else [] %}{% endif %}
+      {% set ro = item.hosts | default([]) %}{% if ro is string %}{% set ro = ro.split(',') if ro else [] %}{% endif %}
+      {% for host in rw %}{% if host %}{% set _ = clients.append({'to': host, 'options': nfs_rw_options}) %}{% endif %}{% endfor %}
+      {% for host in ro %}{% if host %}{% set _ = clients.append({'to': host, 'options': item.options | default('')}) %}{% endif %}{% endfor %}
+      {% set fused = (item.options | default('')) | regex_search('^([^()\\s]+)\\((.*)\\)$', '\\1', '\\2') %}
+      {% if not ro and fused and fused | length == 2 %}{% set _ = clients.append({'to': fused[0], 'options': fused[1]}) %}{% endif %}
+      {{ clients | to_json }}
+  when:
+    - item.path is defined
+    - not item.disabled | default(False)
+    - item.type | default('') not in ['nfs', 'lustre', 'beegfs', 'mmfs', 'gpfs', 'panfs']
+
+- name: Hand the exports to luna when it carries the document
+  include_role:
+    name: luna/mounts
+  vars:
+    luna_mounts_entries: '{{ nfs_luna_entries | default([]) }}'
+
 - name: Ensure exported paths exist
   file:
     path: "{{ item.path }}"
@@ -96,6 +130,18 @@
   template:
     src: 'exports.j2'
     dest: '{{ nfs_exports_path }}/trinity.exports'
+  when: not luna_mounts_available
+
+# the hand-over: exportfs refuses a directory exported twice, so the file this role
+# wrote before Luna took over goes, link and all. Luna's luna.exports carries the same shares
+- name: Remove the exports file this role wrote before luna took over
+  file:
+    path: '{{ item }}'
+    state: absent
+  loop:
+    - '/etc/exports.d/trinity.exports'
+    - '{{ nfs_exports_path }}/trinity.exports'
+  when: luna_mounts_available
 
 - name: Add link to the exports file in /etc/exports.d
   file:
@@ -104,7 +150,9 @@
     state: link
     force: true
     follow: false
-  when: nfs_exports_path|string not in '/etc/exports.d'
+  when:
+    - not luna_mounts_available
+    - nfs_exports_path|string not in '/etc/exports.d'
 
 - name: Render nfsmount.conf configuration file
   template:
