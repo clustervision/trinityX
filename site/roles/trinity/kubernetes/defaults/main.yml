@@ -13,9 +13,10 @@ kubernetes_k3s_completions: ["k3s", "kubectl", "crictl"]
 
 # Node-local path where luna places the k3s-token secret at provision time
 kubernetes_k3s_agent_token_dir: "/etc/k3s"
-# Luna group receiving the k3s-token secret; derived from the image play hostname
-# (e.g. k3s-rocky.osimages.luna -> k3s-rocky)
-kubernetes_luna_group: '{{ inventory_hostname | regex_replace("\.osimages\.luna$", "") }}'
+# Luna group receiving the k3s-token secret: the group luna/group-create made
+# for this image. Same input (the playbook's image_name fact) and the same
+# naming rule (<name>-image -> <name>-group), so k3s-image -> k3s-group.
+kubernetes_luna_group: '{{ hostvars["localhost"]["image_name"] | regex_replace("^(.*)-image$", "\1-group") }}'
 
 kubernetes_helm_version: "v4.2.4"
 kubernetes_helm_url: 
