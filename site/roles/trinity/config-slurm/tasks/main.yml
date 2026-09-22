@@ -47,4 +47,10 @@
 - name: Fix structure of managed files
   include_tasks: managed_block.yml
   loop: "{{ scripts_managed_files }}"
-  
+
+# not super elegant, but bullet-proof
+- name: Re-render slurm config based on Luna info
+  shell: '/trinity/local/sbin/trix-config-slurm -r'
+  notify: restart slurm
+  ignore_errors: true
+  when: primary | default(True)
