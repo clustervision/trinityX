@@ -533,6 +533,12 @@
         - restart slurm
         - restart slurmd
 
+    # not super elegant, but bullet-proof
+    - name: Re-render slurm config based on Luna info
+      shell: '/trinity/local/sbin/trix-config-slurm -r'
+      notify: restart slurm
+      ignore_errors: true
+
     - name: Set UsePAM to 1 in slurm.conf
       lineinfile:
         path: '{{ slurm_conf_path }}/slurm.conf'
@@ -615,4 +621,3 @@
   when:
     - primary|default(True)
     - on_controller
-
