@@ -1,0 +1,40 @@
+---
+
+- block:
+  - name: Load Nodeboot variables.
+    include_vars: "../defaults/nodeboot.yml"
+
+  - name: Load Airgap Nodeboot variables.
+    include_vars: "../vars/airgap/nodeboot.yml"
+    when: is_airgap | default(False)
+
+  - name: Merge Nodeboot asset variables.
+    set_fact:
+      nodeboot_assets: "{{ nodeboot_assets_default | combine(nodeboot_assets_airgap | default({}), recursive=True) }}"
+
+  - name: Downloading Nodeboot nodejs package
+    get_url:
+      url: "{{ nodeboot_assets.noarch_nodejs_repository }}/{{ nodeboot_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/nodeboot/{{ nodeboot_assets.gui_nodejs }}"
+    tags: install-only
+
+  - name: Ensure Nodeboot assets directory exists
+    ansible.builtin.file:
+      path: "{{ trix_ood }}/3.0/nodeboot/app/assets"
+      state: directory
+      owner: root
+      group: root
+      mode: "0755"
+
+  - name: Unpack Nodeboot nodejs files
+    unarchive:
+      src: "{{ trix_ood }}/3.0/nodeboot/{{ nodeboot_assets.gui_nodejs }}"
+      dest: "{{ trix_ood }}/3.0/nodeboot/app/assets/"
+      keep_newer: false # override?
+    tags: install-only
+
+  - name: Cleanup Nodeboot nodejs package
+    file:
+      path: "{{ trix_ood }}/3.0/nodeboot/{{ nodeboot_assets.gui_nodejs }}"
+      state: absent
+  when: not in_image
