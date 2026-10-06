@@ -60,9 +60,18 @@
         - part.rd
         - post.rd
 
+    - name: Reading the install mode of the cluster
+      shell: "luna cluster show | awk -F'|' '$2 ~ /^ *install_mode *$/ {gsub(/ /, \"\", $3); print $3}'"
+      register: luna_cluster_install_mode
+      changed_when: false
+      ignore_errors: true
+
+    # the diskless part/post are for legacy only; lpart mounts the root and writes fstab itself
     - name: Create cloud group
       shell: >
-        luna group add --osimage compute-image --provision_method http -qpart {{ trix_tmpdir }}/part.rd -qpost {{ trix_tmpdir }}/post.rd
+        luna group add --osimage compute-image --provision_method http
+        {{ '' if (luna_cluster_install_mode.stdout | default('')) in ['auto', 'sync', 'full', 'local', 'memboot', 'sanitize']
+           else '-qpart ' ~ trix_tmpdir ~ '/part.rd -qpost ' ~ trix_tmpdir ~ '/post.rd' }}
         -if BOOTIF -N {{ domain }}
         --quick-kerneloptions 'rootdelay=30 console=ttyS0 earlyprintk=ttyS0 no_timer_check net.ifnames=0 biosdevname=0 luna.bootproto=dhcp luna.ctty=/dev/ttyS0'
         compute-{{ cloudname }}

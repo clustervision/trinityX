@@ -51,13 +51,25 @@
       - part.rd
       - post.rd
 
+  - name: Reading the install mode of the cluster
+    shell: "luna cluster show | awk -F'|' '$2 ~ /^ *install_mode *$/ {gsub(/ /, \"\", $3); print $3}'"
+    register: luna_cluster_install_mode
+    changed_when: false
+    ignore_errors: true
+
+  # lpart mounts the root and writes fstab itself, so only legacy needs the diskless part/post.
+  # Unset or unreadable counts as legacy, the cluster default.
+  - name: Deciding whether the group gets the diskless part/post scripts
+    set_fact:
+      luna_group_legacy_scripts: "{{ luna_image_distri is defined and (luna_cluster_install_mode.stdout | default('')) not in ['auto', 'sync', 'full', 'local', 'memboot', 'sanitize'] }}"
+
   - name: Creating group in luna
     shell: "luna group add --osimage {{ luna_image_name }} -qpart {{ trix_tmpdir }}/part.rd -qpost {{ trix_tmpdir }}/post.rd --setupbmc no {{ luna_group_name }}"
-    when: luna_image_distri is defined
+    when: luna_group_legacy_scripts | bool
 
   - name: Creating group in luna
     shell: "luna group add --osimage {{ luna_image_name }} --setupbmc no {{ luna_group_name }}"
-    when: luna_image_distri is not defined
+    when: not luna_group_legacy_scripts | bool
 
   - name: Assigning default bmcsetup to group in luna
     shell: "luna group change --bmcsetupname default-bmcsetup --setupbmc yes --interface BMC --network ipmi {{ luna_group_name }}"
