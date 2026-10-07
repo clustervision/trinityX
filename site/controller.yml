@@ -543,6 +543,13 @@
       alertx_history_enable: true
       tags: monitoring, alertx
 
+      # trixd, the TrinityX daemon beside luna2. It runs after luna2, slurm, genders,
+      # obol and prometheus, whose files it renders at start-up.
+      # --tags trixd installs or updates it alone.
+    - role: trinity/trix-daemon
+      when: trixd_enabled | default(True) | bool
+      tags: trixd
+
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"
       grafana_enable_ssl: true

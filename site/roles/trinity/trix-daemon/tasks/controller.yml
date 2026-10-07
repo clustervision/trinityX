@@ -1,0 +1,197 @@
+---
+# tasks file for trix-daemon on a controller
+
+- name: Install trix-daemon packages
+  yum:
+    name: '{{ trixd_packages }}'
+    state: present
+    enablerepo: luna2
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+# In a pair, the secondary takes the password, and the keypair under EdDSA, from the
+# primary's sync before using them; the primary puts them there once made. The pattern
+# the alertx role uses for its history password.
+- name: Take the shared trix files from the primary
+  when:
+    - ha | default(False)
+    - not primary | default(False)
+  block:
+    - name: Create the trix password directory
+      file:
+        path: '{{ trixd_password_file | dirname }}'
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Copy the API password from sync
+      copy:
+        remote_src: true
+        src: '{{ trix_sync }}/trix/{{ trixd_password_file | basename }}'
+        dest: '{{ trixd_password_file }}'
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Copy the keypair from sync
+      copy:
+        remote_src: true
+        src: '{{ trix_sync }}/trix/{{ item | basename }}'
+        dest: '{{ item }}'
+        mode: '0600'
+      loop:
+        - '{{ trixd_key }}'
+        - '{{ trixd_key }}.pub'
+      when: trixd_token_algorithm == 'EdDSA'
+
+- name: Create the trix tree
+  file:
+    path: '{{ item }}'
+    state: directory
+    mode: '0755'
+  loop:
+    - '{{ trixd_root }}'
+    - '{{ trixd_config_dir }}'
+    - '{{ trixd_site_plugins_dir }}'
+    - '{{ trixd_db_dir }}'
+    - '{{ trixd_log_dir }}'
+    - '{{ trixd_trust_dir }}'
+
+# No file or template for trix in the logrotate role, so its default one rotates every
+# *.log in the directory named here.
+- name: Include the log rotation for trix
+  include_role:
+    name: trinity/logrotate
+  vars:
+    logrotate_component: 'trix'
+    logrotate_logdir: '{{ trixd_log_dir }}'
+
+# --upgrade, never a forced reinstall: that would reinstall every dependency at its
+# newest and move the versions luna2-daemon pins in the same environment. The pip
+# module with an explicit virtualenv, as the alertx and config-* roles use it.
+- name: Install trix-daemon
+  ansible.builtin.pip:
+    name: '{{ trixd_noarch_pip_repository }}/daemon/{{ trixd_pip }}'
+    virtualenv: '{{ trix_local }}/python'
+    extra_args: --upgrade
+  notify: restart trix-daemon
+  when: trixd_pip is defined
+  tags: install-only
+
+# --extra-index-url rather than -i: the index holds trix-daemon, not its dependencies.
+- name: Install trix-daemon from the index
+  ansible.builtin.pip:
+    name: trix-daemon
+    extra_args: '--upgrade --extra-index-url {{ trixd_noarch_pip_repository }}/daemon'
+    virtualenv: '{{ trix_local }}/python'
+  notify: restart trix-daemon
+  when: trixd_pip is undefined
+  tags: install-only
+
+- name: Get python libdir
+  shell: "echo {{ trix_local }}/python/lib/python*"
+  register: trixd_python_dir
+  changed_when: false
+
+- name: Create symlink from site-packages/trix to the trix dir
+  file:
+    src: '{{ trixd_python_dir.stdout }}/site-packages/trix'
+    dest: '{{ trixd_root }}/daemon'
+    state: link
+    force: true
+
+# trixd.ini carries the secret luna.ini is templated from on this controller, so the
+# two daemons cannot disagree. trinity/init sets it long before this role runs.
+- name: Fail plainly when the shared secret is not known
+  fail:
+    msg: >-
+      luna_secret_key is not set. trinity/init sets it at bootstrap and luna.ini
+      is templated from it; run that role before this one.
+  when:
+    - trixd_token_algorithm == 'HS256'
+    - not (trixd_secret_key | default('') | length > 0)
+
+# In etc, not inside the package as luna.ini is: a pip upgrade replaces what it
+# shipped, and an ini it shipped would go with it.
+- name: Render the trixd.ini
+  template:
+    src: trixd.ini.j2
+    dest: '{{ trixd_config_dir }}/trixd.ini'
+    owner: root
+    group: root
+    mode: '0640'
+  notify: restart trix-daemon
+
+- name: Put the shared trix files in sync for the secondary
+  when:
+    - ha | default(False)
+    - primary | default(True)
+  block:
+    - name: Create the trix sync directory
+      file:
+        path: '{{ trix_sync }}/trix'
+        state: directory
+        mode: '0700'
+
+    - name: Add the API password and, under EdDSA, the keypair to sync
+      copy:
+        remote_src: true
+        src: '{{ item }}'
+        dest: '{{ trix_sync }}/trix/'
+        mode: '0600'
+      loop: '{{ [trixd_password_file] + ([trixd_key, trixd_key ~ ".pub"]
+               if trixd_token_algorithm == "EdDSA" else []) }}'
+
+- name: Render the trix-daemon unit
+  template:
+    src: trix-daemon.service.j2
+    dest: /etc/systemd/system/trix-daemon.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart trix-daemon
+
+- name: Check the signing key is present
+  stat:
+    path: '{{ trixd_key }}'
+  register: trixd_key_stat
+  when: trixd_token_algorithm == 'EdDSA'
+
+- name: Fail plainly when the signing key was never generated
+  fail:
+    msg: >-
+      {{ trixd_key }} is missing. Under EdDSA it has to be generated before this
+      role runs; HS256, the default, needs no key.
+  when:
+    - trixd_token_algorithm == 'EdDSA'
+    - not trixd_key_stat.stat.exists
+
+- name: Publish our public key into the trust directory
+  copy:
+    remote_src: true
+    src: '{{ trixd_key }}.pub'
+    dest: '{{ trixd_trust_dir }}/{{ trixd_key_id }}.pub'
+    mode: '0644'
+  when: trixd_token_algorithm == 'EdDSA'
+
+# A changed package, ini or unit restarts the daemon here, before it is checked.
+- name: Apply a restart the changes above asked for
+  meta: flush_handlers
+
+- name: Start trix-daemon
+  ansible.builtin.systemd:
+    name: trix-daemon
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Wait for trix-daemon to answer
+  uri:
+    url: 'http://{{ trixd_plain_bind }}:{{ trixd_plain_port }}/api/v1/system/health'
+    status_code: 200
+  register: trixd_health
+  until: trixd_health is succeeded
+  retries: 12
+  delay: 5
