@@ -15,6 +15,13 @@
   vars:
     extend_image: true
 
+- name: Include trix-daemon tasks
+  include_role:
+    name: trinity/trix-daemon
+  vars:
+    extend_image: true
+  when: trixd_enabled | default(True) | bool
+
 - name: Removing existing local disk mounts
   lineinfile:
     dest: "{{ image_path }}/etc/fstab"

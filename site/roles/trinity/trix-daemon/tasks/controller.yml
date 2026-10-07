@@ -183,3 +183,16 @@
   until: trixd_health is succeeded
   retries: 12
   delay: 5
+
+- name: Create utils trixd config directory
+  file:
+    path: '{{ trixd_utils_config_dir }}/'
+    state: directory
+
+- name: Render utils trixd.ini
+  template:
+    src: trixd-client.ini.j2
+    dest: '{{ trixd_utils_config_dir }}/trixd.ini'
+    owner: root
+    group: root
+    mode: '0640'

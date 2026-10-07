@@ -42,6 +42,16 @@ trixd_password_file: /etc/trinity/passwords/trix/api.txt
 trixd_password: "{{ lookup('password', trixd_password_file ~ ' chars=ascii_letters,digits') }}"
 trixd_token_expiry: 1h
 
+# A client's trixd.ini names the same host as its luna.ini, on the TLS port.
+trixd_client_protocol: https
+trixd_client_endpoint: '{{ ansible_hostname }}'
+trixd_verify_certificate: '{{ luna_verify_certificate | default(False) }}'
+trixd_utils_config_dir: '{{ trixd_root }}/utils/config'
+trixd_node_config_dir: '{{ trixd_root }}/node/config'
+trixd_alertx_config_dir: '{{ trix_local }}/alertx/cli/config'
+trixd_ood_config_dir: '{{ trix_ood }}/3.0/config'
+trixd_ood_group: "{{ ood_apps_admin_group | default('admins') }}"
+
 trixd_plugins:
   - directory
   - prometheus

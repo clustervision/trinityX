@@ -73,6 +73,23 @@
       when: 
       - override | default(ood_luna_apps_download.changed) or ('admin-change' in ansible_run_tags)
 
+    - name: Check for trinityx-ood trixd.ini
+      ansible.builtin.stat:
+        path: "{{ trix_ood }}/3.0/config/trixd.ini"
+      register: ood_trixd_ini
+      when: trixd_enabled | default(True) | bool
+
+    # Also when missing, so an existing cluster gets it without an apps upgrade.
+    - name: Render trinityx-ood trixd.ini
+      ansible.builtin.include_role:
+        name: trinity/trix-daemon
+        tasks_from: ood
+      vars:
+        trixd_ood_group: "{{ ood_apps_admin_group }}"
+      when:
+        - trixd_enabled | default(True) | bool
+        - override | default(ood_luna_apps_download.changed) or ('admin-change' in ansible_run_tags) or not ood_trixd_ini.stat.exists
+
     - name: Install trinityx-ood custom apps python requirements
       ansible.builtin.pip:
         requirements: "{{ trix_ood }}/3.0/{{ item.name }}/requirements.txt"
