@@ -1,5 +1,5 @@
 ---
-# tasks file for trix-daemon on a controller
+# tasks file for trix-daemon
 
 - name: Install trix-daemon packages
   yum:
@@ -10,9 +10,7 @@
   delay: "{{ rpm_delay | default(15) }}"
   tags: install-only
 
-# In a pair, the secondary takes the password, and the keypair under EdDSA, from the
-# primary's sync before using them; the primary puts them there once made. The pattern
-# the alertx role uses for its history password.
+# HA: the secondary takes the shared files from the primary's sync.
 - name: Take the shared trix files from the primary
   when:
     - ha | default(False)
@@ -59,8 +57,6 @@
     - '{{ trixd_log_dir }}'
     - '{{ trixd_trust_dir }}'
 
-# No file or template for trix in the logrotate role, so its default one rotates every
-# *.log in the directory named here.
 - name: Include the log rotation for trix
   include_role:
     name: trinity/logrotate
@@ -68,9 +64,7 @@
     logrotate_component: 'trix'
     logrotate_logdir: '{{ trixd_log_dir }}'
 
-# --upgrade, never a forced reinstall: that would reinstall every dependency at its
-# newest and move the versions luna2-daemon pins in the same environment. The pip
-# module with an explicit virtualenv, as the alertx and config-* roles use it.
+# --upgrade, never --force-reinstall: that would move the versions Luna pins.
 - name: Install trix-daemon
   ansible.builtin.pip:
     name: '{{ trixd_noarch_pip_repository }}/daemon/{{ trixd_pip }}'
@@ -80,7 +74,6 @@
   when: trixd_pip is defined
   tags: install-only
 
-# --extra-index-url rather than -i: the index holds trix-daemon, not its dependencies.
 - name: Install trix-daemon from the index
   ansible.builtin.pip:
     name: trix-daemon
@@ -102,8 +95,6 @@
     state: link
     force: true
 
-# trixd.ini carries the secret luna.ini is templated from on this controller, so the
-# two daemons cannot disagree. trinity/init sets it long before this role runs.
 - name: Fail plainly when the shared secret is not known
   fail:
     msg: >-
@@ -113,8 +104,6 @@
     - trixd_token_algorithm == 'HS256'
     - not (trixd_secret_key | default('') | length > 0)
 
-# In etc, not inside the package as luna.ini is: a pip upgrade replaces what it
-# shipped, and an ini it shipped would go with it.
 - name: Render the trixd.ini
   template:
     src: trixd.ini.j2
@@ -176,7 +165,6 @@
     mode: '0644'
   when: trixd_token_algorithm == 'EdDSA'
 
-# A changed package, ini or unit restarts the daemon here, before it is checked.
 - name: Apply a restart the changes above asked for
   meta: flush_handlers
 

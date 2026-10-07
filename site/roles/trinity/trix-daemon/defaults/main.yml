@@ -1,62 +1,47 @@
 ---
-# vars file for trix-daemon (trixd), the TrinityX daemon beside luna2-daemon
+# vars file for trix-daemon
 
-# Installed unless set to false. site/controller.yml reads it with the same default,
-# through bool, so -e trixd_enabled=false works too.
 trixd_enabled: true
 
 trixd_packages:
   - luna2-python
 
 trixd_root: '{{ trix_local }}/trix'
-# Outside daemon, which is a symlink into site-packages: anything under it is
-# replaced by a pip upgrade, and a directory there stops the symlink being made.
+# Outside the package, so a pip upgrade never replaces it.
 trixd_config_dir: '{{ trixd_root }}/etc'
-# A site's own plugins, outside the package, so an upgrade leaves them alone.
 trixd_site_plugins_dir: '{{ trixd_root }}/plugins'
 trixd_db_dir: '{{ trixd_root }}/var'
 trixd_log_dir: /var/log/trix
 
-# The link the pip pipeline points at the newest 1.0 build, as luna2_daemon_pip is
-# for Luna, so --upgrade takes each new build. A build's own file name, such as
-# trix_daemon-1.0.1791360000-py3-none-any.whl, holds a version. Undefined installs
-# from a package index instead, which the update server does not serve.
+# Always the newest 1.0 build; set a full wheel name to pin one.
 trixd_pip: trix_daemon-1.0-py3-none-any.whl
 trixd_noarch_pip_repository: "https://updates.clustervision.com/trinityx/{{ trix_version }}/trix/noarch/pip/{{ trix_stream }}"
 
 trixd_tls_port: 8050
 trixd_plain_port: 8051
-# The loopback by default. A token on the cluster network in clear text is
-# readable by anything on it, and that interface is in the trusted zone.
+# Plain HTTP stays on the loopback, so tokens never cross the network unencrypted.
 trixd_plain_bind: 127.0.0.1
 
-# The secret luna.ini is templated from on this controller, so either daemon accepts
-# the other's tokens. SECRET_FILE is only read if this is ever left empty.
 trixd_token_algorithm: HS256
+# Luna's secret, so each daemon accepts the other's tokens.
 trixd_secret_key: '{{ luna_secret_key | default("") }}'
 trixd_secret_file: '{{ trix_ssl }}/secret.key'
 
-# The cluster certificate, as luna2's gunicorn.py gets it, and the CA that signed it,
-# which a replication peer is checked against.
 trixd_certfile: '{{ ssl_certificate | default(ssl_cert_path ~ "/" ~ ansible_fqdn ~ ".crt") }}'
 trixd_keyfile: '{{ ssl_certificate_key | default(ssl_cert_path ~ "/" ~ ansible_fqdn ~ ".key") }}'
 trixd_ca_file: '{{ ssl_ca_cert | default(ssl_cert_path ~ "/cluster-ca.crt") }}'
 
-# Read only when trixd_token_algorithm is EdDSA, which needs Luna to speak it too.
+# Used only when trixd_token_algorithm is EdDSA.
 trixd_key: '{{ trix_ssl }}/trix.ed25519'
 trixd_key_id: trix-1
 trixd_trust_dir: '{{ trix_ssl }}/trust.d'
 
 trixd_username: trix
-# Generated once, as the ood role makes its passphrase. In an HA pair the secondary
-# takes it from the primary through the sync directory, so both carry the same one.
+# Generated once; an HA secondary takes it from the primary through trix_sync.
 trixd_password_file: /etc/trinity/passwords/trix/api.txt
 trixd_password: "{{ lookup('password', trixd_password_file ~ ' chars=ascii_letters,digits') }}"
 trixd_token_expiry: 1h
 
-# slurm and genders write the same blocks luna2-daemon's node hook still writes, from
-# the same generator and node list, so the content agrees; once that hook stops, these
-# are the only writers.
 trixd_plugins:
   - directory
   - prometheus
@@ -66,7 +51,6 @@ trixd_plugins:
 
 trixd_auth_chain: local, pam
 
-# Point this at a facade where there is no systemd, as in a container.
 trixd_service_command: /usr/bin/systemctl
 trixd_replication_interval: 300s
 trixd_luna_hash_interval: 60s
