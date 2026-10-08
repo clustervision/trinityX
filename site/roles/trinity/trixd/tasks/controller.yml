@@ -1,7 +1,7 @@
 ---
-# tasks file for trix-daemon
+# tasks file for trixd
 
-- name: Install trix-daemon packages
+- name: Install trixd packages
   yum:
     name: '{{ trixd_packages }}'
     state: present
@@ -11,12 +11,12 @@
   tags: install-only
 
 # HA: the secondary takes the shared files from the primary's sync.
-- name: Take the shared trix files from the primary
+- name: Take the shared trixd files from the primary
   when:
     - ha | default(False)
     - not primary | default(False)
   block:
-    - name: Create the trix password directory
+    - name: Create the trixd password directory
       file:
         path: '{{ trixd_password_file | dirname }}'
         state: directory
@@ -27,7 +27,7 @@
     - name: Copy the API password from sync
       copy:
         remote_src: true
-        src: '{{ trix_sync }}/trix/{{ trixd_password_file | basename }}'
+        src: '{{ trix_sync }}/trixd/{{ trixd_password_file | basename }}'
         dest: '{{ trixd_password_file }}'
         owner: root
         group: root
@@ -36,7 +36,7 @@
     - name: Copy the keypair from sync
       copy:
         remote_src: true
-        src: '{{ trix_sync }}/trix/{{ item | basename }}'
+        src: '{{ trix_sync }}/trixd/{{ item | basename }}'
         dest: '{{ item }}'
         mode: '0600'
       loop:
@@ -44,7 +44,7 @@
         - '{{ trixd_key }}.pub'
       when: trixd_token_algorithm == 'EdDSA'
 
-- name: Create the trix tree
+- name: Create the trixd tree
   file:
     path: '{{ item }}'
     state: directory
@@ -57,29 +57,29 @@
     - '{{ trixd_log_dir }}'
     - '{{ trixd_trust_dir }}'
 
-- name: Include the log rotation for trix
+- name: Include the log rotation for trixd
   include_role:
     name: trinity/logrotate
   vars:
-    logrotate_component: 'trix'
+    logrotate_component: 'trixd'
     logrotate_logdir: '{{ trixd_log_dir }}'
 
 # --upgrade, never --force-reinstall: that would move the versions Luna pins.
-- name: Install trix-daemon
+- name: Install trixd
   ansible.builtin.pip:
     name: '{{ trixd_noarch_pip_repository }}/daemon/{{ trixd_pip }}'
     virtualenv: '{{ trix_local }}/python'
     extra_args: --upgrade
-  notify: restart trix-daemon
+  notify: restart trixd
   when: trixd_pip is defined
   tags: install-only
 
-- name: Install trix-daemon from the index
+- name: Install trixd from the index
   ansible.builtin.pip:
-    name: trix-daemon
+    name: trixd
     extra_args: '--upgrade --extra-index-url {{ trixd_noarch_pip_repository }}/daemon'
     virtualenv: '{{ trix_local }}/python'
-  notify: restart trix-daemon
+  notify: restart trixd
   when: trixd_pip is undefined
   tags: install-only
 
@@ -88,21 +88,24 @@
   register: trixd_python_dir
   changed_when: false
 
-- name: Create symlink from site-packages/trix to the trix dir
+- name: Create symlink from site-packages/trixd to the trixd dir
   file:
-    src: '{{ trixd_python_dir.stdout }}/site-packages/trix'
+    src: '{{ trixd_python_dir.stdout }}/site-packages/trixd'
     dest: '{{ trixd_root }}/daemon'
     state: link
     force: true
 
-- name: Fail plainly when the shared secret is not known
+- name: Check Luna's luna.ini, which trixd reads
+  stat:
+    path: '{{ trixd_luna_ini }}'
+  register: trixd_luna_ini_stat
+
+- name: Fail plainly when Luna's luna.ini is missing
   fail:
     msg: >-
-      luna_secret_key is not set. trinity/init sets it at bootstrap and luna.ini
-      is templated from it; run that role before this one.
-  when:
-    - trixd_token_algorithm == 'HS256'
-    - not (trixd_secret_key | default('') | length > 0)
+      {{ trixd_luna_ini }} is missing. trixd reads Luna's address, protocol and token
+      secret from it; run trinity/luna2 before this role.
+  when: not trixd_luna_ini_stat.stat.exists
 
 - name: Render the trixd.ini
   template:
@@ -111,16 +114,16 @@
     owner: root
     group: root
     mode: '0640'
-  notify: restart trix-daemon
+  notify: restart trixd
 
-- name: Put the shared trix files in sync for the secondary
+- name: Put the shared trixd files in sync for the secondary
   when:
     - ha | default(False)
     - primary | default(True)
   block:
-    - name: Create the trix sync directory
+    - name: Create the trixd sync directory
       file:
-        path: '{{ trix_sync }}/trix'
+        path: '{{ trix_sync }}/trixd'
         state: directory
         mode: '0700'
 
@@ -128,19 +131,19 @@
       copy:
         remote_src: true
         src: '{{ item }}'
-        dest: '{{ trix_sync }}/trix/'
+        dest: '{{ trix_sync }}/trixd/'
         mode: '0600'
       loop: '{{ [trixd_password_file] + ([trixd_key, trixd_key ~ ".pub"]
                if trixd_token_algorithm == "EdDSA" else []) }}'
 
-- name: Render the trix-daemon unit
+- name: Render the trixd unit
   template:
-    src: trix-daemon.service.j2
-    dest: /etc/systemd/system/trix-daemon.service
+    src: trixd.service.j2
+    dest: /etc/systemd/system/trixd.service
     owner: root
     group: root
     mode: '0644'
-  notify: restart trix-daemon
+  notify: restart trixd
 
 - name: Check the signing key is present
   stat:
@@ -168,14 +171,14 @@
 - name: Apply a restart the changes above asked for
   meta: flush_handlers
 
-- name: Start trix-daemon
+- name: Start trixd
   ansible.builtin.systemd:
-    name: trix-daemon
+    name: trixd
     state: started
     enabled: true
     daemon_reload: true
 
-- name: Wait for trix-daemon to answer
+- name: Wait for trixd to answer
   uri:
     url: 'http://{{ trixd_plain_bind }}:{{ trixd_plain_port }}/api/v1/system/health'
     status_code: 200
