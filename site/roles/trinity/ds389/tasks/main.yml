@@ -173,6 +173,7 @@
   command: dscreate from-file /etc/dirsrv/ds389-local.inf
   args:
     creates: "/etc/dirsrv/slapd-local/dse.ldif"
+  register: ds389_created
   when: primary | default(True)
 
 - name: Create DS389 log directory for non-primary
@@ -215,7 +216,9 @@
   systemd:
     name: dirsrv@local
     state: stopped
-  when: primary | default(True)
+  when:
+    - primary | default(True)
+    - ds389_created is changed
 
 - name: Get /etc/dirsrv/slapd status
   stat:
