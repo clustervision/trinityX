@@ -1,6 +1,23 @@
 #!/bin/bash
 
-/usr/bin/aria2c --summary-interval=600 --enable-dht=false --seed-ratio=100000.0 -V -d{{ trix_luna }}/files/ --check-certificate=false {{ trix_luna }}/files/*.torrent
+# Luna torrent seeder: seeds every image torrent in the Luna files directory.
+#
+# --bt-seed-unverified  the tarballs are Luna's own, complete files: seed them at
+#                       once. With -V every restart hashed every tarball again first
+#                       (minutes for a few images), and Luna restarts this service
+#                       after every pack and cleanup: no torrent in the meantime, so
+#                       every install fell back to http after the 120 s stop timeout.
+# --max-concurrent-downloads
+#                       a seeding item counts as active and never finishes
+#                       (--seed-ratio 100000): with aria2c's default of 5 only the
+#                       first five torrents were ever seeded, the others never.
+
+FILES={{ trix_luna }}/files
+torrents=("$FILES"/*.torrent)
+
+exec /usr/bin/aria2c --summary-interval=600 --enable-dht=false --seed-ratio=100000.0 \
+    --bt-seed-unverified=true --max-concurrent-downloads=${#torrents[@]} \
+    -d"$FILES"/ --check-certificate=false "${torrents[@]}"
 
 # other usefull options are:
 # --no-conf 
@@ -8,4 +25,3 @@
 # --log-level=error 
 # --download-result=hide 
 # --summary-interval=0
-
