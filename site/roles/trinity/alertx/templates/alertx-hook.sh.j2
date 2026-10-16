@@ -57,10 +57,17 @@ fi
 
 if [ "$TRIXD_API_ENDPOINT" != "" ]; then
     TRIXD_URL=${TRIXD_API_PROTOCOL:-$API_PROTOCOL}://${TRIXD_API_ENDPOINT}
+    SIGNIN_URL=${TRIXD_URL}/api/v1/auth/node/${HOST}
+    SIGNIN_USER=${TRIXD_API_USERNAME}
+    SIGNIN_PASS=${TRIXD_API_PASSWORD}
 else
+    # No trixd ini: the controller Luna names, on trixd's port, and Luna's account.
     TRIXD_PORT=${TRIXD_PORT:-8050}
     TRIXD_HOST=$(echo ${LUNA_URL} | sed -e 's|^.*://||' -e 's|:.*$||')
     TRIXD_URL=${API_PROTOCOL}://${TRIXD_HOST}:${TRIXD_PORT}
+    SIGNIN_URL=${LUNA_URL}/tpm/${HOST}
+    SIGNIN_USER=${API_USERNAME}
+    SIGNIN_PASS=${API_PASSWORD}
 fi
 
 if [ "$API_VERIFY_CERTIFICATE" == "" ]; then
@@ -90,10 +97,10 @@ function fetch_token {
     export TPM2TOOLS_TCTI="device:/dev/tpm0"
     ldconfig
     TPM=$(tpm2_pcrread sha256:0 2> /dev/null | grep '0x' | awk -F' : ' '{ print $2 }')
-    json='{"tpm_sha256":"'$TPM'","username":"'$API_USERNAME'","password":"'$API_PASSWORD'"}'
+    json='{"tpm_sha256":"'$TPM'","username":"'$SIGNIN_USER'","password":"'$SIGNIN_PASS'"}'
     touch /tmp/token.json
     chmod og-rwx /tmp/token.json
-    curl $INSECURE -X POST -H "Content-Type: application/json" -d "$json" -s "${LUNA_URL}/tpm/${HOST}" > /tmp/token.json
+    curl $INSECURE -X POST -H "Content-Type: application/json" -d "$json" -s "${SIGNIN_URL}" > /tmp/token.json
     valid=$(grep token /tmp/token.json)
     if [ "$valid" ]; then
         token=$(cat /tmp/token.json | awk '{ print $2 }' | grep -oE '"(\S+)"')
@@ -107,9 +114,9 @@ function fetch_token {
 }
 
 function call_hook {
-    LUNA_TOKEN=$(fetch_token)
+    NODE_TOKEN=$(fetch_token)
     json='{"force": false}'
-    curl $INSECURE -X PATCH -H "x-access-tokens: $LUNA_TOKEN" -H "Content-Type: application/json" -d "$json" -i -w "%{http_code}" -s "${TRIXD_URL}/api/v1/prometheus/hw-rules/${HOST}" -o /tmp/alertx-hook.out > /tmp/alertx-hook.code
+    curl $INSECURE -X PATCH -H "x-access-tokens: $NODE_TOKEN" -H "Content-Type: application/json" -d "$json" -i -w "%{http_code}" -s "${TRIXD_URL}/api/v1/prometheus/hw-rules/${HOST}" -o /tmp/alertx-hook.out > /tmp/alertx-hook.code
     RET=$?
     CODE=$(cat /tmp/alertx-hook.code)
     echo "$CODE :: $(cat /tmp/alertx-hook.out)"
