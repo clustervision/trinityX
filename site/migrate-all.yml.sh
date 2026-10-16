@@ -13,6 +13,13 @@
 #   - keep comments/order and the current yml check marker from all.yml.example.
 # Boolean prompts accept yes/y/true and no/n/false (any case) and re-ask on any
 # other answer.
+# Values are resolved up front: the script first reads the latest
+# all.yml.example (and its yml check version), works out the value to use for
+# every key from all.yml / all.yml.example, and only then walks through the
+# options that need a confirmation. On a terminal the resolved value is
+# pre-filled in the input line, so pressing Enter accepts it and moves on to
+# the next step; it can also be edited in place. Without a terminal (piped
+# input) an empty answer accepts the resolved value, as before.
 # For retained string values, only the value is reused; comments come from
 # all.yml.example. Before writing, the original all.yml is copied to all.yml.bkp
 # next to all.yml.
@@ -39,13 +46,16 @@ Options:
                       default: group_vars/all.yml.example next to this script
   --output PATH       Output path; default overwrites --all-yml after copying
                       --all-yml to all.yml.bkp
-  --keep-defaults     Use suggested values without prompting
+  --keep-defaults     Use the resolved values without prompting
   --dry-run           Print migrated YAML to stdout instead of writing it
   -h, --help          Show this help
 
 Notes:
   Before overwriting --all-yml, a copy is always written as all.yml.bkp in the
   same directory.
+  Values are resolved from all.yml / all.yml.example first; the options that
+  need a confirmation are then shown one by one ([n/total]) with the value
+  pre-filled, so Enter accepts it and moves to the next step.
   This is a plain Bash/YAML-block merger for TrinityX all.yml files. It does
   not parse arbitrary YAML; it preserves top-level key blocks verbatim.
 EOF
@@ -163,6 +173,26 @@ extract_blocks "$ALL_YML" "$KEY_BLOCKS/old" "$OLD_KEYS"
 if [ ! -s "$EXAMPLE_KEYS" ]; then
     echo "ERROR: no top-level keys found in $EXAMPLE_YML" >&2
     exit 1
+fi
+
+yml_check_version() {
+    awk '
+        /#[[:space:]]*DO NOT REMOVE:[[:space:]]*yml check:[[:space:]]*[0-9]+/ {
+            line = $0
+            sub(/.*yml check:[[:space:]]*/, "", line)
+            sub(/[^0-9].*$/, "", line)
+            print line
+            exit
+        }
+    ' "$1"
+}
+
+EXAMPLE_VERSION=$(yml_check_version "$EXAMPLE_YML")
+OLD_VERSION=$(yml_check_version "$ALL_YML")
+printf 'Latest all.yml.example: %s (yml check: %s)\n' "$EXAMPLE_YML" "${EXAMPLE_VERSION:-unknown}" >&2
+printf 'Current all.yml:        %s (yml check: %s)\n' "$ALL_YML" "${OLD_VERSION:-none}" >&2
+if [ -n "$EXAMPLE_VERSION" ] && [ -n "$OLD_VERSION" ] && [ "$OLD_VERSION" -gt "$EXAMPLE_VERSION" ] 2>/dev/null; then
+    printf 'WARNING: all.yml (yml check %s) is newer than all.yml.example (yml check %s); is all.yml.example up to date?\n' "$OLD_VERSION" "$EXAMPLE_VERSION" >&2
 fi
 
 is_key_in_example() {
@@ -347,6 +377,24 @@ suggestion_source() {
     fi
 }
 
+# Read one answer. On a terminal the resolved value is pre-filled in the
+# input line (readline), so Enter accepts it; otherwise fall back to a plain
+# read where an empty answer means "accept".
+# The answer is returned in PREFILLED_ANSWER (no command substitution, so
+# readline keeps talking to the terminal).
+read_prefilled() {
+    local label=$1
+    local default=$2
+
+    PREFILLED_ANSWER=""
+    if [ -t 0 ] && [ -t 2 ]; then
+        IFS= read -r -e -p "$label" -i "$default" PREFILLED_ANSWER || PREFILLED_ANSWER=""
+    else
+        printf '%s[%s]: ' "$label" "$default" >&2
+        IFS= read -r PREFILLED_ANSWER || PREFILLED_ANSWER=""
+    fi
+}
+
 prompt_value() {
     local reason=$1
     local key=$2
@@ -356,24 +404,29 @@ prompt_value() {
     local source=$6
     local output_block=$7
     local kind=$8
-    local current_text answer normalized
+    local step=${9:-}
+    local current_text answer normalized prefix
 
     current_text=""
     if [ -n "$current_block" ] && [ -f "$current_block" ]; then
         current_text=$(render_default_prompt "$current_block")
     fi
 
+    prefix=""
+    [ -n "$step" ] && prefix="[$step] "
+
+    if [ -n "$current_text" ]; then
+        printf '\n%s%s %s (current: %s; value taken from %s)\n' "$prefix" "$reason" "$key" "$current_text" "$source" >&2
+    else
+        printf '\n%s%s %s (value taken from %s)\n' "$prefix" "$reason" "$key" "$source" >&2
+    fi
+
     while :; do
-        if [ -n "$current_text" ]; then
-            printf '%s %s (current: %s, suggested from %s: %s): ' "$reason" "$key" "$current_text" "$source" "$suggested" >&2
-        else
-            printf '%s %s [suggested from %s: %s]: ' "$reason" "$key" "$source" "$suggested" >&2
-        fi
-        IFS= read -r answer || answer=""
+        read_prefilled "  $key: " "$suggested"
+        answer=$PREFILLED_ANSWER
 
         if [ -z "$answer" ]; then
-            write_value_with_example_comments "$key" "$suggested" "$example_block" "$output_block"
-            return
+            answer=$suggested
         fi
 
         if [ "$kind" = "bool" ]; then
@@ -388,6 +441,17 @@ prompt_value() {
         write_value_with_example_comments "$key" "$answer" "$example_block" "$output_block"
         return
     done
+}
+
+# Prompts are queued while values are resolved and asked afterwards, so the
+# user sees how many confirmations follow and steps through them in order.
+PROMPTS="$WORKDIR/prompts"
+: > "$PROMPTS"
+FS=$(printf '\037')
+
+queue_prompt() {
+    # reason key old_block suggested source kind
+    printf '%s\037%s\037%s\037%s\037%s\037%s\n' "$1" "$2" "$3" "$4" "$5" "$6" >> "$PROMPTS"
 }
 
 should_prompt() {
@@ -423,10 +487,9 @@ while IFS= read -r key <&3; do
             if [ "$old_value" != "$example_value" ]; then
                 printf '%s\n' "$key" >> "$CHANGED_KEYS"
             fi
+            write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
             if should_prompt; then
-                prompt_value "Firewall option" "$key" "$old_block" "$example_block" "$suggested" "$source" "$new_block" "$kind"
-            else
-                write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
+                queue_prompt "Firewall option" "$key" "$old_block" "$suggested" "$source" "$kind"
             fi
         elif [ "$kind" != "string" ] && [ "$kind" != "bool" ]; then
             cp -- "$example_block" "$new_block"
@@ -435,10 +498,9 @@ while IFS= read -r key <&3; do
             source=$(suggestion_source "$key" "$kind" "$old_block")
             if [ "$old_value" != "$example_value" ]; then
                 printf '%s\n' "$key" >> "$CHANGED_KEYS"
+                write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
                 if should_prompt; then
-                    prompt_value "Changed option" "$key" "$old_block" "$example_block" "$suggested" "$source" "$new_block" "$kind"
-                else
-                    write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
+                    queue_prompt "Changed option" "$key" "$old_block" "$suggested" "$source" "$kind"
                 fi
             else
                 write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
@@ -449,16 +511,29 @@ while IFS= read -r key <&3; do
         if [ "$kind" = "string" ] || [ "$kind" = "bool" ]; then
             suggested=$(suggested_value "$key" "$kind" "" "$example_block")
             source=$(suggestion_source "$key" "$kind" "")
+            write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
             if should_prompt; then
-                prompt_value "New option" "$key" "" "$example_block" "$suggested" "$source" "$new_block" "$kind"
-            else
-                write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
+                queue_prompt "New option" "$key" "" "$suggested" "$source" "$kind"
             fi
         else
             cp -- "$example_block" "$new_block"
         fi
     fi
 done 3< "$EXAMPLE_KEYS"
+
+TOTAL_PROMPTS=$(awk 'END { print NR }' "$PROMPTS")
+TOTAL_KEYS=$(awk 'END { print NR }' "$EXAMPLE_KEYS")
+printf 'Resolved values for %s options from all.yml / all.yml.example.\n' "$TOTAL_KEYS" >&2
+if [ "$TOTAL_PROMPTS" -gt 0 ]; then
+    printf '%s option(s) to confirm; each value is pre-filled: press Enter to accept, or edit it first.\n' "$TOTAL_PROMPTS" >&2
+    step=0
+    while IFS="$FS" read -r p_reason p_key p_old p_suggested p_source p_kind <&3; do
+        step=$((step + 1))
+        prompt_value "$p_reason" "$p_key" "$p_old" "$KEY_BLOCKS/example/$p_key" \
+            "$p_suggested" "$p_source" "$KEY_BLOCKS/new/$p_key" "$p_kind" "$step/$TOTAL_PROMPTS"
+    done 3< "$PROMPTS"
+    printf '\nAll %s option(s) confirmed.\n' "$TOTAL_PROMPTS" >&2
+fi
 
 awk -v blocks="$KEY_BLOCKS/new" '
     function print_block(key) {

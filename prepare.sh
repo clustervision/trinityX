@@ -162,7 +162,18 @@ fi
 if [ "$GITLAB_CI" ]; then
     dnf update -y --exclude=kernel*
 else
-    dnf update -y
+    if [ ! "$DNF_UPGRADE" ]; then
+      add_message "All installed packages will now be upgraded to the latest available versions, including the kernel."
+      add_message "If you choose not to upgrade, you are responsible for making sure that kernel-dependent packages, such as ZFS and DRBD, match the running kernel ($(uname -r))."
+      show_message
+      DNF_UPGRADE=$(get_confirmation y "Do you want to upgrade all packages")
+    fi
+    store_config 'DNF_UPGRADE' $DNF_UPGRADE
+    if [ "$DNF_UPGRADE" == "yes" ]; then
+      dnf update -y
+    else
+      echo "Skipping package upgrade, as requested"
+    fi
 fi
 dnf install curl tar git -y
 
