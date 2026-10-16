@@ -5,11 +5,21 @@
   include_vars: "airgap/main.yaml"
   when: is_airgap | default(False)
 
+- name: Restart trixd so its renders land on a finished controller
+  ansible.builtin.systemd:
+    name: trixd
+    state: restarted
+  when:
+    - trixd_restart_only | default(False)
+    - on_controller | default(False)
+
 - name: Loading controller trixd role
   include_tasks: "controller.yml"
   when:
+    - not trixd_restart_only | default(False)
     - on_controller | default(False)
     - not extend_image | default(False)
 
 - name: Loading node and images trixd role
   include_tasks: "nodes.yml"
+  when: not trixd_restart_only | default(False)

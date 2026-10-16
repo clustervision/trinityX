@@ -5,7 +5,12 @@
 # -------------------------------------------------------
 
 LUNA_INI='{{ trix_luna }}/node/config/luna.ini'
-if [ -f $LUNA_INI ]; then
+TRIXD_INI='{{ trix_local }}/trixd/node/config/trixd.ini'
+
+load_ini () {
+    # One ini into the environment, each key as PREFIX_SECTION_KEY, so two files can be read
+    # without one overwriting the other's account.
+    local file="$1" prefix="$2" section=""
     while IFS='=' read -ra line; do
         if [ ! "$(echo $line | grep -E '^(#|;)')" ] && [ "$line" ]; then
             if [ "$(echo $line | grep '^\[')" ]; then
@@ -13,10 +18,25 @@ if [ -f $LUNA_INI ]; then
             else
                 key=$(echo ${line[0]})
                 value=$(echo ${line[1]})
-                declare -x "${section}_${key}"="$value"
+                declare -gx "${prefix}${section}_${key}"="$value"
             fi
         fi
-    done < "$LUNA_INI"
+    done < "$file"
+}
+
+# trixd's own ini says where trixd is, and is read first. Luna's is still read: the node
+# authenticates with Luna's account and presents the provision token it gets back, which trixd
+# accepts as that node's own - so the two files answer different questions and neither replaces
+# the other.
+if [ -f "$TRIXD_INI" ]; then
+    load_ini "$TRIXD_INI" "TRIXD_"
+else
+    >&2 echo "WARNING: no $TRIXD_INI - this image predates trixd's own configuration;"
+    >&2 echo "WARNING: falling back to $LUNA_INI for where trixd answers."
+fi
+
+if [ -f $LUNA_INI ]; then
+    load_ini "$LUNA_INI" ""
 else
     >&2 echo "No config file: $LUNA_INI"
 fi
@@ -33,6 +53,14 @@ if [ "$API_ENDPOINT" == "" ]; then
     LUNA_URL=${API_PROTOCOL}://{{ trix_ctrl_ip }}:7050
 else
     LUNA_URL=${API_PROTOCOL}://${API_ENDPOINT}
+fi
+
+if [ "$TRIXD_API_ENDPOINT" != "" ]; then
+    TRIXD_URL=${TRIXD_API_PROTOCOL:-$API_PROTOCOL}://${TRIXD_API_ENDPOINT}
+else
+    TRIXD_PORT=${TRIXD_PORT:-8050}
+    TRIXD_HOST=$(echo ${LUNA_URL} | sed -e 's|^.*://||' -e 's|:.*$||')
+    TRIXD_URL=${API_PROTOCOL}://${TRIXD_HOST}:${TRIXD_PORT}
 fi
 
 if [ "$API_VERIFY_CERTIFICATE" == "" ]; then
@@ -80,8 +108,8 @@ function fetch_token {
 
 function call_hook {
     LUNA_TOKEN=$(fetch_token)
-    json='[{ "hostname": "'$FULLHOST'", "force": false}]'
-    curl $INSECURE -X POST -H "x-access-tokens: $LUNA_TOKEN" -H "Content-Type: application/json" -d "$json" -i -w "%{http_code}" -s "${LUNA_URL}/import/prometheus_hw_rules" -o /tmp/alertx-hook.out > /tmp/alertx-hook.code
+    json='{"force": false}'
+    curl $INSECURE -X PATCH -H "x-access-tokens: $LUNA_TOKEN" -H "Content-Type: application/json" -d "$json" -i -w "%{http_code}" -s "${TRIXD_URL}/api/v1/prometheus/hw-rules/${HOST}" -o /tmp/alertx-hook.out > /tmp/alertx-hook.code
     RET=$?
     CODE=$(cat /tmp/alertx-hook.code)
     echo "$CODE :: $(cat /tmp/alertx-hook.out)"

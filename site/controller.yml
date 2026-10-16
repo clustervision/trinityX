@@ -149,6 +149,13 @@
         shadow_networks: "{{ cloud_networks|default({}) }}"
       tags: luna
 
+      # trixd comes up with Luna, because what follows - the OOD apps, alertx and the node
+      # images - is configured against it. Its first render happens before slurm, genders and
+      # prometheus exist, so a later pass restarts it; see the foot of this file.
+    - role: trinity/trixd
+      when: trixd_enabled | default(True) | bool
+      tags: trixd
+
     - role: trinity/nfs
       nfs_rpccount: 256
       nfs_enable_rdma: false
@@ -543,8 +550,10 @@
       alertx_history_enable: true
       tags: monitoring, alertx
 
-      # trixd: after slurm, genders and prometheus, whose files it renders at start-up.
+      # trixd renders the slurm, genders and prometheus files, and by now they have
+      # somewhere to go: one restart so its first render lands on a finished controller.
     - role: trinity/trixd
+      trixd_restart_only: true
       when: trixd_enabled | default(True) | bool
       tags: trixd
 
