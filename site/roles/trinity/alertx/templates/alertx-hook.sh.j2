@@ -24,10 +24,9 @@ load_ini () {
     done < "$file"
 }
 
-# trixd's own ini says where trixd is, and is read first. Luna's is still read: the node
-# authenticates with Luna's account and presents the provision token it gets back, which trixd
-# accepts as that node's own - so the two files answer different questions and neither replaces
-# the other.
+# trixd's own ini is read first: it holds the account and the address, and the node then signs
+# in at trixd itself. Luna's is the fallback for an image built before that ini existed, and is
+# read either way because the rest of this script still uses it.
 if [ -f "$TRIXD_INI" ]; then
     load_ini "$TRIXD_INI" "TRIXD_"
 else
@@ -40,6 +39,12 @@ if [ -f $LUNA_INI ]; then
 else
     >&2 echo "No config file: $LUNA_INI"
 fi
+
+FULLHOST=$(hostname --long)
+if [ ! "$FULLHOST" ]; then # opensuse?
+	FULLHOST=$(hostname)
+fi
+HOST=$(echo $FULLHOST|awk -F'.' '{ print $1 }')
 
 if [ "$API_PROTOCOL" == "" ]; then
 {% if luna_protocol == "https" -%}
@@ -83,11 +88,14 @@ else
     fi 
 fi
 
-FULLHOST=$(hostname --long)
-if [ ! "$FULLHOST" ]; then # opensuse?
-	FULLHOST=$(hostname)
+# The calls below go to trixd, so its own flag decides for them when it has one.
+if [ "$TRIXD_API_VERIFY_CERTIFICATE" != "" ]; then
+    TRIXD_API_VERIFY_CERTIFICATE=$(echo $TRIXD_API_VERIFY_CERTIFICATE | tr 'A-Z' 'a-z')
+    INSECURE=''
+    if [ "$TRIXD_API_VERIFY_CERTIFICATE" == "false" ] || [ "$TRIXD_API_VERIFY_CERTIFICATE" == "no" ]; then
+        INSECURE='--insecure'
+    fi
 fi
-HOST=$(echo $FULLHOST|awk -F'.' '{ print $1 }')
 
 # -------------------------------------------------------
 # the actual calls
