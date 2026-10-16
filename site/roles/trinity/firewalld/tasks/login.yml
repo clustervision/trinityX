@@ -1,7 +1,7 @@
 ---
 
 - name: Install firewalld packages
-  yum:
+  ansible.builtin.package:
     name: '{{ firewalld_packages }}'
     state: present
   retries: "{{ rpm_retries | default(3) }}"
@@ -12,3 +12,12 @@
   systemd:
     name: firewalld
     enabled: true
+
+# Luna sets the cluster interface's zone through NetworkManager; netplan on
+# Debian has no zone, so the interface would fall into the default zone.
+# Trust the cluster network by source, which needs no interface name.
+- name: Trust the cluster network
+  ansible.builtin.command: firewall-offline-cmd --zone=trusted --add-source={{ trix_cluster_net }}/{{ trix_cluster_netprefix }}
+  register: _firewalld_cluster_source
+  changed_when: "'ALREADY_ENABLED' not in _firewalld_cluster_source.stdout"
+  when: ansible_os_family == 'Debian'

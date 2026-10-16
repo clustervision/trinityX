@@ -9,6 +9,16 @@
       - powertools
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  when: ansible_os_family == 'RedHat'
+  tags: install-only
+
+- name: Install environment module packages
+  ansible.builtin.apt:
+    name: lmod
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  when: ansible_os_family == 'Debian'
   tags: install-only
 
 - name: Install profile for modules

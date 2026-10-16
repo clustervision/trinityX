@@ -16,12 +16,21 @@
       register: ood_luna_apps_temp
       changed_when: false
 
-    - name: Download and Unpack trinityx-ood custom apps to temporary directory
+    # Fetched on the controller: a download inside the image runs with the
+    # image's python, which the controller's ansible-core may not support.
+    - name: Download trinityx-ood custom apps to the controller
+      ansible.builtin.get_url:
+        url: "{{ ood_luna_apps_url }}"
+        dest: "/tmp/{{ ood_luna_apps_url | basename }}"
+      delegate_to: localhost
+      tags: install-only
+
+    - name: Unpack trinityx-ood custom apps to temporary directory
       ansible.builtin.unarchive:
-        src: "{{ ood_luna_apps_url }}"
+        src: "/tmp/{{ ood_luna_apps_url | basename }}"
         dest: "{{ ood_luna_apps_temp.path }}"
         mode: u=rw,g=r,o=r,a-x+X
-        remote_src: true
+        remote_src: false
         list_files: yes
       register: ood_luna_apps_temp_files
       changed_when: false
@@ -72,6 +81,13 @@
         mode: "0640"
       when: 
       - override | default(ood_luna_apps_download.changed) or ('admin-change' in ansible_run_tags)
+
+    - name: Install virtualenv for the trinityx-ood custom apps
+      ansible.builtin.apt:
+        name: virtualenv
+        state: present
+      when: ansible_os_family == 'Debian'
+      tags: install-only
 
     - name: Install trinityx-ood custom apps python requirements
       ansible.builtin.pip:

@@ -8,6 +8,7 @@
     - "{{ ansible_os_family }}{{ ansible_distribution_version}}.yaml"
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}.yaml"
   no_log: true
   ignore_errors: true
 
@@ -89,17 +90,37 @@
     - ood_repositories is defined
     - ansible_os_family == "RedHat"
 
+# URL downloads in apt_key/apt run with the target's python, which the
+# controller's ansible-core may not support (ubuntu 24/26). Fetch on the
+# controller and push through the connection, as the prometheus roles do.
 - name: Install OOD apt repo keys
   ansible.builtin.apt_key:
     state: present
-    url: "{{ item.key_url }}"
+    data: "{{ lookup('ansible.builtin.url', item.key_url, split_lines=False) }}"
     id: "{{ item.key_id }}"
   loop: "{{ ood_debs }}"
   when: ansible_os_family == "Debian"
 
+- name: Download OOD apt repo packages to the controller
+  ansible.builtin.get_url:
+    url: "{{ item.deb }}"
+    dest: "/tmp/{{ item.deb | basename }}"
+  loop: "{{ ood_deb_repos }}"
+  delegate_to: localhost
+  when: ansible_os_family == "Debian"
+  tags: install-only
+
+- name: Copy OOD apt repo packages to the target
+  ansible.builtin.copy:
+    src: "/tmp/{{ item.deb | basename }}"
+    dest: "/tmp/{{ item.deb | basename }}"
+  loop: "{{ ood_deb_repos }}"
+  when: ansible_os_family == "Debian"
+  tags: install-only
+
 - name: Install OOD apt repo packages
   ansible.builtin.apt:
-    deb: "{{ item.deb }}"
+    deb: "/tmp/{{ item.deb | basename }}"
     state: present
     update_cache: true
     dpkg_options: force-confnew
@@ -130,6 +151,23 @@
   notify: Run update_ood
   when: ansible_os_family == "Debian"
   tags: install-only
+
+# Debian ships mod_ssl disabled; ood-portal.conf needs it for SSLEngine.
+- name: Enable the apache ssl module
+  ansible.builtin.command: a2enmod ssl
+  args:
+    creates: /etc/apache2/mods-enabled/ssl.load
+  when:
+    - ansible_os_family == "Debian"
+    - ood_enable_ssl
+
+# The Debian nginx package enables a system nginx on :80, which keeps apache
+# from starting. OOD runs its per-user servers from ondemand-nginx instead.
+- name: Disable the system nginx service
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: false
+  when: ansible_os_family == "Debian"
 
 - name: Ensure ssl certificate and key exists
   ansible.builtin.file:

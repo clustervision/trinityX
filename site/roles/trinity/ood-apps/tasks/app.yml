@@ -171,9 +171,32 @@
     - in_image
     - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
   block:
+    # A .deb URL is fetched on the controller: a download inside the image runs
+    # with the image's python, which the controller's ansible-core may not support.
+    - name: Download .deb packages to the controller
+      ansible.builtin.get_url:
+        url: "{{ item.name }}"
+        dest: "/tmp/{{ item.name | basename }}"
+      loop: "{{ app.get('node_apts', []) }}"
+      when: item.name is string and item.name.endswith('.deb')
+      delegate_to: localhost
+      ignore_errors: true
+      tags: install-only
+
+    - name: Copy .deb packages to the target
+      ansible.builtin.copy:
+        src: "/tmp/{{ item.name | basename }}"
+        dest: "/tmp/{{ item.name | basename }}"
+      loop: "{{ app.get('node_apts', []) }}"
+      when: item.name is string and item.name.endswith('.deb')
+      ignore_errors: true
+      tags: install-only
+
     - name: Install Code Server 4.89.0
+      # node_apts entries are either a .deb URL or a list of package names
       ansible.builtin.apt:
-        deb: "{{ item.name }}"
+        deb: "{{ '/tmp/' ~ (item.name | basename) if item.name is string and item.name.endswith('.deb') else omit }}"
+        name: "{{ omit if item.name is string and item.name.endswith('.deb') else item.name }}"
         state: present
       loop: "{{ app.get('node_apts', []) }}"
       retries: "{{ rpm_retries | default(3) }}"
