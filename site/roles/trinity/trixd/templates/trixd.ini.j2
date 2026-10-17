@@ -54,4 +54,5 @@ COMMAND = {{ trixd_service_command }}
 [PLUGINS]
 DIRECTORY = {{ trixd_root }}/daemon/plugins
 SITE_DIRECTORY = {{ trixd_site_plugins_dir }}
-ENABLED = {{ trixd_plugins | join(', ') }}
+ENABLED = {{ (trixd_plugins if 'slurm' in workload_manager
+              else trixd_plugins | reject('equalto', 'slurm') | list) | join(', ') }}

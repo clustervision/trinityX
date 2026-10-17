@@ -56,6 +56,10 @@ trixd_alertx_config_dir: '{{ trix_local }}/alertx/cli/config'
 trixd_ood_config_dir: '{{ trix_ood }}/3.0/config'
 trixd_ood_group: "{{ ood_apps_admin_group | default('admins') }}"
 
+# slurm is in this list but reaches trixd.ini only where slurm is the workload manager -
+# see the template. The plugin needs trinityx_config_slurm, which controller.yml installs
+# under that same condition, so enabling it everywhere gave a k3s cluster a plugin that
+# fails its render at every start-up and on every node change for a service it does not run.
 trixd_plugins:
   - luna
   - directory
