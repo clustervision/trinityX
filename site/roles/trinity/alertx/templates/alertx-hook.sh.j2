@@ -10,17 +10,26 @@ TRIXD_INI='{{ trix_local }}/trixd/node/config/trixd.ini'
 load_ini () {
     # One ini into the environment, each key as PREFIX_SECTION_KEY, so two files can be read
     # without one overwriting the other's account.
-    local file="$1" prefix="$2" section=""
-    while IFS='=' read -ra line; do
-        if [ ! "$(echo $line | grep -E '^(#|;)')" ] && [ "$line" ]; then
-            if [ "$(echo $line | grep '^\[')" ]; then
-                section=$(echo $line | grep -oE "[A-Z]+")
-            else
-                key=$(echo ${line[0]})
-                value=$(echo ${line[1]})
-                declare -gx "${prefix}${section}_${key}"="$value"
-            fi
-        fi
+    #
+    # A value is taken whole, after the first equals sign only: splitting on every one of
+    # them cut a password at the first it contained. Every expansion is quoted, or a value
+    # with an asterisk is replaced by the file names it matches. The read keeps a last line
+    # with no newline after it, which is otherwise dropped along with its key.
+    local file="$1" prefix="$2" section="" line key value
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+        case "$line" in
+            ''|'#'*|';'*) continue ;;
+            '['*']')
+                # The whole name between the brackets: a section with an underscore in it
+                # came back as two words, which declare then refused as an identifier.
+                section="$(echo "$line" | tr -d '[]')"
+                continue ;;
+        esac
+        case "$line" in *=*) ;; *) continue ;; esac
+        key="$(echo "${line%%=*}" | tr -d '[:space:]')"
+        value="$(echo "${line#*=}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+        [ "$key" ] && declare -gx "${prefix}${section}_${key}"="$value"
     done < "$file"
 }
 
