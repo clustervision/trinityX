@@ -111,8 +111,9 @@ function fetch_token {
     curl $INSECURE -X POST -H "Content-Type: application/json" -d "$json" -s "${SIGNIN_URL}" > /tmp/token.json
     valid=$(grep token /tmp/token.json)
     if [ "$valid" ]; then
-        token=$(cat /tmp/token.json | awk '{ print $2 }' | grep -oE '"(\S+)"')
-        token=$(echo "${token:1:-1}")
+        # Not split on whitespace: a token is found whether or not the answer has a space
+        # after the colon, and the two daemons do not agree about that.
+        token=$(sed -n 's/.*"token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/token.json)
         echo $token
     else
         >&2 cat /tmp/token.json
