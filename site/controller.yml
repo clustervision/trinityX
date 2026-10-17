@@ -549,10 +549,16 @@
       tags: monitoring, alertx
 
       # The slurm, genders and prometheus files it renders now have somewhere to go.
+      #
+      # Tagged with the roles that write those files as well as with its own name. Tagged
+      # only trixd, this pass was skipped by exactly the runs that make it necessary: a
+      # --tags config-slurm or config-genders run rewrites what trixd renders against, and
+      # a prometheus run reinstalls the directory its rule files live in, and trixd was
+      # then left serving what it rendered against the old state.
     - role: trinity/trixd
       trixd_restart_only: true
       when: trixd_enabled | default(True) | bool
-      tags: trixd
+      tags: trixd, config-slurm, config-genders, prometheus, monitoring
 
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"
