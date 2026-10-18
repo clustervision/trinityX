@@ -4,12 +4,13 @@
 # Before the first pack there is nothing to seed: wait, so the unit stays active.
 shopt -s nullglob
 FILES={{ trix_luna }}/files
-torrents=("$FILES"/*.torrent)
+{% raw %}torrents=("$FILES"/*.torrent)
 [ ${#torrents[@]} -gt 0 ] || exec sleep infinity
 
 exec /usr/bin/aria2c --summary-interval=600 --enable-dht=false --seed-ratio=100000.0 \
     --bt-seed-unverified=true --max-concurrent-downloads=${#torrents[@]} \
     -d"$FILES"/ --check-certificate=false "${torrents[@]}"
+{% endraw %}
 
 # other usefull options are:
 # --no-conf 
