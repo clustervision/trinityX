@@ -90,9 +90,10 @@
     - ood_repositories is defined
     - ansible_os_family == "RedHat"
 
-# URL downloads in apt_key/apt run with the target's python, which the
-# controller's ansible-core may not support (ubuntu 24/26). Fetch on the
-# controller and push through the connection, as the prometheus roles do.
+# NOTE: ugly, but unavoidable. apt_key url= and apt deb=<URL> download with
+# the target's python, and ansible-core 2.14 on the controller cannot download
+# with python 3.12+ (Ubuntu 24/26). So keys and .debs are fetched on the
+# controller and pushed in, as the prometheus roles do.
 - name: Install OOD apt repo keys
   ansible.builtin.apt_key:
     state: present

@@ -171,8 +171,10 @@
     - in_image
     - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
   block:
-    # A .deb URL is fetched on the controller: a download inside the image runs
-    # with the image's python, which the controller's ansible-core may not support.
+    # NOTE: ugly, but unavoidable. apt deb=<URL> downloads with the image's
+    # python, and ansible-core 2.14 on the controller cannot download with
+    # python 3.12+ (Ubuntu 24/26). So the .deb is fetched on the controller,
+    # copied into the image and installed from there.
     - name: Download .deb packages to the controller
       ansible.builtin.get_url:
         url: "{{ item.name }}"
