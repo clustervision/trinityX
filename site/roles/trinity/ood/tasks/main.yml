@@ -48,6 +48,18 @@
     - ansible_distribution_major_version in ood_os_minimum_versions
     - ansible_distribution_version != ansible_distribution_major_version
 
+# OSC publishes Open OnDemand per Debian/Ubuntu release; for any other release
+# there is no repository to install from, and apt fails much later and unclearly.
+- name: Verify Open OnDemand is published for this Debian/Ubuntu release
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_release in ood_supported_deb_releases
+    fail_msg: >-
+      Open OnDemand is not published for {{ ansible_distribution }} {{ ansible_distribution_version }}
+      ({{ ansible_distribution_release }}). Set enable_ood to false to build without the web portal.
+    success_msg: "Open OnDemand is published for {{ ansible_distribution }} {{ ansible_distribution_release }}"
+  when: ansible_os_family == "Debian"
+
 # The release RPM URL is written out for the airgap build to harvest, so it can
 # drift from ood_release, which is what decides the module streams.
 - name: Verify the Open OnDemand repository matches the release being installed
