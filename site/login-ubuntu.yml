@@ -4,10 +4,9 @@
 # This mirrors the structure of login-default.yml, but uses the Ubuntu
 # image creation/setup flow from compute-ubuntu.yml.
 #
-# Note: full login-default parity for Ubuntu still requires Ubuntu support in
-# the trinity/ood and trinity/slurm roles. Today this playbook renders the
-# Ubuntu login-image entrypoint, while the role-level OOD/slurm work remains
-# a follow-up.
+# Roles of the RedHat login setup that are RedHat-only and skipped for
+# Ubuntu (packages, pcs-modules, tunables, rdma-centos, openhpc, nscd) are
+# commented out in imports/trinity-ubuntu-login-setup.yml.
 
 - hosts: localhost
   pre_tasks:
@@ -18,6 +17,7 @@
     set_fact:
       # The Ubuntu release to build: 22 (jammy), 24 (noble) or 26 (resolute).
       # The codename is looked up from this number in trinity/image-create.
+      # 26 has no Open OnDemand release yet: build it with enable_ood: false.
       ubuntu_version: "{{ ubuntu_version | default('24') }}"
     tags: always
 
@@ -32,6 +32,24 @@
           'login-ubuntu-image' if ubuntu_version == '24'
           else 'login-ubuntu' ~ ubuntu_version ~ '-image'
         ) }}"
+    tags: always
+
+  - name: Verify if luna secret vault exists
+    ansible.builtin.stat:
+      path: "/trinity/local/etc/ssl/secret.key"
+    register: stat_secret_key
+    tags: always
+
+  - block:
+    - name: Import luna secret key
+      ansible.builtin.slurp:
+        src: "/trinity/local/etc/ssl/secret.key"
+      register: luna_secret_key_b64
+
+    - name: Set Luna secret key
+      ansible.builtin.set_fact:
+        luna_secret_key: "{{ luna_secret_key_b64['content'] | b64decode }}"
+    when: stat_secret_key.stat.exists
     tags: always
 
 - import_playbook: imports/trinity-ubuntu-image-create.yml
@@ -54,18 +72,12 @@
   vars:
     hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
     in_login_image: true
+    luna_secret_key: "{{ hostvars['localhost']['luna_secret_key'] }}"
   tags: build
 
-- hosts:
-    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
-  roles:
-    - role: trinity/slurm
-      slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-      slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
-      munge_conf_path: '{{ trix_shared }}/etc/munge'
-      enable_slurm_pam: true
-      when: "'slurm' in workload_manager "
-      tags: slurm
+# slurm runs inside imports/trinity-ubuntu-login-setup.yml with
+# enable_slurm_pam: false, as for RedHat: pam_slurm_adopt on a login node
+# would lock out every user without a running job.
 
 - hosts: controllers
   pre_tasks:
