@@ -36,8 +36,20 @@
     extra_args: "--upgrade"
   tags: install-only
 
+# Symlink '{{ trix_local }}/python/bin/trix-config-genders' to '{{ trix_local }}/sbin/trix-config-genders'
+- name: Symlink '{{ trix_local }}/python/bin/trix-config-genders' to '{{ trix_local }}/sbin/trix-config-genders'
+  ansible.builtin.file:
+    src: '{{ trix_local }}/python/bin/trix-config-genders'
+    dest: '{{ trix_local }}/sbin/trix-config-genders'
+    state: link
+
 # Add the managed block to the managed files
 - name: Fix structure of managed files
   include_tasks: managed_block.yml
   loop: "{{ scripts_managed_files }}"
   
+# not super elegant, but bullet-proof
+- name: Re-render genders file based on Luna info
+  shell: '/trinity/local/sbin/trix-config-genders -r'
+  ignore_errors: true
+  when: primary | default(True)
