@@ -165,6 +165,18 @@
   with_items: "{{ ssl_ca_cert_store }}"
   when: item.name == ansible_facts['os_family']
 
+# A login image signs its own certificates (the OOD portal) with the CA it
+# generated above, so it has to trust that CA next to the controller's.
+- name: Add login image CA certificate to default trust store
+  ansible.builtin.copy:
+    remote_src: true
+    src: '{{ ssl_ca_cert }}'
+    dest: '{{ item.location }}/login-{{ ssl_ca_cert | basename }}'
+  with_items: "{{ ssl_ca_cert_store }}"
+  when:
+    - in_login_image | default(False)
+    - item.name == ansible_facts['os_family']
+
 - name: Update certificate trust store
   shell: "{{ item.update_trust }}"
   changed_when: cert_copy.changed

@@ -25,6 +25,36 @@
         list_files: yes
       register: ood_luna_apps_temp_files
       changed_when: false
+      when: not in_login_image | default(False)
+      tags: install-only
+
+    # NOTE: ugly, but unavoidable. In an image, a URL download runs with the
+    # image's python, and ansible-core 2.14 on the controller cannot download
+    # with python 3.12+ (Ubuntu 24/26). So the login image gets the archive
+    # downloaded on the controller and pushed in.
+    - name: Download trinityx-ood custom apps to the controller for the login image
+      ansible.builtin.get_url:
+        url: "{{ ood_luna_apps_url }}"
+        dest: "/tmp/{{ ood_luna_apps_url | basename }}"
+      delegate_to: localhost
+      when: in_login_image | default(False)
+      tags: install-only
+
+    - name: Unpack trinityx-ood custom apps into the login image
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ ood_luna_apps_url | basename }}"
+        dest: "{{ ood_luna_apps_temp.path }}"
+        mode: u=rw,g=r,o=r,a-x+X
+        list_files: yes
+      register: ood_luna_apps_image_files
+      changed_when: false
+      when: in_login_image | default(False)
+      tags: install-only
+
+    - name: Use the login image unpack result
+      ansible.builtin.set_fact:
+        ood_luna_apps_temp_files: "{{ ood_luna_apps_image_files }}"
+      when: in_login_image | default(False)
       tags: install-only
 
     - name: Get base folder name

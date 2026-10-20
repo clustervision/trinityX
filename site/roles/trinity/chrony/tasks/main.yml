@@ -2,7 +2,7 @@
 # tasks file for chrony
 
 - name: Install chrony packages
-  yum:
+  ansible.builtin.package:
     name: "{{ chrony_packages }}"
     state: present
   retries: "{{ rpm_retries | default(3) }}"
@@ -12,7 +12,7 @@
 - name: Update chrony configuration file
   template:
     src: chrony.conf.j2
-    dest: /etc/chrony.conf
+    dest: "{{ chrony_conf_path }}"
     owner: root
     group: root
     mode: 0644
@@ -20,11 +20,11 @@
 
 - name: Enable chrony service
   systemd:
-    name: chronyd
+    name: "{{ chrony_service }}"
     enabled: 'yes'
 
 - name: Start chrony service
   ansible.builtin.systemd:
-    name: chronyd
+    name: "{{ chrony_service }}"
     state: started
   when: not in_image

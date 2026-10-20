@@ -1,14 +1,48 @@
 ---
 # tasks file for environment-modules
 
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_distribution }}.yaml"
+    - "{{ ansible_os_family }}.yaml"
+  no_log: true
+  ignore_errors: true
+  when: not is_airgap | default(False)
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file. Airgap.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "airgap/{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "airgap/{{ ansible_distribution }}.yaml"
+    - "airgap/{{ ansible_os_family }}.yaml"
+    - "airgap/main.yaml"
+  no_log: true
+  ignore_errors: true
+  when: is_airgap | default(False)
+
+# The next two tasks are separated because of legacy: enablerepo does not work with Ubuntu/Debian
 - name: Install environment module packages
-  yum:
+  ansible.builtin.package:
     name: '{{ envmodules_packages }}'
     state: present
     enablerepo:
       - powertools
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  when: ansible_os_family == 'RedHat'
+  tags: install-only
+
+- name: Install environment module packages
+  ansible.builtin.package:
+    name: '{{ envmodules_packages }}'
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  when: ansible_os_family == 'Debian'
   tags: install-only
 
 - name: Install profile for modules
