@@ -24,11 +24,9 @@
   ignore_errors: true
   when: is_airgap | default(False)
 
-- debug:
-    msg: "Hello: {{ envmodules_packages }} {{ ansible_os_family  }} {{ ansible_distribution }}  {{ is_airgap }}"
-
+# The next two tasks are separated because of legacy: enablerepo does not work with Ubuntu/Debian
 - name: Install environment module packages
-  yum:
+  ansible.builtin.package:
     name: '{{ envmodules_packages }}'
     state: present
     enablerepo:
