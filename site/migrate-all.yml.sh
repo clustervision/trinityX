@@ -7,9 +7,11 @@
 #   - drop variables no longer present in all.yml.example;
 #   - for booleans, suggest/use the all.yml.example value;
 #   - for strings, suggest/use the all.yml value when present;
-#   - for trix_version, suggest/use the all.yml.example value;
-#   - for the firewall interface/port lists and the DNS forwarders, suggest/use
-#     the all.yml value when present (they describe the deployed cluster);
+#   - trix_version is always taken from all.yml.example and never prompted;
+#   - for the firewall interface/port lists, suggest/use the all.yml value when
+#     present (they describe the deployed cluster);
+#   - for the network settings, the DNS forwarders and the user names/passwords,
+#     keep the all.yml block verbatim when present, without prompting;
 #   - keep comments/order and the current yml check marker from all.yml.example.
 # Boolean prompts accept yes/y/true and no/n/false (any case) and re-ask on any
 # other answer.
@@ -306,10 +308,18 @@ is_authoritative_key() {
 # through the normal suggest/prompt path with all.yml as the source.
 FIREWALL_ALL_YML_KEYS="firewalld_public_interfaces firewalld_trusted_interfaces firewalld_public_tcp_ports firewalld_public_udp_ports"
 
-# DNS forwarders (the cluster's nameservers) likewise come from the deployed
-# cluster (TRIX-1905). This is a multi-line block list, so the whole block is
-# taken from all.yml rather than offered for inline editing.
-NAMESERVER_ALL_YML_KEYS="trix_dns_forwarders"
+# Network settings, the DNS forwarders and user names/passwords describe the
+# deployed cluster; their whole block is kept from all.yml, without a prompt.
+CLUSTER_ALL_YML_KEYS="trix_domain trix_external_fqdn trix_login_fqdn resolv_search_domains \
+trix_dns_forwarders \
+trix_cluster_net trix_cluster_netprefix trix_cluster_dhcp_start trix_cluster_dhcp_end \
+trix_infiniband_net trix_infiniband_netprefix trix_bmc_net trix_bmc_netprefix \
+trix_ctrl1_ip trix_ctrl1_bmcip trix_ctrl1_heartbeat_ip trix_ctrl1_hostname \
+trix_ctrl2_ip trix_ctrl2_bmcip trix_ctrl2_heartbeat_ip trix_ctrl2_hostname \
+trix_ctrl_ip trix_ctrl_hostname \
+fence_ipmilan_login fence_ipmilan_passwd luna_username luna_password \
+luna_bmcsetup_user luna_bmcsetup_password luna_redfish_user luna_redfish_password \
+easybuild_user"
 
 key_in_list() {
     local wanted=$1
@@ -325,8 +335,8 @@ is_firewall_key() {
     key_in_list "$1" "$FIREWALL_ALL_YML_KEYS"
 }
 
-is_nameserver_key() {
-    key_in_list "$1" "$NAMESERVER_ALL_YML_KEYS"
+is_cluster_key() {
+    key_in_list "$1" "$CLUSTER_ALL_YML_KEYS"
 }
 
 # Normalise a boolean answer. Accepts yes/y/true and no/n/false in any case;
@@ -473,9 +483,9 @@ while IFS= read -r key <&3; do
     if [ -f "$old_block" ]; then
         old_value=$(first_value "$old_block")
         example_value=$(first_value "$example_block")
-        if is_nameserver_key "$key"; then
-            # Multi-line block list: keep the deployed cluster's forwarders
-            # verbatim; comments still come from all.yml.example around it.
+        if is_cluster_key "$key"; then
+            # Keep the deployed cluster's block verbatim; comments still come
+            # from all.yml.example around it.
             cp -- "$old_block" "$new_block"
             if ! diff -q -- "$old_block" "$example_block" >/dev/null 2>&1; then
                 printf '%s\n' "$key" >> "$CHANGED_KEYS"
@@ -499,7 +509,7 @@ while IFS= read -r key <&3; do
             if [ "$old_value" != "$example_value" ]; then
                 printf '%s\n' "$key" >> "$CHANGED_KEYS"
                 write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
-                if should_prompt; then
+                if should_prompt && [ "$key" != "trix_version" ]; then
                     queue_prompt "Changed option" "$key" "$old_block" "$suggested" "$source" "$kind"
                 fi
             else
@@ -512,7 +522,7 @@ while IFS= read -r key <&3; do
             suggested=$(suggested_value "$key" "$kind" "" "$example_block")
             source=$(suggestion_source "$key" "$kind" "")
             write_value_with_example_comments "$key" "$suggested" "$example_block" "$new_block"
-            if should_prompt; then
+            if should_prompt && [ "$key" != "trix_version" ]; then
                 queue_prompt "New option" "$key" "" "$suggested" "$source" "$kind"
             fi
         else
