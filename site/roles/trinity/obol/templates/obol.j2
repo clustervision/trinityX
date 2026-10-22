@@ -169,12 +169,12 @@ class Obol:
 
     def member_serializer(self, values):
         """Serializer for LDAP member fields"""
-        serialized_values = [f"uid={v},ou=People,{self.base_dn}".encode("utf-8") for v in values]
+        serialized_values = [f"uid={v},{self.users_dn}".encode("utf-8") for v in values]
         return serialized_values
 
     def member_of_serializer(self, values):
         """Serializer for LDAP memberOf fields"""
-        serialized_values = [f"cn={v},ou=Group,{self.base_dn}".encode("utf-8") for v in values]
+        serialized_values = [f"cn={v},{self.groups_dn}".encode("utf-8") for v in values]
         return serialized_values
 
 
@@ -214,12 +214,14 @@ class Obol:
     @property
     def users_dn(self):
         """Returns the users DN"""
-        return f"ou=People,{self.base_dn}"
+        user_ou = self.config.get("ldap", "user_ou")
+        return f"ou={user_ou},{self.base_dn}"
 
     @property
     def groups_dn(self):
         """Returns the groups DN"""
-        return f"ou=Group,{self.base_dn}"
+        group_ou = self.config.get("ldap", "group_ou")
+        return f"ou={group_ou},{self.base_dn}"
 
     @classmethod
     def _make_secret(cls, password):
@@ -477,7 +479,7 @@ class Obol:
                 create_group = True
 
         # Add the user
-        dn = f"uid={username},ou=People,{self.base_dn}"
+        dn = f"uid={username},{self.users_dn}"
         cn = cn or username
         sn = sn or username
         home = home or f"{self.config.get('users', 'home')}/{username}"
@@ -588,7 +590,7 @@ class Obol:
                 )
 
         # Add group
-        group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
+        group_dn = f"cn={groupname},{self.groups_dn}"
         group_record = [
 {% if obol_use_ds389 %}
             ("objectclass", [b"top", b"posixGroup", b"groupOfUniqueNames"]),
@@ -614,14 +616,14 @@ class Obol:
             raise LookupError(f"User '{username}' does not exist")
 
         # Delete the user
-        user_dn = f"uid={username},ou=People,{self.base_dn}"
+        user_dn = f"uid={username},{self.users_dn}"
         self.conn.delete_s(user_dn)
 
         # Delete the default group if it exists and has no other members
         try:
             group = self.group_show(username)
             if len(group.get("{{ member }}", [])) == 0:
-                group_dn = f"cn={group['cn']},ou=Group,{self.base_dn}"
+                group_dn = f"cn={group['cn']},{self.groups_dn}"
                 self.conn.delete_s(group_dn)
         except LookupError:
             pass
@@ -639,7 +641,7 @@ class Obol:
         if len(group.get("{{ member }}", [])) > 0:
             raise ValueError(f"Group '{groupname}' has members")
         # Delete the group
-        group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
+        group_dn = f"cn={groupname},{self.groups_dn}"
         self.conn.delete_s(group_dn)
 
     ###### Modify
@@ -766,7 +768,7 @@ class Obol:
             ]
 
         # Modify the user in LDAP
-        dn = f"uid={username},ou=People,{self.base_dn}"
+        dn = f"uid={username},{self.users_dn}"
         self.conn.modify_s(dn, mod_attrs)
 
         if primary_group_changed:
@@ -818,7 +820,7 @@ class Obol:
             ]
 
         # Modify the group
-        group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
+        group_dn = f"cn={groupname},{self.groups_dn}"
         self.conn.modify_s(group_dn, group_mod_attrs)
         self.group_addusers(groupname, users_to_add)
         self.group_delusers(groupname, users_to_del)
@@ -865,11 +867,11 @@ class Obol:
                 (
                     ldap.MOD_ADD,
                     "{{ member }}",
-                    f"uid={name},ou=People,{self.base_dn}".encode("utf-8"),
+                    f"uid={name},{self.users_dn}".encode("utf-8"),
                 )
             )
 
-        group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
+        group_dn = f"cn={groupname},{self.groups_dn}"
         self.conn.modify_s(group_dn, mod_attrs)
 
     def group_delusers(self, groupname, usernames, warn=False, **kwargs):
@@ -897,11 +899,11 @@ class Obol:
                     (
                         ldap.MOD_DELETE,
                         "{{ member }}",
-                        f"uid={user['uid']},ou=People,{self.base_dn}".encode("utf-8"),
+                        f"uid={user['uid']},{self.users_dn}".encode("utf-8"),
                     )
                 )
 
-        group_dn = f"cn={groupname},ou=Group,{self.base_dn}"
+        group_dn = f"cn={groupname},{self.groups_dn}"
         self.conn.modify_s(group_dn, mod_attrs)
 
     @show_output
@@ -975,6 +977,8 @@ def run():
     # Parser
     parser = argparse.ArgumentParser(prog="obol", description="Manage Cluster Users.")
 
+    # Config file
+    parser.add_argument("--config", "-c", metavar="CONFIG_FILE", default="/etc/obol.conf", help="Path to config file")
     # LDAP bind parameters override
     parser.add_argument("--bind-dn", "-D", metavar="BIND_DN", help="LDAP bind DN")
     parser.add_argument(
@@ -982,6 +986,8 @@ def run():
     )
     parser.add_argument("--host", "-H", metavar="HOST", help="LDAP host")
     parser.add_argument("--base-dn", "-b", metavar="BASE_DN", help="LDAP base DN")
+    parser.add_argument("--user-ou", "-U", metavar="USER_OU", help="LDAP user OU")
+    parser.add_argument("--group-ou", "-G", metavar="GROUP_OU", help="LDAP group OU")
     # Output format
     parser.add_argument(
         "--json",
@@ -1167,7 +1173,7 @@ def run():
         logging.info(f"Executing command '{logged_cmd}'")
 
         args = vars(parser.parse_args())
-        obol = Obol("/etc/obol.conf", overrides=args)
+        obol = Obol(args.get("config", "/etc/obol.conf"), overrides=args)
 
         method_name = f"{args['command']}_{ args.get('subcommand', '')}"
         function = getattr(obol, method_name, None)
@@ -1196,3 +1202,4 @@ def run():
 
 if __name__ == "__main__":
     run()
+
