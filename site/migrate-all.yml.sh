@@ -202,9 +202,40 @@ is_key_in_example() {
     awk -v wanted="$wanted" 'BEGIN { found=1 } $0 == wanted { found=0; exit } END { exit found }' "$EXAMPLE_KEYS"
 }
 
+# awk function: index of the whitespace before a trailing YAML comment in a
+# value, or 0. A "#" inside a quoted scalar is part of the value.
+YAML_COMMENT_AWK='
+    function comment_at(s,    sq, dq, q, c, i, n, start) {
+        sq = sprintf("%c", 39)
+        dq = sprintf("%c", 34)
+        n = length(s)
+        start = 1
+        i = match(s, /[^[:space:]]/)
+        q = (i > 0) ? substr(s, i, 1) : ""
+        if (q == sq || q == dq) {
+            for (i++; i <= n; i++) {
+                c = substr(s, i, 1)
+                if (q == dq && c == "\\") {
+                    i++
+                } else if (c == q) {
+                    if (q == sq && substr(s, i + 1, 1) == sq) {
+                        i++
+                    } else {
+                        break
+                    }
+                }
+            }
+            # An unterminated quote keeps the plain-scalar rule.
+            if (i <= n) start = i + 1
+        }
+        if (match(substr(s, start), /[[:space:]]+#/)) return start + RSTART - 1
+        return 0
+    }
+'
+
 block_kind() {
     local block=$1
-    awk '
+    awk "$YAML_COMMENT_AWK"'
         BEGIN {
             sq = sprintf("%c", 39)
             dq = sprintf("%c", 34)
@@ -212,7 +243,7 @@ block_kind() {
         NR == 1 {
             line = $0
             sub(/^[A-Za-z_][A-Za-z0-9_]*:[[:space:]]*/, "", line)
-            sub(/[[:space:]]+#.*$/, "", line)
+            if ((c = comment_at(line)) > 0) line = substr(line, 1, c - 1)
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
             if (line == "true" || line == "false" || line == "True" || line == "False" || line == "TRUE" || line == "FALSE") {
                 print "bool"
@@ -233,11 +264,11 @@ block_kind() {
 
 first_value() {
     local block=$1
-    awk '
+    awk "$YAML_COMMENT_AWK"'
         NR == 1 {
             line = $0
             sub(/^[A-Za-z_][A-Za-z0-9_]*:[[:space:]]*/, "", line)
-            sub(/[[:space:]]+#.*$/, "", line)
+            if ((c = comment_at(line)) > 0) line = substr(line, 1, c - 1)
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
             print line
         }
@@ -274,14 +305,15 @@ write_value_with_example_comments() {
     local example_block=$3
     local output_block=$4
 
-    awk -v key="$key" -v value="$value" '
+    # Through the environment: awk -v would expand backslash escapes.
+    MIGRATE_VALUE=$value awk -v key="$key" "$YAML_COMMENT_AWK"'
         NR == 1 {
             comment = ""
-            line = $0
-            if (match(line, /[[:space:]]+#/)) {
-                comment = substr(line, RSTART)
+            line = substr($0, index($0, ":") + 1)
+            if ((c = comment_at(line)) > 0) {
+                comment = substr(line, c)
             }
-            print key ": " value comment
+            print key ": " ENVIRON["MIGRATE_VALUE"] comment
             next
         }
         { print }
