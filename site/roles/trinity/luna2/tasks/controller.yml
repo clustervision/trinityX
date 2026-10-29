@@ -108,7 +108,7 @@
 
 - name: Report a kept Luna database
   fail:
-    msg: "{{ trix_luna }}/daemon/common/luna.db exists and is kept. Run with -e override=yes to back it up and start with a new database."
+    msg: "{{ trix_luna }}/daemon/common/luna.db exists and is kept. Run with -e override=yes --tags luna to back it up and start with a new, empty database."
   ignore_errors: true
   when:
     - primary | default(True)
@@ -684,7 +684,7 @@
       options: 'op monitor interval=29s --group Trinity-stack'
       state: present
     tags: pcs
-    when: pcs_reapply or 'luna2-master' not in pcs_existing_rsc
+    when: pcs_reapply | default(True) or 'luna2-master' not in pcs_existing_rsc
   when:
     - ha | default(False)
     - primary | default(True)

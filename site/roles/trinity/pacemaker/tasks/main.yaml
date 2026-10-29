@@ -96,7 +96,7 @@
 
 - name: Report a kept corosync.conf
   fail:
-    msg: "/etc/corosync/corosync.conf exists and is left as it is. Run with -e override=yes to rewrite it."
+    msg: "/etc/corosync/corosync.conf exists and is left as it is. Run with -e override=yes --tags pacemaker to rewrite it."
   ignore_errors: true
   when:
     - not override | default(False) | bool
@@ -192,6 +192,7 @@
   command: cibadmin -Q
   register: pcs_cib
   changed_when: false
+  no_log: true
   check_mode: false
   until: pcs_cib.rc == 0
   retries: 10
@@ -207,7 +208,7 @@
 - name: Verify that the pacemaker configuration was read
   assert:
     that: pcs_existing_rsc | length > 0
-    fail_msg: "A previous run completed, but the cluster lists no resources. Refusing to re-create them; check 'pcs status' or run with -e override=yes."
+    fail_msg: "A previous run completed, but the cluster lists no resources. Refusing to re-create them; check 'pcs status' or run with -e override=yes --tags pacemaker."
   when:
     - playbook_done_prior | default(False)
     - not pcs_reapply
@@ -215,7 +216,7 @@
 
 - name: Report kept pacemaker resources and settings
   fail:
-    msg: "{{ pcs_existing_rsc | length }} existing pacemaker resources and their settings are left as they are. Run with -e override=yes to re-apply them."
+    msg: "{{ pcs_existing_rsc | length }} existing pacemaker resources and their settings are left as they are. Run with -e override=yes and the tags of the components concerned to re-apply them."
   ignore_errors: true
   tags: always
   when:
