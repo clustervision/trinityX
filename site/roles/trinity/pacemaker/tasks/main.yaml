@@ -91,7 +91,16 @@
   template:
     src: "corosync.conf.j2"
     dest: "/etc/corosync/corosync.conf"
+    force: "{{ override | default(False) | bool }}"
   register: corosync_config
+
+- name: Report a kept corosync.conf
+  fail:
+    msg: "/etc/corosync/corosync.conf exists and is left as it is. Run with -e override=yes to rewrite it."
+  ignore_errors: true
+  when:
+    - not override | default(False) | bool
+    - not corosync_config.changed
 
 - name: Restart corosync
   ansible.builtin.systemd:
