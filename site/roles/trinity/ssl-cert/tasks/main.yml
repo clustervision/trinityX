@@ -99,6 +99,13 @@
         -set_serial {{ ansible_date_time.epoch }}
     args:
       creates: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
+    register: ssl_cert_signed
+
+  - name: Report a kept certificate
+    fail:
+      msg: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt exists and is kept. Run with -e override=yes to back it up and create a new certificate."
+    ignore_errors: true
+    when: ssl_cert_signed is not changed
 
   - name: Create symlink for floating H/A controller
     file:

@@ -100,6 +100,20 @@
     - override | default(False)
     - primary | default(True)
 
+- name: Check for a kept Luna database
+  stat:
+    path: '{{ trix_luna }}/daemon/common/luna.db'
+  register: luna_daemon_db_kept
+  when: primary | default(True)
+
+- name: Report a kept Luna database
+  fail:
+    msg: "{{ trix_luna }}/daemon/common/luna.db exists and is kept. Run with -e override=yes to back it up and start with a new database."
+  ignore_errors: true
+  when:
+    - primary | default(True)
+    - luna_daemon_db_kept.stat.exists
+
 # ----------------------------------------------------
 
 - name: Get python libdir

@@ -202,6 +202,20 @@
   when:
     - override | default(False)
     - primary | default(True)
+
+- name: Check for kept OpenLDAP data
+  stat:
+    path: '{{ openldap_server_dir_path }}'
+  register: openldap_server_dir_kept
+  when: primary | default(True)
+
+- name: Report kept OpenLDAP data
+  fail:
+    msg: "{{ openldap_server_dir_path }} exists and is kept. Run with -e override=yes to back it up and start with new LDAP data."
+  ignore_errors: true
+  when:
+    - primary | default(True)
+    - openldap_server_dir_kept.stat.exists
 # ----------------------------------------------------------------
 
 - name: Enable OpenLDAP service

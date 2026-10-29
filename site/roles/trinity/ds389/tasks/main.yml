@@ -176,6 +176,14 @@
   register: ds389_created
   when: primary | default(True)
 
+- name: Report kept 389 Directory Server data
+  fail:
+    msg: "The 389 Directory Server instance and {{ ds389_server_dir_path }} exist and are kept. Run with -e override=yes to back them up and create a new instance."
+  ignore_errors: true
+  when:
+    - primary | default(True)
+    - ds389_created is not changed
+
 - name: Create DS389 log directory for non-primary
   file:
     path: /var/log/dirsrv/slapd-local
