@@ -137,6 +137,7 @@
           monitor interval=67s OCF_CHECK_LEVEL=10 --group=Trinity-fs-{{ item.mount | replace("/","_") }}'
       state: present
     loop: "{{ shared_fs_lvm_partitions }}"
+    when: pcs_reapply or ('trinity-fs-' ~ (item.mount | replace("/","_"))) not in pcs_existing_rsc
 
   - name: Add pacemaker order constraint - Trinity-lvm then Trinity-fs
     pcs_constraint_order:

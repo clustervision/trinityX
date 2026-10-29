@@ -407,7 +407,9 @@
       resource_type: 'systemd:slapd'
       options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
       state: present
-    when: primary | default(True)
+    when:
+      - primary | default(True)
+      - pcs_reapply or 'openldap' not in pcs_existing_rsc
   when: ha | default(False)
   tags: pcs
 

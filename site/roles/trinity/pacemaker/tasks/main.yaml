@@ -187,6 +187,42 @@
     state: started
     enabled: true
 
+# Existing resources and settings are left alone; -e override=yes re-applies them (TRIX-2327)
+- name: Read the existing pacemaker configuration
+  command: cibadmin -Q
+  register: pcs_cib
+  changed_when: false
+  check_mode: false
+  until: pcs_cib.rc == 0
+  retries: 10
+  delay: 15
+  tags: always
+
+- name: List the existing pacemaker resources
+  set_fact:
+    pcs_reapply: "{{ override | default(False) | bool }}"
+    pcs_existing_rsc: "{{ pcs_cib.stdout | regex_findall('<(?:primitive|group|clone|master|bundle)\\s[^>]*?\\bid=\"([^\"]+)\"') }}"
+  tags: always
+
+- name: Verify that the pacemaker configuration was read
+  assert:
+    that: pcs_existing_rsc | length > 0
+    fail_msg: "A previous run completed, but the cluster lists no resources. Refusing to re-create them; check 'pcs status' or run with -e override=yes."
+  when:
+    - playbook_done_prior | default(False)
+    - not pcs_reapply
+  tags: always
+
+- name: Report kept pacemaker resources and settings
+  fail:
+    msg: "{{ pcs_existing_rsc | length }} existing pacemaker resources and their settings are left as they are. Run with -e override=yes to re-apply them."
+  ignore_errors: true
+  tags: always
+  when:
+    - primary
+    - not pcs_reapply
+    - pcs_existing_rsc | length > 0
+
   # this should calm pcs down, trying to failover to this incomplete non primary node....
 - name: set property 'standby' to 'on' for non primary node (standby)
   pcs_property:
@@ -194,7 +230,9 @@
     node: '{{ ansible_hostname }}'
     value: 'on'
   ignore_errors: true
-  when: not primary
+  when:
+    - not primary
+    - pcs_reapply or not playbook_done_prior | default(False)
 
 # ---------------------- resources and config ----------------
 
@@ -204,6 +242,7 @@
       name: '{{ item.key }}'
       value: '{{ item.value }}'
     with_dict: '{{ pacemaker_properties }}'
+    when: pcs_reapply or not playbook_done_prior | default(False)
 
   - name: Setup pacemaker resource defaults
     command: pcs resource defaults '{{ item }}'
@@ -212,6 +251,7 @@
     retries: 10
     delay: 15
     with_items: '{{ pacemaker_resource_defaults }}'
+    when: pcs_reapply or not playbook_done_prior | default(False)
 
   - name: Add floating IP resource
     pcs_resource:
@@ -219,6 +259,7 @@
       resource_type: 'ocf:heartbeat:IPaddr2'
       options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Trinity'
       state: present
+    when: pcs_reapply or 'trinity-ip' not in pcs_existing_rsc
 
   - name: Add external floating IP resource
     pcs_resource:
@@ -233,6 +274,7 @@
       - trix_ctrl_external_netprefix != ''
       - trix_ctrl_external_nic is defined
       - trix_ctrl_external_nic != ''
+      - pcs_reapply or 'trinity-ip-external' not in pcs_existing_rsc
   when: primary
 
 # --------------------- fencing ----------------------------
@@ -259,6 +301,7 @@
       with_together:
         - '{{ all_ctrl_hostname }}'
         - '{{ all_ctrl_bmcip }}'
+      when: pcs_reapply or ('fence-' ~ (item.0)) not in pcs_existing_rsc
 
     - name: Add fencing location constraints
       pcs_constraint_location:

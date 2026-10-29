@@ -335,6 +335,7 @@
           clone-max={{ all_ctrl_hostname|length }} clone-node-max=1 notify=true'
       state: present
     loop: "{{ drbd_fs_disks }}"
+    when: pcs_reapply or ('DRBD-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
   #--------------------------------------------
 
@@ -346,7 +347,9 @@
       options: 'startdelay=10 stopdelay=3 mondelay=20 op monitor timeout=40 --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype == 'lvm'
+    when:
+      - item.fstype == 'lvm'
+      - pcs_reapply or ('wait-for-device-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
   - name: Add pacemaker resource wait-for-device
     pcs_resource:
@@ -356,7 +359,9 @@
       options: 'startdelay=10 stopdelay=3 mondelay=20 op monitor timeout=40 --group=Trinity-zfs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype == 'zfs'
+    when:
+      - item.fstype == 'zfs'
+      - pcs_reapply or ('wait-for-device-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
   - name: Add pacemaker resource wait-for-device
     pcs_resource:
@@ -369,6 +374,7 @@
     when: 
       - item.fstype != 'lvm'
       - item.fstype != 'zfs'
+      - pcs_reapply or ('wait-for-device-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
   #--------------------------------------------
 
@@ -387,7 +393,9 @@
           --group Trinity-lvm-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype == 'lvm'
+    when:
+      - item.fstype == 'lvm'
+      - pcs_reapply or ('trinity-lvm-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
   - name: Add pacemaker ZFS resource trinity-zfs
     pcs_resource:
@@ -397,7 +405,9 @@
       options: 'pool={{ item.name | replace("/","_") }} --group Trinity-zfs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype == 'zfs'
+    when:
+      - item.fstype == 'zfs'
+      - pcs_reapply or ('trinity-zfs-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
 #pcs resource create yournewlv_lv Filesystem device=/dev/yournewvg/lv_yournewlv  directory=/some/path/to/lv/mount fstype=ext4  --group whateveryourclusternameis
 #pcs resource create Newlvvdb-fs ocf:heartbeat:Filesystem device=/dev/newvdb/Newlvvdb directory=/newfs fstype=xfs --group HA-LVM --after newvdb-vg
@@ -417,6 +427,7 @@
     when: 
       - item.fstype != 'lvm'
       - item.fstype != 'zfs'
+      - pcs_reapply or ('trinity-fs-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
   #--------------------------------------------
 
@@ -427,7 +438,9 @@
       options: 'op monitor interval=183s --group=Trinity-lvm-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype == 'lvm'
+    when:
+      - item.fstype == 'lvm'
+      - pcs_reapply or ('lvm-ready-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
   - name: Add pacemaker resource zfs-ready
     pcs_resource:
@@ -436,7 +449,9 @@
       options: 'op monitor interval=183s --group=Trinity-zfs-{{ item.name | replace("/","_") }}'
       state: present
     loop: "{{ drbd_fs_disks }}"
-    when: item.fstype == 'zfs'
+    when:
+      - item.fstype == 'zfs'
+      - pcs_reapply or ('zfs-ready-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
   - name: Add pacemaker resource fs-ready
     pcs_resource:
@@ -448,6 +463,7 @@
     when: 
       - item.fstype != 'lvm'
       - item.fstype != 'zfs'
+      - pcs_reapply or ('fs-ready-' ~ (item.name | replace("/","_"))) not in pcs_existing_rsc
 
   #--------------------------------------------
 
@@ -457,6 +473,7 @@
       resource_type: 'ocf:pacemaker:Dummy'
       options: 'op monitor interval=183s --group=Trinity-stack'
       state: present
+    when: pcs_reapply or 'trinity-stack-ready' not in pcs_existing_rsc
 
   #--------------------------------------------
 
