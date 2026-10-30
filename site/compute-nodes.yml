@@ -1,0 +1,78 @@
+---
+#
+# Applies the compute setup to running nodes, without a reboot. Nothing here
+# creates, registers or packs an image, so a run cannot change one.
+#
+#   ansible-playbook -i hosts -i live-nodes compute-nodes.yml -e hostlist=live
+#   ansible-playbook -i hosts -i live-nodes compute-nodes.yml -e hostlist=live -e node_os=ubuntu
+#
+# The inventory needs the controllers as well as the nodes, so pass site/hosts
+# alongside the node inventory; see site/live-nodes.example for the node side.
+#
+- hosts: all
+  gather_facts: false
+  tasks:
+  - name: Mark this run as a run on live nodes
+    set_fact:
+      on_node: true
+      trix_facts_file: '{{ trix_images }}/node-facts.dat'
+    tags: always
+
+- hosts: controllers
+  pre_tasks:
+  - name: Kick off with init
+    include_role:
+      name: trinity/init
+    tags: always
+
+  - fail:
+      msg: "This playbook should only be run on the active controller"
+    when:
+      - ha | default(False)
+      - not primary | default(False)
+    tags: always
+
+  roles:
+  - role: trinity/lock-check
+    tags: always
+
+  - role: trinity/ldap-backend-selector
+    when: enable_authentication|default(True)
+    tags: always
+
+  - role: ansible/write_facts
+    tags: always
+
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+  tags: live-nodes-ctrl
+
+- import_playbook: imports/trinity-redhat-image-setup.yml
+  when: node_os | default('redhat') == 'redhat'
+
+- import_playbook: imports/trinity-ubuntu-image-setup.yml
+  when: node_os | default('redhat') == 'ubuntu'
+
+- import_playbook: imports/trinity-opensuse-image-setup.yml
+  when: node_os | default('redhat') == 'opensuse'
+
+- hosts: '{{ hostlist }}'
+  roles:
+  - role: trinity/slurm
+    slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+    slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+    munge_conf_path: '{{ trix_shared }}/etc/munge'
+    when:
+      - "'slurm' in workload_manager"
+      - node_os | default('redhat') != 'opensuse'  # as in compute-opensuse.yml
+    tags: slurm
+
+- hosts: controllers
+  gather_facts: false
+  tasks:
+  - name: Remove the staged facts
+    file:
+      path: '{{ trix_facts_file }}'
+      state: absent
+    tags: always

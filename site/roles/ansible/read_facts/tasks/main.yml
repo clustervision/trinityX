@@ -2,6 +2,15 @@
 
 # running inside chroot !!
 
+# A live node is handed the facts the controller staged for it; an image already
+# has them inside it.
+- name: Copy the staged facts to the node
+  copy:
+    src: "{{ trix_facts_file }}"
+    dest: /facts.dat
+    mode: '0600'
+  when: on_node | default(False)
+
 - block:
   - name: Read facts
     slurp:
@@ -98,5 +107,5 @@
       state: absent
     when: read_facts_cleanup | default(True)
 
-  when: ansible_connection is search("chroot")
+  when: ansible_connection is search("chroot") or on_node | default(False)
 

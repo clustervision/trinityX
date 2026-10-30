@@ -164,13 +164,13 @@
       delay: "{{ rpm_delay | default(15) }}"
       tags: install-only
   when:
-    - in_image
+    - in_image or on_node | default(False)
     - ansible_facts['os_family'] == "RedHat"
 
 
 - name: Install APT packages on controller if required
   when:
-    - in_image
+    - in_image or on_node | default(False)
     - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
   block:
     # NOTE: ugly, but unavoidable. apt deb=<URL> downloads with the image's

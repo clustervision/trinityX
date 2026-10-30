@@ -1,14 +1,5 @@
 ---
 
-- name: Get image path
-  set_fact:
-    image_path: "{{ trix_images }}/{{ image_name }}"
-
-- name: Create dir for compute image
-  file:
-    name: "{{ image_path }}"
-    state: directory
-
 - name: Set facts
   set_fact:
     data:
@@ -31,9 +22,15 @@
       ag_server: "{{ ag_server | default(trix_ctrl_hostname) }}"
       playbook_done_prior: "{{ playbook_done_prior | default(False) }}"
 
+- name: Create the directory for the facts file
+  file:
+    name: "{{ trix_facts_file | dirname }}"
+    state: directory
+
 - name: Create facts file
   copy:
-    dest: "{{ image_path }}/facts.dat"
+    dest: "{{ trix_facts_file }}"
     content: "{{ data }}"
+    mode: '0600'
 
 
