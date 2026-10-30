@@ -32,7 +32,7 @@
 
 - import_playbook: imports/trinity-opensuse-image-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['image_name'] ~ '.osimages.luna' if 'osimages_luna' in groups else 'all:!controllers' }}"
 
 - hosts:
     - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
@@ -53,5 +53,5 @@
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
-      when: not on_node | default(False)
+      when: not on_node | default(False) | bool
       tags: pack-images

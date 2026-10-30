@@ -61,9 +61,7 @@
   - role: trinity/image-download
     image_download_distribution: "{{ alternative_distribution }}"
     image_download_source: "{{ alternative_image_source|default('base') }}"
-    when:
-      - download_base_image is defined
-      - not on_node | default(False)
+    when: download_base_image is defined and not on_node | default(False) | bool
     tags: image-create, install-only
 
   - role: ansible/write_facts
@@ -71,14 +69,14 @@
 
   - role: trinity/image-create
     image_create_distribution: 'opensuse'
-    when: not on_node | default(False)
+    when: not on_node | default(False) | bool
     tags: image-create, install-only
 
   - role: luna/osimage-create
     luna_image_path: "{{ trix_images }}/{{ image_name }}"
     luna_image_name: "{{ image_name }}"
     luna_image_distribution: OpenSuse
-    when: not on_node | default(False)
+    when: not on_node | default(False) | bool
     tags: image-create
 
   environment:
@@ -145,12 +143,12 @@
     luna_image_path: "{{ trix_images }}/{{ image_name }}"
     luna_image_name: "{{ image_name }}"
     luna_image_distribution: OpenSuse
-    when: not on_node | default(False)
+    when: not on_node | default(False) | bool
 
   - role: luna/group-create
     luna_image_name: "{{ image_name }}"
     luna_image_distribution: OpenSuse
-    when: not on_node | default(False)
+    when: not on_node | default(False) | bool
 
   environment:
     no_proxy: "{{ ['.' ~ trix_domain, trix_ctrl_ip, trix_external_fqdn, trix_ctrl_hostname, trix_ctrl1_hostname, trix_ctrl2_hostname, trix_ctrl3_hostname|default(trix_ctrl1_hostname), trix_ctrl4_hostname|default(trix_ctrl2_hostname)] | select | join(',') }}"

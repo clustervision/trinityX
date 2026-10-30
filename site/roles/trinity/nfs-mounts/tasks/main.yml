@@ -215,7 +215,7 @@
     with_items: '{{ new_nfs_mounts }}'
     when:
       - (item.type is defined and item.type != 'manual') or item.type is not defined
-      - ((in_image or on_node | default(False)) and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
+      - ((in_image or on_node | default(False) | bool) and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
 
   - name: Setup NFS mounts for RedHat family
     mount:
@@ -228,7 +228,7 @@
     when: 
       - ansible_facts['os_family'] == "RedHat"
       - (item.type is defined and item.type != 'manual') or item.type is not defined
-      - ((in_image or on_node | default(False)) and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
+      - ((in_image or on_node | default(False) | bool) and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
 
   - name: Setup NFS mounts for Debian family
     mount:
@@ -241,7 +241,7 @@
     when: 
       - ansible_facts['os_family'] == "Debian"
       - (item.type is defined and item.type != 'manual') or item.type is not defined
-      - ((in_image or on_node | default(False)) and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
+      - ((in_image or on_node | default(False) | bool) and not nfs_only_xmount) or (nfs_only_xmount and item.xmount) or item.external | default(False)
   when:
     - new_nfs_mounts is defined
     - not luna_mounts_available

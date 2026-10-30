@@ -43,7 +43,7 @@
     - '{{ trix_examples }}'
     - '{{ trix_modulefiles }}'
   when: in_login_image|default(False) or
-        (ansible_connection is not search("chroot") and not on_node | default(False))
+        (ansible_connection is not search("chroot") and not on_node | default(False) | bool)
                                       # beware: at this stage, in_image is not know yet
 
 - name: Create Trinity H/A directory structure on controllers
@@ -53,4 +53,4 @@
   when:
     - ha
     - trix_ha is defined
-    - not on_node | default(False)
+    - not on_node | default(False) | bool

@@ -43,10 +43,10 @@
 
 - import_playbook: imports/trinity-ubuntu-image-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['image_name'] ~ '.osimages.luna' if 'osimages_luna' in groups else 'all:!controllers' }}"
 
 - hosts:
-    - "{{ hostlist | default(hostvars['localhost']['image_name'] ~ '.osimages.luna') }}"
+    - "{{ hostlist | default(hostvars['localhost']['image_name'] ~ '.osimages.luna' if 'osimages_luna' in groups else 'all:!controllers') }}"
   roles:
     - role: trinity/slurm
       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
@@ -60,12 +60,12 @@
   pre_tasks:
     - name: Unmount the image /proc before packing
       shell: "! mountpoint -q {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc || umount {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc"
-      when: not on_node | default(False)
+      when: not on_node | default(False) | bool
       tags: always
   roles:
     - role: luna/osimage-pack
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
-      when: not on_node | default(False)
+      when: not on_node | default(False) | bool
       tags: pack-images
