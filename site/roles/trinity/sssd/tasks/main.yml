@@ -38,7 +38,8 @@
     owner: 'root'
     group: 'root'
     mode: '0600'
-    force: "{{ override | default(False) | bool }}"
+    # write on override or a first install: of this image when in an image, else of the controller
+    force: "{{ override | default(False) | bool or not (image_done_prior if in_image | default(False) else playbook_done_prior | default(False)) }}"
   register: sssd_config_file
   notify: restart sssd
 
