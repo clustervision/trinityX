@@ -589,6 +589,21 @@
   with_items:
     - munge
 
+- block:
+    - name: Create systemd drop-in dir for the shared mount
+      file:
+        name: "/etc/systemd/system/{{ trix_shared[1:] | replace('/', '-') }}.mount.d"
+        state: directory
+
+    # a start that failed on a slow mount is never retried; a mount that comes up later starts munge
+    - name: Start munge whenever the shared mount comes up
+      copy:
+        content: "[Unit]\nWants=munge.service\n"
+        dest: "/etc/systemd/system/{{ trix_shared[1:] | replace('/', '-') }}.mount.d/munge.conf"
+  when:
+    - ha | default(False)
+    - on_controller
+
 - name: Enable munge service on passive slurm nodes (portal services etc)
   systemd:
     name: '{{ item }}'
