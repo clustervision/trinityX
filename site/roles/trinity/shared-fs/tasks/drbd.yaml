@@ -139,6 +139,11 @@
      path: "/etc/trinity/drbd.start.failed"
   register: drbd_fail_start
 
+- name: Verify if DRBD was set up completely
+  stat:
+     path: "/etc/trinity/drbd.done"
+  register: drbd_done
+
 - block:
   - block:
     - name: Populate service facts
@@ -602,5 +607,13 @@
   - name: Wait for Pacemaker to settle
     command: /usr/sbin/crm_resource --wait
 
-  when: primary
+  - name: Mark DRBD as set up
+    ansible.builtin.file:
+      path: /etc/trinity/drbd.done
+      state: touch
+
+  when:
+    - primary
+    # re-entered until a run completes it; -e override=yes re-applies it
+    - (not drbd_done.stat.exists) or drbd_fail_start.stat.exists or override | default(False)
 

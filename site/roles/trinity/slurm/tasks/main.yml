@@ -242,7 +242,7 @@
       command: 'mv -f {{ slurm_conf_path }} {{ slurm_conf_path }}.backup'
     when: slurm_conf_path_stat.stat.exists
   when:
-    - override | default(False)
+    - override | default(False) | bool
     - primary | default(True)
 
 # -----------------------------------------------------------------
@@ -529,9 +529,16 @@
         - ['slurm.conf', 'slurmdbd.conf', 'slurm-nodes.conf', 'slurm-partitions.conf', 'gres.conf']
         - ['0644', '0600', '0644', '0644', '0644']
         - ['root', 'slurm', 'root', 'root', 'root']
+      register: slurm_conf_files
       notify:
         - restart slurm
         - restart slurmd
+
+    - name: Report a kept Slurm configuration
+      fail:
+        msg: "{{ slurm_conf_path }}/slurm.conf exists and is kept. Run with -e override=yes --tags slurm to back it up and write a new Slurm configuration."
+      ignore_errors: true
+      when: not (slurm_conf_files.results | selectattr('item.0', 'equalto', 'slurm.conf') | first).changed
 
     - name: Set UsePAM to 1 in slurm.conf
       lineinfile:
@@ -588,6 +595,21 @@
     - on_controller
   with_items:
     - munge
+
+- block:
+    - name: Create systemd drop-in dir for the shared mount
+      file:
+        name: "/etc/systemd/system/{{ trix_shared[1:] | replace('/', '-') }}.mount.d"
+        state: directory
+
+    # a start that failed on a slow mount is never retried; a mount that comes up later starts munge
+    - name: Start munge whenever the shared mount comes up
+      copy:
+        content: "[Unit]\nWants=munge.service\n"
+        dest: "/etc/systemd/system/{{ trix_shared[1:] | replace('/', '-') }}.mount.d/munge.conf"
+  when:
+    - ha | default(False)
+    - on_controller
 
 - name: Enable munge service on passive slurm nodes (portal services etc)
   systemd:
