@@ -349,7 +349,7 @@ trix_infiniband_net trix_infiniband_netprefix trix_bmc_net trix_bmc_netprefix \
 trix_ctrl1_ip trix_ctrl1_bmcip trix_ctrl1_heartbeat_ip trix_ctrl1_hostname \
 trix_ctrl2_ip trix_ctrl2_bmcip trix_ctrl2_heartbeat_ip trix_ctrl2_hostname \
 trix_ctrl_ip trix_ctrl_hostname \
-fence_ipmilan_login fence_ipmilan_passwd luna_username luna_password \
+fence_ipmilan_login fence_ipmilan_passwd luna_username luna_password trixd_username trixd_password \
 luna_bmcsetup_user luna_bmcsetup_password luna_redfish_user luna_redfish_password \
 easybuild_user"
 

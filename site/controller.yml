@@ -419,9 +419,13 @@
       prometheus_server_additional_sd:
         - job_name: luna_nodes
           http_sd_configs:
-          - url: "{{ luna_protocol }}://localhost:7050/export/prometheus"
+          - url: "{{ trixd_protocol ~ '://localhost:' ~ trixd_tls_port ~ '/api/v1/prometheus/renders/targets'
+                     if trixd_enabled | default(True) | bool else luna_protocol ~ '://localhost:7050/export/prometheus' }}"
             tls_config:
               insecure_skip_verify: true
+          # trixd's document carries the controllers too; luna_controllers scrapes them.
+          relabel_configs: "{{ [{'source_labels': ['luna_group'], 'regex': 'controller', 'action': 'drop'}]
+                               if trixd_enabled | default(True) | bool else [] }}"
           metric_relabel_configs:
             # Drop transient systemd unit states to reduce cardinality.
             - source_labels: ['__name__', 'state']

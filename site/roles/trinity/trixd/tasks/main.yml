@@ -12,11 +12,36 @@
     - trixd_render_only | default(False)
     - on_controller | default(False)
   block:
+    # The exporter roles have written where each controller exporter answers, so trixd
+    # takes it from there rather than from a second list of ports and conditions.
+    - name: Find the controller targets the exporter roles wrote
+      find:
+        paths: '{{ trixd_controller_sd_dir }}'
+        patterns: '*.yml'
+      register: trixd_controller_sd_files
+
+    - name: Read the controller targets
+      slurp:
+        src: '{{ item.path }}'
+      loop: '{{ trixd_controller_sd_files.files }}'
+      loop_control:
+        label: '{{ item.path }}'
+      register: trixd_controller_sd
+
+    # Read again by trixd at its next render, so the nudge below is enough.
+    - name: Render trixd's exporter file
+      template:
+        src: exporters.yaml.j2
+        dest: '{{ trixd_config_dir }}/exporters.yaml'
+        owner: root
+        group: root
+        mode: '0644'
+
     # Retried because this runs in the same play that started the daemon. Never verified:
     # trixd's certificate is signed by the cluster's own CA and carries no loopback name.
     - name: Sign in to trixd
       uri:
-        url: 'https://127.0.0.1:{{ trixd_tls_port }}/api/v1/auth/token'
+        url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/auth/token'
         method: POST
         body_format: json
         body:
@@ -34,7 +59,7 @@
     # estate, so it outlasts the module's default timeout on a large cluster.
     - name: Make trixd render everything
       uri:
-        url: 'https://127.0.0.1:{{ trixd_tls_port }}/api/v1/system/notify'
+        url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/system/notify'
         method: POST
         body_format: json
         body: {}

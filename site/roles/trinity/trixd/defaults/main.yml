@@ -36,14 +36,13 @@ trixd_key: '{{ trix_ssl }}/trixd.ed25519'
 trixd_key_id: trixd-1
 trixd_trust_dir: '{{ trix_ssl }}/trust.d'
 
+# As all.yml.example ships them, so an all.yml without them is caught by init's password check.
 trixd_username: trixd
-# Generated once; an HA secondary takes it from the primary through trix_sync.
-trixd_password_file: /etc/trinity/passwords/trixd/api.txt
-trixd_password: "{{ lookup('password', trixd_password_file ~ ' chars=ascii_letters,digits') }}"
+trixd_password: trixd
 trixd_token_expiry: 1h
 
-# A client's trixd.ini names the same host and protocol as its luna.ini, on port 7070.
-trixd_client_protocol: '{{ luna_protocol | default("https") }}'
+# What trixd serves on its TLS port and its clients call it with, as luna_protocol is for Luna.
+trixd_protocol: '{{ luna_protocol | default("https") }}'
 # The floating name, not this controller's. A node image is rendered by whichever
 # controller ran the installer, so its own name keeps the node calling that one after a
 # failover; and the short name is in no certificate SAN, which bites the moment a site
@@ -55,6 +54,8 @@ trixd_node_config_dir: '{{ trixd_root }}/node/config'
 trixd_alertx_config_dir: '{{ trix_local }}/alertx/cli/config'
 trixd_ood_config_dir: '{{ trix_ood }}/3.0/config'
 trixd_ood_group: "{{ ood_apps_admin_group | default('admins') }}"
+# Where the exporter roles write the controllers' targets; trixd's exporters.yaml is read from them.
+trixd_controller_sd_dir: '{{ trix_etc }}/prometheus_server/file_sd/trix'
 
 # slurm is in this list but reaches trixd.ini only where slurm is the workload manager -
 # see the template. The plugin needs trinityx_config_slurm, which controller.yml installs
@@ -72,5 +73,4 @@ trixd_auth_chain: local, pam
 
 trixd_service_command: /usr/bin/systemctl
 trixd_replication_interval: 300s
-trixd_luna_hash_interval: 60s
 trixd_audit_keep: 90d

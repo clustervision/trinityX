@@ -16,23 +16,6 @@
     - ha | default(False)
     - not primary | default(False)
   block:
-    - name: Create the trixd password directory
-      file:
-        path: '{{ trixd_password_file | dirname }}'
-        state: directory
-        owner: root
-        group: root
-        mode: '0700'
-
-    - name: Copy the API password from sync
-      copy:
-        remote_src: true
-        src: '{{ trix_sync }}/trixd/{{ trixd_password_file | basename }}'
-        dest: '{{ trixd_password_file }}'
-        owner: root
-        group: root
-        mode: '0600'
-
     - name: Copy the keypair from sync
       copy:
         remote_src: true
@@ -118,6 +101,7 @@
   when:
     - ha | default(False)
     - primary | default(True)
+    - trixd_token_algorithm == 'EdDSA'
   block:
     - name: Create the trixd sync directory
       file:
@@ -125,14 +109,15 @@
         state: directory
         mode: '0700'
 
-    - name: Add the API password and, under EdDSA, the keypair to sync
+    - name: Add the keypair to sync
       copy:
         remote_src: true
         src: '{{ item }}'
         dest: '{{ trix_sync }}/trixd/'
         mode: '0600'
-      loop: '{{ [trixd_password_file] + ([trixd_key, trixd_key ~ ".pub"]
-               if trixd_token_algorithm == "EdDSA" else []) }}'
+      loop:
+        - '{{ trixd_key }}'
+        - '{{ trixd_key }}.pub'
 
 - name: Render the trixd unit
   template:
