@@ -275,7 +275,9 @@
   - name: Verify controller hostname is configured
     fail:
       msg: "Current controller hostname does not match any configured in 'trix_ctrl1_hostname' or 'trix_ctrl2_hostname', ... Please set the hostname to match what is configured"
-    when: trix_this_ctrl_hostname is not defined or trix_this_ctrl_hostname == ""
+    when:
+      - on_controller | default(False)  # only a controller carries one of these hostnames
+      - trix_this_ctrl_hostname is not defined or trix_this_ctrl_hostname == ""
 
   - debug:
       msg: 'Using {{ trix_this_ctrl_hostname }} as configured hostname'
