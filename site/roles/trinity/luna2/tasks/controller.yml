@@ -97,8 +97,22 @@
     when:
       - luna_daemon_db_file.stat.exists
   when:
-    - override | default(False)
+    - override | default(False) | bool
     - primary | default(True)
+
+- name: Check for a kept Luna database
+  stat:
+    path: '{{ trix_luna }}/daemon/common/luna.db'
+  register: luna_daemon_db_kept
+  when: primary | default(True)
+
+- name: Report a kept Luna database
+  fail:
+    msg: "{{ trix_luna }}/daemon/common/luna.db exists and is kept. Run with -e override=yes --tags luna to back it up and start with a new, empty database."
+  ignore_errors: true
+  when:
+    - primary | default(True)
+    - luna_daemon_db_kept.stat.exists
 
 # ----------------------------------------------------
 
@@ -670,6 +684,7 @@
       options: 'op monitor interval=29s --group Trinity-stack'
       state: present
     tags: pcs
+    when: pcs_reapply | default(True) or 'luna2-master' not in pcs_existing_rsc
   when:
     - ha | default(False)
     - primary | default(True)

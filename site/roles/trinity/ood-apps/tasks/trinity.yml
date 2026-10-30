@@ -81,7 +81,7 @@
         dest: "{{ trix_ood }}/3.0"
         force: true
       when:
-      - override | default(ood_luna_apps_download.changed)
+      - override | default(False) | bool or ood_luna_apps_download.changed
 
     - name: Create trinityx-ood luna2 app config directory
       ansible.builtin.file:
@@ -91,7 +91,7 @@
         owner: root
         group: "{{ ood_apps_admin_group }}"
       when: 
-      - override | default(ood_luna_apps_download.changed) or ('admin-change' in ansible_run_tags)
+      - override | default(False) | bool or ood_luna_apps_download.changed or ('admin-change' in ansible_run_tags)
 
     - name: Render trinityx-ood luna app luna.ini
       ansible.builtin.template:
@@ -101,7 +101,7 @@
         group: "{{ ood_apps_admin_group }}"
         mode: "0640"
       when: 
-      - override | default(ood_luna_apps_download.changed) or ('admin-change' in ansible_run_tags)
+      - override | default(False) | bool or ood_luna_apps_download.changed or ('admin-change' in ansible_run_tags)
 
     - name: Check for trinityx-ood trixd.ini
       ansible.builtin.stat:
@@ -127,7 +127,7 @@
       with_items: "{{ ood_apps }}"
       when: 
       - item.get('type') == 'trinity'
-      - override | default(ood_luna_apps_download.changed)
+      - override | default(False) | bool or ood_luna_apps_download.changed
       tags: install-only
 
     - name: Symlink trinityx-ood custom apps
@@ -140,4 +140,4 @@
       notify: Run update_ood
       when: 
       - item.get('type') == 'trinity'
-      - override | default(ood_luna_apps_download.changed, true) | default((ood_apps_path + '/' + item.type + '_' + item.name) is not exists, true)
+      - override | default(False) | bool or ood_luna_apps_download.changed or (ood_apps_path + '/' + item.type + '_' + item.name) is not exists

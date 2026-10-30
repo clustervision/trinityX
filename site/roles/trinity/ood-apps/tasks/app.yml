@@ -64,7 +64,7 @@
       loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app', wantlist=True) }}"
       when: 
         - item.state == 'directory'
-        - app.get('override') | default(override, true) | default((app_path + '/' + item.path) is not exists, true)
+        - app.get('override') | default(False) | bool or override | default(False) | bool or (app_path + '/' + item.path) is not exists
 
     - name: Copy files for app {{ app.name }}
       ansible.builtin.copy:
@@ -77,7 +77,7 @@
       loop: "{{ lookup('community.general.filetree', 'files/{{ app.name }}/app', wantlist=True) }}"
       when: 
         - item.state == 'file'
-        - app.get('override') | default(override, true) | default((app_path + '/' + item.path) is not exists, true)
+        - app.get('override') | default(False) | bool or override | default(False) | bool or (app_path + '/' + item.path) is not exists
 
     - name: Render files for app {{ app.name }}
       ansible.builtin.template:
@@ -90,7 +90,7 @@
       loop: "{{ lookup('community.general.filetree', 'templates/{{ app.name }}/app', wantlist=True) }}"
       when: 
         - item.state == 'file'
-        - app.get('override') | default(override, true) | default((app_path + '/' + item.path.replace('.j2', '')) is not exists, true)
+        - app.get('override') | default(False) | bool or override | default(False) | bool or (app_path + '/' + item.path.replace('.j2', '')) is not exists
 
     - name: Render module file for app {{ app.name }}
       ansible.builtin.template:
@@ -102,7 +102,7 @@
       notify: Run update_ood
       when: 
         # - "('templates/' + app.name + '/module.lua.j2') is exists "
-        - app.get('override') | default(override, true) | default((trix_shared + '/modulefiles/ood-' + app.name + '.lua') is not exists, true)
+        - app.get('override') | default(False) | bool or override | default(False) | bool or (trix_shared + '/modulefiles/ood-' + app.name + '.lua') is not exists
       failed_when: false
     
     - name: Copy TrinityX icon for app {{ app.name }}

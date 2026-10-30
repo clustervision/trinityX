@@ -33,6 +33,7 @@
       node: '{{ ansible_hostname }}'
       state: 'absent'
     ignore_errors: true
+    when: override | default(False) | bool or not playbook_done_prior | default(False)
 
   - name: Clear possible pacemaker dependency messages
     shell: "pcs resource cleanup"
@@ -42,6 +43,7 @@
     pcs_property:
       name: stonith-enabled
       value: '{{ fence_ipmilan_enabled }}'
+    when: override | default(False) | bool or not playbook_done_prior | default(False)
   tags: ha,pcs,pacemaker,fencing
   when:
     - ha

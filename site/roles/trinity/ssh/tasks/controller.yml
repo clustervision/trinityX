@@ -76,12 +76,22 @@
     src: '{{ item.0 }}'
     dest: '/etc/ssh/{{ item.0 }}'
     mode: '{{ item.1 }}'
+    force: "{{ item.0 != 'sshd_config' or override | default(False) | bool or not playbook_done_prior | default(False) }}"
     owner: root
     group: root
   with_together:
     - ['sshd_config', 'ssh_config']
     - ['0600', '0644']
+  register: ssh_config_files
   notify: restart sshd
+
+- name: Report a kept sshd_config
+  fail:
+    msg: "/etc/ssh/sshd_config exists and is left as it is. Run with -e override=yes --tags ssh to rewrite it."
+  ignore_errors: true
+  when:
+    - not override | default(False) | bool
+    - not (ssh_config_files.results | selectattr('item.0', 'equalto', 'sshd_config') | first).changed
 
 - name: Start and enable sshd daemon
   ansible.builtin.systemd:

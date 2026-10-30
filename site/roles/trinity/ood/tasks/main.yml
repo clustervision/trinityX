@@ -208,11 +208,23 @@
   ansible.builtin.template:
     src: ood_portal.yml.j2
     dest: "{{ ood_cfg_path }}/ood_portal.yml"
-    mode: "0644"
+    mode: "0600"
     owner: root
     group: root
+    # write on override or a first install: of this image when in an image, else of the controller
+    force: "{{ override | default(False) | bool or not (image_done_prior if in_image | default(False) else playbook_done_prior | default(False)) }}"
+  register: ood_portal_file
   notify: Run update_ood
   tags: branding
+
+- name: Report a kept ood_portal.yml
+  fail:
+    msg: "{{ ood_cfg_path }}ood_portal.yml exists and is left as it is. Run with -e override=yes --tags ood-core to rewrite it."
+  ignore_errors: true
+  tags: branding
+  when:
+    - not override | default(False) | bool
+    - not ood_portal_file.changed
 
 - name: Render OOD nginx_stage.yml config file
   ansible.builtin.template:

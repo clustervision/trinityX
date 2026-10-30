@@ -200,8 +200,22 @@
       command: 'mv -f {{ openldap_server_dir_path }} {{ openldap_server_dir_path }}.backup'
     when: openldap_server_dir_stat.stat.exists
   when:
-    - override | default(False)
+    - override | default(False) | bool
     - primary | default(True)
+
+- name: Check for kept OpenLDAP data
+  stat:
+    path: '{{ openldap_server_dir_path }}'
+  register: openldap_server_dir_kept
+  when: primary | default(True)
+
+- name: Report kept OpenLDAP data
+  fail:
+    msg: "{{ openldap_server_dir_path }} exists and is kept. Run with -e override=yes --tags openldap to back it up and start with new, empty LDAP data."
+  ignore_errors: true
+  when:
+    - primary | default(True)
+    - openldap_server_dir_kept.stat.exists
 # ----------------------------------------------------------------
 
 - name: Enable OpenLDAP service
@@ -393,7 +407,9 @@
       resource_type: 'systemd:slapd'
       options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Trinity-stack'
       state: present
-    when: primary | default(True)
+    when:
+      - primary | default(True)
+      - pcs_reapply or 'openldap' not in pcs_existing_rsc
   when: ha | default(False)
   tags: pcs
 
