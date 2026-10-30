@@ -46,7 +46,7 @@
     hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
 
 - hosts:
-    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    - "{{ hostlist | default(hostvars['localhost']['image_name'] ~ '.osimages.luna') }}"
   roles:
     - role: trinity/slurm
       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
@@ -60,10 +60,12 @@
   pre_tasks:
     - name: Unmount the image /proc before packing
       shell: "! mountpoint -q {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc || umount {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc"
+      when: not on_node | default(False)
       tags: always
   roles:
     - role: luna/osimage-pack
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
+      when: not on_node | default(False)
       tags: pack-images

@@ -1,5 +1,15 @@
 ---
 
+- name: Get image path
+  set_fact:
+    image_path: "{{ trix_images }}/{{ image_name }}"
+
+- name: Create dir for compute image
+  file:
+    name: "{{ image_path }}"
+    state: directory
+  when: not on_node | default(False)
+
 - name: Set facts
   set_fact:
     data:
@@ -22,14 +32,11 @@
       ag_server: "{{ ag_server | default(trix_ctrl_hostname) }}"
       playbook_done_prior: "{{ playbook_done_prior | default(False) }}"
 
-- name: Create the directory for the facts file
-  file:
-    name: "{{ trix_facts_file | dirname }}"
-    state: directory
-
 - name: Create facts file
   copy:
-    dest: "{{ trix_facts_file }}"
+    # the file carries Luna's credentials, and a live-node run has no image of
+    # its own, so it must not land in a tree that gets packed
+    dest: "{{ trix_images if on_node | default(False) else image_path }}/facts.dat"
     content: "{{ data }}"
     mode: '0600'
 

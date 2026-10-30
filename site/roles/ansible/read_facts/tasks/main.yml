@@ -2,11 +2,19 @@
 
 # running inside chroot !!
 
-# A live node is handed the facts the controller staged for it; an image already
-# has them inside it.
-- name: Copy the staged facts to the node
+# A live node reaches this role through the same setup playbook as an image, but
+# has no /facts.dat of its own. on_node is the only marker available this early:
+# trinity/init has not run, so in_image is not set yet.
+- name: Fail when a host outside an image was not marked as a live node
+  fail:
+    msg: "{{ inventory_hostname }} is not an image. Pass -e on_node=true to set up live nodes."
+  when:
+    - ansible_connection is not search("chroot")
+    - not on_node | default(False)
+
+- name: Copy the controller facts to the node
   copy:
-    src: "{{ trix_facts_file }}"
+    src: "{{ trix_images }}/facts.dat"
     dest: /facts.dat
     mode: '0600'
   when: on_node | default(False)

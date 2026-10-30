@@ -32,7 +32,7 @@
     hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
 
 - hosts:
-    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    - "{{ hostlist | default(hostvars['localhost']['image_name'] ~ '.osimages.luna') }}"
   roles:
     - role: trinity/slurm
       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
@@ -47,4 +47,5 @@
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
+      when: not on_node | default(False)
       tags: pack-images
