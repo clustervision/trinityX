@@ -11,6 +11,7 @@
       owner: root
       group: "{{ ood_apps_admin_group }}"
     when: "'/dev/infiniband/umad0' is exists"
+    tags: admin-change
 
   - name: Render sudoers file
     ansible.builtin.template:
@@ -21,4 +22,5 @@
       mode: "0755"
     when: 
       - override | default(False) | bool or ('/etc/sudoers.d/ibanalyzer') is not exists or ('admin-change' in ansible_run_tags)
+    tags: admin-change
 

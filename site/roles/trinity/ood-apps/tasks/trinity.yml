@@ -103,6 +103,20 @@
       when: 
       - override | default(False) | bool or ood_luna_apps_download.changed or ('admin-change' in ansible_run_tags)
 
+    - name: Set the admin group on the trinityx-ood luna app config
+      ansible.builtin.file:
+        path: "{{ trix_ood }}/3.0/config/{{ item.path }}"
+        owner: root
+        group: "{{ ood_apps_admin_group }}"
+        mode: "{{ item.mode }}"
+      loop:
+      - { path: '', mode: '0755' }
+      - { path: luna.ini, mode: '0640' }
+      when:
+      - "'admin-change' in ansible_run_tags"
+      - (trix_ood + '/3.0/config/' + item.path) is exists
+      tags: admin-change
+
     - name: Install trinityx-ood custom apps python requirements
       ansible.builtin.pip:
         requirements: "{{ trix_ood }}/3.0/{{ item.name }}/requirements.txt"

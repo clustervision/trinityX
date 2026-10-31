@@ -1,6 +1,7 @@
 - name: "Collect info about file existance"
   stat: "path={{ item }}"
   register: item_path
+  tags: admin-change
 
 - name: "Collect info about bkp file existance"
   stat: "path={{ item }}.bkp"
@@ -33,6 +34,7 @@
     group: '{{ cs_admin_group }}'
     mode: g+rw
   when: item_path.stat.exists
+  tags: admin-change
 
 - name: "Ensure backup file is present"
   copy:
