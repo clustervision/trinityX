@@ -27,6 +27,19 @@
         - '{{ trixd_key }}.pub'
       when: trixd_token_algorithm == 'EdDSA'
 
+    - name: Ensure the Luna password location exists
+      file:
+        path: '{{ trixd_luna_delegate_password_file | dirname }}'
+        state: directory
+        mode: '0700'
+
+    - name: Copy the Luna delegate password from sync
+      copy:
+        remote_src: true
+        src: '{{ trix_sync }}/trixd/{{ trixd_luna_delegate_password_file | basename }}'
+        dest: '{{ trixd_luna_delegate_password_file }}'
+        mode: '0600'
+
 # Only what is outside the package: a directory where the daemon link goes stops the link.
 - name: Create the trixd tree
   file:
@@ -88,6 +101,24 @@
       secret from it; run trinity/luna2 before this role.
   when: not trixd_luna_ini_stat.stat.exists
 
+- name: Generate or get the Luna delegate password from /etc/trinity/passwords
+  set_fact:
+    trixd_luna_delegate_password: "{{ lookup('password',
+                                     trixd_luna_delegate_password_file,
+                                     chars='ascii_letters,digits,hexdigits') }}"
+  no_log: true
+
+# Luna journals its users to the other controller, so only the primary creates it.
+- name: Create the Luna delegate trixd signs persons in with
+  include_role:
+    name: luna/user-create
+  vars:
+    luna_users:
+      - name: '{{ trixd_luna_delegate_username }}'
+        password: '{{ trixd_luna_delegate_password }}'
+        delegate: true
+  when: primary | default(True)
+
 - name: Render the trixd.ini
   template:
     src: trixd.ini.j2
@@ -101,7 +132,6 @@
   when:
     - ha | default(False)
     - primary | default(True)
-    - trixd_token_algorithm == 'EdDSA'
   block:
     - name: Create the trixd sync directory
       file:
@@ -118,6 +148,14 @@
       loop:
         - '{{ trixd_key }}'
         - '{{ trixd_key }}.pub'
+      when: trixd_token_algorithm == 'EdDSA'
+
+    - name: Add the Luna delegate password to sync
+      copy:
+        remote_src: true
+        src: '{{ trixd_luna_delegate_password_file }}'
+        dest: '{{ trix_sync }}/trixd/'
+        mode: '0600'
 
 - name: Render the trixd unit
   template:

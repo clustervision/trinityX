@@ -1,0 +1,63 @@
+---
+- name: Verify if user already exists in luna
+  shell: "luna user show {{ luna_user.name | quote }} -R"
+  register: luna_user_in_luna
+  changed_when: false
+  failed_when: false
+
+- name: Reading the user as luna has it
+  set_fact:
+    luna_user_record: "{{ luna_user_in_luna.stdout | from_json if luna_user_in_luna.rc | int == 0 else {} }}"
+
+# only the flags the entry gives, and on an existing user only those luna holds otherwise
+- name: Deciding which flags to hand to luna
+  set_fact:
+    luna_user_flags: >-
+      {%- set flags = [] -%}
+      {%- for flag in ['enabled', 'admin', 'delegate'] if luna_user[flag] is defined -%}
+      {%- if not luna_user_record or (luna_user_record[flag] | default(False) | bool) != (luna_user[flag] | bool) -%}
+      {%- set _ = flags.append('--' ~ flag ~ ' ' ~ ('yes' if luna_user[flag] | bool else 'no')) -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {{ flags | join(' ') }}
+
+# The CLI asks a password on the terminal only. setsid leaves it none, so it reads
+# the password from stdin instead of waiting on the operator's terminal.
+- name: Creating user in luna
+  shell: "setsid -w luna user add {{ ('--source ' ~ luna_user.source | quote) if luna_user.source is defined else '' }} {{ luna_user_flags }} {{ '--password' if luna_user.password is defined else '' }} {{ luna_user.name | quote }}"
+  args:
+    stdin: "{{ (luna_user.password ~ '\n' ~ luna_user.password) if luna_user.password is defined else omit }}"
+  no_log: true
+  when: luna_user_in_luna.rc | int != 0
+
+- name: Changing user in luna
+  shell: "luna user change {{ luna_user_flags }} {{ luna_user.name | quote }}"
+  when:
+    - luna_user_in_luna.rc | int == 0
+    - luna_user_flags | length > 0
+
+# Luna never returns a password, so the way to know it differs is to sign in with it.
+# A disabled user is refused whatever its password, so it is not asked.
+- name: Checking whether luna takes the password of the user
+  uri:
+    url: '{{ luna_protocol }}://127.0.0.1:7050/token'
+    method: POST
+    body_format: json
+    body:
+      username: '{{ luna_user.name }}'
+      password: '{{ luna_user.password }}'
+    status_code: [201, 401]
+    validate_certs: false
+  register: luna_user_signin
+  no_log: true
+  when:
+    - luna_user_in_luna.rc | int == 0
+    - luna_user.password is defined
+    - (luna_user.enabled if luna_user.enabled is defined else luna_user_record.enabled | default(True)) | bool
+
+- name: Setting the password of the user in luna
+  shell: "setsid -w luna user change --password {{ luna_user.name | quote }}"
+  args:
+    stdin: "{{ luna_user.password }}\n{{ luna_user.password }}"
+  no_log: true
+  when: luna_user_signin.status | default(0) | int == 401
