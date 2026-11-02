@@ -1,0 +1,16 @@
+# Live nodes to set up with the compute playbooks. Copy to nodes.yml, list the
+# nodes and run from site/:
+#   ansible-playbook -i hosts -i nodes.yml compute-default.yml
+# Only the listed nodes change: the image, its Luna osimage and group are left alone.
+all:
+  vars:
+    # also read by the controller plays, which then skip the image steps
+    on_node: true
+  children:
+    nodes:
+      vars:
+        # beats the task-level become in the roles; a Luna image may ship without sudo
+        ansible_become: false
+      hosts:
+        node001:
+        node[002:004]:

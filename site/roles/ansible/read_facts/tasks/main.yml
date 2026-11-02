@@ -17,6 +17,14 @@
     mode: '0600'
   when: ansible_connection is not search("chroot")
 
+- name: Remove the staged controller facts
+  file:
+    path: "{{ trix_images }}/facts.dat"
+    state: absent
+  delegate_to: localhost
+  run_once: true
+  when: ansible_connection is not search("chroot")
+
 - block:
   - name: Read facts
     slurp:

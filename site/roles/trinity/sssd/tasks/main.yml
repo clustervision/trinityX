@@ -275,4 +275,7 @@
 
   - name: Configure pam to create homedir on first logon
     shell: "pam-auth-update --enable mkhomedir"
+  # a re-run on a live node otherwise waits on a debconf prompt
+  environment:
+    DEBIAN_FRONTEND: noninteractive
   when: ansible_facts['os_family'] == "Debian"
