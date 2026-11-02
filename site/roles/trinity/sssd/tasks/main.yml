@@ -8,6 +8,7 @@
     - "{{ ansible_os_family }}.yaml"
   no_log: true
   ignore_errors: true
+  tags: admin-change
 
 - name: Install sssd packages
   package:
@@ -30,6 +31,7 @@
                           '/etc/trinity/passwords/ds389/root.txt
                            chars=ascii_letters,digits,hexdigits') }}"
   when: sss_use_ds389 | default(False)
+  tags: admin-change
 
 - name: Add configuration file to /etc/sssd/sssd.conf
   template:
@@ -42,6 +44,7 @@
     force: "{{ override | default(False) | bool or not (image_done_prior if in_image | default(False) else playbook_done_prior | default(False)) }}"
   register: sssd_config_file
   notify: restart sssd
+  tags: admin-change
 
 - name: Report a kept sssd.conf
   fail:
@@ -50,6 +53,7 @@
   when:
     - not override | default(False) | bool
     - not sssd_config_file.changed
+  tags: admin-change
 
 - name: Ensure certs directory exists
   file:
@@ -115,6 +119,7 @@
     - on_controller   
     - sss_allowed_groups is defined
     - sss_allowed_groups is iterable
+  tags: admin-change
 
 - name: Setting up the system to use sssd for authentication
   command: "{{ item.command }}"
