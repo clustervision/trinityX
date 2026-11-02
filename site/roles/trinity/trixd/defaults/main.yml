@@ -74,7 +74,11 @@ trixd_plugins:
   - slurm
   - genders
 
-trixd_auth_chain: local, pam
+# peercred: a process on the controller signs in as the account it runs as, no password.
+trixd_auth_chain: local, pam, peercred
+# The site's admin group, not trixd_ood_group: that is the OOD apps' group, and outside
+# ood-apps it is always 'admins'.
+trixd_group_roles: "{{ admin_group }}:manager"
 
 trixd_service_command: /usr/bin/systemctl
 trixd_replication_interval: 300s
