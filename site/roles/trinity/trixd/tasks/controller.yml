@@ -157,6 +157,16 @@
         dest: '{{ trix_sync }}/trixd/'
         mode: '0600'
 
+# OnDemand's apps run as httpd_t and reach trixd's peercred socket. The restart
+# recreates /run/trixd, which systemd then labels from this rule. The spec must
+# name the side SELinux treats as canonical: /var/run before EL10, /run after.
+- name: Selinux fcontext on the trixd runtime directory
+  sefcontext:
+    target: "{{ '/var/run' if ansible_distribution_major_version|int < 10 else '/run' }}/trixd(/.*)?"
+    setype: httpd_var_run_t
+  notify: restart trixd
+  when: ansible_selinux.status == "enabled"
+
 - name: Render the trixd unit
   template:
     src: trixd.service.j2
