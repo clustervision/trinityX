@@ -88,7 +88,7 @@
     msg: "/etc/drbd.d/trinityx.res config file exists. This means we do not re-create DRBD resources"
   when:
     - drbd_res_config.stat.exists
-    - not override | default(False)
+    - not override | default(False) | bool
   ignore_errors: true
 
 - block:
@@ -100,14 +100,14 @@
       timeout: 10
   when:
     - drbd_res_config.stat.exists
-    - override | default(False)
+    - override | default(False) | bool
 
 - block:
   - name: stop DRBD
     ansible.builtin.systemd:
       name: drbd
       state: stopped
-    when: override | default(False)
+    when: override | default(False) | bool
     ignore_errors: true
 
   - name: Set up DRBD common settings configuration file
@@ -132,7 +132,7 @@
     loop: "{{ drbd_fs_disks }}"
     ignore_errors: false
     # we wont ignore errors here as we have to make sure this step succeeds before proceeding
-  when: (not drbd_res_config.stat.exists) or override | default(False)
+  when: (not drbd_res_config.stat.exists) or override | default(False) | bool
 
 - name: Verify if DRBD did not start last time
   stat:
@@ -323,7 +323,7 @@
         state: stopped
       when: drbd_started is defined and drbd_started.state == "started"
 
-    when: (not drbd_res_config.stat.exists) or drbd_fail_start.stat.exists or override | default(False)
+    when: (not drbd_res_config.stat.exists) or drbd_fail_start.stat.exists or override | default(False) | bool
 
 
   #--------------------------------------------
@@ -615,5 +615,5 @@
   when:
     - primary
     # re-entered until a run completes it; -e override=yes re-applies it
-    - (not drbd_done.stat.exists) or drbd_fail_start.stat.exists or override | default(False)
+    - (not drbd_done.stat.exists) or drbd_fail_start.stat.exists or override | default(False) | bool
 
