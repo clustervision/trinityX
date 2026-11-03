@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-__version__     = '15.2.0.0'
+__version__     = '16.1.0.0'
 
 import time
 from alert_fetcher import AlertFetcher
 from node_utils import NodeUtils
 from logger import Logger
-from config import AUTO_UNDRAIN, ALERT_FETCH_INTERVAL
+from config import AUTO_DRAIN, AUTO_UNDRAIN, ALERT_FETCH_INTERVAL
 
 
 log = Logger.get_logger("TRIX-DRAINER: drainer")
@@ -22,6 +22,19 @@ class Drainer:
         self.fetcher = AlertFetcher()
         self.node_utils = NodeUtils()
         self.previous_alert_reasons = {}
+        self.skipped_drain_reasons = {}
+
+    def drain_or_report(self, node: str, reason: str, details: str) -> None:
+        """
+        Drains the node if AUTO_DRAIN is on. Otherwise logs that it would have,
+        once per node until its reasons change.
+        """
+        if AUTO_DRAIN:
+            self.node_utils.drain_node(node, reason)
+            self.previous_alert_reasons[node] = reason  # cache it immediately
+        elif self.skipped_drain_reasons.get(node) != details:
+            log.info(f"AUTO_DRAIN is off: would have drained {node} (reason: {details}); no action taken")
+            self.skipped_drain_reasons[node] = details
 
     def main(self):
         """
@@ -47,14 +60,15 @@ class Drainer:
             else:
                 controller_reason = f"Controller NHC: {controller_reasons[0]}"
 
-            log.info("Controller NHC alert active → draining ALL nodes")
+            if AUTO_DRAIN:
+                log.info("Controller NHC alert active -> draining ALL nodes")
+            controller_details = "Controller NHC: " + "; ".join(controller_reasons)
             for node in all_nodes_set:
                 is_not_drained = node in not_drained_set
                 is_drainer_drained = node in drainer_drained_set
 
                 if is_not_drained:
-                    self.node_utils.drain_node(node, controller_reason)
-                    self.previous_alert_reasons[node] = controller_reason
+                    self.drain_or_report(node, controller_reason, controller_details)
                 elif is_drainer_drained:
                     # keep it drained; update reason if it changed
                     prev = self.previous_alert_reasons.get(node)
@@ -70,15 +84,18 @@ class Drainer:
             is_not_drained = node in not_drained_set
             is_drainer_drained = node in drainer_drained_set
 
-            # Case 1: Not drained, has alert => DRAIN
+            # Forget a reported drain once the node stops qualifying, so a new alert is logged again
+            if not (is_not_drained and has_alert):
+                self.skipped_drain_reasons.pop(node, None)
+
+            # Case 1: Not drained, has alert => DRAIN (or only log it if AUTO_DRAIN is off)
             if is_not_drained and has_alert:
                 if len(nhc_alerts[node]) > 1:
                     log.debug(f"Node {node} has multiple NHC reasons: {nhc_alerts[node]}")
                     reason = "Multiple reasons for drained node, check AlertX for more information"
                 else:
                     reason = nhc_alerts[node][0]
-                self.node_utils.drain_node(node, reason)
-                self.previous_alert_reasons[node] = reason  # cache it immediately
+                self.drain_or_report(node, reason, "; ".join(nhc_alerts[node]))
                 continue
 
             # Case 2: Drained by us, no alert => UN-DRAIN (if enabled)
