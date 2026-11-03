@@ -7,6 +7,7 @@
     ood_apps_airgap_vars: {}
     ood_apps: []
     ood_apps_is_airgap: "{{ is_airgap | default(False) }}"
+  tags: admin-change
 
 - name: Load OS-specific OOD app overrides
   ansible.builtin.include_vars:
@@ -17,10 +18,12 @@
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
   no_log: true
   ignore_errors: true
+  tags: admin-change
 
 - set_fact:
     ood_apps_os_vars:
       ood_apps_overrides: "{{ ood_apps_overrides }}"
+  tags: admin-change
 
 #- name: ood apps os vars
 #  debug:
@@ -32,12 +35,14 @@
   no_log: true
   when:
     - ood_apps_is_airgap
+  tags: admin-change
 
 - set_fact:
     ood_apps_airgap_main_vars:
       ood_apps_overrides: "{{ ood_apps_overrides }}"
       ood_apps_remove: "{{ ood_apps_remove }}"
       ood_apps_meta: "{{ ood_apps_meta }}"
+  tags: admin-change
 
 #- name: ood apps airgap main vars
 #  debug:
@@ -57,12 +62,14 @@
   ignore_errors: true
   when:
     - ood_apps_is_airgap
+  tags: admin-change
 
 - set_fact:
     ood_apps_airgap_vars:
       ood_apps_overrides: "{{ ood_apps_overrides }}"
       ood_apps_remove: "{{ ood_apps_remove }}"
       ood_apps_meta: "{{ ood_apps_meta }}"
+  tags: admin-change
 
 #- name: ood apps airgap vars
 #  debug:
@@ -103,6 +110,7 @@
         if ood_apps_is_airgap
         else (ood_apps_os_vars.ood_apps_meta.ood_luna_apps_url | default(ood_luna_apps_url))
       }}
+  tags: admin-change
 
 # - name: Resolve final OOD app order
 #   ansible.builtin.set_fact:
@@ -128,6 +136,7 @@
         | reject('in', ood_apps_absent | default([]))
         | list
       }}
+  tags: admin-change
 
 - name: Remove absent/legacy OOD apps from published Open OnDemand app directory
   ansible.builtin.file:
@@ -156,6 +165,7 @@
         ]
       }}
   loop: "{{ ood_apps_enabled_resolved }}"
+  tags: admin-change
 
 - name: ood_apps var content
   debug:
@@ -168,6 +178,7 @@
 - name: Download and link trinity apps
   ansible.builtin.include_tasks:
     file: trinity.yml
+  tags: admin-change
 
 - name: Run apps tasks
   ansible.builtin.include_tasks:
@@ -175,6 +186,7 @@
   loop: "{{ ood_apps }}"
   loop_control:
     loop_var: app
+  tags: admin-change
 
 - name: Include tasks for login image
   ansible.builtin.include_tasks:

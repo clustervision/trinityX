@@ -267,7 +267,7 @@
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
       when: enable_authentication|default(True)
-      tags: sssd, authentication, admin-change, config-slurm
+      tags: sssd, authentication, config-slurm
 
     - role: trinity/mariadb
       mariadb_db_path: "{{ trix_ha if ha else trix_local }}/var/lib/mysql"
@@ -348,15 +348,15 @@
     - role: trinity/config-slurm
       cs_admin_group: "{{ admin_group }}"
       when: "'slurm' in workload_manager "
-      tags: slurm, config-slurm, ood-apps, admin-change
+      tags: slurm, config-slurm, ood-apps
 
     - role: trinity/config-genders
       cg_admin_group: "{{ admin_group }}"
-      tags: config-genders, admin-change
+      tags: config-genders
 
     - role: trinity/config-manager
       cm_admin_group: "{{ admin_group }}"
-      tags: config-manager, admin-change
+      tags: config-manager
 
       # this role is using sol_grab provided through luna utils
     - role: trinity/node-console
@@ -397,13 +397,13 @@
       ood_login_host: "{{ trix_external_fqdn }}"
       ood_ldap_host: "{{ trix_ctrl_ip }}"
       ood_admin_group: "{{ admin_group }}"
-      tags: ood, ood-core, admin-change
+      tags: ood, ood-core
       when: enable_ood
 
     - role: trinity/ood-apps
       ood_enable_ssl: true
       ood_apps_admin_group: "{{ admin_group }}"
-      tags: ood, ood-apps, admin-change
+      tags: ood, ood-apps
       when: enable_ood
 
     # - role: trinity/prometheus-auth
@@ -470,7 +470,7 @@
       #   role: trinity/prometheus-server -> prometheus_server_tls/enabled: true == https
       prometheus_alertmanager_web_protocol: "https"
       prometheus_alertmanager_web_open_port: "{{ firewall_open_prometheus | default(False) }}"
-      tags: prometheus-alertmanager, prometheus, monitoring, admin-change
+      tags: prometheus-alertmanager, prometheus, monitoring
 
     - role: trinity/prometheus-node-exporter
       # Prometheus node exporter
@@ -574,7 +574,7 @@
       grafana_auto_upgrade: true
       ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
       ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      tags: grafana, monitoring, admin-change
+      tags: grafana, monitoring
 
     - role: trinity/osconfig
       tags: osconfig

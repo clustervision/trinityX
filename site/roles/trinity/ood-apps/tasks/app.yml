@@ -47,6 +47,7 @@
         group: "{{ app.group | default(ood_apps_admin_group) }}"
         follow: true
       notify: Run update_ood
+  tags: admin-change
 
 - name: Configure controller for app {{ app.name }}
   when:
@@ -136,6 +137,7 @@
     - name: Include additional tasks for app {{ app.name }}
       include_tasks: "{{ item }}"
       loop: "{{ app.get('tasks', []) }}"
+      tags: admin-change
 
 
 # We do install the apps in the login image as it gives freedom and with the
