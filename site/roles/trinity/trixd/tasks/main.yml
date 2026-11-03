@@ -5,6 +5,15 @@
   include_vars: "airgap/main.yaml"
   when: is_airgap | default(False)
 
+# Before the render below, which takes the helper's lock where its directory is.
+- name: Set up the slurm plugin's helper
+  include_tasks: "slurm.yml"
+  when:
+    - trixd_render_only | default(False)
+    - on_controller | default(False)
+    - "'slurm' in workload_manager"
+    - "'slurm' in trixd_plugins"
+
 # A nudge, not a restart: both generator packages are imported inside the render itself,
 # so one installed after trixd started is picked up by the next render.
 - name: Render trixd's files against a finished controller
@@ -54,6 +63,36 @@
       retries: 12
       delay: 5
       no_log: true
+
+    # A save runs with the Slurm files' group, which config-slurm takes from the site's
+    # admin_group; the plugin's own default is admins. Set on each controller, as each
+    # answers from its own copy until replication brings the other's, which holds the same.
+    - name: Give the slurm plugin the site's admin group
+      when:
+        - "'slurm' in workload_manager"
+        - "'slurm' in trixd_plugins"
+      block:
+        - name: Read the slurm plugin's settings
+          uri:
+            url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/slurm/config'
+            method: GET
+            headers:
+              x-access-tokens: '{{ trixd_token.json.token }}'
+            validate_certs: false
+          register: trixd_slurm_config
+
+        - name: Set the slurm plugin's admin group
+          uri:
+            url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/slurm/config'
+            method: PATCH
+            body_format: json
+            body:
+              admin_group: '{{ admin_group }}'
+            headers:
+              x-access-tokens: '{{ trixd_token.json.token }}'
+            validate_certs: false
+          changed_when: true
+          when: trixd_slurm_config.json.admin_group != admin_group
 
     # No event: every render runs and nothing is dispatched. A render reads the whole
     # estate, so it outlasts the module's default timeout on a large cluster.

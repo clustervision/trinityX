@@ -1,0 +1,62 @@
+---
+# The slurm plugin's helper: the account it runs as, on every controller with the same ids
+# so the directory on the share is its own on either; Slurm's admin right for it; its
+# directories; and slurmlint, which it checks a save with.
+
+- name: Create the slurm helper's group
+  ansible.builtin.group:
+    name: '{{ trixd_slurm_account }}'
+    gid: '{{ trixd_slurm_id }}'
+    system: true
+
+- name: Create the slurm helper's account
+  ansible.builtin.user:
+    name: '{{ trixd_slurm_account }}'
+    uid: '{{ trixd_slurm_id }}'
+    group: '{{ trixd_slurm_account }}'
+    shell: /sbin/nologin
+    home: /nonexistent
+    create_home: false
+    system: true
+
+# No --upgrade: the OOD Slurm app installs it too, and its version stays.
+- name: Install slurmlint
+  ansible.builtin.pip:
+    name: slurmlint
+    virtualenv: '{{ trix_local }}/python'
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+# The parent first: the file module gives the parents it creates the child's owner and mode.
+- name: Create the slurm helper's state directory
+  file:
+    path: '{{ item.path }}'
+    state: directory
+    owner: '{{ item.owner }}'
+    group: '{{ item.owner }}'
+    mode: '{{ item.mode }}'
+  loop:
+    - { path: '{{ trixd_slurm_state_dir | dirname }}', owner: root, mode: '0755' }
+    - { path: '{{ trixd_slurm_state_dir }}', owner: '{{ trixd_slurm_account }}', mode: '0700' }
+
+# The Slurm files and their accounting are the cluster's, not each controller's.
+- name: Set up the slurm helper on the shared Slurm files and in accounting
+  when: primary | default(True)
+  block:
+    - name: Create the slurm helper's directory beside the Slurm files
+      file:
+        path: '{{ trixd_slurm_share_dir }}'
+        state: directory
+        owner: '{{ trixd_slurm_account }}'
+        group: '{{ trixd_slurm_account }}'
+        mode: '0700'
+
+    - name: Look up the slurm helper's account in Slurm's accounting
+      command: sacctmgr -n -P show user {{ trixd_slurm_account }} format=adminlevel
+      register: trixd_slurm_adminlevel
+      changed_when: false
+
+    - name: Make the slurm helper's account a Slurm administrator
+      command: sacctmgr -i add user {{ trixd_slurm_account }} account=root adminlevel=Administrator
+      when: trixd_slurm_adminlevel.stdout | trim == ''
