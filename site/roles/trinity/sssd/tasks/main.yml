@@ -44,6 +44,38 @@
     force: "{{ override | default(False) | bool or not (image_done_prior if in_image | default(False) else playbook_done_prior | default(False)) }}"
   register: sssd_config_file
   notify: restart sssd
+
+- name: Count the login filter lines in sssd.conf
+  command: grep -c '^ldap_access_filter[[:space:]]*=' {{ sssd_config_location }}/sssd.conf
+  register: sssd_filter_count
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: "'admin-change' in ansible_run_tags"
+  tags: admin-change
+
+# the filter line is taken from the template, so it has one source
+- name: Set the admin group in the sssd.conf login filter
+  lineinfile:
+    path: '{{ sssd_config_location }}/sssd.conf'
+    regexp: '^ldap_access_filter\s*='
+    line: "{{ lookup('template', 'sssd.conf.j2') | regex_search('^ldap_access_filter *=.*$', multiline=True) }}"
+    # replace only: a missing line is reported below, never appended
+    backrefs: true
+  register: sssd_filter_line
+  notify: restart sssd
+  when:
+    - "'admin-change' in ansible_run_tags"
+    - sssd_filter_count.stdout | default('') == '1'
+  tags: admin-change
+
+- name: Report a sssd.conf whose login filter could not be changed
+  fail:
+    msg: "{{ sssd_config_location }}/sssd.conf has {{ sssd_filter_count.stdout | default('no') }} ldap_access_filter lines, one expected; the admin group in it was not changed. Run with -e override=yes --tags sssd to rewrite it."
+  ignore_errors: true
+  when:
+    - "'admin-change' in ansible_run_tags"
+    - sssd_filter_count.stdout | default('') != '1'
   tags: admin-change
 
 - name: Report a kept sssd.conf
@@ -53,7 +85,7 @@
   when:
     - not override | default(False) | bool
     - not sssd_config_file.changed
-  tags: admin-change
+    - not sssd_filter_line.changed | default(False)
 
 - name: Ensure certs directory exists
   file:
