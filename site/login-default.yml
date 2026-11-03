@@ -45,7 +45,7 @@
 
 - import_playbook: imports/trinity-redhat-login-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['setup_hosts'] }}"
     in_login_image: true
     luna_secret_key: "{{ hostvars['localhost']['luna_secret_key'] }}"
 
@@ -64,4 +64,5 @@
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
+      when: not for_node | bool
       tags: pack-images

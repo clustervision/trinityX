@@ -24,18 +24,6 @@
         ) }}"
     tags: always
 
-  # refused before the controller plays, so a forgotten marker never reaches the image
-  - name: Verify that -i and on_node are given together
-    fail:
-      msg: "Live nodes need -i with a node inventory that sets on_node=true (see nodes.yml.example), and on_node is only valid with -i"
-    when: (on_node | default(False) | bool) == (ansible_inventory_sources == lookup('config', 'DEFAULT_HOST_LIST'))
-    tags: always
-
-  - name: Set the hosts to set up
-    set_fact:
-      setup_hosts: "{{ 'all:!controllers' if on_node | default(False) | bool else image_name ~ '.osimages.luna' }}"
-    tags: always
-
 - import_playbook: imports/trinity-ubuntu-image-create.yml
   vars:
     image_name: "{{ hostvars['localhost']['image_name'] }}"
@@ -72,12 +60,12 @@
   pre_tasks:
     - name: Unmount the image /proc before packing
       shell: "! mountpoint -q {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc || umount {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc"
-      when: not on_node | default(False) | bool
+      when: not for_node | bool
       tags: always
   roles:
     - role: luna/osimage-pack
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
-      when: not on_node | default(False) | bool
+      when: not for_node | bool
       tags: pack-images

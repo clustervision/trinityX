@@ -2,6 +2,15 @@
 
 # create an absolute bare minimal image for redistribution
 
+# a base image has nothing to set up on a live node
+- hosts: localhost
+  gather_facts: false
+  tasks:
+  - fail:
+      msg: "A base image is built from the default inventory, without -i"
+    when: ansible_inventory_sources != lookup('config', 'DEFAULT_HOST_LIST')
+    tags: always
+
 - import_playbook: imports/trinity-ubuntu-image-create.yml
   vars:
     image_name: ubuntu
