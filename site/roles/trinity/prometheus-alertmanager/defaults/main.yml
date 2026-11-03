@@ -65,10 +65,6 @@ prometheus_alertmanager_receivers:
 - name: 'mail'
   email_configs:
   - to: '{{prometheus_alertmanager_mail}}'
-- name: 'prometheus-sensu-bridge'
-  webhook_configs:
-  - url: 'http://localhost:5555/listener'
-    send_resolved: true
 - name: 'alertx-history'
   webhook_configs:
   - url: 'http://localhost:7151/listener'
@@ -176,10 +172,6 @@ prometheus_alertmanager_route:
         receiver: 'mail'
         continue: true
 
-      - matchers:
-        - severity =~ "danger|critical"
-        receiver: prometheus-sensu-bridge
-        continue: true
       - matchers:
         - severity =~ "danger|critical|warning|info"
         receiver: alertx-history
