@@ -119,6 +119,20 @@
         delegate: true
   when: primary | default(True)
 
+# Luna's chain is local, pam: the directory user signs in through pam, so the row is
+# made for pam and Luna adopts it then. No password: the directory holds it.
+- name: Create the site's administrator in Luna
+  include_role:
+    name: luna/user-create
+  vars:
+    luna_users:
+      - name: '{{ admin_user }}'
+        source: pam
+        admin: true
+  when:
+    - primary | default(True)
+    - admin_user | default('', true) | length > 0
+
 - name: Render the trixd.ini
   template:
     src: trixd.ini.j2
