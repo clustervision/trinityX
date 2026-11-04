@@ -47,6 +47,21 @@
     group: 'root'
     mode: '0750'
 
+- name: Ensuring bash completion path exists
+  file:
+    path: '/etc/bash_completion.d/'
+    state: directory
+    owner: 'root'
+    group: 'root'
+
+- name: Copy bash completion script
+  copy:
+    src: 'obol_completion.sh'
+    dest: '/etc/bash_completion.d/obol.sh'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
 - name: Add default configuration to {{ obol_conf_path }}
   template:
     src: 'obol.conf.j2'
