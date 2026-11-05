@@ -1,0 +1,21 @@
+# One application domain per PAM service, luna's and trixd's: the controller's users, without
+# the login filter, their account expiry still checked.
+[sssd]
+# an application domain is used only when listed here as well
+domains = controller, luna{{ ', trixd' if enable_trixd | default(True) | bool else '' }}
+
+[pam]
+# one list for every PAM service on this controller; add a service here, not in its own file
+pam_app_services = luna{{ ', trixd' if enable_trixd | default(True) | bool else '' }}
+
+[application/luna]
+inherit_from = controller
+ldap_access_order = expire
+enumerate = false
+{% if enable_trixd | default(True) | bool %}
+
+[application/trixd]
+inherit_from = controller
+ldap_access_order = expire
+enumerate = false
+{% endif %}
