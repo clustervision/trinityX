@@ -5,21 +5,55 @@
 # -------------------------------------------------------
 
 LUNA_INI='{{ trix_luna }}/node/config/luna.ini'
+TRIXD_INI='{{ trix_local }}/trixd/node/config/trixd.ini'
+
+load_ini () {
+    # One ini into the environment, each key as PREFIX_SECTION_KEY, so two files can be read
+    # without one overwriting the other's account.
+    #
+    # A value is taken whole, after the first equals sign only: splitting on every one of
+    # them cut a password at the first it contained. Every expansion is quoted, or a value
+    # with an asterisk is replaced by the file names it matches. The read keeps a last line
+    # with no newline after it, which is otherwise dropped along with its key.
+    local file="$1" prefix="$2" section="" line key value
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+        case "$line" in
+            ''|'#'*|';'*) continue ;;
+            '['*']')
+                # The whole name between the brackets: a section with an underscore in it
+                # came back as two words, which declare then refused as an identifier.
+                section="$(echo "$line" | tr -d '[]')"
+                continue ;;
+        esac
+        case "$line" in *=*) ;; *) continue ;; esac
+        key="$(echo "${line%%=*}" | tr -d '[:space:]')"
+        value="$(echo "${line#*=}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+        [ "$key" ] && declare -gx "${prefix}${section}_${key}"="$value"
+    done < "$file"
+}
+
+# trixd's own ini is read first: it holds the account and the address, and the node then signs
+# in at trixd itself. Luna's is the fallback for an image built before that ini existed, and is
+# read either way because the rest of this script still uses it.
+if [ -f "$TRIXD_INI" ]; then
+    load_ini "$TRIXD_INI" "TRIXD_"
+else
+    >&2 echo "WARNING: no $TRIXD_INI - this image predates trixd's own configuration;"
+    >&2 echo "WARNING: falling back to $LUNA_INI for where trixd answers."
+fi
+
 if [ -f $LUNA_INI ]; then
-    while IFS='=' read -ra line; do
-        if [ ! "$(echo $line | grep -E '^(#|;)')" ] && [ "$line" ]; then
-            if [ "$(echo $line | grep '^\[')" ]; then
-                section=$(echo $line | grep -oE "[A-Z]+")
-            else
-                key=$(echo ${line[0]})
-                value=$(echo ${line[1]})
-                declare -x "${section}_${key}"="$value"
-            fi
-        fi
-    done < "$LUNA_INI"
+    load_ini "$LUNA_INI" ""
 else
     >&2 echo "No config file: $LUNA_INI"
 fi
+
+FULLHOST=$(hostname --long)
+if [ ! "$FULLHOST" ]; then # opensuse?
+	FULLHOST=$(hostname)
+fi
+HOST=$(echo $FULLHOST|awk -F'.' '{ print $1 }')
 
 if [ "$API_PROTOCOL" == "" ]; then
 {% if luna_protocol == "https" -%}
@@ -35,6 +69,21 @@ else
     LUNA_URL=${API_PROTOCOL}://${API_ENDPOINT}
 fi
 
+if [ "$TRIXD_API_ENDPOINT" != "" ]; then
+    TRIXD_URL=${TRIXD_API_PROTOCOL:-$API_PROTOCOL}://${TRIXD_API_ENDPOINT}
+    SIGNIN_URL=${TRIXD_URL}/api/v1/auth/node/${HOST}
+    SIGNIN_USER=${TRIXD_API_USERNAME}
+    SIGNIN_PASS=${TRIXD_API_PASSWORD}
+else
+    # No trixd ini: the controller Luna names, on trixd's port, and Luna's account.
+    TRIXD_PORT=${TRIXD_PORT:-7070}
+    TRIXD_HOST=$(echo ${LUNA_URL} | sed -e 's|^.*://||' -e 's|:.*$||')
+    TRIXD_URL=${API_PROTOCOL}://${TRIXD_HOST}:${TRIXD_PORT}
+    SIGNIN_URL=${LUNA_URL}/tpm/${HOST}
+    SIGNIN_USER=${API_USERNAME}
+    SIGNIN_PASS=${API_PASSWORD}
+fi
+
 if [ "$API_VERIFY_CERTIFICATE" == "" ]; then
 {% if luna_verify_certificate | bool %}
     INSECURE=''
@@ -48,11 +97,14 @@ else
     fi 
 fi
 
-FULLHOST=$(hostname --long)
-if [ ! "$FULLHOST" ]; then # opensuse?
-	FULLHOST=$(hostname)
+# The calls below go to trixd, so its own flag decides for them when it has one.
+if [ "$TRIXD_API_VERIFY_CERTIFICATE" != "" ]; then
+    TRIXD_API_VERIFY_CERTIFICATE=$(echo $TRIXD_API_VERIFY_CERTIFICATE | tr 'A-Z' 'a-z')
+    INSECURE=''
+    if [ "$TRIXD_API_VERIFY_CERTIFICATE" == "false" ] || [ "$TRIXD_API_VERIFY_CERTIFICATE" == "no" ]; then
+        INSECURE='--insecure'
+    fi
 fi
-HOST=$(echo $FULLHOST|awk -F'.' '{ print $1 }')
 
 # -------------------------------------------------------
 # the actual calls
@@ -62,14 +114,15 @@ function fetch_token {
     export TPM2TOOLS_TCTI="device:/dev/tpm0"
     ldconfig
     TPM=$(tpm2_pcrread sha256:0 2> /dev/null | grep '0x' | awk -F' : ' '{ print $2 }')
-    json='{"tpm_sha256":"'$TPM'","username":"'$API_USERNAME'","password":"'$API_PASSWORD'"}'
+    json='{"tpm_sha256":"'$TPM'","username":"'$SIGNIN_USER'","password":"'$SIGNIN_PASS'"}'
     touch /tmp/token.json
     chmod og-rwx /tmp/token.json
-    curl $INSECURE -X POST -H "Content-Type: application/json" -d "$json" -s "${LUNA_URL}/tpm/${HOST}" > /tmp/token.json
+    curl $INSECURE -X POST -H "Content-Type: application/json" -d "$json" -s "${SIGNIN_URL}" > /tmp/token.json
     valid=$(grep token /tmp/token.json)
     if [ "$valid" ]; then
-        token=$(cat /tmp/token.json | awk '{ print $2 }' | grep -oE '"(\S+)"')
-        token=$(echo "${token:1:-1}")
+        # Not split on whitespace: a token is found whether or not the answer has a space
+        # after the colon, and the two daemons do not agree about that.
+        token=$(sed -n 's/.*"token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/token.json)
         echo $token
     else
         >&2 cat /tmp/token.json
@@ -79,9 +132,9 @@ function fetch_token {
 }
 
 function call_hook {
-    LUNA_TOKEN=$(fetch_token)
-    json='[{ "hostname": "'$FULLHOST'", "force": false}]'
-    curl $INSECURE -X POST -H "x-access-tokens: $LUNA_TOKEN" -H "Content-Type: application/json" -d "$json" -i -w "%{http_code}" -s "${LUNA_URL}/import/prometheus_hw_rules" -o /tmp/alertx-hook.out > /tmp/alertx-hook.code
+    NODE_TOKEN=$(fetch_token)
+    json='{"force": false}'
+    curl $INSECURE -X PATCH -H "x-access-tokens: $NODE_TOKEN" -H "Content-Type: application/json" -d "$json" -i -w "%{http_code}" -s "${TRIXD_URL}/api/v1/prometheus/hw-rules/${HOST}" -o /tmp/alertx-hook.out > /tmp/alertx-hook.code
     RET=$?
     CODE=$(cat /tmp/alertx-hook.code)
     echo "$CODE :: $(cat /tmp/alertx-hook.out)"

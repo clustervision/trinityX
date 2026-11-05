@@ -1,0 +1,39 @@
+---
+# The node's trixd.ini, beside its luna.ini, under the same conditions as luna2's nodes.yml.
+
+- name: Render node trixd.ini into the image
+  when:
+    - on_controller | default(False)
+    - image_path is defined
+    - trix_local is defined
+  block:
+    - name: Create node trixd config directory in the image
+      file:
+        path: '{{ image_path }}/{{ trixd_node_config_dir }}/'
+        state: directory
+
+    - name: Render node trixd.ini in the image
+      template:
+        src: trixd-client.ini.j2
+        dest: '{{ image_path }}/{{ trixd_node_config_dir }}/trixd.ini'
+        owner: root
+        group: root
+        mode: '0640'
+
+- name: Render node trixd.ini in place
+  when:
+    - in_image | default(False) or on_node | default(False)
+    - trix_local is defined
+  block:
+    - name: Create node trixd config directory
+      file:
+        path: '{{ trixd_node_config_dir }}/'
+        state: directory
+
+    - name: Render node trixd.ini
+      template:
+        src: trixd-client.ini.j2
+        dest: '{{ trixd_node_config_dir }}/trixd.ini'
+        owner: root
+        group: root
+        mode: '0640'

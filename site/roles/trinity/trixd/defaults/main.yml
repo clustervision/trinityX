@@ -1,0 +1,92 @@
+---
+# vars file for trixd
+
+enable_trixd: true
+
+trixd_packages:
+  - luna2-python
+
+trixd_root: '{{ trix_local }}/trixd'
+# Inside the daemon link, as luna.ini is; the wheel ships only trixd.ini.sample, so pip never replaces it.
+trixd_config_dir: '{{ trixd_root }}/daemon/config'
+trixd_db_dir: '{{ trixd_root }}/daemon/var'
+# Made only when a site writes a plugin of its own, like Luna's files folder.
+trixd_site_plugins_dir: '{{ trixd_root }}/plugins'
+trixd_log_dir: /var/log/trixd
+
+# Always the newest 1.0 build; set a full wheel name to pin one.
+trixd_pip: trixd-1.0-py3-none-any.whl
+trixd_noarch_pip_repository: "https://updates.clustervision.com/trinityx/{{ trix_version }}/trixd/noarch/pip/{{ trix_stream }}"
+
+# trixd reads Luna's address, protocol and token secret from here, never a copy.
+trixd_luna_ini: '{{ trix_luna }}/daemon/config/luna.ini'
+
+trixd_tls_port: 7070
+trixd_plain_port: 7071
+# Plain HTTP on every address, because nodes call trixd too; 127.0.0.1 keeps it on the controller.
+trixd_plain_bind: 0.0.0.0
+
+trixd_token_algorithm: HS256
+trixd_certfile: '{{ ssl_certificate | default(ssl_cert_path ~ "/" ~ ansible_fqdn ~ ".crt") }}'
+trixd_keyfile: '{{ ssl_certificate_key | default(ssl_cert_path ~ "/" ~ ansible_fqdn ~ ".key") }}'
+trixd_ca_file: '{{ ssl_ca_cert | default(ssl_cert_path ~ "/cluster-ca.crt") }}'
+
+# Used only when trixd_token_algorithm is EdDSA.
+trixd_key: '{{ trix_ssl }}/trixd.ed25519'
+trixd_key_id: trixd-1
+trixd_trust_dir: '{{ trix_ssl }}/trust.d'
+
+# As all.yml.example ships them, so an all.yml without them is caught by init's password check.
+trixd_username: trixd
+trixd_password: trixd
+trixd_token_expiry: 1h
+
+# The Luna user trixd signs persons in with (on_behalf_of). Its password is generated
+# on the primary and kept like the other service passwords; no site sets it.
+trixd_luna_delegate_username: trixd-delegate
+trixd_luna_delegate_password_file: /etc/trinity/passwords/luna/trixd-delegate.txt
+
+# What trixd serves on its TLS port and its clients call it with, as luna_protocol is for Luna.
+trixd_protocol: https
+# The floating name, not this controller's. A node image is rendered by whichever
+# controller ran the installer, so its own name keeps the node calling that one after a
+# failover; and the short name is in no certificate SAN, which bites the moment a site
+# turns verification on. Measured on a pair: the SAN carries the floating name, the
+# controller FQDNs and the addresses, never the short name.
+trixd_client_endpoint: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+trixd_verify_certificate: false
+trixd_node_config_dir: '{{ trixd_root }}/node/config'
+trixd_alertx_config_dir: '{{ trix_local }}/alertx/cli/config'
+trixd_ood_config_dir: '{{ trix_ood }}/3.0/config'
+trixd_ood_group: "{{ ood_apps_admin_group | default('admins') }}"
+# Where the exporter roles write the controllers' targets; trixd's exporters.yaml is read from them.
+trixd_controller_sd_dir: '{{ trix_etc }}/prometheus_server/file_sd/trix'
+
+# slurm is in this list but reaches trixd.ini only where slurm is the workload manager -
+# see the template. The plugin needs trinityx_config_slurm, which controller.yml installs
+# under that same condition, so enabling it everywhere gave a k3s cluster a plugin that
+# fails its render at every start-up and on every node change for a service it does not run.
+trixd_plugins:
+  - luna
+  - directory
+  - prometheus
+  - services
+  - slurm
+  - genders
+
+# peercred: a process on the controller signs in as the account it runs as, no password.
+trixd_auth_chain: local, pam, peercred
+# The site's admin group, not trixd_ood_group: that is the OOD apps' group, and outside
+# ood-apps it is always 'admins'.
+trixd_group_roles: "{{ admin_group }}:manager"
+
+trixd_service_command: /usr/bin/systemctl
+trixd_replication_interval: 300s
+trixd_audit_keep: 90d
+
+# What the slurm plugin's helper runs as and writes (its package.yaml); the plugin fixes
+# these, so they are not a site's to change.
+trixd_slurm_account: trinityx-slurm
+trixd_slurm_id: 889
+trixd_slurm_state_dir: /var/lib/trixd/slurm
+trixd_slurm_share_dir: /etc/slurm/.trinityx-slurm

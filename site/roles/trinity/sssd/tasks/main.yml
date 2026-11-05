@@ -87,6 +87,17 @@
     - not sssd_config_file.changed
     - not sssd_filter_line.changed | default(False)
 
+# A snippet, not sssd.conf: it lands on a controller whose sssd.conf is kept.
+- name: Add the TrinityX application domains to sssd
+  template:
+    src: 'sssd-trinityx.conf.j2'
+    dest: '{{ sssd_config_location }}/conf.d/trinityx.conf'
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+  notify: restart sssd
+  when: on_controller | default(False)
+
 - name: Ensure certs directory exists
   file:
     path: "{{ ca_certificate_path }}"
@@ -152,6 +163,95 @@
     - sss_allowed_groups is defined
     - sss_allowed_groups is iterable
   tags: admin-change
+
+# HA: the secondary keeps the administrator's password like the other passwords.
+- name: Take the administrator's password from the primary
+  when:
+    - ha | default(False)
+    - not primary | default(False)
+    - on_controller
+    - sss_admin_user | length > 0
+  block:
+    - name: Check for the administrator's password in sync
+      stat:
+        path: '{{ trix_sync }}/users/{{ sss_admin_user_password_file | basename }}'
+      register: sss_admin_user_password_sync
+
+    - name: Ensure the administrator's password location exists
+      file:
+        path: '{{ sss_admin_user_password_file | dirname }}'
+        state: directory
+        mode: '0700'
+      when: sss_admin_user_password_sync.stat.exists
+
+    - name: Copy the administrator's password from sync
+      copy:
+        remote_src: true
+        src: '{{ trix_sync }}/users/{{ sss_admin_user_password_file | basename }}'
+        dest: '{{ sss_admin_user_password_file }}'
+        mode: '0600'
+      when: sss_admin_user_password_sync.stat.exists
+
+# An account that already resolves is the site's own: it is left as it is, and no
+# password is generated for it.
+- name: Create the administrator in the directory
+  when:
+    - primary | default(True)
+    - on_controller
+    - sss_admin_user | length > 0
+  block:
+    - name: Resolve the administrator via NSS
+      getent:
+        database: passwd
+        key: '{{ sss_admin_user }}'
+      register: sss_admin_user_nss
+      ignore_errors: true
+
+    - name: Generate the administrator's password and save it to /etc/trinity/passwords
+      set_fact:
+        sss_admin_user_password: "{{ lookup('password',
+                                    sss_admin_user_password_file,
+                                    chars='ascii_letters,digits,hexdigits') }}"
+      no_log: true
+      when: sss_admin_user_nss is failed
+
+    - name: Add the administrator to the directory
+      command:
+        argv:
+          - /usr/local/sbin/obol
+          - user
+          - add
+          - --password
+          - '{{ sss_admin_user_password }}'
+          - --groups
+          - '{{ sss_admin_group }}'
+          - '{{ sss_admin_user }}'
+      no_log: true
+      when: sss_admin_user_nss is failed
+
+    - name: Check for the administrator's password
+      stat:
+        path: '{{ sss_admin_user_password_file }}'
+      register: sss_admin_user_password_stat
+      when: ha | default(False)
+
+    - name: Put the administrator's password in sync for the secondary
+      when:
+        - ha | default(False)
+        - sss_admin_user_password_stat.stat.exists
+      block:
+        - name: Ensure the users sync directory exists
+          file:
+            path: '{{ trix_sync }}/users'
+            state: directory
+            mode: '0700'
+
+        - name: Add the administrator's password to sync
+          copy:
+            remote_src: true
+            src: '{{ sss_admin_user_password_file }}'
+            dest: '{{ trix_sync }}/users/'
+            mode: '0600'
 
 - name: Setting up the system to use sssd for authentication
   command: "{{ item.command }}"

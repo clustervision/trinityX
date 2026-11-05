@@ -149,6 +149,11 @@
         shadow_networks: "{{ cloud_networks|default({}) }}"
       tags: luna
 
+      # With Luna: the OOD apps, alertx and the node images are configured against it.
+    - role: trinity/trixd
+      when: enable_trixd | default(True) | bool
+      tags: trixd
+
     - role: trinity/nfs
       nfs_rpccount: 256
       nfs_enable_rdma: false
@@ -258,6 +263,8 @@
     - role: trinity/sssd
       sss_allowed_groups:
         - '{{ admin_group }}'
+      sss_admin_user: "{{ admin_user | default('', true) }}"
+      sss_admin_group: '{{ admin_group }}'
       sss_ldap_hosts:
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
@@ -349,10 +356,6 @@
       cg_admin_group: "{{ admin_group }}"
       tags: config-genders
 
-    - role: trinity/config-manager
-      cm_admin_group: "{{ admin_group }}"
-      tags: config-manager
-
       # this role is using sol_grab provided through luna utils
     - role: trinity/node-console
       tags: node-console
@@ -414,9 +417,13 @@
       prometheus_server_additional_sd:
         - job_name: luna_nodes
           http_sd_configs:
-          - url: "{{ luna_protocol }}://localhost:7050/export/prometheus"
+          - url: "{{ trixd_protocol ~ '://localhost:' ~ trixd_tls_port ~ '/api/v1/prometheus/renders/targets'
+                     if enable_trixd | default(True) | bool else luna_protocol ~ '://localhost:7050/export/prometheus' }}"
             tls_config:
               insecure_skip_verify: true
+          # trixd's document carries the controllers too; luna_controllers scrapes them.
+          relabel_configs: "{{ [{'source_labels': ['luna_group'], 'regex': 'controller', 'action': 'drop'}]
+                               if enable_trixd | default(True) | bool else [] }}"
           metric_relabel_configs:
             # Drop transient systemd unit states to reduce cardinality.
             - source_labels: ['__name__', 'state']
@@ -543,6 +550,13 @@
       alertx_history_sql_db: 'alertx_history'
       alertx_history_enable: true
       tags: monitoring, alertx
+
+      # Re-render once the roles that write those files have run; tagged with them so a
+      # tagged run cannot skip it.
+    - role: trinity/trixd
+      trixd_render_only: true
+      when: enable_trixd | default(True) | bool
+      tags: trixd, config-slurm, config-genders, prometheus, monitoring
 
     - role: trinity/grafana
       ldap_auth: "{{ enable_authentication|default(True) }}"

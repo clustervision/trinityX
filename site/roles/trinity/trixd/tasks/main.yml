@@ -1,0 +1,126 @@
+---
+# tasks file for trixd
+
+- name: Load airgap variables
+  include_vars: "airgap/main.yaml"
+  when: is_airgap | default(False)
+
+# Before the render below, which takes the helper's lock where its directory is.
+- name: Set up the slurm plugin's helper
+  include_tasks: "slurm.yml"
+  when:
+    - trixd_render_only | default(False)
+    - on_controller | default(False)
+    - "'slurm' in workload_manager"
+    - "'slurm' in trixd_plugins"
+
+# A nudge, not a restart: both generator packages are imported inside the render itself,
+# so one installed after trixd started is picked up by the next render.
+- name: Render trixd's files against a finished controller
+  when:
+    - trixd_render_only | default(False)
+    - on_controller | default(False)
+  block:
+    # The exporter roles have written where each controller exporter answers, so trixd
+    # takes it from there rather than from a second list of ports and conditions.
+    - name: Find the controller targets the exporter roles wrote
+      find:
+        paths: '{{ trixd_controller_sd_dir }}'
+        patterns: '*.yml'
+      register: trixd_controller_sd_files
+
+    - name: Read the controller targets
+      slurp:
+        src: '{{ item.path }}'
+      loop: '{{ trixd_controller_sd_files.files }}'
+      loop_control:
+        label: '{{ item.path }}'
+      register: trixd_controller_sd
+
+    # Read again by trixd at its next render, so the nudge below is enough.
+    - name: Render trixd's exporter file
+      template:
+        src: exporters.yaml.j2
+        dest: '{{ trixd_config_dir }}/exporters.yaml'
+        owner: root
+        group: root
+        mode: '0644'
+
+    # Retried because this runs in the same play that started the daemon. Never verified:
+    # trixd's certificate is signed by the cluster's own CA and carries no loopback name.
+    - name: Sign in to trixd
+      uri:
+        url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/auth/token'
+        method: POST
+        body_format: json
+        body:
+          username: '{{ trixd_username }}'
+          password: '{{ trixd_password }}'
+        status_code: 201
+        validate_certs: false
+      register: trixd_token
+      until: trixd_token is succeeded
+      retries: 12
+      delay: 5
+      no_log: true
+
+    # A save runs with the Slurm files' group, which config-slurm takes from the site's
+    # admin_group; the plugin's own default is admins. Set on each controller, as each
+    # answers from its own copy until replication brings the other's, which holds the same.
+    - name: Give the slurm plugin the site's admin group
+      when:
+        - "'slurm' in workload_manager"
+        - "'slurm' in trixd_plugins"
+      block:
+        - name: Read the slurm plugin's settings
+          uri:
+            url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/slurm/config'
+            method: GET
+            headers:
+              x-access-tokens: '{{ trixd_token.json.token }}'
+            validate_certs: false
+          register: trixd_slurm_config
+
+        - name: Set the slurm plugin's admin group
+          uri:
+            url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/slurm/config'
+            method: PATCH
+            body_format: json
+            body:
+              admin_group: '{{ admin_group }}'
+            headers:
+              x-access-tokens: '{{ trixd_token.json.token }}'
+            validate_certs: false
+          changed_when: true
+          when: trixd_slurm_config.json.admin_group != admin_group
+
+    # No event: every render runs and nothing is dispatched. A render reads the whole
+    # estate, so it outlasts the module's default timeout on a large cluster.
+    - name: Make trixd render everything
+      uri:
+        url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/system/notify'
+        method: POST
+        body_format: json
+        body: {}
+        headers:
+          x-access-tokens: '{{ trixd_token.json.token }}'
+        validate_certs: false
+        timeout: 600
+      register: trixd_rendered
+
+    - name: Report what trixd rendered
+      ansible.builtin.debug:
+        msg: >-
+          trixd rendered {{ trixd_rendered.json.rendered | join(', ')
+          if trixd_rendered.json.rendered else 'nothing' }}
+
+- name: Loading controller trixd role
+  include_tasks: "controller.yml"
+  when:
+    - not trixd_render_only | default(False)
+    - on_controller | default(False)
+    - not extend_image | default(False)
+
+- name: Loading node and images trixd role
+  include_tasks: "nodes.yml"
+  when: not trixd_render_only | default(False)

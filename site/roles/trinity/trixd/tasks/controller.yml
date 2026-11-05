@@ -1,0 +1,245 @@
+---
+# tasks file for trixd
+
+- name: Install trixd packages
+  yum:
+    name: '{{ trixd_packages }}'
+    state: present
+    enablerepo: luna2
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+  tags: install-only
+
+# HA: the secondary takes the shared files from the primary's sync.
+- name: Take the shared trixd files from the primary
+  when:
+    - ha | default(False)
+    - not primary | default(False)
+  block:
+    - name: Copy the keypair from sync
+      copy:
+        remote_src: true
+        src: '{{ trix_sync }}/trixd/{{ item | basename }}'
+        dest: '{{ item }}'
+        mode: '0600'
+      loop:
+        - '{{ trixd_key }}'
+        - '{{ trixd_key }}.pub'
+      when: trixd_token_algorithm == 'EdDSA'
+
+    - name: Ensure the Luna password location exists
+      file:
+        path: '{{ trixd_luna_delegate_password_file | dirname }}'
+        state: directory
+        mode: '0700'
+
+    - name: Copy the Luna delegate password from sync
+      copy:
+        remote_src: true
+        src: '{{ trix_sync }}/trixd/{{ trixd_luna_delegate_password_file | basename }}'
+        dest: '{{ trixd_luna_delegate_password_file }}'
+        mode: '0600'
+
+# Only what is outside the package: a directory where the daemon link goes stops the link.
+- name: Create the trixd tree
+  file:
+    path: '{{ item }}'
+    state: directory
+    mode: '0755'
+  loop:
+    - '{{ trixd_root }}'
+    - '{{ trixd_log_dir }}'
+    - '{{ trixd_trust_dir }}'
+
+- name: Include the log rotation for trixd
+  include_role:
+    name: trinity/logrotate
+  vars:
+    logrotate_component: 'trixd'
+    logrotate_logdir: '{{ trixd_log_dir }}'
+
+# --upgrade, never --force-reinstall: that would move the versions Luna pins.
+- name: Install trixd
+  ansible.builtin.pip:
+    name: '{{ trixd_noarch_pip_repository }}/daemon/{{ trixd_pip }}'
+    virtualenv: '{{ trix_local }}/python'
+    extra_args: --upgrade
+  notify: restart trixd
+  when: trixd_pip is defined
+  tags: install-only
+
+- name: Install trixd from the index
+  ansible.builtin.pip:
+    name: trixd
+    extra_args: '--upgrade -i {{ trixd_noarch_pip_repository }}/daemon'
+    virtualenv: '{{ trix_local }}/python'
+  notify: restart trixd
+  when: trixd_pip is undefined
+  tags: install-only
+
+- name: Get python libdir
+  shell: "echo {{ trix_local }}/python/lib/python*"
+  register: trixd_python_dir
+  changed_when: false
+
+- name: Create symlink from site-packages/trixd to the trixd dir
+  file:
+    src: '{{ trixd_python_dir.stdout }}/site-packages/trixd'
+    dest: '{{ trixd_root }}/daemon'
+    state: link
+    force: true
+
+- name: Check Luna's luna.ini, which trixd reads
+  stat:
+    path: '{{ trixd_luna_ini }}'
+  register: trixd_luna_ini_stat
+
+- name: Fail plainly when Luna's luna.ini is missing
+  fail:
+    msg: >-
+      {{ trixd_luna_ini }} is missing. trixd reads Luna's address, protocol and token
+      secret from it; run trinity/luna2 before this role.
+  when: not trixd_luna_ini_stat.stat.exists
+
+- name: Generate or get the Luna delegate password from /etc/trinity/passwords
+  set_fact:
+    trixd_luna_delegate_password: "{{ lookup('password',
+                                     trixd_luna_delegate_password_file,
+                                     chars='ascii_letters,digits,hexdigits') }}"
+  no_log: true
+
+# Luna journals its users to the other controller, so only the primary creates it.
+- name: Create the Luna delegate trixd signs persons in with
+  include_role:
+    name: luna/user-create
+  vars:
+    luna_users:
+      - name: '{{ trixd_luna_delegate_username }}'
+        password: '{{ trixd_luna_delegate_password }}'
+        delegate: true
+  when: primary | default(True)
+
+# trixd's own PAM service: system-auth's auth and account lines, with pam_sss held to the trixd
+# domain the sssd role adds; the required account line refuses a name that domain cannot find.
+- name: Add the trixd PAM service
+  ansible.builtin.copy:
+    content: |
+      #%PAM-1.0
+      auth        required                                     pam_env.so
+      auth        required                                     pam_faildelay.so delay=2000000
+      auth        [default=1 ignore=ignore success=ok]         pam_usertype.so isregular
+      auth        [default=1 ignore=ignore success=ok]         pam_localuser.so
+      auth        sufficient                                   pam_unix.so nullok
+      auth        [default=1 ignore=ignore success=ok]         pam_usertype.so isregular
+      auth        sufficient                                   pam_sss.so forward_pass domains=trixd
+      auth        required                                     pam_deny.so
+
+      account     required                                     pam_nologin.so
+      account     required                                     pam_unix.so
+      account     sufficient                                   pam_localuser.so
+      account     sufficient                                   pam_usertype.so issystem
+      account     required                                     pam_sss.so domains=trixd
+      account     required                                     pam_permit.so
+    dest: '/etc/pam.d/trixd'
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Render the trixd.ini
+  template:
+    src: trixd.ini.j2
+    dest: '{{ trixd_config_dir }}/trixd.ini'
+    owner: root
+    group: root
+    mode: '0640'
+  notify: restart trixd
+
+- name: Put the shared trixd files in sync for the secondary
+  when:
+    - ha | default(False)
+    - primary | default(True)
+  block:
+    - name: Create the trixd sync directory
+      file:
+        path: '{{ trix_sync }}/trixd'
+        state: directory
+        mode: '0700'
+
+    - name: Add the keypair to sync
+      copy:
+        remote_src: true
+        src: '{{ item }}'
+        dest: '{{ trix_sync }}/trixd/'
+        mode: '0600'
+      loop:
+        - '{{ trixd_key }}'
+        - '{{ trixd_key }}.pub'
+      when: trixd_token_algorithm == 'EdDSA'
+
+    - name: Add the Luna delegate password to sync
+      copy:
+        remote_src: true
+        src: '{{ trixd_luna_delegate_password_file }}'
+        dest: '{{ trix_sync }}/trixd/'
+        mode: '0600'
+
+# OnDemand's apps run as httpd_t and reach trixd's peercred socket. The restart
+# recreates /run/trixd, which systemd then labels from this rule. The spec must
+# name the side SELinux treats as canonical: /var/run before EL10, /run after.
+- name: Selinux fcontext on the trixd runtime directory
+  sefcontext:
+    target: "{{ '/var/run' if ansible_distribution_major_version|int < 10 else '/run' }}/trixd(/.*)?"
+    setype: httpd_var_run_t
+  notify: restart trixd
+  when: ansible_selinux.status == "enabled"
+
+- name: Render the trixd unit
+  template:
+    src: trixd.service.j2
+    dest: /etc/systemd/system/trixd.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart trixd
+
+- name: Check the signing key is present
+  stat:
+    path: '{{ trixd_key }}'
+  register: trixd_key_stat
+  when: trixd_token_algorithm == 'EdDSA'
+
+- name: Fail plainly when the signing key was never generated
+  fail:
+    msg: >-
+      {{ trixd_key }} is missing. Under EdDSA it has to be generated before this
+      role runs; HS256, the default, needs no key.
+  when:
+    - trixd_token_algorithm == 'EdDSA'
+    - not trixd_key_stat.stat.exists
+
+- name: Publish our public key into the trust directory
+  copy:
+    remote_src: true
+    src: '{{ trixd_key }}.pub'
+    dest: '{{ trixd_trust_dir }}/{{ trixd_key_id }}.pub'
+    mode: '0644'
+  when: trixd_token_algorithm == 'EdDSA'
+
+- name: Apply a restart the changes above asked for
+  meta: flush_handlers
+
+- name: Start trixd
+  ansible.builtin.systemd:
+    name: trixd
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Wait for trixd to answer
+  uri:
+    url: 'http://127.0.0.1:{{ trixd_plain_port }}/api/v1/system/health'
+    status_code: 200
+  register: trixd_health
+  until: trixd_health is succeeded
+  retries: 12
+  delay: 5
