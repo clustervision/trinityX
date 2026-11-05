@@ -1,0 +1,14 @@
+# trixd's PAM service reaches only this domain: the controller's users, without the
+# login filter, their account expiry still checked.
+[sssd]
+# an application domain is used only when listed here as well
+domains = controller, trixd
+
+[pam]
+# one list for every PAM service on this controller; trixd is its only member
+pam_app_services = trixd
+
+[application/trixd]
+inherit_from = controller
+ldap_access_order = expire
+enumerate = false

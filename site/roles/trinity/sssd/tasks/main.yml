@@ -87,6 +87,17 @@
     - not sssd_config_file.changed
     - not sssd_filter_line.changed | default(False)
 
+# A snippet, not sssd.conf: it lands on a controller whose sssd.conf is kept.
+- name: Add the trixd application domain to sssd
+  template:
+    src: 'sssd-trixd.conf.j2'
+    dest: '{{ sssd_config_location }}/conf.d/trixd.conf'
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+  notify: restart sssd
+  when: sss_trixd_domain | default(False) | bool
+
 - name: Ensure certs directory exists
   file:
     path: "{{ ca_certificate_path }}"
