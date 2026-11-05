@@ -88,15 +88,15 @@
     - not sssd_filter_line.changed | default(False)
 
 # A snippet, not sssd.conf: it lands on a controller whose sssd.conf is kept.
-- name: Add the trixd application domain to sssd
+- name: Add the luna application domain to sssd
   template:
-    src: 'sssd-trixd.conf.j2'
-    dest: '{{ sssd_config_location }}/conf.d/trixd.conf'
+    src: 'sssd-luna.conf.j2'
+    dest: '{{ sssd_config_location }}/conf.d/luna.conf'
     owner: 'root'
     group: 'root'
     mode: '0600'
   notify: restart sssd
-  when: sss_trixd_domain | default(False) | bool
+  when: on_controller | default(False)
 
 - name: Ensure certs directory exists
   file:

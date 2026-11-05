@@ -320,6 +320,32 @@
     mode: 0640
   when: luna2_use_kea | default(False)
 
+# system-auth's auth and account lines, with pam_sss held to the luna domain that the sssd
+# role adds; its account line is required, so a name that domain cannot find is refused.
+- name: Add the Luna PAM service
+  ansible.builtin.copy:
+    content: |
+      #%PAM-1.0
+      auth        required                                     pam_env.so
+      auth        required                                     pam_faildelay.so delay=2000000
+      auth        [default=1 ignore=ignore success=ok]         pam_usertype.so isregular
+      auth        [default=1 ignore=ignore success=ok]         pam_localuser.so
+      auth        sufficient                                   pam_unix.so nullok
+      auth        [default=1 ignore=ignore success=ok]         pam_usertype.so isregular
+      auth        sufficient                                   pam_sss.so forward_pass domains=luna
+      auth        required                                     pam_deny.so
+
+      account     required                                     pam_nologin.so
+      account     required                                     pam_unix.so
+      account     sufficient                                   pam_localuser.so
+      account     sufficient                                   pam_usertype.so issystem
+      account     required                                     pam_sss.so domains=luna
+      account     required                                     pam_permit.so
+    dest: '/etc/pam.d/luna'
+    owner: root
+    group: root
+    mode: '0644'
+
 # ---------------- legacy fixes ------------------
 
 - name: Perform legacy fixes for existing daemon luna.ini config file

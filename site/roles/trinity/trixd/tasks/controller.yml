@@ -119,35 +119,17 @@
         delegate: true
   when: primary | default(True)
 
-# system-auth's auth and account lines, with pam_sss held to the trixd domain that the sssd
-# role adds; its account line is required, so a name that domain cannot find is refused.
-# Luna signs pam users in through the same stack, so both services share this one content.
-- name: Add the trixd and Luna PAM services
+# trixd signs persons in through Luna's PAM stack, which the luna2 role adds.
+- name: Add the trixd PAM service
   ansible.builtin.copy:
     content: |
       #%PAM-1.0
-      auth        required                                     pam_env.so
-      auth        required                                     pam_faildelay.so delay=2000000
-      auth        [default=1 ignore=ignore success=ok]         pam_usertype.so isregular
-      auth        [default=1 ignore=ignore success=ok]         pam_localuser.so
-      auth        sufficient                                   pam_unix.so nullok
-      auth        [default=1 ignore=ignore success=ok]         pam_usertype.so isregular
-      auth        sufficient                                   pam_sss.so forward_pass domains=trixd
-      auth        required                                     pam_deny.so
-
-      account     required                                     pam_nologin.so
-      account     required                                     pam_unix.so
-      account     sufficient                                   pam_localuser.so
-      account     sufficient                                   pam_usertype.so issystem
-      account     required                                     pam_sss.so domains=trixd
-      account     required                                     pam_permit.so
-    dest: '/etc/pam.d/{{ item }}'
+      auth        include      luna
+      account     include      luna
+    dest: '/etc/pam.d/trixd'
     owner: root
     group: root
     mode: '0644'
-  loop:
-    - trixd
-    - luna
 
 - name: Render the trixd.ini
   template:
