@@ -151,7 +151,7 @@
 
       # With Luna: the OOD apps, alertx and the node images are configured against it.
     - role: trinity/trixd
-      when: trixd_enabled | default(True) | bool
+      when: enable_trixd | default(True) | bool
       tags: trixd
 
     - role: trinity/nfs
@@ -268,7 +268,7 @@
       sss_ldap_hosts:
         - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
       sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
-      sss_trixd_domain: '{{ trixd_enabled | default(True) | bool }}'
+      sss_trixd_domain: '{{ enable_trixd | default(True) | bool }}'
       when: enable_authentication|default(True)
       tags: sssd, authentication, config-slurm
 
@@ -423,12 +423,12 @@
         - job_name: luna_nodes
           http_sd_configs:
           - url: "{{ trixd_protocol ~ '://localhost:' ~ trixd_tls_port ~ '/api/v1/prometheus/renders/targets'
-                     if trixd_enabled | default(True) | bool else luna_protocol ~ '://localhost:7050/export/prometheus' }}"
+                     if enable_trixd | default(True) | bool else luna_protocol ~ '://localhost:7050/export/prometheus' }}"
             tls_config:
               insecure_skip_verify: true
           # trixd's document carries the controllers too; luna_controllers scrapes them.
           relabel_configs: "{{ [{'source_labels': ['luna_group'], 'regex': 'controller', 'action': 'drop'}]
-                               if trixd_enabled | default(True) | bool else [] }}"
+                               if enable_trixd | default(True) | bool else [] }}"
           metric_relabel_configs:
             # Drop transient systemd unit states to reduce cardinality.
             - source_labels: ['__name__', 'state']
@@ -560,7 +560,7 @@
       # tagged run cannot skip it.
     - role: trinity/trixd
       trixd_render_only: true
-      when: trixd_enabled | default(True) | bool
+      when: enable_trixd | default(True) | bool
       tags: trixd, config-slurm, config-genders, prometheus, monitoring
 
     - role: trinity/grafana
