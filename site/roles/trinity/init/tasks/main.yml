@@ -275,7 +275,9 @@
   - name: Verify controller hostname is configured
     fail:
       msg: "Current controller hostname does not match any configured in 'trix_ctrl1_hostname' or 'trix_ctrl2_hostname', ... Please set the hostname to match what is configured"
-    when: trix_this_ctrl_hostname is not defined or trix_this_ctrl_hostname == ""
+    when:
+      - on_controller | default(False)  # only a controller carries one of these hostnames
+      - trix_this_ctrl_hostname is not defined or trix_this_ctrl_hostname == ""
 
   - debug:
       msg: 'Using {{ trix_this_ctrl_hostname }} as configured hostname'
@@ -296,7 +298,7 @@
     when:
       - not ha | default(False)
       - trix_ctrl_hostname != ansible_hostname
-  when: not in_image | default(False)  # lpart: skip on image build
+  when: on_controller | default(False)  # the block checks this controller's own hostname
   tags: always,verify-host
 
 - block:
@@ -595,5 +597,5 @@
   selinux:
     state: "{{ 'permissive' if enable_selinux else 'disabled' }}"
     policy: 'targeted'
-  when: ansible_facts['os_family'] == "RedHat"
+  when: ansible_facts['os_family'] == "RedHat" and (in_image or on_controller)
 

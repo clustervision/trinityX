@@ -41,12 +41,13 @@
     #alternative_image_source: 'base'
 
 
+# setup_hosts (the image, or the nodes given with -i) is set in imports/trinity-ubuntu-image-create.yml
 - import_playbook: imports/trinity-ubuntu-image-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['setup_hosts'] }}"
 
 - hosts:
-    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    - "{{ hostvars['localhost']['setup_hosts'] }}"
   roles:
     - role: trinity/slurm
       slurm_conf_path: '{{ trix_shared }}/etc/slurm'
@@ -60,10 +61,12 @@
   pre_tasks:
     - name: Unmount the image /proc before packing
       shell: "! mountpoint -q {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc || umount {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc"
+      when: not for_node | bool
       tags: always
   roles:
     - role: luna/osimage-pack
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
+      when: not for_node | bool
       tags: pack-images

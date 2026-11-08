@@ -121,7 +121,7 @@
         else 'slurm_packages_ohpc' if enable_openhpc | default(False)
         else 'slurm_packages'
       }}
-  when: not in_image
+  when: not in_image and not on_node | default(False) | bool
 
 - name: Resolve slurm package flavor for images
   set_fact:
@@ -131,7 +131,7 @@
         else 'slurm_packages_ohpc_image' if enable_openhpc | default(False)
         else 'slurm_packages_image'
       }}
-  when: in_image
+  when: in_image or on_node | default(False) | bool
 
 # TRIX-1608 remove clashing slurm package flavors before install
 - name: Resolve slurm package flavors for removal
@@ -140,7 +140,7 @@
       - slurm_packages
       - slurm_packages_trx
       - slurm_packages_ohpc
-  when: not in_image
+  when: not in_image and not on_node | default(False) | bool
 
 - name: Resolve slurm package flavors for removal in images
   set_fact:
@@ -148,7 +148,7 @@
       - slurm_packages_image
       - slurm_packages_trx_image
       - slurm_packages_ohpc_image
-  when: in_image
+  when: in_image or on_node | default(False) | bool
 
 - name: Resolve clashing slurm package flavors
   set_fact:

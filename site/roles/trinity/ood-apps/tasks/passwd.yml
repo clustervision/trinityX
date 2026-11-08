@@ -16,8 +16,7 @@
     state: restarted
   loop_control:
     loop_var: passwd_item
-  with_items:
-    - httpd
-    - nginx
+  # nginx runs on the controller only; on a login node apache2 holds its port
+  with_items: "{{ [ood_apache_service_name | default('httpd')] + (['nginx'] if on_controller | default(False) | bool else []) }}"
   when: not in_image
 

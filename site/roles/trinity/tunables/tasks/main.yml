@@ -35,7 +35,7 @@
     owner: 'root'
     group: 'root'
     mode: '0644'
-  when: in_image | default(False)
+  when: in_image | default(False) or on_node | default(False) | bool
 
 - name: Copy 91-hpc-controller-sysctl.conf to /etc/sysctl.d/
   template:
@@ -57,13 +57,13 @@
     mode: '0644'
     backup: true
   notify: activate sysctls
-  when: in_image | default(False)
+  when: in_image | default(False) or on_node | default(False) | bool
 
 - name: Setting compute performance tuned profile
   copy:
     dest: /etc/tuned/active_profile
     content: "{{ compute_tuned_profile | default('hpc-compute') }}\n"
-  when: in_image | default(False)
+  when: in_image | default(False) or on_node | default(False) | bool
 
 - name: Setting controller performance tuned profile
   shell: "tuned-adm profile {{ controller_tuned_profile | default('throughput-performance') }}"

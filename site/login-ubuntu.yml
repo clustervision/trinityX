@@ -68,9 +68,10 @@
     # The alternative source can be 'base' or 'docker'
     #alternative_image_source: 'base'
 
+# setup_hosts (the image, or the nodes given with -i) is set in imports/trinity-ubuntu-image-create.yml
 - import_playbook: imports/trinity-ubuntu-login-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['setup_hosts'] }}"
     in_login_image: true
     luna_secret_key: "{{ hostvars['localhost']['luna_secret_key'] }}"
   tags: build
@@ -83,10 +84,12 @@
   pre_tasks:
     - name: Unmount the image /proc before packing
       shell: "! mountpoint -q {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc || umount {{ trix_images }}/{{ hostvars['localhost']['image_name'] }}/proc"
+      when: not for_node | bool
       tags: always
   roles:
     - role: luna/osimage-pack
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
+      when: not for_node | bool
       tags: pack-images
