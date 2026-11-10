@@ -121,7 +121,7 @@
     - name: Install the target release into the image from el-bootstrap
       when: image_arch is not defined
       dnf:
-        name: "{{ image_el_release_packages }}"
+        name: "{{ image_el_release_packages + image_bootstrap_extra }}"
         installroot: "{{ image_path }}"
         releasever: "{{ image_el_releasever }}"
         disablerepo: "*"
@@ -138,7 +138,7 @@
         --disablerepo=* --enablerepo={{ el_bootstrap_prefix }}-*
         --nogpgcheck --setopt=install_weak_deps=False
         {{ image_dnf_excludes | default([]) | map('regex_replace', '^', '--exclude=') | join(' ') }}
-        install {{ image_el_release_packages | join(' ') }}
+        install {{ (image_el_release_packages + image_bootstrap_extra) | join(' ') }}
       register: el_forcearch_seed
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
