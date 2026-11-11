@@ -105,7 +105,7 @@
 
 - name: Copy CA certificate
   copy:
-    remote_src: "{{ False if in_image else True }}"
+    remote_src: "{{ False if in_image or on_node | default(False) | bool else True }}"
     src: "{{ ssl_ca_cert }}"
     dest: "{{ ca_certificate_path }}/{{ ssl_ca_cert | basename }}"
   notify: restart sssd
@@ -275,4 +275,7 @@
 
   - name: Configure pam to create homedir on first logon
     shell: "pam-auth-update --enable mkhomedir"
+  # a re-run on a live node otherwise waits on a debconf prompt
+  environment:
+    DEBIAN_FRONTEND: noninteractive
   when: ansible_facts['os_family'] == "Debian"

@@ -30,12 +30,13 @@
     #alternative_image_source: 'base'
 
 
+# setup_hosts (the image, or the nodes given with -i) is set in imports/trinity-opensuse-image-create.yml
 - import_playbook: imports/trinity-opensuse-image-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['setup_hosts'] }}"
 
 - hosts:
-    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    - "{{ hostvars['localhost']['setup_hosts'] }}"
   roles:
 
     # Not supported on Opensuse yet
@@ -53,4 +54,5 @@
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
+      when: not for_node | bool
       tags: pack-images

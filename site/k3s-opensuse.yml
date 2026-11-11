@@ -32,10 +32,10 @@
 
 - import_playbook: imports/trinity-opensuse-image-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['setup_hosts'] }}"
 
 - hosts:
-    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    - "{{ hostvars['localhost']['setup_hosts'] }}"
   roles:
 
     - role: trinity/kubernetes
@@ -47,4 +47,5 @@
       vars:
          params:
             image_name: "{{ hostvars['localhost']['image_name'] }}"
+      when: not for_node | bool
       tags: pack-images

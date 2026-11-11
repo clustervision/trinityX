@@ -36,6 +36,8 @@
       ansible.builtin.get_url:
         url: "{{ ood_luna_apps_url }}"
         dest: "/tmp/{{ ood_luna_apps_url | basename }}"
+        # the file name says latest; a copy left by an earlier build is not
+        force: true
       delegate_to: localhost
       when: in_login_image | default(False)
       tags: install-only
@@ -133,6 +135,13 @@
       when:
         - enable_trixd | default(True) | bool
         - override | default(ood_luna_apps_download.changed) or ('admin-change' in ansible_run_tags) or not ood_trixd_ini.stat.exists
+
+    # the pip module needs packaging or setuptools in the image's own python
+    - name: Install setuptools for the pip module in the login image
+      ansible.builtin.package:
+        name: python3-setuptools
+      when: in_login_image | default(False)
+      tags: install-only
 
     - name: Install trinityx-ood custom apps python requirements
       ansible.builtin.pip:
