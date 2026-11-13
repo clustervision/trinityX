@@ -64,11 +64,12 @@
 # -e image_el_baseurl=<mirror> -e image_el_releasever=<N> are set, or an explicit list of repositories
 # is given as -e image_el_repos=[{id, baseurl, image_baseurl}] with the release in image_el_releasever: the
 # controller seeds from those repositories alone, and so does the image afterwards.
-# The bootstrap repositories of a list carry the image name, so another build never enables them.
+# The bootstrap repositories carry the image name, so two builds at once never write one
+# file or enable each other's.
 - name: Name the bootstrap repositories of this build
   when: image_el_baseurl is defined or image_el_repos is defined
   set_fact:
-    el_bootstrap_prefix: "el-bootstrap-{{ ('list-' ~ image_name ~ '-') if image_el_repos is defined else '' }}{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}"
+    el_bootstrap_prefix: "el-bootstrap-{{ 'list-' if image_el_repos is defined else '' }}{{ image_name }}-{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}"
 
 - name: Find the bootstrap repositories a build of this image left on the controller
   when: image_el_repos is defined
@@ -90,14 +91,14 @@
     - name: Add the el-bootstrap repo on the controller (disabled by default)
       when: image_el_repos is not defined
       copy:
-        dest: "/etc/yum.repos.d/el-bootstrap-{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}.repo"
+        dest: "/etc/yum.repos.d/{{ el_bootstrap_prefix }}.repo"
         content: |
-          [el-bootstrap-{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}-baseos]
+          [{{ el_bootstrap_prefix }}-baseos]
           name=el-bootstrap {{ image_el_releasever }} BaseOS
           baseurl={{ image_el_baseurl }}/BaseOS/{{ image_arch | default(system_arch) }}/os/
           gpgcheck=0
           enabled=0
-          [el-bootstrap-{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}-appstream]
+          [{{ el_bootstrap_prefix }}-appstream]
           name=el-bootstrap {{ image_el_releasever }} AppStream
           baseurl={{ image_el_baseurl }}/AppStream/{{ image_arch | default(system_arch) }}/os/
           gpgcheck=0
@@ -220,6 +221,10 @@
   loop: "{{ image_el_repos }}"
   loop_control:
     label: "{{ item.id }}"
+
+- name: Remove the bootstrap repository of the mirror from the controller
+  when: image_el_baseurl is defined and image_el_repos is not defined
+  file: { path: "/etc/yum.repos.d/{{ el_bootstrap_prefix }}.repo", state: absent }
 
 #- synchronize:
 #    src: "/etc/pki/"
