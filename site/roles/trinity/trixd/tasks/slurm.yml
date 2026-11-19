@@ -36,9 +36,10 @@
     owner: '{{ item.owner }}'
     group: '{{ item.owner }}'
     mode: '{{ item.mode }}'
+    recurse: '{{ item.recurse }}'
   loop:
-    - { path: '{{ trixd_slurm_state_dir | dirname }}', owner: root, mode: '0755' }
-    - { path: '{{ trixd_slurm_state_dir }}', owner: '{{ trixd_slurm_account }}', mode: '0700' }
+    - { path: '{{ trixd_slurm_state_dir | dirname }}', owner: root, mode: '0755', recurse: false }
+    - { path: '{{ trixd_slurm_state_dir }}', owner: '{{ trixd_slurm_account }}', mode: '0700', recurse: true }
 
 # The Slurm files and their accounting are the cluster's, not each controller's.
 - name: Set up the slurm helper on the shared Slurm files and in accounting
@@ -51,6 +52,7 @@
         owner: '{{ trixd_slurm_account }}'
         group: '{{ trixd_slurm_account }}'
         mode: '0700'
+        recurse: true
 
     - name: Look up the slurm helper's account in Slurm's accounting
       command: sacctmgr -n -P show user {{ trixd_slurm_account }} format=adminlevel
