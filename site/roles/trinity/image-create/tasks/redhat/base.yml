@@ -65,17 +65,24 @@
 # is given as -e image_el_repos=[{id, baseurl, image_baseurl}] with the release in image_el_releasever: the
 # controller seeds from those repositories alone, and so does the image afterwards.
 # The bootstrap repositories carry the image name, so two builds at once never write one
-# file or enable each other's.
+# file or enable each other's. The name ends in ':' because no image name can contain one, which
+# keeps the name of one image from being the start of another's, and only the ids of this build
+# are enabled.
 - name: Name the bootstrap repositories of this build
   when: image_el_baseurl is defined or image_el_repos is defined
   set_fact:
-    el_bootstrap_prefix: "el-bootstrap-{{ 'list-' if image_el_repos is defined else '' }}{{ image_name }}-{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}"
+    el_bootstrap_prefix: "el-bootstrap-{{ 'list-' if image_el_repos is defined else '' }}{{ image_name }}:{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}"
+
+- name: Name the bootstrap repository ids of this build
+  when: image_el_baseurl is defined or image_el_repos is defined
+  set_fact:
+    el_bootstrap_repo_ids: "{{ (image_el_repos | map(attribute='id') | map('regex_replace', '^', el_bootstrap_prefix ~ '-') | join(',')) if image_el_repos is defined else (el_bootstrap_prefix ~ '-baseos,' ~ el_bootstrap_prefix ~ '-appstream') }}"
 
 - name: Find the bootstrap repositories a build of this image left on the controller
   when: image_el_repos is defined
   find:
     paths: /etc/yum.repos.d
-    patterns: "el-bootstrap-list-{{ image_name }}-*.repo"
+    patterns: "el-bootstrap-list-{{ image_name }}:*.repo"
   register: el_bootstrap_left
 
 - name: Remove them
@@ -126,7 +133,7 @@
         installroot: "{{ image_path }}"
         releasever: "{{ image_el_releasever }}"
         disablerepo: "*"
-        enablerepo: "{{ el_bootstrap_prefix }}-*"
+        enablerepo: "{{ el_bootstrap_repo_ids }}"
         disable_gpg_check: true
         state: present
       retries: "{{ rpm_retries | default(3) }}"
@@ -136,7 +143,7 @@
       shell: >
         dnf -y --installroot={{ image_path }} --forcearch={{ image_arch }}
         --releasever={{ image_el_releasever }} --setopt=reposdir=/etc/yum.repos.d
-        --disablerepo=* --enablerepo={{ el_bootstrap_prefix }}-*
+        --disablerepo=* --enablerepo={{ el_bootstrap_repo_ids }}
         --nogpgcheck --setopt=install_weak_deps=False
         {{ image_dnf_excludes | default([]) | map('regex_replace', '^', '--exclude=') | join(' ') }}
         install {{ image_el_release_packages | join(' ') }}
@@ -197,7 +204,7 @@
       - dnf
     installroot: "{{ image_path }}"
     disablerepo: "{{ '*' if (image_el_repos is defined or image_el_baseurl is defined) else omit }}"
-    enablerepo: "{{ (el_bootstrap_prefix ~ '-*') if (image_el_repos is defined or image_el_baseurl is defined) else omit }}"
+    enablerepo: "{{ el_bootstrap_repo_ids if (image_el_repos is defined or image_el_baseurl is defined) else omit }}"
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
@@ -208,7 +215,7 @@
   shell: >
     dnf -y --installroot={{ image_path }} --forcearch={{ image_arch }}
     --setopt=reposdir=/etc/yum.repos.d
-    --disablerepo=* --enablerepo={{ el_bootstrap_prefix }}-*
+    --disablerepo=* --enablerepo={{ el_bootstrap_repo_ids }}
     --nogpgcheck --setopt=install_weak_deps=False install dnf
   register: dnf_forcearch_install
   retries: 3
