@@ -62,17 +62,8 @@ trixd_ood_group: "{{ ood_apps_admin_group | default('admins') }}"
 # Where the exporter roles write the controllers' targets; trixd's exporters.yaml is read from them.
 trixd_controller_sd_dir: '{{ trix_etc }}/prometheus_server/file_sd/trix'
 
-# slurm is in this list but reaches trixd.ini only where slurm is the workload manager -
-# see the template. The plugin needs trinityx_config_slurm, which controller.yml installs
-# under that same condition, so enabling it everywhere gave a k3s cluster a plugin that
-# fails its render at every start-up and on every node change for a service it does not run.
-trixd_plugins:
-  - luna
-  - directory
-  - prometheus
-  - services
-  - slurm
-  - genders
+# The enabled list is what the package installed, less these.
+trixd_plugins_excluded: []
 
 # peercred: a process on the controller signs in as the account it runs as, no password.
 trixd_auth_chain: local, pam, peercred
