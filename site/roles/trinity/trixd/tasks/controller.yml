@@ -89,6 +89,22 @@
     state: link
     force: true
 
+# manifest.yaml is the marker: __init__.py and __pycache__ sit beside the plugin directories.
+- name: Find the plugins the trixd package installed
+  find:
+    paths: '{{ trixd_root }}/daemon/plugins'
+    patterns: manifest.yaml
+    recurse: true
+    depth: 2
+  register: trixd_plugin_manifests
+
+- name: Take the plugin list from what is installed
+  set_fact:
+    trixd_plugins: "{{ trixd_plugin_manifests.files | map(attribute='path') | map('dirname')
+                       | map('basename') | difference(trixd_plugins_excluded) | sort }}"
+  # A plugin a site adds of its own is not in the package, so a list it sets is kept.
+  when: trixd_plugins is not defined
+
 - name: Check Luna's luna.ini, which trixd reads
   stat:
     path: '{{ trixd_luna_ini }}'

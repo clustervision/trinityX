@@ -153,7 +153,9 @@
       tags: luna
 
       # With Luna: the OOD apps, alertx and the node images are configured against it.
+      # The slurm plugin is held back where slurm is not the workload manager.
     - role: trinity/trixd
+      trixd_plugins_excluded: "{{ ['slurm'] if 'slurm' not in workload_manager else [] }}"
       when: enable_trixd | default(True) | bool
       tags: trixd
 
