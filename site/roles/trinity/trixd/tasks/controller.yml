@@ -102,8 +102,20 @@
   set_fact:
     trixd_plugins: "{{ trixd_plugin_manifests.files | map(attribute='path') | map('dirname')
                        | map('basename') | difference(trixd_plugins_excluded) | sort }}"
+    trixd_plugins_derived: true
   # A plugin a site adds of its own is not in the package, so a list it sets is kept.
   when: trixd_plugins is not defined
+
+- name: Fail plainly when no plugins were found to enable
+  fail:
+    msg: >-
+      No plugins were found under {{ trixd_root }}/daemon/plugins. The daemon
+      reads an empty enabled list as every plugin, so the install stops here:
+      check the trixd package is installed and that trixd_plugins_excluded
+      does not name them all.
+  when:
+    - trixd_plugins_derived | default(False)
+    - trixd_plugins | length == 0
 
 - name: Check Luna's luna.ini, which trixd reads
   stat:
