@@ -352,13 +352,17 @@
       tags: kubernetes, k3s
       when: "'k3s' in workload_manager"
 
+      # With trixd enabled, its slurm and genders plugins render these files.
     - role: trinity/config-slurm
       cs_admin_group: "{{ admin_group }}"
-      when: "'slurm' in workload_manager "
+      when:
+        - "'slurm' in workload_manager"
+        - not enable_trixd | default(True) | bool
       tags: slurm, config-slurm, ood-apps
 
     - role: trinity/config-genders
       cg_admin_group: "{{ admin_group }}"
+      when: not enable_trixd | default(True) | bool
       tags: config-genders
 
       # this role is using sol_grab provided through luna utils
