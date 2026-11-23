@@ -61,35 +61,80 @@
 # instead of the controller's release rpm. Mirrors the opensuse base.yml
 # dnf --installroot bootstrap (repo lives on the CONTROLLER so the controller's
 # dnf resolves it; the image then carries el10 repos via rocky-repos). Off unless
-# -e image_el_baseurl=<mirror> -e image_el_releasever=<N> are set.
+# -e image_el_baseurl=<mirror> -e image_el_releasever=<N> are set, or an explicit list of repositories
+# is given as -e image_el_repos=[{id, baseurl, image_baseurl}] with the release in image_el_releasever: the
+# controller seeds from those repositories alone, and so does the image afterwards.
+# The bootstrap repositories carry the image name, so two builds at once never write one
+# file or enable each other's. The name ends in ':' because no image name can contain one, which
+# keeps the name of one image from being the start of another's. The mark of a list build follows
+# the ':' for the same reason: before the name it would make list-<name> and a list build of <name>
+# the same. Only the ids of this build are enabled.
+- name: Name the bootstrap repositories of this build
+  when: image_el_baseurl is defined or image_el_repos is defined
+  set_fact:
+    el_bootstrap_prefix: "el-bootstrap-{{ image_name }}:{{ 'list-' if image_el_repos is defined else '' }}{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}"
+
+- name: Name the bootstrap repository ids of this build
+  when: image_el_baseurl is defined or image_el_repos is defined
+  set_fact:
+    el_bootstrap_repo_ids: "{{ (image_el_repos | map(attribute='id') | map('regex_replace', '^', el_bootstrap_prefix ~ '-') | join(',')) if image_el_repos is defined else (el_bootstrap_prefix ~ '-baseos,' ~ el_bootstrap_prefix ~ '-appstream') }}"
+
+- name: Find the bootstrap repositories a build of this image left on the controller
+  when: image_el_repos is defined
+  find:
+    paths: /etc/yum.repos.d
+    patterns: "el-bootstrap-{{ image_name }}:list-*.repo"
+  register: el_bootstrap_left
+
+- name: Remove them
+  when: image_el_repos is defined
+  file: { path: "{{ item.path }}", state: absent }
+  loop: "{{ el_bootstrap_left.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
 - name: Seed a cross-major EL base into {{ image_path }}
-  when: image_el_baseurl is defined
+  when: image_el_baseurl is defined or image_el_repos is defined
   block:
     - name: Add the el-bootstrap repo on the controller (disabled by default)
+      when: image_el_repos is not defined
       copy:
-        dest: "/etc/yum.repos.d/el-bootstrap-{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}.repo"
+        dest: "/etc/yum.repos.d/{{ el_bootstrap_prefix }}.repo"
         content: |
-          [el-bootstrap-{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}-baseos]
+          [{{ el_bootstrap_prefix }}-baseos]
           name=el-bootstrap {{ image_el_releasever }} BaseOS
           baseurl={{ image_el_baseurl }}/BaseOS/{{ image_arch | default(system_arch) }}/os/
           gpgcheck=0
           enabled=0
-          [el-bootstrap-{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}-appstream]
+          [{{ el_bootstrap_prefix }}-appstream]
           name=el-bootstrap {{ image_el_releasever }} AppStream
           baseurl={{ image_el_baseurl }}/AppStream/{{ image_arch | default(system_arch) }}/os/
           gpgcheck=0
           enabled=0
+    - name: Add the el-bootstrap repos on the controller from the repository list (disabled by default)
+      when: image_el_repos is defined
+      copy:
+        dest: "/etc/yum.repos.d/{{ el_bootstrap_prefix }}-{{ item.id }}.repo"
+        content: |
+          [{{ el_bootstrap_prefix }}-{{ item.id }}]
+          name=el-bootstrap {{ image_el_releasever }} {{ item.id }}
+          baseurl={{ item.baseurl }}
+          gpgcheck=0
+          enabled=0
+      loop: "{{ image_el_repos | default([]) }}"
+      loop_control:
+        label: "{{ item.id }}"
     - name: Pin the target releasever in the image
       file: { path: "{{ image_path }}/etc/dnf/vars", state: directory }
     - copy: { content: "{{ image_el_releasever }}", dest: "{{ image_path }}/etc/dnf/vars/releasever" }
     - name: Install the target release into the image from el-bootstrap
       when: image_arch is not defined
       dnf:
-        name: [rocky-release, rocky-repos, rocky-gpg-keys, python3]
+        name: "{{ image_el_release_packages }}"
         installroot: "{{ image_path }}"
         releasever: "{{ image_el_releasever }}"
         disablerepo: "*"
-        enablerepo: "el-bootstrap-{{ image_el_releasever }}-*"
+        enablerepo: "{{ el_bootstrap_repo_ids }}"
         disable_gpg_check: true
         state: present
       retries: "{{ rpm_retries | default(3) }}"
@@ -99,10 +144,10 @@
       shell: >
         dnf -y --installroot={{ image_path }} --forcearch={{ image_arch }}
         --releasever={{ image_el_releasever }} --setopt=reposdir=/etc/yum.repos.d
-        --disablerepo=* --enablerepo=el-bootstrap-{{ image_el_releasever }}{{ ('-' ~ image_arch) if image_arch is defined else '' }}-*
+        --disablerepo=* --enablerepo={{ el_bootstrap_repo_ids }}
         --nogpgcheck --setopt=install_weak_deps=False
         {{ image_dnf_excludes | default([]) | map('regex_replace', '^', '--exclude=') | join(' ') }}
-        install rocky-release rocky-repos rocky-gpg-keys python3
+        install {{ image_el_release_packages | join(' ') }}
       register: el_forcearch_seed
       retries: "{{ rpm_retries | default(3) }}"
       delay: "{{ rpm_delay | default(15) }}"
@@ -119,8 +164,31 @@
         insertafter: '^\[main\]'
         create: true
 
+- name: Give the image the repositories of the list
+  when: image_el_repos is defined
+  block:
+    - name: Create the repository directory of the image
+      file: { path: "{{ image_path }}/etc/yum.repos.d", state: directory }
+    # skip_if_unavailable: a directory of the controller is bound under the image for the build only, and a
+    # node that never had it must not fail its package manager on it. The file name sorts before the
+    # release package's own files, which define the same ids on some releases: dnf reads the files by
+    # name and keeps the first definition of an id.
+    - name: Write one repository file per repository of the list
+      copy:
+        dest: "{{ image_path }}/etc/yum.repos.d/00-osimage-{{ item.id }}.repo"
+        content: |
+          [{{ item.id }}]
+          name={{ item.id }}
+          baseurl={{ item.image_baseurl | default(item.baseurl) }}
+          enabled=1
+          gpgcheck=0
+          skip_if_unavailable=1
+      loop: "{{ image_el_repos }}"
+      loop_control:
+        label: "{{ item.id }}"
+
 - name: Install {{ os_release_rpm.stdout }} package in {{ image_path }}
-  when: image_el_baseurl is not defined
+  when: image_el_baseurl is not defined and image_el_repos is not defined
   dnf:
     disable_gpg_check: true
     name: "{{ os_release_rpm.stdout }}"
@@ -138,6 +206,8 @@
       - yum
       - dnf
     installroot: "{{ image_path }}"
+    disablerepo: "{{ '*' if (image_el_repos is defined or image_el_baseurl is defined) else omit }}"
+    enablerepo: "{{ el_bootstrap_repo_ids if (image_el_repos is defined or image_el_baseurl is defined) else omit }}"
     state: present
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
@@ -148,12 +218,23 @@
   shell: >
     dnf -y --installroot={{ image_path }} --forcearch={{ image_arch }}
     --setopt=reposdir=/etc/yum.repos.d
-    --disablerepo=* --enablerepo=el-bootstrap-{{ image_el_releasever }}-{{ image_arch }}-*
+    --disablerepo=* --enablerepo={{ el_bootstrap_repo_ids }}
     --nogpgcheck --setopt=install_weak_deps=False install dnf
   register: dnf_forcearch_install
   retries: 3
   delay: 15
   until: dnf_forcearch_install.rc == 0
+
+- name: Remove the bootstrap repositories of the list from the controller
+  when: image_el_repos is defined
+  file: { path: "/etc/yum.repos.d/{{ el_bootstrap_prefix }}-{{ item.id }}.repo", state: absent }
+  loop: "{{ image_el_repos }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: Remove the bootstrap repository of the mirror from the controller
+  when: image_el_baseurl is defined and image_el_repos is not defined
+  file: { path: "/etc/yum.repos.d/{{ el_bootstrap_prefix }}.repo", state: absent }
 
 #- synchronize:
 #    src: "/etc/pki/"
