@@ -14,6 +14,7 @@
       copy:
         dest: "{{ trix_ssl }}/secret.key"
         content: "{{ luna_secret_key }}"
+        mode: '0600'
     when: not stat_secret_key.stat.exists
 
   - block:
@@ -26,6 +27,13 @@
       set_fact:
         luna_secret_key: "{{ luna_secret_key_b64['content'] | b64decode }}"
     when: stat_secret_key.stat.exists
+
+  # The vault shares a directory with the certificates, and that group carries
+  # unrelated service accounts; the mode is the only thing keeping them out.
+  - name: Restrict access to the luna secret vault
+    file:
+      path: "{{ trix_ssl }}/secret.key"
+      mode: '0600'
 
 
 - block:
@@ -43,6 +51,7 @@
       copy:
         dest: "{{ trix_ssl }}/omapi.key"
         content: "{{ omapi_key }}"
+        mode: '0600'
     when: not stat_omapi_key.stat.exists
 
   - block:
@@ -55,6 +64,11 @@
       set_fact:
         omapi_key: "{{ omapi_key_b64['content'] | b64decode }}"
     when: stat_omapi_key.stat.exists
+
+  - name: Restrict access to the omapi vault
+    file:
+      path: "{{ trix_ssl }}/omapi.key"
+      mode: '0600'
 
 
 - block:
@@ -76,6 +90,7 @@
       copy:
         dest: "{{ trix_ssl }}/tsig.key"
         content: "{{ tsig_key }}"
+        mode: '0600'
     when: not stat_tsig_key.stat.exists
 
   - block:
@@ -96,6 +111,11 @@
   - name: Set TSIG key algo
     set_fact:
       tsig_key_algo: "{{ tsig_key | regex_search('algorithm .*') | split() | last | regex_replace('\"', '') | regex_replace(';', '') }}"
+
+  - name: Restrict access to the TSIG vault
+    file:
+      path: "{{ trix_ssl }}/tsig.key"
+      mode: '0600'
   when:
     - ansible_facts['os_family'] == "RedHat"
     - ansible_facts['distribution_major_version']|int > 8
