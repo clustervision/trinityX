@@ -92,6 +92,46 @@
           changed_when: true
           when: trixd_slurm_config.json.admin_group != admin_group
 
+    # A render writes only inside a managed block, and the slurm and pdsh roles place
+    # their files without one. 409 with these words is a file that has its block; any
+    # other 409 is another change holding the files, which is asked again.
+    - name: Give the Slurm files their managed blocks
+      uri:
+        url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/slurm/files/actions/init'
+        method: POST
+        body_format: json
+        body: {}
+        headers:
+          x-access-tokens: '{{ trixd_token.json.token }}'
+        validate_certs: false
+        status_code: [200, 409]
+        timeout: 600
+      register: trixd_slurm_init
+      until: >-
+        trixd_slurm_init.status | default(0) == 200
+        or 'managed block already' in ((trixd_slurm_init.json | default({})).message | default(''))
+      retries: 6
+      delay: 5
+      changed_when: trixd_slurm_init.status == 200
+      when:
+        - "'slurm' in workload_manager"
+
+    - name: Give the genders file its managed block
+      uri:
+        url: '{{ trixd_protocol }}://127.0.0.1:{{ trixd_tls_port }}/api/v1/genders/files/actions/init'
+        method: POST
+        body_format: json
+        body: {}
+        headers:
+          x-access-tokens: '{{ trixd_token.json.token }}'
+        validate_certs: false
+        status_code: [200, 409]
+        timeout: 600
+      register: trixd_genders_init
+      changed_when: trixd_genders_init.status == 200
+      when:
+        - "'genders' not in trixd_plugins_excluded"
+
     # No event: every render runs and nothing is dispatched. A render reads the whole
     # estate, so it outlasts the module's default timeout on a large cluster.
     - name: Make trixd render everything
