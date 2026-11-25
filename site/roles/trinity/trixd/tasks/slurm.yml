@@ -62,3 +62,24 @@
     - name: Make the slurm helper's account a Slurm administrator
       command: sacctmgr -i add user {{ trixd_slurm_account }} account=root adminlevel=Administrator
       when: trixd_slurm_adminlevel.stdout | trim == ''
+
+    # The helper writes the three files and their backups by their group, and creates
+    # neither; the slurm role has just placed the files as root's own.
+    - name: Give the Slurm files to the admin group
+      file:
+        path: '{{ item }}'
+        owner: root
+        group: '{{ admin_group }}'
+        mode: g+rw
+      loop: '{{ trixd_slurm_files }}'
+
+    - name: Keep a backup beside each Slurm file
+      copy:
+        remote_src: true
+        src: '{{ item }}'
+        dest: '{{ item }}.bkp'
+        owner: root
+        group: '{{ admin_group }}'
+        mode: g+rw
+        force: false
+      loop: '{{ trixd_slurm_files }}'
