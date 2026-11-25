@@ -1,4 +1,5 @@
 ---
+# The rule files are changed on the cluster afterwards: written when absent, or on override.
 - name: Alerting rules file
   ansible.builtin.template:
     src: "generic.rules.j2"
@@ -6,6 +7,7 @@
     owner: root
     group: "{{prometheus_server_system_group}}"
     mode: 0640
+    force: "{{ override | default(False) | bool }}"
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
   when:
     - not prometheus_server_agent_mode
@@ -19,6 +21,7 @@
     owner: root
     group: "{{prometheus_server_system_group}}"
     mode: 0640
+    force: "{{ override | default(False) | bool }}"
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
   when:
     - not prometheus_server_agent_mode
@@ -32,6 +35,7 @@
     owner: root
     group: "{{prometheus_server_system_group}}"
     mode: 0640
+    force: "{{ override | default(False) | bool }}"
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
   when:
     - not prometheus_server_agent_mode
